@@ -1,0 +1,11 @@
+﻿metrica,descricao,n,friedman_chi2,p,kendall_W,med_deepseek,med_gemini,med_openai,p_holm_familia
+cc_medio,QP2 ciclomatica media por metodo,29,10.414,0.0054787,0.17955,1.6743,1.5769,1.8333,0.010957
+cc_total,QP2 ciclomatica total,29,29.034,4.9573e-07,0.50059,380,345,249,2.9744e-06
+cog_medio,QP3 cognitiva media por metodo,29,1.4483,0.48474,0.02497,0.7,0.64754,0.77576,0.48474
+cog_total,QP3 cognitiva total,29,14.552,0.00069204,0.25089,159,137,93,0.0034602
+nom_total,QP4 NOM total,29,42.177,6.9404e-10,0.72719,232,205,137,5.5523e-09
+npm_total,QP4 NPM total,29,43.843,3.0165e-10,0.75592,219,203,115,2.7149e-09
+nom_medio,NOM medio por tipo,29,13.27,0.0013139,0.22879,8.0571,8.8462,11.462,0.004187
+lcom_medio,LCOM-HS medio,29,13.724,0.0010467,0.23662,0.73271,0.75348,0.85654,0.004187
+pct_publicos,% metodos publicos,29,46.947,6.3901e-11,0.80944,0.9646,0.9913,0.86466,6.3901e-10
+linhas,tamanho (linhas),29,32.483,8.8401e-08,0.56005,1537,1607,1072,6.1881e-07

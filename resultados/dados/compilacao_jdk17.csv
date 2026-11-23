@@ -1,0 +1,90 @@
+﻿modelo,especificacao,arquivos,compilou,erros,primeiro_erro
+deepseek,ESP01,45,sim,0,
+deepseek,ESP02,43,sim,0,
+deepseek,ESP03,45,sim,0,
+deepseek,ESP04,29,sim,0,
+deepseek,ESP05,35,sim,0,
+deepseek,ESP06,21,sim,0,
+deepseek,ESP07,36,sim,0,
+deepseek,ESP08,38,nao,1,java\deepseek\ESP08\Repository.java:26: error: type Collection does not take parameters
+deepseek,ESP09,42,sim,0,
+deepseek,ESP10,32,sim,0,
+deepseek,ESP11,57,nao,4,java\deepseek\ESP11\AccessionService.java:4: error: cannot find symbol
+deepseek,ESP12,33,sim,0,
+deepseek,ESP13,30,sim,0,
+deepseek,ESP14,32,sim,0,
+deepseek,ESP15,33,sim,0,
+deepseek,ESP16,27,sim,0,
+deepseek,ESP17,40,sim,0,
+deepseek,ESP18,22,sim,0,
+deepseek,ESP19,23,sim,0,
+deepseek,ESP20,28,sim,0,
+deepseek,ESP21,15,sim,0,
+deepseek,ESP22,30,sim,0,
+deepseek,ESP23,25,sim,0,
+deepseek,ESP24,27,sim,0,
+deepseek,ESP25,48,nao,1,"java\deepseek\ESP25\Main.java:34: error: no suitable method found for grant(Role,Permission,Permission)"
+deepseek,ESP26,17,sim,0,
+deepseek,ESP27,21,sim,0,
+deepseek,ESP28,31,nao,2,java\deepseek\ESP28\Main.java:12: error: incompatible types: String cannot be converted to MahjongGame
+deepseek,ESP29,16,sim,0,
+deepseek,ESP30,16,sim,0,
+gemini,ESP01,28,sim,0,
+gemini,ESP02,26,sim,0,
+gemini,ESP03,40,sim,0,
+gemini,ESP04,20,sim,0,
+gemini,ESP05,29,sim,0,
+gemini,ESP06,17,sim,0,
+gemini,ESP07,26,nao,1,java\gemini\ESP07\DataPackageExporter.java:30: error: cannot find symbol
+gemini,ESP08,28,sim,0,
+gemini,ESP09,32,sim,0,
+gemini,ESP10,30,sim,0,
+gemini,ESP11,45,sim,0,
+gemini,ESP12,24,sim,0,
+gemini,ESP13,20,sim,0,
+gemini,ESP14,27,sim,0,
+gemini,ESP15,18,sim,0,
+gemini,ESP16,22,sim,0,
+gemini,ESP17,40,sim,0,
+gemini,ESP18,19,sim,0,
+gemini,ESP19,20,sim,0,
+gemini,ESP20,32,sim,0,
+gemini,ESP21,17,sim,0,
+gemini,ESP22,21,nao,1,java\gemini\ESP22\Main.java:167: error: cannot find symbol
+gemini,ESP23,18,sim,0,
+gemini,ESP24,26,nao,1,java\gemini\ESP24\DHWebServer.java:141: error: not a statement
+gemini,ESP25,36,sim,0,
+gemini,ESP26,11,sim,0,
+gemini,ESP27,21,sim,0,
+gemini,ESP28,23,nao,1,java\gemini\ESP28\GameSession.java:223: error: cannot find symbol
+gemini,ESP30,26,sim,0,
+openai,ESP01,15,sim,0,
+openai,ESP02,14,sim,0,
+openai,ESP03,23,sim,0,
+openai,ESP04,17,sim,0,
+openai,ESP05,19,sim,0,
+openai,ESP06,8,sim,0,
+openai,ESP07,11,nao,10,java\openai\ESP07\DataRegistry.java:65: error: members has private access in Publisher
+openai,ESP08,13,sim,0,
+openai,ESP09,17,sim,0,
+openai,ESP10,15,sim,0,
+openai,ESP11,21,nao,1,java\openai\ESP11\ArchiveSystem.java:272: error: incompatible types: ArchiveRecord cannot be converted to ResourceComponent
+openai,ESP12,16,sim,0,
+openai,ESP13,17,sim,0,
+openai,ESP14,9,sim,0,
+openai,ESP15,13,sim,0,
+openai,ESP16,13,nao,1,java\openai\ESP16\AppSystem.java:56: error: no suitable method found for comparing(AppSystem:[...]Parts)
+openai,ESP17,37,sim,0,
+openai,ESP18,11,sim,0,
+openai,ESP19,15,sim,0,
+openai,ESP20,22,nao,1,java\openai\ESP20\PortalVisitorService.java:164: error: cannot find symbol
+openai,ESP21,17,sim,0,
+openai,ESP22,21,nao,4,java\openai\ESP22\RestaurantSystem.java:234: error: cannot find symbol
+openai,ESP23,18,nao,1,java\openai\ESP23\InMemoryPaintCatalog.java:40: error: bad operand type PaintColor for unary operator '!'
+openai,ESP24,18,sim,0,
+openai,ESP25,22,nao,1,"java\openai\ESP25\ReportTemplate.java:19: error: method copyOf in interface Map<K#2,V#2> cannot be applied to given types;"
+openai,ESP26,11,sim,0,
+openai,ESP27,16,sim,0,
+openai,ESP28,20,sim,0,
+openai,ESP29,16,sim,0,
+openai,ESP30,10,nao,1,java\openai\ESP30\Main.java:18: error: cannot find symbol
