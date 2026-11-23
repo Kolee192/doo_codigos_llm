@@ -1,0 +1,11 @@
+# classes compiladas e temporarios
+*.class
+_classes/
+_out/
+__pycache__/
+*.pyc
+
+# segredos: nunca versionar chaves de API
+.env
+*.key
+chaves*

@@ -1,0 +1,13 @@
+You are given a software specification written as software requirements (user stories or functional requirements).
+Implement the system in Java 17 using object-oriented design.
+
+Requirements for your answer:
+- Use only the Java standard library (no external frameworks or libraries).
+- Implement the functionality described in the specification.
+- Put each class, interface or enum in its own file.
+- Start each file with a comment line in the format: // File: ClassName.java
+- Include a Main class with a main method that runs a short demo.
+- Return only code, with no explanations before or after it.
+
+Specification:
+{SPEC}
