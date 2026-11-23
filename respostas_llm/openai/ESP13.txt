@@ -1,0 +1,1357 @@
+// File: User.java
+import java.util.Objects;
+import java.util.UUID;
+
+public final class User {
+    private final String id;
+    private final String name;
+    private final boolean damsManager;
+
+    public User(String name, boolean damsManager) {
+        this(UUID.randomUUID().toString(), name, damsManager);
+    }
+
+    public User(String id, String name, boolean damsManager) {
+        this.id = Objects.requireNonNull(id);
+        this.name = Objects.requireNonNull(name);
+        this.damsManager = damsManager;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public boolean isDamsManager() {
+        return damsManager;
+    }
+}
+
+// File: Title.java
+import java.util.Objects;
+
+public final class Title {
+    private final String value;
+    private final String type;
+
+    public Title(String value, String type) {
+        this.value = Objects.requireNonNull(value);
+        this.type = type == null ? "preferred" : type;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    @Override
+    public String toString() {
+        return value;
+    }
+}
+
+// File: NameRecord.java
+import java.util.Objects;
+import java.util.UUID;
+
+public final class NameRecord {
+    private final String id;
+    private final String name;
+    private final String description;
+
+    public NameRecord(String name, String description) {
+        this(UUID.randomUUID().toString(), name, description);
+    }
+
+    public NameRecord(String id, String name, String description) {
+        this.id = Objects.requireNonNull(id);
+        this.name = Objects.requireNonNull(name);
+        this.description = description == null ? "" : description;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+}
+
+// File: Subject.java
+import java.util.Objects;
+
+public final class Subject {
+    private final String heading;
+    private final String type;
+
+    public Subject(String heading, String type) {
+        this.heading = Objects.requireNonNull(heading);
+        this.type = type == null ? "topic" : type;
+    }
+
+    public String getHeading() {
+        return heading;
+    }
+
+    public String getType() {
+        return type;
+    }
+}
+
+// File: ExternalReference.java
+import java.net.URI;
+import java.util.Objects;
+
+public final class ExternalReference {
+    private final URI uri;
+    private final String description;
+
+    public ExternalReference(URI uri, String description) {
+        this.uri = Objects.requireNonNull(uri);
+        this.description = description == null ? "" : description;
+    }
+
+    public URI getUri() {
+        return uri;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+}
+
+// File: GeoLocation.java
+public final class GeoLocation {
+    private final double latitude;
+    private final double longitude;
+    private final String description;
+
+    public GeoLocation(double latitude, double longitude, String description) {
+        if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            throw new IllegalArgumentException("Coordinates are out of range");
+        }
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.description = description == null ? "" : description;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+}
+
+// File: OriginInfo.java
+public final class OriginInfo {
+    private final String place;
+    private final String publisher;
+    private final String edition;
+    private final String other;
+
+    public OriginInfo(String place, String publisher, String edition, String other) {
+        this.place = place == null ? "" : place;
+        this.publisher = publisher == null ? "" : publisher;
+        this.edition = edition == null ? "" : edition;
+        this.other = other == null ? "" : other;
+    }
+
+    public String getPlace() {
+        return place;
+    }
+
+    public String getPublisher() {
+        return publisher;
+    }
+
+    public String getEdition() {
+        return edition;
+    }
+
+    public String getOther() {
+        return other;
+    }
+}
+
+// File: EventRecord.java
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
+
+public final class EventRecord {
+    private final String id;
+    private final String resourceId;
+    private final String type;
+    private final String agent;
+    private final Instant occurredAt;
+    private final String outcome;
+    private final String details;
+
+    public EventRecord(String resourceId, String type, String agent, Instant occurredAt,
+                       String outcome, String details) {
+        this.id = UUID.randomUUID().toString();
+        this.resourceId = Objects.requireNonNull(resourceId);
+        this.type = Objects.requireNonNull(type);
+        this.agent = agent == null ? "system" : agent;
+        this.occurredAt = occurredAt == null ? Instant.now() : occurredAt;
+        this.outcome = outcome == null ? "" : outcome;
+        this.details = details == null ? "" : details;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getResourceId() {
+        return resourceId;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public String getAgent() {
+        return agent;
+    }
+
+    public Instant getOccurredAt() {
+        return occurredAt;
+    }
+
+    public String getOutcome() {
+        return outcome;
+    }
+
+    public String getDetails() {
+        return details;
+    }
+}
+
+// File: RightsInfo.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public final class RightsInfo {
+    private String copyrightStatus = "unknown";
+    private String rightsHolder = "";
+    private String statutes = "";
+    private String license = "";
+    private String otherRights = "";
+    private String libraryPolicy = "";
+    private LocalDate copyrightExpiry;
+    private LocalDate statuteExpiry;
+    private LocalDate policyExpiry;
+    private final List<String> permittedUses = new ArrayList<>();
+    private final List<String> restrictedUses = new ArrayList<>();
+
+    public String getCopyrightStatus() {
+        return copyrightStatus;
+    }
+
+    public void setCopyrightStatus(String copyrightStatus) {
+        this.copyrightStatus = copyrightStatus == null ? "unknown" : copyrightStatus;
+    }
+
+    public String getRightsHolder() {
+        return rightsHolder;
+    }
+
+    public void setRightsHolder(String rightsHolder) {
+        this.rightsHolder = rightsHolder == null ? "" : rightsHolder;
+    }
+
+    public String getStatutes() {
+        return statutes;
+    }
+
+    public void setStatutes(String statutes) {
+        this.statutes = statutes == null ? "" : statutes;
+    }
+
+    public String getLicense() {
+        return license;
+    }
+
+    public void setLicense(String license) {
+        this.license = license == null ? "" : license;
+    }
+
+    public String getOtherRights() {
+        return otherRights;
+    }
+
+    public void setOtherRights(String otherRights) {
+        this.otherRights = otherRights == null ? "" : otherRights;
+    }
+
+    public String getLibraryPolicy() {
+        return libraryPolicy;
+    }
+
+    public void setLibraryPolicy(String libraryPolicy) {
+        this.libraryPolicy = libraryPolicy == null ? "" : libraryPolicy;
+    }
+
+    public LocalDate getCopyrightExpiry() {
+        return copyrightExpiry;
+    }
+
+    public void setCopyrightExpiry(LocalDate copyrightExpiry) {
+        this.copyrightExpiry = copyrightExpiry;
+    }
+
+    public LocalDate getStatuteExpiry() {
+        return statuteExpiry;
+    }
+
+    public void setStatuteExpiry(LocalDate statuteExpiry) {
+        this.statuteExpiry = statuteExpiry;
+    }
+
+    public LocalDate getPolicyExpiry() {
+        return policyExpiry;
+    }
+
+    public void setPolicyExpiry(LocalDate policyExpiry) {
+        this.policyExpiry = policyExpiry;
+    }
+
+    public void permitUse(String use) {
+        permittedUses.add(use);
+    }
+
+    public void restrictUse(String use) {
+        restrictedUses.add(use);
+    }
+
+    public List<String> getPermittedUses() {
+        return Collections.unmodifiableList(permittedUses);
+    }
+
+    public List<String> getRestrictedUses() {
+        return Collections.unmodifiableList(restrictedUses);
+    }
+
+    public boolean isUnderCopyright() {
+        return "copyright".equalsIgnoreCase(copyrightStatus)
+                || "under copyright".equalsIgnoreCase(copyrightStatus);
+    }
+
+    public boolean hasApplicableLicense() {
+        return !license.isBlank();
+    }
+}
+
+// File: Resource.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+public abstract class Resource {
+    private final String id;
+    private final String repositoryId;
+    private final List<Title> titles = new ArrayList<>();
+    private final Set<String> languages = new LinkedHashSet<>();
+    private final Map<NameRecord, Set<String>> names = new LinkedHashMap<>();
+    private final List<Subject> subjects = new ArrayList<>();
+    private final List<String> notes = new ArrayList<>();
+    private final List<ExternalReference> externalReferences = new ArrayList<>();
+    private final List<EventRecord> events = new ArrayList<>();
+    private final RightsInfo rights = new RightsInfo();
+    private GeoLocation geoLocation;
+    private OriginInfo originInfo;
+    private String provenance = "";
+    private String inclusiveDates = "";
+    private String bulkDates = "";
+
+    protected Resource(String repositoryId, String initialTitle) {
+        this(UUID.randomUUID().toString(), repositoryId, initialTitle);
+    }
+
+    protected Resource(String id, String repositoryId, String initialTitle) {
+        this.id = id;
+        this.repositoryId = repositoryId;
+        if (initialTitle != null && !initialTitle.isBlank()) {
+            titles.add(new Title(initialTitle, "preferred"));
+        }
+    }
+
+    public final String getId() {
+        return id;
+    }
+
+    public final String getRepositoryId() {
+        return repositoryId;
+    }
+
+    public abstract String getResourceType();
+
+    public synchronized List<Title> getTitles() {
+        return Collections.unmodifiableList(new ArrayList<>(titles));
+    }
+
+    public synchronized String getPreferredTitle() {
+        return titles.isEmpty() ? "" : titles.get(0).getValue();
+    }
+
+    public synchronized void addTitle(Title title, String agent) {
+        titles.add(title);
+        addEvent(new EventRecord(id, "title-change", agent, Instant.now(),
+                "Title added", title.getValue()));
+    }
+
+    public synchronized Set<String> getLanguages() {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(languages));
+    }
+
+    public synchronized void addLanguage(String language, String agent) {
+        if (language != null && !language.isBlank() && languages.add(language)) {
+            addEvent(new EventRecord(id, "language-change", agent, Instant.now(),
+                    "Language added", language));
+        }
+    }
+
+    public synchronized void addName(NameRecord name, String role) {
+        names.computeIfAbsent(name, ignored -> new LinkedHashSet<>())
+                .add(role == null ? "related" : role);
+    }
+
+    public synchronized Map<NameRecord, Set<String>> getNames() {
+        Map<NameRecord, Set<String>> copy = new LinkedHashMap<>();
+        names.forEach((name, roles) -> copy.put(name,
+                Collections.unmodifiableSet(new LinkedHashSet<>(roles))));
+        return Collections.unmodifiableMap(copy);
+    }
+
+    public synchronized void addSubject(Subject subject) {
+        subjects.add(subject);
+    }
+
+    public synchronized List<Subject> getSubjects() {
+        return Collections.unmodifiableList(new ArrayList<>(subjects));
+    }
+
+    public synchronized void addNote(String note, String agent) {
+        notes.add(note);
+        addEvent(new EventRecord(id, "note-change", agent, Instant.now(),
+                "Note added", note));
+    }
+
+    public synchronized List<String> getNotes() {
+        return Collections.unmodifiableList(new ArrayList<>(notes));
+    }
+
+    public synchronized void addExternalReference(ExternalReference reference) {
+        externalReferences.add(reference);
+    }
+
+    public synchronized List<ExternalReference> getExternalReferences() {
+        return Collections.unmodifiableList(new ArrayList<>(externalReferences));
+    }
+
+    public synchronized void setGeoLocation(GeoLocation geoLocation) {
+        this.geoLocation = geoLocation;
+    }
+
+    public synchronized GeoLocation getGeoLocation() {
+        return geoLocation;
+    }
+
+    public synchronized void setOriginInfo(OriginInfo originInfo, String agent) {
+        this.originInfo = originInfo;
+        addEvent(new EventRecord(id, "origin-info-change", agent, Instant.now(),
+                "Origin information updated", ""));
+    }
+
+    public synchronized OriginInfo getOriginInfo() {
+        return originInfo;
+    }
+
+    public synchronized RightsInfo getRights() {
+        return rights;
+    }
+
+    public synchronized void setProvenance(String provenance) {
+        this.provenance = provenance == null ? "" : provenance;
+    }
+
+    public synchronized String getProvenance() {
+        return provenance;
+    }
+
+    public synchronized void setInclusiveDates(String inclusiveDates) {
+        this.inclusiveDates = inclusiveDates == null ? "" : inclusiveDates;
+    }
+
+    public synchronized String getInclusiveDates() {
+        return inclusiveDates;
+    }
+
+    public synchronized void setBulkDates(String bulkDates) {
+        this.bulkDates = bulkDates == null ? "" : bulkDates;
+    }
+
+    public synchronized String getBulkDates() {
+        return bulkDates;
+    }
+
+    public synchronized void addEvent(EventRecord event) {
+        events.add(event);
+    }
+
+    public synchronized List<EventRecord> getEvents() {
+        return Collections.unmodifiableList(new ArrayList<>(events));
+    }
+
+    public synchronized void recordEvent(String type, String agent, String outcome, String details) {
+        addEvent(new EventRecord(id, type, agent, Instant.now(), outcome, details));
+    }
+
+    public synchronized boolean matchesTitle(String query) {
+        String normalized = query.toLowerCase();
+        return titles.stream().anyMatch(t -> t.getValue().toLowerCase().contains(normalized));
+    }
+}
+
+// File: Repository.java
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+public final class Repository {
+    private final String id;
+    private String name;
+    private String contactEmail;
+    private String address;
+    private final Set<String> staffUserIds = new LinkedHashSet<>();
+
+    public Repository(String id, String name, String contactEmail, String address) {
+        this.id = id;
+        this.name = name;
+        this.contactEmail = contactEmail == null ? "" : contactEmail;
+        this.address = address == null ? "" : address;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public synchronized String getName() {
+        return name;
+    }
+
+    public synchronized String getContactEmail() {
+        return contactEmail;
+    }
+
+    public synchronized String getAddress() {
+        return address;
+    }
+
+    public synchronized void updateInformation(String name, String contactEmail, String address) {
+        this.name = name;
+        this.contactEmail = contactEmail == null ? "" : contactEmail;
+        this.address = address == null ? "" : address;
+    }
+
+    public synchronized void addStaff(String userId) {
+        staffUserIds.add(userId);
+    }
+
+    public synchronized void removeStaff(String userId) {
+        staffUserIds.remove(userId);
+    }
+
+    public synchronized boolean hasStaff(String userId) {
+        return staffUserIds.contains(userId);
+    }
+
+    public synchronized Set<String> getStaffUserIds() {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(staffUserIds));
+    }
+}
+
+// File: CollectionRecord.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+public final class CollectionRecord extends Resource {
+    private final Set<String> memberResourceIds = new LinkedHashSet<>();
+    private final Set<String> relatedCollectionIds = new LinkedHashSet<>();
+    private String compositionDescription = "";
+
+    public CollectionRecord(String repositoryId, String title) {
+        super(repositoryId, title);
+    }
+
+    @Override
+    public String getResourceType() {
+        return "collection";
+    }
+
+    public synchronized void addMember(Resource resource) {
+        if (resource == null) {
+            throw new IllegalArgumentException("A collection member is required");
+        }
+        if (!getRepositoryId().equals(resource.getRepositoryId())) {
+            throw new IllegalArgumentException("Collection members must belong to the same repository");
+        }
+        if (!getProvenance().isBlank() && !getProvenance().equals(resource.getProvenance())) {
+            throw new IllegalArgumentException("Collection member has different provenance");
+        }
+        memberResourceIds.add(resource.getId());
+    }
+
+    public synchronized Set<String> getMemberResourceIds() {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(memberResourceIds));
+    }
+
+    public synchronized void relateTo(CollectionRecord other) {
+        if (other != null && !other.getId().equals(getId())) {
+            relatedCollectionIds.add(other.getId());
+        }
+    }
+
+    public synchronized Set<String> getRelatedCollectionIds() {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(relatedCollectionIds));
+    }
+
+    public synchronized String getCompositionDescription() {
+        return compositionDescription;
+    }
+
+    public synchronized void setCompositionDescription(String description) {
+        compositionDescription = description == null ? "" : description;
+    }
+}
+
+// File: DigitalObject.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public final class DigitalObject extends Resource {
+    private final List<Component> components = new ArrayList<>();
+    private final List<ContentFile> files = new ArrayList<>();
+
+    public DigitalObject(String repositoryId, String title) {
+        super(repositoryId, title);
+    }
+
+    @Override
+    public String getResourceType() {
+        return "object";
+    }
+
+    public synchronized void addComponent(Component component) {
+        if (component == null || !getRepositoryId().equals(component.getRepositoryId())) {
+            throw new IllegalArgumentException("Component must belong to the same repository");
+        }
+        if (components.stream().anyMatch(c -> c.getId().equals(component.getId()))) {
+            return;
+        }
+        components.add(component);
+        component.setParentObjectId(getId());
+    }
+
+    public synchronized List<Component> getComponents() {
+        return Collections.unmodifiableList(new ArrayList<>(components));
+    }
+
+    public synchronized void addFile(ContentFile file) {
+        if (file == null || !getRepositoryId().equals(file.getRepositoryId())) {
+            throw new IllegalArgumentException("File must belong to the same repository");
+        }
+        files.add(file);
+        file.setOwnerId(getId());
+    }
+
+    public synchronized List<ContentFile> getFiles() {
+        return Collections.unmodifiableList(new ArrayList<>(files));
+    }
+}
+
+// File: Component.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public final class Component extends Resource {
+    private String parentObjectId;
+    private String parentComponentId;
+    private final List<Component> children = new ArrayList<>();
+    private final List<ContentFile> files = new ArrayList<>();
+
+    public Component(String repositoryId, String title) {
+        super(repositoryId, title);
+    }
+
+    @Override
+    public String getResourceType() {
+        return "component";
+    }
+
+    public synchronized String getParentObjectId() {
+        return parentObjectId;
+    }
+
+    synchronized void setParentObjectId(String parentObjectId) {
+        this.parentObjectId = parentObjectId;
+    }
+
+    public synchronized String getParentComponentId() {
+        return parentComponentId;
+    }
+
+    public synchronized void addChild(Component child) {
+        if (child == null || child == this
+                || !getRepositoryId().equals(child.getRepositoryId())) {
+            throw new IllegalArgumentException("Invalid child component");
+        }
+        child.parentComponentId = getId();
+        child.parentObjectId = parentObjectId;
+        children.add(child);
+    }
+
+    public synchronized List<Component> getChildren() {
+        return Collections.unmodifiableList(new ArrayList<>(children));
+    }
+
+    public synchronized void addFile(ContentFile file) {
+        if (file == null || !getRepositoryId().equals(file.getRepositoryId())) {
+            throw new IllegalArgumentException("File must belong to the same repository");
+        }
+        files.add(file);
+        file.setOwnerId(getId());
+    }
+
+    public synchronized List<ContentFile> getFiles() {
+        return Collections.unmodifiableList(new ArrayList<>(files));
+    }
+}
+
+// File: ContentFile.java
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
+
+public final class ContentFile {
+    private final String id = UUID.randomUUID().toString();
+    private final String repositoryId;
+    private final String name;
+    private long sizeBytes;
+    private Instant creationDate;
+    private String format;
+    private String formatVersion;
+    private String checksum;
+    private String registeredChecksum;
+    private String checksumMethod;
+    private String sourceCaptureInformation = "";
+    private String hardware = "";
+    private String software = "";
+    private String ownerId;
+    private final java.util.List<EventRecord> events = new java.util.ArrayList<>();
+
+    public ContentFile(String repositoryId, String name, long sizeBytes, Instant creationDate,
+                       String format, String formatVersion, String checksum, String checksumMethod) {
+        this.repositoryId = Objects.requireNonNull(repositoryId);
+        this.name = Objects.requireNonNull(name);
+        if (sizeBytes < 0) {
+            throw new IllegalArgumentException("File size cannot be negative");
+        }
+        this.sizeBytes = sizeBytes;
+        this.creationDate = creationDate == null ? Instant.now() : creationDate;
+        this.format = format == null ? "" : format;
+        this.formatVersion = formatVersion == null ? "" : formatVersion;
+        this.checksum = checksum == null ? "" : checksum;
+        this.registeredChecksum = this.checksum;
+        this.checksumMethod = checksumMethod == null ? "" : checksumMethod;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getRepositoryId() {
+        return repositoryId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public synchronized long getSizeBytes() {
+        return sizeBytes;
+    }
+
+    public synchronized Instant getCreationDate() {
+        return creationDate;
+    }
+
+    public synchronized String getFormat() {
+        return format;
+    }
+
+    public synchronized String getFormatVersion() {
+        return formatVersion;
+    }
+
+    public synchronized String getChecksum() {
+        return checksum;
+    }
+
+    public synchronized String getRegisteredChecksum() {
+        return registeredChecksum;
+    }
+
+    public synchronized String getChecksumMethod() {
+        return checksumMethod;
+    }
+
+    public synchronized String getOwnerId() {
+        return ownerId;
+    }
+
+    synchronized void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
+    }
+
+    public synchronized void updateChecksum(String checksum, String agent) {
+        this.checksum = checksum == null ? "" : checksum;
+        events.add(new EventRecord(id, "checksum-update", agent, Instant.now(),
+                "Checksum changed", this.checksum));
+    }
+
+    public synchronized boolean hasChecksumChanged() {
+        return !Objects.equals(checksum, registeredChecksum);
+    }
+
+    public synchronized void registerCurrentChecksum() {
+        registeredChecksum = checksum;
+    }
+
+    public synchronized void setTechnicalMetadata(String sourceCaptureInformation,
+                                                   String hardware, String software) {
+        this.sourceCaptureInformation = sourceCaptureInformation == null ? "" : sourceCaptureInformation;
+        this.hardware = hardware == null ? "" : hardware;
+        this.software = software == null ? "" : software;
+    }
+
+    public synchronized String getSourceCaptureInformation() {
+        return sourceCaptureInformation;
+    }
+
+    public synchronized String getHardware() {
+        return hardware;
+    }
+
+    public synchronized String getSoftware() {
+        return software;
+    }
+
+    public synchronized java.util.List<EventRecord> getEvents() {
+        return java.util.Collections.unmodifiableList(new java.util.ArrayList<>(events));
+    }
+}
+
+// File: Dams.java
+import java.net.URI;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+public final class Dams {
+    private final Map<String, Repository> repositories = new LinkedHashMap<>();
+    private final Map<String, Resource> resources = new LinkedHashMap<>();
+    private final Map<String, ContentFile> files = new LinkedHashMap<>();
+    private final Map<String, NameRecord> nameRegistry = new LinkedHashMap<>();
+
+    public synchronized Repository createRepository(String name, String email, String address) {
+        Repository repository = new Repository(UUID.randomUUID().toString(), name, email, address);
+        repositories.put(repository.getId(), repository);
+        return repository;
+    }
+
+    public synchronized CollectionRecord createCollection(User actor, String repositoryId, String title) {
+        requireRepository(repositoryId);
+        CollectionRecord collection = new CollectionRecord(repositoryId, title);
+        resources.put(collection.getId(), collection);
+        recordCreation(collection, actor);
+        return collection;
+    }
+
+    public synchronized DigitalObject createObject(User actor, String repositoryId, String title) {
+        requireRepository(repositoryId);
+        DigitalObject object = new DigitalObject(repositoryId, title);
+        resources.put(object.getId(), object);
+        recordCreation(object, actor);
+        return object;
+    }
+
+    public synchronized Component createComponent(User actor, String repositoryId, String title) {
+        requireRepository(repositoryId);
+        Component component = new Component(repositoryId, title);
+        resources.put(component.getId(), component);
+        recordCreation(component, actor);
+        return component;
+    }
+
+    public synchronized ContentFile createContentFile(User actor, String repositoryId, String name,
+                                                       long sizeBytes, Instant creationDate,
+                                                       String format, String formatVersion,
+                                                       String checksum, String checksumMethod) {
+        requireRepository(repositoryId);
+        ContentFile file = new ContentFile(repositoryId, name, sizeBytes, creationDate, format,
+                formatVersion, checksum, checksumMethod);
+        files.put(file.getId(), file);
+        return file;
+    }
+
+    public synchronized Repository getRepository(String id) {
+        return requireRepository(id);
+    }
+
+    public synchronized Resource getResource(String id) {
+        Resource resource = resources.get(id);
+        if (resource == null) {
+            throw new IllegalArgumentException("Unknown resource: " + id);
+        }
+        return resource;
+    }
+
+    public synchronized ContentFile getContentFile(String id) {
+        ContentFile file = files.get(id);
+        if (file == null) {
+            throw new IllegalArgumentException("Unknown content file: " + id);
+        }
+        return file;
+    }
+
+    public synchronized void updateRepositoryInformation(User actor, String repositoryId,
+                                                          String name, String email, String address) {
+        Repository repository = requireRepository(repositoryId);
+        requireCuratorialAccess(actor, repositoryId);
+        repository.updateInformation(name, email, address);
+        resources.values().stream()
+                .filter(r -> r.getRepositoryId().equals(repositoryId))
+                .forEach(r -> r.recordEvent("repository-information-change", actor.getName(),
+                        "Repository information updated", repository.getName()));
+    }
+
+    public synchronized void addRepositoryStaff(User actor, String repositoryId, User staff) {
+        requireCuratorialAccess(actor, repositoryId);
+        requireRepository(repositoryId).addStaff(staff.getId());
+    }
+
+    public synchronized boolean canCurate(User user, String repositoryId) {
+        return user != null && (user.isDamsManager()
+                || requireRepository(repositoryId).hasStaff(user.getId()));
+    }
+
+    public synchronized void addCollectionMember(User actor, String collectionId, String resourceId) {
+        CollectionRecord collection = requireCollection(collectionId);
+        Resource member = getResource(resourceId);
+        requireCuratorialAccess(actor, collection.getRepositoryId());
+        if (!collection.getRepositoryId().equals(member.getRepositoryId())) {
+            throw new IllegalArgumentException("Resources must belong to the same repository");
+        }
+        collection.addMember(member);
+        collection.recordEvent("composition-change", actor.getName(), "Member added", resourceId);
+    }
+
+    public synchronized void relateCollections(User actor, String firstId, String secondId) {
+        CollectionRecord first = requireCollection(firstId);
+        CollectionRecord second = requireCollection(secondId);
+        requireCuratorialAccess(actor, first.getRepositoryId());
+        requireCuratorialAccess(actor, second.getRepositoryId());
+        first.relateTo(second);
+        second.relateTo(first);
+        first.recordEvent("relationship-change", actor.getName(), "Collections related", secondId);
+    }
+
+    public synchronized void addComponent(User actor, String objectId, String componentId) {
+        DigitalObject object = requireObject(objectId);
+        Component component = requireComponent(componentId);
+        requireCuratorialAccess(actor, object.getRepositoryId());
+        object.addComponent(component);
+        object.recordEvent("structure-change", actor.getName(), "Component added", componentId);
+    }
+
+    public synchronized void addChildComponent(User actor, String parentId, String childId) {
+        Component parent = requireComponent(parentId);
+        Component child = requireComponent(childId);
+        requireCuratorialAccess(actor, parent.getRepositoryId());
+        parent.addChild(child);
+        parent.recordEvent("structure-change", actor.getName(), "Child component added", childId);
+    }
+
+    public synchronized void associateFile(User actor, String ownerResourceId, String fileId) {
+        Resource owner = getResource(ownerResourceId);
+        ContentFile file = getContentFile(fileId);
+        requireCuratorialAccess(actor, owner.getRepositoryId());
+        if (!owner.getRepositoryId().equals(file.getRepositoryId())) {
+            throw new IllegalArgumentException("File and resource must belong to the same repository");
+        }
+        if (owner instanceof DigitalObject object) {
+            object.addFile(file);
+        } else if (owner instanceof Component component) {
+            component.addFile(file);
+        } else {
+            throw new IllegalArgumentException("Files can only be associated with objects or components");
+        }
+    }
+
+    public synchronized void addTitle(User actor, String resourceId, String title, String type) {
+        Resource resource = getResource(resourceId);
+        requireCuratorialAccess(actor, resource.getRepositoryId());
+        resource.addTitle(new Title(title, type), actor.getName());
+    }
+
+    public synchronized NameRecord registerName(User actor, String repositoryId,
+                                                 String name, String description) {
+        requireCuratorialAccess(actor, repositoryId);
+        String key = name.trim().toLowerCase();
+        NameRecord record = nameRegistry.get(key);
+        if (record == null) {
+            record = new NameRecord(name, description);
+            nameRegistry.put(key, record);
+        }
+        return record;
+    }
+
+    public synchronized void addName(User actor, String resourceId, NameRecord name, String role) {
+        Resource resource = getResource(resourceId);
+        requireCuratorialAccess(actor, resource.getRepositoryId());
+        resource.addName(name, role);
+    }
+
+    public synchronized void addSubject(User actor, String resourceId, Subject subject) {
+        Resource resource = getResource(resourceId);
+        requireCuratorialAccess(actor, resource.getRepositoryId());
+        resource.addSubject(subject);
+    }
+
+    public synchronized void addLanguage(User actor, String resourceId, String language) {
+        Resource resource = getResource(resourceId);
+        requireCuratorialAccess(actor, resource.getRepositoryId());
+        resource.addLanguage(language, actor.getName());
+    }
+
+    public synchronized void addNote(User actor, String resourceId, String note) {
+        Resource resource = getResource(resourceId);
+        requireCuratorialAccess(actor, resource.getRepositoryId());
+        resource.addNote(note, actor.getName());
+    }
+
+    public synchronized void addExternalReference(User actor, String resourceId,
+                                                   URI uri, String description) {
+        Resource resource = getResource(resourceId);
+        requireCuratorialAccess(actor, resource.getRepositoryId());
+        resource.addExternalReference(new ExternalReference(uri, description));
+    }
+
+    public synchronized void setGeoLocation(User actor, String resourceId, GeoLocation location) {
+        Resource resource = getResource(resourceId);
+        requireCuratorialAccess(actor, resource.getRepositoryId());
+        resource.setGeoLocation(location);
+    }
+
+    public synchronized void setOriginInfo(User actor, String resourceId, OriginInfo originInfo) {
+        Resource resource = getResource(resourceId);
+        requireCuratorialAccess(actor, resource.getRepositoryId());
+        resource.setOriginInfo(originInfo, actor.getName());
+    }
+
+    public synchronized void updateRights(User actor, String resourceId, RightsInfo rights) {
+        Resource resource = getResource(resourceId);
+        requireCuratorialAccess(actor, resource.getRepositoryId());
+        RightsInfo destination = resource.getRights();
+        destination.setCopyrightStatus(rights.getCopyrightStatus());
+        destination.setRightsHolder(rights.getRightsHolder());
+        destination.setStatutes(rights.getStatutes());
+        destination.setLicense(rights.getLicense());
+        destination.setOtherRights(rights.getOtherRights());
+        destination.setLibraryPolicy(rights.getLibraryPolicy());
+        destination.setCopyrightExpiry(rights.getCopyrightExpiry());
+        destination.setStatuteExpiry(rights.getStatuteExpiry());
+        destination.setPolicyExpiry(rights.getPolicyExpiry());
+        rights.getPermittedUses().forEach(destination::permitUse);
+        rights.getRestrictedUses().forEach(destination::restrictUse);
+        resource.recordEvent("rights-change", actor.getName(), "Rights updated", "");
+    }
+
+    public synchronized void recordEvent(User actor, String resourceId, String type,
+                                         String outcome, String details) {
+        Resource resource = getResource(resourceId);
+        requireCuratorialAccess(actor, resource.getRepositoryId());
+        resource.recordEvent(type, actor.getName(), outcome, details);
+    }
+
+    public synchronized List<Resource> browseFormalCollections() {
+        return resources.values().stream()
+                .filter(CollectionRecord.class::isInstance)
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized List<Resource> resourcesForRepository(String repositoryId) {
+        requireRepository(repositoryId);
+        return resources.values().stream()
+                .filter(r -> r.getRepositoryId().equals(repositoryId))
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized List<Resource> curatorialResources(User user) {
+        if (user == null) {
+            return List.of();
+        }
+        return resources.values().stream()
+                .filter(r -> canCurate(user, r.getRepositoryId()))
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized List<Resource> searchByTitle(String query) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+        return resources.values().stream().filter(r -> r.matchesTitle(query))
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized List<Resource> searchByTitle(String query, Set<String> collectionIds,
+                                                      String language) {
+        Set<String> allowed = collectionIds == null ? Set.of() : collectionIds;
+        return resources.values().stream()
+                .filter(r -> query == null || query.isBlank() || r.matchesTitle(query))
+                .filter(r -> language == null || language.isBlank()
+                        || r.getLanguages().contains(language))
+                .filter(r -> allowed.isEmpty() || belongsToAnyCollection(r, allowed))
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized List<Resource> searchByName(String query, String role) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+        String normalized = query.toLowerCase();
+        return resources.values().stream().filter(resource ->
+                resource.getNames().entrySet().stream().anyMatch(entry ->
+                        entry.getKey().getName().toLowerCase().contains(normalized)
+                                && (role == null || role.isBlank()
+                                || entry.getValue().contains(role))))
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized List<Resource> searchBySubject(String heading) {
+        if (heading == null || heading.isBlank()) {
+            return List.of();
+        }
+        String normalized = heading.toLowerCase();
+        return resources.values().stream().filter(resource ->
+                resource.getSubjects().stream()
+                        .anyMatch(s -> s.getHeading().toLowerCase().contains(normalized)
+                                || s.getType().toLowerCase().contains(normalized)))
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized List<ContentFile> filesForRepository(String repositoryId) {
+        requireRepository(repositoryId);
+        return files.values().stream()
+                .filter(file -> file.getRepositoryId().equals(repositoryId))
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized List<ContentFile> filesWithChangedChecksums() {
+        return files.values().stream().filter(ContentFile::hasChecksumChanged)
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized List<Resource> resourcesUnderCopyright() {
+        return resources.values().stream().filter(r -> r.getRights().isUnderCopyright())
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized List<Resource> resourcesWithExpiringCopyright() {
+        return resources.values().stream()
+                .filter(r -> r.getRights().getCopyrightExpiry() != null)
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized List<Resource> resourcesWithApplicableStatutes() {
+        return resources.values().stream()
+                .filter(r -> !r.getRights().getStatutes().isBlank())
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized String repositoryForObject(String objectId) {
+        return requireObject(objectId).getRepositoryId();
+    }
+
+    public synchronized List<CollectionRecord> collectionsForResource(String resourceId) {
+        Resource target = getResource(resourceId);
+        return resources.values().stream()
+                .filter(CollectionRecord.class::isInstance)
+                .map(CollectionRecord.class::cast)
+                .filter(collection -> collection.getMemberResourceIds().contains(target.getId()))
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public synchronized List<Component> componentsInOrder(String objectId) {
+        return requireObject(objectId).getComponents();
+    }
+
+    public synchronized List<ContentFile> contentFiles(String resourceId) {
+        Resource resource = getResource(resourceId);
+        if (resource instanceof DigitalObject object) {
+            return object.getFiles();
+        }
+        if (resource instanceof Component component) {
+            return component.getFiles();
+        }
+        return List.of();
+    }
+
+    public synchronized boolean userMayAccessFile(User user, String fileId) {
+        ContentFile file = getContentFile(fileId);
+        Resource owner = resources.get(file.getOwnerId());
+        if (owner == null) {
+            return false;
+        }
+        RightsInfo rights = owner.getRights();
+        return !rights.isUnderCopyright() || rights.hasApplicableLicense()
+                || (user != null && canCurate(user, file.getRepositoryId()));
+    }
+
+    public synchronized List<Resource> allResources() {
+        return Collections.unmodifiableList(new ArrayList<>(resources.values()));
+    }
+
+    private boolean belongsToAnyCollection(Resource resource, Set<String> collectionIds) {
+        if (resource instanceof CollectionRecord collection
+                && collectionIds.contains(collection.getId())) {
+            return true;
+        }
+        return collectionsForResource(resource.getId()).stream()
+                .anyMatch(collection -> collectionIds.contains(collection.getId()));
+    }
+
+    private void recordCreation(Resource resource, User actor) {
+        requireCuratorialAccess(actor, resource.getRepositoryId());
+        resource.recordEvent("creation", actor.getName(), "Resource created", "");
+    }
+
+    private Repository requireRepository(String id) {
+        Repository repository = repositories.get(id);
+        if (repository == null) {
+            throw new IllegalArgumentException("Unknown repository: " + id);
+        }
+        return repository;
+    }
+
+    private CollectionRecord requireCollection(String id) {
+        Resource resource = getResource(id);
+        if (!(resource instanceof CollectionRecord collection)) {
+            throw new IllegalArgumentException("Not a collection: " + id);
+        }
+        return collection;
+    }
+
+    private DigitalObject requireObject(String id) {
+        Resource resource = getResource(id);
+        if (!(resource instanceof DigitalObject object)) {
+            throw new IllegalArgumentException("Not an object: " + id);
+        }
+        return object;
+    }
+
+    private Component requireComponent(String id) {
+        Resource resource = getResource(id);
+        if (!(resource instanceof Component component)) {
+            throw new IllegalArgumentException("Not a component: " + id);
+        }
+        return component;
+    }
+
+    private void requireCuratorialAccess(User user, String repositoryId) {
+        if (!canCurate(user, repositoryId)) {
+            throw new SecurityException("User does not have curatorial access to this repository");
+        }
+    }
+}
+
+// File: Main.java
+import java.time.Instant;
+import java.util.Set;
+
+public class Main {
+    public static void main(String[] args) {
+        Dams dams = new Dams();
+        Repository repository = dams.createRepository(
+                "City Archives", "archives@example.org", "100 Main Street");
+        User manager = new User("DAMS Manager", true);
+        User curator = new User("Repository Curator", false);
+        dams.addRepositoryStaff(manager, repository.getId(), curator);
+
+        CollectionRecord collection = dams.createCollection(curator, repository.getId(),
+                "Photographs of the City");
+        collection.setProvenance("City Historical Office");
+
+        DigitalObject object = dams.createObject(curator, repository.getId(),
+                "Main Street, 1924");
+        object.setProvenance("City Historical Office");
+        dams.addCollectionMember(curator, collection.getId(), object.getId());
+
+        Component component = dams.createComponent(curator, repository.getId(), "Street view");
+        dams.addComponent(curator, object.getId(), component.getId());
+
+        ContentFile file = dams.createContentFile(curator, repository.getId(),
+                "main-street.tif", 2_400_000, Instant.now(),
+                "image/tiff", "6.0", "abc123", "SHA-256");
+        dams.associateFile(curator, object.getId(), file.getId());
+
+        System.out.println("Collections: " + dams.browseFormalCollections().size());
+        System.out.println("Title matches: " + dams.searchByTitle("Main Street").size());
+        System.out.println("Curator resources: " + dams.curatorialResources(curator).size());
+        System.out.println("Object repository: " + dams.getRepository(
+                dams.repositoryForObject(object.getId())).getName());
+        System.out.println("Object files: " + dams.contentFiles(object.getId()).size());
+        System.out.println("Collection filter results: "
+                + dams.searchByTitle("", Set.of(collection.getId()), null).size());
+    }
+}

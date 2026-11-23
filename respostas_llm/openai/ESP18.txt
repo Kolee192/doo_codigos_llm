@@ -1,0 +1,885 @@
+// File: ProfileStatus.java
+public enum ProfileStatus {
+    PENDING_REVIEW,
+    APPROVED,
+    REJECTED
+}
+
+// File: UserRole.java
+public enum UserRole {
+    SYSTEM_ADMIN,
+    FDP_ADMIN,
+    ENTITY_REPRESENTATIVE,
+    ENTITY_EDITOR
+}
+
+// File: EntityProfile.java
+import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+
+public class EntityProfile {
+    private final String id;
+    private final String institutionName;
+    private final Instant createdAt;
+    private final Map<String, String> fields = new LinkedHashMap<>();
+    private ProfileStatus status;
+    private Instant lastUpdatedAt;
+    private String lastUpdatedBy;
+    private Instant lastReminderAt;
+
+    public EntityProfile(String id, String institutionName, Map<String, String> initialFields,
+                         ProfileStatus status, Instant createdAt) {
+        this.id = Objects.requireNonNull(id);
+        this.institutionName = Objects.requireNonNull(institutionName);
+        this.status = Objects.requireNonNull(status);
+        this.createdAt = Objects.requireNonNull(createdAt);
+        this.lastUpdatedAt = createdAt;
+        this.lastUpdatedBy = "system";
+        if (initialFields != null) {
+            initialFields.forEach((key, value) -> {
+                if (key != null && value != null) {
+                    fields.put(key, value);
+                }
+            });
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getInstitutionName() {
+        return institutionName;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public synchronized ProfileStatus getStatus() {
+        return status;
+    }
+
+    public synchronized void setStatus(ProfileStatus status) {
+        this.status = Objects.requireNonNull(status);
+    }
+
+    public synchronized Map<String, String> getFields() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(fields));
+    }
+
+    public synchronized String getField(String name) {
+        return fields.get(name);
+    }
+
+    public synchronized void setField(String name, String value) {
+        Objects.requireNonNull(name);
+        if (value == null) {
+            fields.remove(name);
+        } else {
+            fields.put(name, value);
+        }
+    }
+
+    public synchronized Instant getLastUpdatedAt() {
+        return lastUpdatedAt;
+    }
+
+    public synchronized String getLastUpdatedBy() {
+        return lastUpdatedBy;
+    }
+
+    public synchronized void markUpdated(Instant at, String username) {
+        lastUpdatedAt = Objects.requireNonNull(at);
+        lastUpdatedBy = Objects.requireNonNull(username);
+    }
+
+    public synchronized Instant getLastReminderAt() {
+        return lastReminderAt;
+    }
+
+    public synchronized void markReminderSent(Instant at) {
+        lastReminderAt = Objects.requireNonNull(at);
+    }
+}
+
+// File: UserAccount.java
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Objects;
+import java.util.Set;
+
+public class UserAccount {
+    private final String username;
+    private final String institutionId;
+    private final String passwordHash;
+    private final EnumSet<UserRole> roles;
+    private volatile boolean enabled;
+
+    public UserAccount(String username, String institutionId, String passwordHash,
+                       Set<UserRole> roles, boolean enabled) {
+        this.username = Objects.requireNonNull(username);
+        this.institutionId = institutionId;
+        this.passwordHash = Objects.requireNonNull(passwordHash);
+        this.roles = roles == null || roles.isEmpty()
+                ? EnumSet.noneOf(UserRole.class)
+                : EnumSet.copyOf(roles);
+        this.enabled = enabled;
+        if (!this.roles.contains(UserRole.SYSTEM_ADMIN) && institutionId == null) {
+            throw new IllegalArgumentException("Non-system accounts must belong to an institution.");
+        }
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getInstitutionId() {
+        return institutionId;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public Set<UserRole> getRoles() {
+        return Collections.unmodifiableSet(EnumSet.copyOf(roles));
+    }
+
+    public boolean hasRole(UserRole role) {
+        return roles.contains(role);
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public void addRole(UserRole role) {
+        roles.add(Objects.requireNonNull(role));
+    }
+
+    public void removeRole(UserRole role) {
+        roles.remove(role);
+    }
+}
+
+// File: ChangeLogEntry.java
+import java.time.Instant;
+
+public record ChangeLogEntry(
+        String entityId,
+        Instant changedAt,
+        String username,
+        String field,
+        String oldValue,
+        String newValue,
+        String action) {
+}
+
+// File: NotificationCenter.java
+import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public class NotificationCenter {
+    public record Notification(String recipient, String subject, String message, Instant createdAt) {
+    }
+
+    private final CopyOnWriteArrayList<Notification> notifications = new CopyOnWriteArrayList<>();
+
+    public void send(String recipient, String subject, String message) {
+        notifications.add(new Notification(recipient, subject, message, Instant.now()));
+    }
+
+    public List<Notification> getNotifications() {
+        return List.copyOf(notifications);
+    }
+}
+
+// File: AuthService.java
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.Base64;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class AuthService {
+    private static final int ITERATIONS = 65_536;
+    private static final int KEY_LENGTH = 256;
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    private final Map<String, UserAccount> accounts = new ConcurrentHashMap<>();
+    private final Map<String, String> resetTokens = new ConcurrentHashMap<>();
+    private final NotificationCenter notifications;
+
+    public AuthService(NotificationCenter notifications) {
+        this.notifications = notifications;
+    }
+
+    public UserAccount createAccount(String username, String password, String institutionId,
+                                     java.util.Set<UserRole> roles) {
+        if (username == null || username.isBlank() || password == null || password.length() < 8) {
+            throw new IllegalArgumentException("A username and password of at least 8 characters are required.");
+        }
+        UserAccount account = new UserAccount(username, institutionId, hashPassword(password),
+                roles, true);
+        if (accounts.putIfAbsent(username, account) != null) {
+            throw new IllegalArgumentException("Username already exists: " + username);
+        }
+        return account;
+    }
+
+    public Optional<UserAccount> authenticate(String username, String password) {
+        UserAccount account = accounts.get(username);
+        if (account == null || !account.isEnabled() || password == null) {
+            return Optional.empty();
+        }
+        return verifyPassword(password, account.getPasswordHash())
+                ? Optional.of(account)
+                : Optional.empty();
+    }
+
+    public Optional<UserAccount> findAccount(String username) {
+        return Optional.ofNullable(accounts.get(username));
+    }
+
+    public void disableAccount(String username) {
+        UserAccount account = requireAccount(username);
+        account.setEnabled(false);
+    }
+
+    public void enableAccount(String username) {
+        UserAccount account = requireAccount(username);
+        account.setEnabled(true);
+    }
+
+    public void requestPasswordReset(String username) {
+        UserAccount account = accounts.get(username);
+        if (account == null || !account.isEnabled()) {
+            return;
+        }
+        byte[] bytes = new byte[24];
+        RANDOM.nextBytes(bytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        resetTokens.put(token, username);
+        notifications.send(username, "Password reset",
+                "Use this one-time reset token to set a new password: " + token);
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new IllegalArgumentException("Password must contain at least 8 characters.");
+        }
+        String username = resetTokens.remove(token);
+        if (username == null) {
+            throw new IllegalArgumentException("Invalid or expired password reset token.");
+        }
+        UserAccount existing = requireAccount(username);
+        accounts.put(username, new UserAccount(username, existing.getInstitutionId(),
+                hashPassword(newPassword), existing.getRoles(), existing.isEnabled()));
+    }
+
+    public void sendPasswordReminder(String username) {
+        UserAccount account = accounts.get(username);
+        if (account != null && account.isEnabled()) {
+            notifications.send(username, "Password assistance",
+                    "If you have forgotten your password, request a password reset from the website.");
+        }
+    }
+
+    public java.util.Collection<UserAccount> allAccounts() {
+        return java.util.List.copyOf(accounts.values());
+    }
+
+    private UserAccount requireAccount(String username) {
+        UserAccount account = accounts.get(username);
+        if (account == null) {
+            throw new IllegalArgumentException("Unknown username: " + username);
+        }
+        return account;
+    }
+
+    private static String hashPassword(String password) {
+        byte[] salt = new byte[16];
+        RANDOM.nextBytes(salt);
+        byte[] derived = derive(password.toCharArray(), salt);
+        return Base64.getEncoder().encodeToString(salt) + ":" + Base64.getEncoder().encodeToString(derived);
+    }
+
+    private static boolean verifyPassword(String password, String encoded) {
+        try {
+            String[] parts = encoded.split(":", 2);
+            byte[] salt = Base64.getDecoder().decode(parts[0]);
+            byte[] expected = Base64.getDecoder().decode(parts[1]);
+            return MessageDigest.isEqual(expected, derive(password.toCharArray(), salt));
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
+    private static byte[] derive(char[] password, byte[] salt) {
+        try {
+            PBEKeySpec spec = new PBEKeySpec(password, salt, ITERATIONS, KEY_LENGTH);
+            try {
+                return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+                        .generateSecret(spec).getEncoded();
+            } finally {
+                spec.clearPassword();
+            }
+        } catch (Exception ex) {
+            throw new IllegalStateException("Unable to hash password.", ex);
+        }
+    }
+}
+
+// File: ProfileService.java
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public class ProfileService {
+    private static final Set<String> DATE_FIELDS = Set.of(
+            "samExpirationDate", "auditDate", "auditDueDate");
+
+    private final Map<String, EntityProfile> profiles = new ConcurrentHashMap<>();
+    private final Map<String, String> primaryUsers = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> delegates = new ConcurrentHashMap<>();
+    private final List<ChangeLogEntry> changeLog = new CopyOnWriteArrayList<>();
+    private final AuthService authService;
+    private final NotificationCenter notifications;
+    private final Clock clock;
+    private volatile Instant lastApiPull;
+    private volatile boolean hideEmailFromPublic = true;
+    private volatile boolean requireAnnualUpdate;
+    private volatile Duration monthlyReminderInterval = Duration.ofDays(30);
+    private volatile Duration dataReminderLeadTime = Duration.ofDays(30);
+
+    public ProfileService(AuthService authService, NotificationCenter notifications) {
+        this(authService, notifications, Clock.systemUTC());
+    }
+
+    public ProfileService(AuthService authService, NotificationCenter notifications, Clock clock) {
+        this.authService = Objects.requireNonNull(authService);
+        this.notifications = Objects.requireNonNull(notifications);
+        this.clock = Objects.requireNonNull(clock);
+    }
+
+    public EntityProfile submitProfileRequest(String institutionName, Map<String, String> fields) {
+        return createProfile(institutionName, fields, ProfileStatus.PENDING_REVIEW, "public submission");
+    }
+
+    public EntityProfile createEntity(UserAccount actor, String institutionName,
+                                      Map<String, String> fields) {
+        requireFdpAdministrator(actor);
+        EntityProfile profile = createProfile(institutionName, fields,
+                ProfileStatus.PENDING_REVIEW, actor.getUsername());
+        changeLog.add(new ChangeLogEntry(profile.getId(), clock.instant(), actor.getUsername(),
+                "*", null, institutionName, "ENTITY_CREATED"));
+        return profile;
+    }
+
+    public void approveProfile(UserAccount actor, String entityId) {
+        requireFdpAdministrator(actor);
+        EntityProfile profile = requireProfile(entityId);
+        profile.setStatus(ProfileStatus.APPROVED);
+        profile.markUpdated(clock.instant(), actor.getUsername());
+        changeLog.add(new ChangeLogEntry(entityId, clock.instant(), actor.getUsername(),
+                "status", ProfileStatus.PENDING_REVIEW.name(), ProfileStatus.APPROVED.name(), "APPROVED"));
+    }
+
+    public void rejectProfile(UserAccount actor, String entityId, String reason) {
+        requireFdpAdministrator(actor);
+        EntityProfile profile = requireProfile(entityId);
+        ProfileStatus oldStatus = profile.getStatus();
+        profile.setStatus(ProfileStatus.REJECTED);
+        profile.markUpdated(clock.instant(), actor.getUsername());
+        changeLog.add(new ChangeLogEntry(entityId, clock.instant(), actor.getUsername(),
+                "status", oldStatus.name(), ProfileStatus.REJECTED.name(),
+                "REJECTED: " + Objects.requireNonNullElse(reason, "")));
+    }
+
+    public UserAccount designatePrimaryUser(UserAccount actor, String entityId,
+                                            String username, String password) {
+        requireFdpAdministrator(actor);
+        EntityProfile profile = requireProfile(entityId);
+        UserAccount user = authService.createAccount(username, password, entityId,
+                Set.of(UserRole.ENTITY_REPRESENTATIVE));
+        primaryUsers.put(entityId, username);
+        changeLog.add(new ChangeLogEntry(entityId, clock.instant(), actor.getUsername(),
+                "primaryUser", null, username, "PRIMARY_USER_DESIGNATED"));
+        return user;
+    }
+
+    public UserAccount createOrEditUser(UserAccount actor, String entityId, String username,
+                                        String password, Set<UserRole> roles) {
+        requireFdpAdministrator(actor);
+        requireProfile(entityId);
+        if (authService.findAccount(username).isPresent()) {
+            throw new IllegalArgumentException("Editing an existing account's password or role is not supported here.");
+        }
+        UserAccount user = authService.createAccount(username, password, entityId, roles);
+        changeLog.add(new ChangeLogEntry(entityId, clock.instant(), actor.getUsername(),
+                "user:" + username, null, String.join(",", roles.stream().map(Enum::name).toList()),
+                "USER_CREATED"));
+        return user;
+    }
+
+    public void disableUser(UserAccount actor, String username) {
+        requireFdpAdministrator(actor);
+        UserAccount target = authService.findAccount(username)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown username: " + username));
+        authService.disableAccount(username);
+        if (target.getInstitutionId() != null) {
+            changeLog.add(new ChangeLogEntry(target.getInstitutionId(), clock.instant(),
+                    actor.getUsername(), "user:" + username, "enabled", "disabled", "USER_DISABLED"));
+        }
+    }
+
+    public void delegateEditingRights(UserAccount actor, String delegateUsername) {
+        requireInstitutionRole(actor);
+        if (!actor.hasRole(UserRole.ENTITY_REPRESENTATIVE)
+                && !Objects.equals(primaryUsers.get(actor.getInstitutionId()), actor.getUsername())) {
+            throw new SecurityException("Only a designated entity representative can delegate editing rights.");
+        }
+        UserAccount delegate = authService.findAccount(delegateUsername)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown delegate account."));
+        if (!Objects.equals(delegate.getInstitutionId(), actor.getInstitutionId())) {
+            throw new SecurityException("Delegates must belong to the same institution.");
+        }
+        delegates.computeIfAbsent(actor.getInstitutionId(), ignored -> ConcurrentHashMap.newKeySet())
+                .add(delegateUsername);
+        delegate.addRole(UserRole.ENTITY_EDITOR);
+        changeLog.add(new ChangeLogEntry(actor.getInstitutionId(), clock.instant(), actor.getUsername(),
+                "editingRights:" + delegateUsername, null, "granted", "RIGHTS_DELEGATED"));
+    }
+
+    public void revokeEditingRights(UserAccount actor, String delegateUsername) {
+        requireInstitutionRole(actor);
+        if (!actor.hasRole(UserRole.ENTITY_REPRESENTATIVE)) {
+            throw new SecurityException("Only an entity representative can revoke editing rights.");
+        }
+        Set<String> institutionDelegates = delegates.get(actor.getInstitutionId());
+        if (institutionDelegates != null) {
+            institutionDelegates.remove(delegateUsername);
+        }
+        authService.findAccount(delegateUsername).ifPresent(user -> user.removeRole(UserRole.ENTITY_EDITOR));
+        changeLog.add(new ChangeLogEntry(actor.getInstitutionId(), clock.instant(), actor.getUsername(),
+                "editingRights:" + delegateUsername, "granted", "revoked", "RIGHTS_REVOKED"));
+    }
+
+    public void updateProfile(UserAccount actor, String entityId, Map<String, String> updates) {
+        Objects.requireNonNull(updates);
+        requireCanEdit(actor, entityId);
+        EntityProfile profile = requireProfile(entityId);
+        if (profile.getStatus() == ProfileStatus.REJECTED) {
+            throw new IllegalStateException("Rejected profiles cannot be edited.");
+        }
+        Instant now = clock.instant();
+        for (Map.Entry<String, String> entry : updates.entrySet()) {
+            String field = Objects.requireNonNull(entry.getKey());
+            String oldValue = profile.getField(field);
+            String newValue = entry.getValue();
+            if (!Objects.equals(oldValue, newValue)) {
+                profile.setField(field, newValue);
+                changeLog.add(new ChangeLogEntry(entityId, now, actor.getUsername(), field,
+                        oldValue, newValue, "FIELD_UPDATED"));
+            }
+        }
+        profile.markUpdated(now, actor.getUsername());
+    }
+
+    public void requireAnnualUpdate(UserAccount actor, String entityId) {
+        requireCanEdit(actor, entityId);
+        EntityProfile profile = requireProfile(entityId);
+        profile.markUpdated(clock.instant(), actor.getUsername());
+        changeLog.add(new ChangeLogEntry(entityId, clock.instant(), actor.getUsername(),
+                "annualReport", null, "completed", "ANNUAL_UPDATE_RECORDED"));
+    }
+
+    public void setAnnualUpdateRequired(boolean required) {
+        requireAnnualUpdate = required;
+    }
+
+    public boolean isAnnualUpdateRequired() {
+        return requireAnnualUpdate;
+    }
+
+    public void setHideEmailFromPublic(boolean hide) {
+        hideEmailFromPublic = hide;
+    }
+
+    public void configureReminderPolicy(Duration monthlyInterval, Duration dataLeadTime) {
+        if (monthlyInterval == null || monthlyInterval.isNegative() || monthlyInterval.isZero()
+                || dataLeadTime == null || dataLeadTime.isNegative()) {
+            throw new IllegalArgumentException("Invalid reminder interval.");
+        }
+        monthlyReminderInterval = monthlyInterval;
+        dataReminderLeadTime = dataLeadTime;
+    }
+
+    public List<EntityProfile> searchPublicProfiles(String query) {
+        String normalized = query == null ? "" : query.toLowerCase();
+        return profiles.values().stream()
+                .filter(p -> p.getStatus() == ProfileStatus.APPROVED)
+                .filter(p -> p.getInstitutionName().toLowerCase().contains(normalized)
+                        || p.getFields().entrySet().stream().anyMatch(e ->
+                        !isEmailField(e.getKey()) && e.getValue().toLowerCase().contains(normalized)))
+                .sorted(Comparator.comparing(EntityProfile::getInstitutionName))
+                .toList();
+    }
+
+    public EntityProfile getPublicProfile(String entityId) {
+        EntityProfile profile = requireProfile(entityId);
+        if (profile.getStatus() != ProfileStatus.APPROVED) {
+            throw new IllegalArgumentException("Profile is not publicly available.");
+        }
+        return profile;
+    }
+
+    public Map<String, String> getPublicFields(String entityId) {
+        EntityProfile profile = getPublicProfile(entityId);
+        Map<String, String> result = new LinkedHashMap<>(profile.getFields());
+        if (hideEmailFromPublic) {
+            result.keySet().removeIf(ProfileService::isEmailField);
+        }
+        result.put("institutionName", profile.getInstitutionName());
+        result.put("entityId", profile.getId());
+        result.put("lastUpdatedAt", profile.getLastUpdatedAt().toString());
+        result.put("lastUpdatedBy", profile.getLastUpdatedBy());
+        return Map.copyOf(result);
+    }
+
+    public List<String> getDataAlerts(String entityId) {
+        EntityProfile profile = getPublicProfile(entityId);
+        LocalDate today = LocalDate.now(clock);
+        List<String> alerts = new ArrayList<>();
+        for (String field : DATE_FIELDS) {
+            String value = profile.getField(field);
+            if (value == null || value.isBlank()) {
+                continue;
+            }
+            try {
+                LocalDate date = LocalDate.parse(value);
+                if (!date.isAfter(today.plus(dataReminderLeadTime))) {
+                    alerts.add(field + " requires attention (date: " + date + ").");
+                }
+            } catch (DateTimeParseException ignored) {
+                alerts.add(field + " contains an invalid date and should be reviewed.");
+            }
+        }
+        return List.copyOf(alerts);
+    }
+
+    public List<String> signInAlerts(UserAccount user) {
+        if (user == null || user.getInstitutionId() == null) {
+            return List.of();
+        }
+        EntityProfile profile = profiles.get(user.getInstitutionId());
+        if (profile == null || profile.getStatus() != ProfileStatus.APPROVED) {
+            return List.of();
+        }
+        List<String> alerts = new ArrayList<>(getDataAlerts(profile.getId()));
+        if (requireAnnualUpdate && profile.getLastUpdatedAt().isBefore(
+                clock.instant().atZone(ZoneOffset.UTC).toLocalDate().withDayOfYear(1)
+                        .atStartOfDay(ZoneOffset.UTC).toInstant())) {
+            alerts.add("An annual profile update is required.");
+        }
+        return List.copyOf(alerts);
+    }
+
+    public void sendScheduledReminders() {
+        Instant now = clock.instant();
+        for (EntityProfile profile : profiles.values()) {
+            if (profile.getStatus() != ProfileStatus.APPROVED) {
+                continue;
+            }
+            if (profile.getLastReminderAt() == null
+                    || Duration.between(profile.getLastReminderAt(), now).compareTo(monthlyReminderInterval) >= 0) {
+                notifyInstitution(profile, "Profile update reminder",
+                        "Please review and update your entity profile.");
+                profile.markReminderSent(now);
+            }
+            List<String> alerts = getDataAlerts(profile.getId());
+            if (!alerts.isEmpty()) {
+                notifyInstitution(profile, "Profile data requires attention",
+                        String.join("\n", alerts));
+            }
+        }
+    }
+
+    public List<ChangeLogEntry> getChangeLog(String entityId) {
+        return changeLog.stream()
+                .filter(entry -> entityId == null || entry.entityId().equals(entityId))
+                .sorted(Comparator.comparing(ChangeLogEntry::changedAt))
+                .toList();
+    }
+
+    public Instant getLastApiPull() {
+        return lastApiPull;
+    }
+
+    void recordApiPull() {
+        lastApiPull = clock.instant();
+    }
+
+    public List<EntityProfile> allProfilesForAdministrators(UserAccount actor) {
+        requireFdpAdministrator(actor);
+        return profiles.values().stream()
+                .sorted(Comparator.comparing(EntityProfile::getInstitutionName))
+                .toList();
+    }
+
+    AuthService getAuthService() {
+        return authService;
+    }
+
+    private EntityProfile createProfile(String institutionName, Map<String, String> fields,
+                                        ProfileStatus status, String creator) {
+        if (institutionName == null || institutionName.isBlank()) {
+            throw new IllegalArgumentException("Institution name is required.");
+        }
+        String id = UUID.randomUUID().toString();
+        EntityProfile profile = new EntityProfile(id, institutionName, fields, status, clock.instant());
+        profiles.put(id, profile);
+        changeLog.add(new ChangeLogEntry(id, clock.instant(), creator, "*", null,
+                institutionName, "PROFILE_SUBMITTED"));
+        return profile;
+    }
+
+    private EntityProfile requireProfile(String entityId) {
+        EntityProfile profile = profiles.get(entityId);
+        if (profile == null) {
+            throw new IllegalArgumentException("Unknown entity: " + entityId);
+        }
+        return profile;
+    }
+
+    private void requireCanEdit(UserAccount actor, String entityId) {
+        if (actor == null || !actor.isEnabled()) {
+            throw new SecurityException("An enabled account is required.");
+        }
+        if (actor.hasRole(UserRole.SYSTEM_ADMIN) || actor.hasRole(UserRole.FDP_ADMIN)) {
+            return;
+        }
+        if (!Objects.equals(actor.getInstitutionId(), entityId)) {
+            throw new SecurityException("Users may only edit their own institution's profile.");
+        }
+        if (actor.hasRole(UserRole.ENTITY_REPRESENTATIVE)
+                || (actor.hasRole(UserRole.ENTITY_EDITOR)
+                && delegates.getOrDefault(entityId, Set.of()).contains(actor.getUsername()))) {
+            return;
+        }
+        throw new SecurityException("The account has no profile editing rights.");
+    }
+
+    private static void requireFdpAdministrator(UserAccount actor) {
+        if (actor == null || !actor.isEnabled()
+                || (!actor.hasRole(UserRole.SYSTEM_ADMIN) && !actor.hasRole(UserRole.FDP_ADMIN))) {
+            throw new SecurityException("FDP administrator privileges are required.");
+        }
+    }
+
+    private static void requireInstitutionRole(UserAccount actor) {
+        if (actor == null || !actor.isEnabled() || actor.getInstitutionId() == null) {
+            throw new SecurityException("An enabled institution account is required.");
+        }
+    }
+
+    private void notifyInstitution(EntityProfile profile, String subject, String message) {
+        Set<String> recipients = ConcurrentHashMap.newKeySet();
+        String primary = primaryUsers.get(profile.getId());
+        if (primary != null) {
+            recipients.add(primary);
+        }
+        authService.allAccounts().stream()
+                .filter(UserAccount::isEnabled)
+                .filter(user -> Objects.equals(user.getInstitutionId(), profile.getId()))
+                .filter(user -> user.hasRole(UserRole.ENTITY_REPRESENTATIVE)
+                        || user.hasRole(UserRole.ENTITY_EDITOR))
+                .map(UserAccount::getUsername)
+                .forEach(recipients::add);
+        recipients.forEach(username -> notifications.send(username, subject, message));
+    }
+
+    private static boolean isEmailField(String key) {
+        return key.toLowerCase().contains("email");
+    }
+}
+
+// File: ProfileApi.java
+import java.util.List;
+import java.util.Map;
+
+public class ProfileApi {
+    private final ProfileService profileService;
+
+    public ProfileApi(ProfileService profileService) {
+        this.profileService = profileService;
+    }
+
+    public List<Map<String, String>> search(String query) {
+        return profileService.searchPublicProfiles(query).stream()
+                .map(profile -> profileService.getPublicFields(profile.getId()))
+                .toList();
+    }
+
+    public Map<String, String> getProfile(String entityId) {
+        return profileService.getPublicFields(entityId);
+    }
+
+    public java.time.Instant getLastDataPullTime() {
+        return profileService.getLastApiPull();
+    }
+
+    public List<Map<String, String>> pullAll() {
+        profileService.recordApiPull();
+        return profileService.searchPublicProfiles("").stream()
+                .map(profile -> profileService.getPublicFields(profile.getId()))
+                .toList();
+    }
+
+    public void updateProfile(String entityId, Map<String, String> updates) {
+        throw new UnsupportedOperationException("The profile API is read-only.");
+    }
+}
+
+// File: ExportService.java
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
+public class ExportService {
+    private final ProfileService profileService;
+
+    public ExportService(ProfileService profileService) {
+        this.profileService = profileService;
+    }
+
+    public byte[] exportExcel(String entityId) {
+        Map<String, String> fields = profileService.getPublicFields(entityId);
+        StringBuilder html = new StringBuilder("<html><head><meta charset=\"UTF-8\"></head><body><table>");
+        for (Map.Entry<String, String> entry : fields.entrySet()) {
+            html.append("<tr><th>").append(escapeHtml(entry.getKey()))
+                    .append("</th><td>").append(escapeHtml(entry.getValue()))
+                    .append("</td></tr>");
+        }
+        html.append("</table></body></html>");
+        return html.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    public byte[] exportPdf(String entityId) {
+        Map<String, String> fields = profileService.getPublicFields(entityId);
+        StringBuilder text = new StringBuilder();
+        fields.forEach((key, value) -> text.append(key).append(": ").append(value).append("\n"));
+
+        String[] lines = text.toString().split("\\R");
+        StringBuilder stream = new StringBuilder("BT\n/F1 10 Tf\n50 790 Td\n");
+        for (int i = 0; i < lines.length; i++) {
+            if (i > 0) {
+                stream.append("0 -14 Td\n");
+            }
+            stream.append("(").append(escapePdf(lines[i])).append(") Tj\n");
+        }
+        stream.append("ET\n");
+
+        String content = stream.toString();
+        String[] objects = {
+                "<< /Type /Catalog /Pages 2 0 R >>",
+                "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+                "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+                "<< /Length " + content.getBytes(StandardCharsets.ISO_8859_1).length + " >>\nstream\n"
+                        + content + "endstream"
+        };
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        write(output, "%PDF-1.4\n");
+        int[] offsets = new int[objects.length + 1];
+        for (int i = 0; i < objects.length; i++) {
+            offsets[i + 1] = output.size();
+            write(output, (i + 1) + " 0 obj\n" + objects[i] + "\nendobj\n");
+        }
+        int xrefOffset = output.size();
+        write(output, "xref\n0 " + (objects.length + 1) + "\n");
+        write(output, "0000000000 65535 f \n");
+        for (int i = 1; i < offsets.length; i++) {
+            write(output, String.format("%010d 00000 n \n", offsets[i]));
+        }
+        write(output, "trailer\n<< /Size " + (objects.length + 1) + " /Root 1 0 R >>\n");
+        write(output, "startxref\n" + xrefOffset + "\n%%EOF");
+        return output.toByteArray();
+    }
+
+    private static void write(ByteArrayOutputStream output, String value) {
+        output.writeBytes(value.getBytes(StandardCharsets.ISO_8859_1));
+    }
+
+    private static String escapeHtml(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;").replace("\"", "&quot;");
+    }
+
+    private static String escapePdf(String value) {
+        String ascii = value.replaceAll("[^\\x20-\\x7E]", "?");
+        return ascii.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)");
+    }
+}
+
+// File: Main.java
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+
+public class Main {
+    public static void main(String[] args) {
+        NotificationCenter notifications = new NotificationCenter();
+        AuthService auth = new AuthService(notifications);
+        ProfileService profiles = new ProfileService(auth, notifications);
+
+        UserAccount fdpAdmin = auth.createAccount("fdp-admin", "ChangeMe123!",
+                null, Set.of(UserRole.FDP_ADMIN));
+
+        Map<String, String> initialData = new LinkedHashMap<>();
+        initialData.put("website", "https://example.edu");
+        initialData.put("contactEmail", "research@example.edu");
+        initialData.put("samExpirationDate", "2030-12-31");
+        initialData.put("auditDate", "2024-06-30");
+
+        EntityProfile profile = profiles.createEntity(fdpAdmin,
+                "Example University", initialData);
+        profiles.designatePrimaryUser(fdpAdmin, profile.getId(),
+                "research-admin", "SecurePass123!");
+        profiles.approveProfile(fdpAdmin, profile.getId());
+
+        ProfileApi api = new ProfileApi(profiles);
+        System.out.println("Search results: " + api.search("Example").size());
+        System.out.println("Public profile: " + api.getProfile(profile.getId()));
+        System.out.println("Sign-in alerts: " + profiles.signInAlerts(
+                auth.authenticate("research-admin", "SecurePass123!").orElseThrow()));
+        System.out.println("PDF export bytes: "
+                + new ExportService(profiles).exportPdf(profile.getId()).length);
+    }
+}

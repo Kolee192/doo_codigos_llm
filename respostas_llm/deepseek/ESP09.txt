@@ -1,0 +1,2526 @@
+// File: Role.java
+public enum Role {
+    ADMIN,
+    LAB_ADMIN,
+    RESEARCHER,
+    JUNIOR_RESEARCHER,
+    SUPERVISOR,
+    MRI_OPERATOR,
+    RELEASE_ENGINEER,
+    SYSTEM_ADMINISTRATOR,
+    USER
+}
+// File: Permission.java
+public enum Permission {
+    INSTALL_SYSTEM,
+    RUN_TESTS,
+    VIEW_ACCEPTANCE_RESULTS,
+    CONFIGURE_NIGHTLY_BUILD,
+    MANAGE_DEPENDENCIES,
+    RECORD_RESPONSES,
+    NAVIGATE,
+    THEME_WEB,
+    CREATE_PAGE,
+    UPLOAD_FILE,
+    ATTACH_FILE,
+    DOWNLOAD_FILE,
+    ACCESS_NETWORK_DRIVE,
+    CREATE_LOG_BOOK,
+    VIEW_RESEARCHER_ACTIVITY,
+    UPLOAD_LARGE_FILE,
+    ASSIGN_TAGS,
+    ASSIGN_METADATA,
+    FILTER_FILES,
+    USE_CONTROLLED_VOCABULARY,
+    MAKE_IMMUTABLE,
+    LINK_FILES,
+    RESTRICT_METADATA,
+    RESTORE_FILE,
+    REVERT_VERSION,
+    VISUALIZE_FILES,
+    ASSOCIATE_EXPERIMENT,
+    MANAGE_BACKUP,
+    DESCRIBE_EXPERIMENT,
+    ADMIN_ACCESS,
+    LINK_RUNS,
+    CREATE_TEMPLATES,
+    CAPTURE_RUN_METADATA,
+    MANAGE_WORM_STRAIN,
+    SEARCH_PROTOCOLS,
+    MODIFY_PROTOCOL,
+    VIEW_PROTOCOL_HISTORY,
+    CREATE_PROTOCOL,
+    PROVE_CREATION,
+    MANAGE_REFERENCES,
+    SEARCH_FILES,
+    LIMIT_SEARCH,
+    SEARCH_SECTIONS,
+    DOWNLOAD_SEARCH_RESULTS,
+    VIEW_PROVENANCE,
+    ATTACH_MULTIPLE,
+    DOWNLOAD_MULTIPLE,
+    DRAW_TABLES,
+    VIEW_EVENTS,
+    STORE_VIDEO,
+    MIGRATE_DATA,
+    FORWARD_NEWS,
+    MANAGE_INVENTORY,
+    EDIT_SPREADSHEET,
+    CREATE_FEEDBACK,
+    PUSH_TWITTER,
+    PRIVATE_SHARING,
+    RECORD_WORKFLOW,
+    VIEW_TWITTER,
+    VIEW_CALENDARS,
+    SYNC_CALENDAR,
+    INSERT_GREEK,
+    MOVE_FILES,
+    ACCESS_MENDELEY,
+    TRACK_DATASETS,
+    SHARE_PAPERS,
+    CURATE_DATA,
+    VIEW_TIMELINE,
+    REMOTE_ACCESS,
+    SHARE_WRITEUPS,
+    COLLECT_LIBRARY,
+    MARK_QUALITY,
+    STANDARD_METADATA,
+    ANNOTATE_PHYSIOLOGY,
+    ANNOTATE_BEHAVIOUR,
+    ANNOTATE_DRUG,
+    SEARCH_IMAGES,
+    AUTO_METADATA,
+    DETAILED_METADATA,
+    PREPOPULATE_TEMPLATE,
+    PRESERVE_METADATA,
+    LINK_OBJECTS,
+    LOCATE_BY_METADATA,
+    PROTECT_DATA,
+    PRIVATE_DATA,
+    STORE_INPUTS,
+    SEARCH_FILE_TYPE,
+    BULK_UPLOAD,
+    LATE_METADATA,
+    CHANGE_SHARING,
+    RESTRICT_SHARING,
+    ACCESS_SHARED_DATA,
+    REVISION_CONTROL,
+    HARVEST_KNOWLEDGE,
+    SECURE_REMOTE,
+    GROUP_REPOSITORY,
+    RECORD_WORKFLOW_PLAN
+}
+// File: User.java
+import java.util.EnumSet;
+import java.util.Set;
+
+public class User {
+    private final String id;
+    private final String username;
+    private final Role role;
+    private final Set<Permission> permissions;
+    private User supervisor;
+
+    public User(String id, String username, Role role) {
+        this.id = id;
+        this.username = username;
+        this.role = role;
+        this.permissions = EnumSet.noneOf(Permission.class);
+        this.permissions.addAll(defaultPermissions(role));
+    }
+
+    public static Set<Permission> defaultPermissions(Role role) {
+        Set<Permission> p = EnumSet.noneOf(Permission.class);
+        switch (role) {
+            case ADMIN:
+                p.addAll(EnumSet.allOf(Permission.class));
+                break;
+            case SYSTEM_ADMINISTRATOR:
+                p.add(Permission.INSTALL_SYSTEM);
+                p.add(Permission.RUN_TESTS);
+                p.add(Permission.MANAGE_DEPENDENCIES);
+                p.add(Permission.MANAGE_BACKUP);
+                p.add(Permission.MIGRATE_DATA);
+                p.add(Permission.SECURE_REMOTE);
+                break;
+            case RELEASE_ENGINEER:
+                p.add(Permission.CONFIGURE_NIGHTLY_BUILD);
+                p.add(Permission.RUN_TESTS);
+                p.add(Permission.VIEW_ACCEPTANCE_RESULTS);
+                break;
+            case LAB_ADMIN:
+                p.add(Permission.ADMIN_ACCESS);
+                p.add(Permission.THEME_WEB);
+                p.add(Permission.MANAGE_INVENTORY);
+                p.add(Permission.CREATE_TEMPLATES);
+                p.add(Permission.MANAGE_WORM_STRAIN);
+                p.add(Permission.CREATE_FEEDBACK);
+                p.add(Permission.VIEW_RESEARCHER_ACTIVITY);
+                p.add(Permission.CREATE_LOG_BOOK);
+                p.add(Permission.CREATE_PAGE);
+                p.add(Permission.UPLOAD_FILE);
+                p.add(Permission.DOWNLOAD_FILE);
+                p.add(Permission.ATTACH_FILE);
+                p.add(Permission.ASSIGN_TAGS);
+                p.add(Permission.ASSIGN_METADATA);
+                p.add(Permission.CHANGE_SHARING);
+                p.add(Permission.RESTRICT_SHARING);
+                break;
+            case SUPERVISOR:
+                p.add(Permission.VIEW_RESEARCHER_ACTIVITY);
+                p.add(Permission.VIEW_ACCEPTANCE_RESULTS);
+                p.add(Permission.VIEW_EVENTS);
+                p.add(Permission.VIEW_CALENDARS);
+                p.add(Permission.CREATE_FEEDBACK);
+                break;
+            case MRI_OPERATOR:
+                p.add(Permission.RECORD_RESPONSES);
+                p.add(Permission.UPLOAD_FILE);
+                p.add(Permission.ATTACH_FILE);
+                p.add(Permission.CREATE_PAGE);
+                break;
+            case RESEARCHER:
+                p.add(Permission.CREATE_PAGE);
+                p.add(Permission.UPLOAD_FILE);
+                p.add(Permission.ATTACH_FILE);
+                p.add(Permission.DOWNLOAD_FILE);
+                p.add(Permission.ACCESS_NETWORK_DRIVE);
+                p.add(Permission.CREATE_LOG_BOOK);
+                p.add(Permission.UPLOAD_LARGE_FILE);
+                p.add(Permission.ASSIGN_TAGS);
+                p.add(Permission.ASSIGN_METADATA);
+                p.add(Permission.FILTER_FILES);
+                p.add(Permission.USE_CONTROLLED_VOCABULARY);
+                p.add(Permission.MAKE_IMMUTABLE);
+                p.add(Permission.LINK_FILES);
+                p.add(Permission.RESTRICT_METADATA);
+                p.add(Permission.RESTORE_FILE);
+                p.add(Permission.REVERT_VERSION);
+                p.add(Permission.VISUALIZE_FILES);
+                p.add(Permission.ASSOCIATE_EXPERIMENT);
+                p.add(Permission.DESCRIBE_EXPERIMENT);
+                p.add(Permission.LINK_RUNS);
+                p.add(Permission.CAPTURE_RUN_METADATA);
+                p.add(Permission.SEARCH_PROTOCOLS);
+                p.add(Permission.MODIFY_PROTOCOL);
+                p.add(Permission.VIEW_PROTOCOL_HISTORY);
+                p.add(Permission.CREATE_PROTOCOL);
+                p.add(Permission.PROVE_CREATION);
+                p.add(Permission.MANAGE_REFERENCES);
+                p.add(Permission.SEARCH_FILES);
+                p.add(Permission.LIMIT_SEARCH);
+                p.add(Permission.SEARCH_SECTIONS);
+                p.add(Permission.DOWNLOAD_SEARCH_RESULTS);
+                p.add(Permission.VIEW_PROVENANCE);
+                p.add(Permission.ATTACH_MULTIPLE);
+                p.add(Permission.DOWNLOAD_MULTIPLE);
+                p.add(Permission.DRAW_TABLES);
+                p.add(Permission.VIEW_EVENTS);
+                p.add(Permission.STORE_VIDEO);
+                p.add(Permission.FORWARD_NEWS);
+                p.add(Permission.EDIT_SPREADSHEET);
+                p.add(Permission.PUSH_TWITTER);
+                p.add(Permission.PRIVATE_SHARING);
+                p.add(Permission.RECORD_WORKFLOW);
+                p.add(Permission.VIEW_TWITTER);
+                p.add(Permission.VIEW_CALENDARS);
+                p.add(Permission.SYNC_CALENDAR);
+                p.add(Permission.INSERT_GREEK);
+                p.add(Permission.MOVE_FILES);
+                p.add(Permission.ACCESS_MENDELEY);
+                p.add(Permission.TRACK_DATASETS);
+                p.add(Permission.SHARE_PAPERS);
+                p.add(Permission.CURATE_DATA);
+                p.add(Permission.VIEW_TIMELINE);
+                p.add(Permission.REMOTE_ACCESS);
+                p.add(Permission.SHARE_WRITEUPS);
+                p.add(Permission.COLLECT_LIBRARY);
+                p.add(Permission.MARK_QUALITY);
+                p.add(Permission.STANDARD_METADATA);
+                p.add(Permission.ANNOTATE_PHYSIOLOGY);
+                p.add(Permission.ANNOTATE_BEHAVIOUR);
+                p.add(Permission.ANNOTATE_DRUG);
+                p.add(Permission.SEARCH_IMAGES);
+                p.add(Permission.AUTO_METADATA);
+                p.add(Permission.DETAILED_METADATA);
+                p.add(Permission.PREPOPULATE_TEMPLATE);
+                p.add(Permission.PRESERVE_METADATA);
+                p.add(Permission.LINK_OBJECTS);
+                p.add(Permission.LOCATE_BY_METADATA);
+                p.add(Permission.PROTECT_DATA);
+                p.add(Permission.PRIVATE_DATA);
+                p.add(Permission.STORE_INPUTS);
+                p.add(Permission.SEARCH_FILE_TYPE);
+                p.add(Permission.BULK_UPLOAD);
+                p.add(Permission.LATE_METADATA);
+                p.add(Permission.CHANGE_SHARING);
+                p.add(Permission.RESTRICT_SHARING);
+                p.add(Permission.ACCESS_SHARED_DATA);
+                p.add(Permission.REVISION_CONTROL);
+                p.add(Permission.RECORD_WORKFLOW_PLAN);
+                break;
+            case JUNIOR_RESEARCHER:
+                p.add(Permission.CREATE_PAGE);
+                p.add(Permission.UPLOAD_FILE);
+                p.add(Permission.ATTACH_FILE);
+                p.add(Permission.DOWNLOAD_FILE);
+                p.add(Permission.SEARCH_FILES);
+                p.add(Permission.HARVEST_KNOWLEDGE);
+                p.add(Permission.ACCESS_SHARED_DATA);
+                break;
+            case USER:
+                p.add(Permission.NAVIGATE);
+                p.add(Permission.DOWNLOAD_FILE);
+                break;
+        }
+        return p;
+    }
+
+    public boolean can(Permission permission) {
+        return role == Role.ADMIN || permissions.contains(permission);
+    }
+
+    public void grant(Permission permission) {
+        permissions.add(permission);
+    }
+
+    public void revoke(Permission permission) {
+        permissions.remove(permission);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public Set<Permission> getPermissions() {
+        return EnumSet.copyOf(permissions);
+    }
+
+    public User getSupervisor() {
+        return supervisor;
+    }
+
+    public void setSupervisor(User supervisor) {
+        this.supervisor = supervisor;
+    }
+}
+// File: MetadataType.java
+public enum MetadataType {
+    TEXT,
+    NUMBER,
+    DATE,
+    BOOLEAN,
+    CONTROLLED_VOCABULARY,
+    FILE_REFERENCE
+}
+// File: LinkType.java
+public enum LinkType {
+    ANALYSIS_OF,
+    DERIVED_FROM,
+    INPUT_TO,
+    RELATED_TO,
+    VERSION_OF
+}
+// File: TestStatus.java
+public enum TestStatus {
+    PASSED,
+    FAILED,
+    SKIPPED
+}
+// File: QualityStatus.java
+public enum QualityStatus {
+    GOOD,
+    BAD,
+    HIDDEN_BAD
+}
+// File: ShareLevel.java
+public enum ShareLevel {
+    PRIVATE,
+    INDIVIDUALS,
+    GROUP,
+    PUBLIC
+}
+// File: Tag.java
+import java.util.Objects;
+
+public class Tag {
+    private final String name;
+    private final String vocabulary;
+
+    public Tag(String name, String vocabulary) {
+        this.name = name;
+        this.vocabulary = vocabulary;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getVocabulary() {
+        return vocabulary;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Tag)) return false;
+        Tag tag = (Tag) o;
+        return name.equals(tag.name) && vocabulary.equals(tag.vocabulary);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, vocabulary);
+    }
+
+    @Override
+    public String toString() {
+        return vocabulary + ":" + name;
+    }
+}
+// File: ControlledVocabulary.java
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+public class ControlledVocabulary {
+    private final String name;
+    private final Set<Tag> allowedTags = new LinkedHashSet<>();
+
+    public ControlledVocabulary(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void addTag(Tag tag) {
+        if (!tag.getVocabulary().equals(name)) {
+            throw new IllegalArgumentException("Tag vocabulary must match controlled vocabulary name");
+        }
+        allowedTags.add(tag);
+    }
+
+    public boolean isAllowed(Tag tag) {
+        return allowedTags.contains(tag);
+    }
+
+    public Set<Tag> getAllowedTags() {
+        return new LinkedHashSet<>(allowedTags);
+    }
+}
+// File: MetadataField.java
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.HashSet;
+import java.util.Set;
+
+public class MetadataField {
+    private final String name;
+    private final MetadataType type;
+    private final boolean required;
+    private final Set<String> allowedValues;
+    private final String regex;
+    private final String defaultValue;
+
+    public MetadataField(String name, MetadataType type, boolean required) {
+        this(name, type, required, new HashSet<>(), null, null);
+    }
+
+    public MetadataField(String name, MetadataType type, boolean required,
+                         Set<String> allowedValues, String regex, String defaultValue) {
+        this.name = name;
+        this.type = type;
+        this.required = required;
+        this.allowedValues = allowedValues == null ? new HashSet<>() : new HashSet<>(allowedValues);
+        this.regex = regex;
+        this.defaultValue = defaultValue;
+    }
+
+    public String validate(String value) {
+        if (value == null || value.isBlank()) {
+            return required ? "Value is required" : null;
+        }
+        switch (type) {
+            case NUMBER:
+                try {
+                    Double.parseDouble(value);
+                } catch (NumberFormatException e) {
+                    return "Value must be a number";
+                }
+                break;
+            case DATE:
+                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+                format.setLenient(false);
+                try {
+                    format.parse(value);
+                } catch (ParseException e) {
+                    return "Value must be a date in yyyy-MM-dd format";
+                }
+                break;
+            case BOOLEAN:
+                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                    return "Value must be true or false";
+                }
+                break;
+            case CONTROLLED_VOCABULARY:
+                if (!allowedValues.contains(value)) {
+                    return "Value is not in the controlled vocabulary";
+                }
+                break;
+            case TEXT:
+            case FILE_REFERENCE:
+                if (regex != null && !value.matches(regex)) {
+                    return "Value does not match the required format";
+                }
+                break;
+        }
+        return null;
+    }
+
+    public MetadataValue createValue(String value, User user) {
+        String error = validate(value);
+        if (error != null) {
+            throw new IllegalArgumentException("Invalid metadata for " + name + ": " + error);
+        }
+        return new MetadataValue(this, value, user);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public MetadataType getType() {
+        return type;
+    }
+
+    public boolean isRequired() {
+        return required;
+    }
+
+    public Set<String> getAllowedValues() {
+        return new HashSet<>(allowedValues);
+    }
+
+    public String getRegex() {
+        return regex;
+    }
+
+    public String getDefaultValue() {
+        return defaultValue;
+    }
+}
+// File: MetadataValue.java
+import java.util.Date;
+
+public class MetadataValue {
+    private final MetadataField field;
+    private final String value;
+    private final Date setAt;
+    private final User setBy;
+
+    public MetadataValue(MetadataField field, String value, User setBy) {
+        this.field = field;
+        this.value = value;
+        this.setAt = new Date();
+        this.setBy = setBy;
+    }
+
+    public MetadataField getField() {
+        return field;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public Date getSetAt() {
+        return new Date(setAt.getTime());
+    }
+
+    public User getSetBy() {
+        return setBy;
+    }
+}
+// File: PageTemplate.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class PageTemplate {
+    private final String name;
+    private final List<MetadataField> fields;
+    private final Map<String, String> defaultValues;
+
+    public PageTemplate(String name, List<MetadataField> fields, Map<String, String> defaultValues) {
+        this.name = name;
+        this.fields = new ArrayList<>(fields);
+        this.defaultValues = new LinkedHashMap<>(defaultValues);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public List<MetadataField> getFields() {
+        return new ArrayList<>(fields);
+    }
+
+    public Map<String, String> prepopulate() {
+        return new LinkedHashMap<>(defaultValues);
+    }
+
+    public void validateMetadata(Map<String, String> supplied) {
+        for (MetadataField field : fields) {
+            String value = supplied.containsKey(field.getName())
+                    ? supplied.get(field.getName())
+                    : defaultValues.get(field.getName());
+            String error = field.validate(value);
+            if (error != null) {
+                throw new IllegalArgumentException("Invalid metadata for " + field.getName() + ": " + error);
+            }
+        }
+    }
+}
+// File: FileVersion.java
+import java.util.Arrays;
+import java.util.Date;
+
+public class FileVersion {
+    private final int versionNumber;
+    private final long size;
+    private final String hash;
+    private final Date created;
+    private final User createdBy;
+    private final byte[] content;
+
+    public FileVersion(int versionNumber, byte[] content, User createdBy) {
+        this.versionNumber = versionNumber;
+        this.content = content.clone();
+        this.size = content.length;
+        this.hash = Integer.toHexString(Arrays.hashCode(content));
+        this.created = new Date();
+        this.createdBy = createdBy;
+    }
+
+    public int getVersionNumber() {
+        return versionNumber;
+    }
+
+    public long getSize() {
+        return size;
+    }
+
+    public String getHash() {
+        return hash;
+    }
+
+    public Date getCreated() {
+        return new Date(created.getTime());
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public byte[] getContent() {
+        return content.clone();
+    }
+}
+// File: FileLink.java
+import java.util.Date;
+
+public class FileLink {
+    private final FileResource source;
+    private final FileResource target;
+    private final LinkType type;
+    private final Date created;
+
+    public FileLink(FileResource source, FileResource target, LinkType type) {
+        this.source = source;
+        this.target = target;
+        this.type = type;
+        this.created = new Date();
+    }
+
+    public FileResource getSource() {
+        return source;
+    }
+
+    public FileResource getTarget() {
+        return target;
+    }
+
+    public LinkType getType() {
+        return type;
+    }
+
+    public Date getCreated() {
+        return new Date(created.getTime());
+    }
+}
+// File: FileResource.java
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class FileResource {
+    private final String id;
+    private final String fileName;
+    private final String mimeType;
+    private final User owner;
+    private final List<FileVersion> versions = new ArrayList<>();
+    private final Set<Tag> tags = new LinkedHashSet<>();
+    private final Map<String, MetadataValue> metadata = new LinkedHashMap<>();
+    private final List<FileLink> links = new ArrayList<>();
+    private boolean immutable;
+    private boolean deleted;
+    private ShareLevel shareLevel = ShareLevel.PRIVATE;
+    private final Set<User> sharedWith = new HashSet<>();
+    private QualityStatus quality = QualityStatus.GOOD;
+
+    public FileResource(String id, String fileName, String mimeType, User owner, byte[] content) {
+        this.id = id;
+        this.fileName = fileName;
+        this.mimeType = mimeType;
+        this.owner = owner;
+        this.versions.add(new FileVersion(1, content, owner));
+    }
+
+    public void addVersion(User user, byte[] content) {
+        if (immutable) {
+            throw new IllegalStateException("File is immutable");
+        }
+        versions.add(new FileVersion(versions.size() + 1, content, user));
+    }
+
+    public void revertToVersion(int versionNumber, User user) {
+        FileVersion version = getVersion(versionNumber);
+        addVersion(user, version.getContent());
+    }
+
+    public FileVersion getVersion(int versionNumber) {
+        for (FileVersion version : versions) {
+            if (version.getVersionNumber() == versionNumber) {
+                return version;
+            }
+        }
+        throw new IllegalArgumentException("Unknown version: " + versionNumber);
+    }
+
+    public FileVersion getCurrentVersion() {
+        return versions.get(versions.size() - 1);
+    }
+
+    public Date getUploadDate() {
+        return getCurrentVersion().getCreated();
+    }
+
+    public void assignTag(Tag tag) {
+        tags.add(tag);
+    }
+
+    public MetadataValue setMetadata(MetadataField field, String value, User user) {
+        if (immutable) {
+            throw new IllegalStateException("Cannot modify metadata of immutable file");
+        }
+        MetadataValue metadataValue = field.createValue(value, user);
+        metadata.put(field.getName(), metadataValue);
+        return metadataValue;
+    }
+
+    public void addLink(FileResource target, LinkType type) {
+        links.add(new FileLink(this, target, type));
+    }
+
+    public void markDeleted() {
+        deleted = true;
+    }
+
+    public void restore() {
+        deleted = false;
+    }
+
+    public void setImmutable(boolean immutable) {
+        this.immutable = immutable;
+    }
+
+    public void setShareLevel(ShareLevel shareLevel, Collection<User> users) {
+        this.shareLevel = shareLevel;
+        this.sharedWith.clear();
+        if (users != null) {
+            this.sharedWith.addAll(users);
+        }
+    }
+
+    public void setQuality(QualityStatus quality) {
+        this.quality = quality;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public long getSize() {
+        return getCurrentVersion().getSize();
+    }
+
+    public boolean isImmutable() {
+        return immutable;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public ShareLevel getShareLevel() {
+        return shareLevel;
+    }
+
+    public Set<User> getSharedWith() {
+        return new HashSet<>(sharedWith);
+    }
+
+    public QualityStatus getQuality() {
+        return quality;
+    }
+
+    public Set<Tag> getTags() {
+        return new LinkedHashSet<>(tags);
+    }
+
+    public Map<String, MetadataValue> getMetadata() {
+        return new LinkedHashMap<>(metadata);
+    }
+
+    public List<FileLink> getLinks() {
+        return new ArrayList<>(links);
+    }
+
+    public List<FileVersion> getVersions() {
+        return new ArrayList<>(versions);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof FileResource)) return false;
+        FileResource that = (FileResource) o;
+        return id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
+}
+// File: Workspace.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Workspace {
+    private final User owner;
+    private final Map<String, FileResource> files = new LinkedHashMap<>();
+    private final Set<FileResource> unattached = new LinkedHashSet<>();
+
+    public Workspace(User owner) {
+        this.owner = owner;
+    }
+
+    public void addFile(FileResource file) {
+        files.put(file.getId(), file);
+        unattached.add(file);
+    }
+
+    public void markAttached(FileResource file) {
+        unattached.remove(file);
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public List<FileResource> getFiles() {
+        return new ArrayList<>(files.values());
+    }
+
+    public List<FileResource> getUnattachedFiles() {
+        return new ArrayList<>(unattached);
+    }
+
+    public FileResource getFile(String id) {
+        return files.get(id);
+    }
+}
+// File: LogBookPage.java
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class LogBookPage {
+    private final String id;
+    private final String title;
+    private final User author;
+    private final Date createdAt;
+    private String content;
+    private LogBook logBook;
+    private LogBookSection section;
+    private final List<FileResource> attachments;
+    private final Map<String, MetadataValue> metadata;
+    private final List<String> provenance;
+    private final PageTemplate template;
+
+    public LogBookPage(String id, String title, User author, PageTemplate template) {
+        this.id = id;
+        this.title = title;
+        this.author = author;
+        this.createdAt = new Date();
+        this.content = "";
+        this.attachments = new ArrayList<>();
+        this.metadata = new LinkedHashMap<>();
+        this.provenance = new ArrayList<>();
+        this.template = template;
+        this.provenance.add("created by " + author.getUsername() + " at " + createdAt);
+    }
+
+    public void assignLogBook(LogBook logBook) {
+        this.logBook = logBook;
+    }
+
+    public void assignSection(LogBookSection section) {
+        this.section = section;
+        if (section != null) {
+            this.logBook = section.getLogBook();
+        }
+    }
+
+    public void attachFile(FileResource file) {
+        if (!attachments.contains(file)) {
+            attachments.add(file);
+            provenance.add("attached " + file.getFileName() + " by " + author.getUsername());
+        }
+    }
+
+    public void attachFiles(Collection<FileResource> files) {
+        for (FileResource file : files) {
+            attachFile(file);
+        }
+    }
+
+    public void appendHtmlTable(List<List<String>> rows) {
+        StringBuilder builder = new StringBuilder(content);
+        builder.append("<table>");
+        for (List<String> row : rows) {
+            builder.append("<tr>");
+            for (String cell : row) {
+                builder.append("<td>").append(cell).append("</td>");
+            }
+            builder.append("</tr>");
+        }
+        builder.append("</table>");
+        content = builder.toString();
+    }
+
+    public void insertGreekSymbol(String symbol) {
+        content += symbol;
+    }
+
+    public void appendContent(String extraContent) {
+        content += extraContent;
+    }
+
+    public void setMetadata(MetadataField field, String value, User user) {
+        metadata.put(field.getName(), field.createValue(value, user));
+        provenance.add("metadata " + field.getName() + " set by " + user.getUsername());
+    }
+
+    public void addProvenance(String entry) {
+        provenance.add(entry);
+    }
+
+    public String getDigitalProof() {
+        return Integer.toHexString((id + createdAt.getTime() + author.getUsername() + content).hashCode());
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public User getAuthor() {
+        return author;
+    }
+
+    public Date getCreatedAt() {
+        return new Date(createdAt.getTime());
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public LogBook getLogBook() {
+        return logBook;
+    }
+
+    public LogBookSection getSection() {
+        return section;
+    }
+
+    public List<FileResource> getAttachments() {
+        return new ArrayList<>(attachments);
+    }
+
+    public Map<String, MetadataValue> getMetadata() {
+        return new LinkedHashMap<>(metadata);
+    }
+
+    public List<String> getProvenance() {
+        return new ArrayList<>(provenance);
+    }
+
+    public PageTemplate getTemplate() {
+        return template;
+    }
+}
+// File: LogBookSection.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class LogBookSection {
+    private final String id;
+    private final String name;
+    private final LogBook logBook;
+    private final List<LogBookPage> pages;
+
+    public LogBookSection(String id, String name, LogBook logBook) {
+        this.id = id;
+        this.name = name;
+        this.logBook = logBook;
+        this.pages = new ArrayList<>();
+    }
+
+    public LogBookPage createPage(String pageId, String title, User author, PageTemplate template) {
+        LogBookPage page = new LogBookPage(pageId, title, author, template);
+        page.assignSection(this);
+        pages.add(page);
+        logBook.registerPage(page);
+        return page;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public LogBook getLogBook() {
+        return logBook;
+    }
+
+    public List<LogBookPage> getPages() {
+        return new ArrayList<>(pages);
+    }
+}
+// File: LogBook.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+public class LogBook {
+    private final String id;
+    private final String name;
+    private final User owner;
+    private final List<LogBookSection> sections;
+    private final List<LogBookPage> pages;
+
+    public LogBook(String id, String name, User owner) {
+        this.id = id;
+        this.name = name;
+        this.owner = owner;
+        this.sections = new ArrayList<>();
+        this.pages = new ArrayList<>();
+    }
+
+    public LogBookSection addSection(String sectionName) {
+        LogBookSection section = new LogBookSection(id + "-sec-" + (sections.size() + 1), sectionName, this);
+        sections.add(section);
+        return section;
+    }
+
+    public Optional<LogBookSection> getSection(String sectionName) {
+        for (LogBookSection section : sections) {
+            if (section.getName().equals(sectionName)) {
+                return Optional.of(section);
+            }
+        }
+        return Optional.empty();
+    }
+
+    public LogBookPage createPage(String pageId, String title, User author, PageTemplate template) {
+        LogBookPage page = new LogBookPage(pageId, title, author, template);
+        page.assignLogBook(this);
+        pages.add(page);
+        return page;
+    }
+
+    public void registerPage(LogBookPage page) {
+        if (!pages.contains(page)) {
+            pages.add(page);
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public List<LogBookSection> getSections() {
+        return new ArrayList<>(sections);
+    }
+
+    public List<LogBookPage> getPages() {
+        return new ArrayList<>(pages);
+    }
+}
+// File: DirectoryUpload.java
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class DirectoryUpload {
+    private final String id;
+    private final String directoryName;
+    private final User uploader;
+    private final Date uploadedAt;
+    private final List<FileResource> files;
+    private final Map<String, MetadataValue> groupMetadata;
+
+    public DirectoryUpload(String id, String directoryName, User uploader, List<FileResource> files) {
+        this.id = id;
+        this.directoryName = directoryName;
+        this.uploader = uploader;
+        this.uploadedAt = new Date();
+        this.files = new ArrayList<>(files);
+        this.groupMetadata = new LinkedHashMap<>();
+    }
+
+    public void applyMetadataToAll(MetadataField field, String value, User user) {
+        MetadataValue metadataValue = field.createValue(value, user);
+        for (FileResource file : files) {
+            file.setMetadata(field, value, user);
+        }
+        groupMetadata.put(field.getName(), metadataValue);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getDirectoryName() {
+        return directoryName;
+    }
+
+    public User getUploader() {
+        return uploader;
+    }
+
+    public Date getUploadedAt() {
+        return new Date(uploadedAt.getTime());
+    }
+
+    public List<FileResource> getFiles() {
+        return new ArrayList<>(files);
+    }
+
+    public Map<String, MetadataValue> getGroupMetadata() {
+        return new LinkedHashMap<>(groupMetadata);
+    }
+}
+// File: ProtocolVersion.java
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class ProtocolVersion {
+    private final int number;
+    private final String content;
+    private final Map<String, MetadataValue> metadata;
+    private final User author;
+    private final Date createdAt;
+    private final ProtocolVersion parent;
+
+    public ProtocolVersion(int number, String content, Map<String, MetadataValue> metadata,
+                           User author, ProtocolVersion parent) {
+        this.number = number;
+        this.content = content;
+        this.metadata = metadata == null ? new LinkedHashMap<>() : new LinkedHashMap<>(metadata);
+        this.author = author;
+        this.createdAt = new Date();
+        this.parent = parent;
+    }
+
+    public int getNumber() {
+        return number;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public Map<String, MetadataValue> getMetadata() {
+        return new LinkedHashMap<>(metadata);
+    }
+
+    public User getAuthor() {
+        return author;
+    }
+
+    public Date getCreatedAt() {
+        return new Date(createdAt.getTime());
+    }
+
+    public ProtocolVersion getParent() {
+        return parent;
+    }
+}
+// File: Protocol.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class Protocol {
+    private final String id;
+    private final String title;
+    private final User owner;
+    private final List<ProtocolVersion> versions;
+    private final List<Protocol> branches;
+    private Protocol parent;
+
+    public Protocol(String id, String title, User owner) {
+        this.id = id;
+        this.title = title;
+        this.owner = owner;
+        this.versions = new ArrayList<>();
+        this.branches = new ArrayList<>();
+    }
+
+    public ProtocolVersion addVersion(String content, Map<String, MetadataValue> metadata, User author) {
+        ProtocolVersion parentVersion = versions.isEmpty() ? null : versions.get(versions.size() - 1);
+        ProtocolVersion version = new ProtocolVersion(versions.size() + 1, content, metadata, author, parentVersion);
+        versions.add(version);
+        return version;
+    }
+
+    public Protocol branch(String newId, String newTitle, User newOwner) {
+        Protocol branch = new Protocol(newId, newTitle, newOwner);
+        branch.parent = this;
+        branches.add(branch);
+        return branch;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public List<ProtocolVersion> getVersions() {
+        return new ArrayList<>(versions);
+    }
+
+    public ProtocolVersion getCurrentVersion() {
+        return versions.isEmpty() ? null : versions.get(versions.size() - 1);
+    }
+
+    public List<Protocol> getBranches() {
+        return new ArrayList<>(branches);
+    }
+
+    public Protocol getParent() {
+        return parent;
+    }
+
+    public Map<String, MetadataValue> emptyMetadata() {
+        return new LinkedHashMap<>();
+    }
+}
+// File: WorkflowExecution.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class WorkflowExecution {
+    private final String id;
+    private final String workflowName;
+    private final String plan;
+    private final List<String> executionHistory;
+    private String result;
+    private LogBookPage logBookEntry;
+
+    public WorkflowExecution(String id, String workflowName, String plan) {
+        this.id = id;
+        this.workflowName = workflowName;
+        this.plan = plan;
+        this.executionHistory = new ArrayList<>();
+        this.result = "";
+    }
+
+    public void recordStep(String step) {
+        executionHistory.add(step);
+    }
+
+    public void complete(String result) {
+        this.result = result;
+        executionHistory.add("completed: " + result);
+    }
+
+    public void attachToLogBook(LogBookPage page) {
+        this.logBookEntry = page;
+        page.addProvenance("workflow " + workflowName + " recorded");
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getWorkflowName() {
+        return workflowName;
+    }
+
+    public String getPlan() {
+        return plan;
+    }
+
+    public List<String> getExecutionHistory() {
+        return new ArrayList<>(executionHistory);
+    }
+
+    public String getResult() {
+        return result;
+    }
+
+    public LogBookPage getLogBookEntry() {
+        return logBookEntry;
+    }
+}
+// File: ExperimentalRun.java
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class ExperimentalRun {
+    private final String id;
+    private final String description;
+    private final Date date;
+    private final Set<FileResource> files;
+    private final List<WorkflowExecution> workflows;
+    private final Map<String, MetadataValue> metadata;
+
+    public ExperimentalRun(String id, String description, Date date) {
+        this.id = id;
+        this.description = description;
+        this.date = date == null ? new Date() : new Date(date.getTime());
+        this.files = new LinkedHashSet<>();
+        this.workflows = new ArrayList<>();
+        this.metadata = new LinkedHashMap<>();
+    }
+
+    public void addFile(FileResource file) {
+        files.add(file);
+    }
+
+    public void addWorkflowExecution(WorkflowExecution workflow) {
+        workflows.add(workflow);
+    }
+
+    public void setMetadata(MetadataField field, String value, User user) {
+        metadata.put(field.getName(), field.createValue(value, user));
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Date getDate() {
+        return new Date(date.getTime());
+    }
+
+    public Set<FileResource> getFiles() {
+        return new LinkedHashSet<>(files);
+    }
+
+    public List<WorkflowExecution> getWorkflows() {
+        return new ArrayList<>(workflows);
+    }
+
+    public Map<String, MetadataValue> getMetadata() {
+        return new LinkedHashMap<>(metadata);
+    }
+}
+// File: Experiment.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Experiment {
+    private final String id;
+    private final String title;
+    private final User owner;
+    private final List<ExperimentalRun> runs;
+    private final Set<FileResource> files;
+    private final Map<String, MetadataValue> metadata;
+    private final Map<FileResource, QualityStatus> quality;
+    private Protocol protocol;
+
+    public Experiment(String id, String title, User owner, Protocol protocol) {
+        this.id = id;
+        this.title = title;
+        this.owner = owner;
+        this.runs = new ArrayList<>();
+        this.files = new LinkedHashSet<>();
+        this.metadata = new LinkedHashMap<>();
+        this.quality = new LinkedHashMap<>();
+        this.protocol = protocol;
+    }
+
+    public void addRun(ExperimentalRun run) {
+        runs.add(run);
+    }
+
+    public void associateFile(FileResource file) {
+        files.add(file);
+    }
+
+    public void setMetadata(MetadataField field, String value, User user) {
+        metadata.put(field.getName(), field.createValue(value, user));
+    }
+
+    public void markQuality(FileResource file, QualityStatus status) {
+        quality.put(file, status);
+        file.setQuality(status);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public List<ExperimentalRun> getRuns() {
+        return new ArrayList<>(runs);
+    }
+
+    public Set<FileResource> getFiles() {
+        return new LinkedHashSet<>(files);
+    }
+
+    public Map<String, MetadataValue> getMetadata() {
+        return new LinkedHashMap<>(metadata);
+    }
+
+    public Map<FileResource, QualityStatus> getQuality() {
+        return new LinkedHashMap<>(quality);
+    }
+
+    public Protocol getProtocol() {
+        return protocol;
+    }
+
+    public void setProtocol(Protocol protocol) {
+        this.protocol = protocol;
+    }
+}
+// File: CalendarEvent.java
+import java.util.Date;
+
+public class CalendarEvent {
+    private final String id;
+    private final String title;
+    private final Date start;
+    private final Date end;
+    private final User creator;
+    private final boolean sharedWithGroup;
+    private boolean googleSynced;
+    private String externalId;
+
+    public CalendarEvent(String id, String title, Date start, Date end, User creator, boolean sharedWithGroup) {
+        this.id = id;
+        this.title = title;
+        this.start = new Date(start.getTime());
+        this.end = new Date(end.getTime());
+        this.creator = creator;
+        this.sharedWithGroup = sharedWithGroup;
+    }
+
+    public void syncWithGoogle(String externalId) {
+        this.googleSynced = true;
+        this.externalId = externalId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public Date getStart() {
+        return new Date(start.getTime());
+    }
+
+    public Date getEnd() {
+        return new Date(end.getTime());
+    }
+
+    public User getCreator() {
+        return creator;
+    }
+
+    public boolean isSharedWithGroup() {
+        return sharedWithGroup;
+    }
+
+    public boolean isGoogleSynced() {
+        return googleSynced;
+    }
+
+    public String getExternalId() {
+        return externalId;
+    }
+}
+// File: Equipment.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Equipment {
+    private final String id;
+    private final String name;
+    private int quantity;
+    private final List<CalendarEvent> bookings;
+
+    public Equipment(String id, String name, int quantity) {
+        this.id = id;
+        this.name = name;
+        this.quantity = quantity;
+        this.bookings = new ArrayList<>();
+    }
+
+    public void addBooking(CalendarEvent event) {
+        bookings.add(event);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
+    }
+
+    public List<CalendarEvent> getBookings() {
+        return new ArrayList<>(bookings);
+    }
+}
+// File: Consumable.java
+public class Consumable {
+    private final String name;
+    private int quantity;
+    private final String unit;
+    private final int reorderLevel;
+
+    public Consumable(String name, int quantity, String unit, int reorderLevel) {
+        this.name = name;
+        this.quantity = quantity;
+        this.unit = unit;
+        this.reorderLevel = reorderLevel;
+    }
+
+    public void adjust(int delta) {
+        quantity += delta;
+    }
+
+    public boolean isLow() {
+        return quantity <= reorderLevel;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public int getReorderLevel() {
+        return reorderLevel;
+    }
+}
+// File: FeedbackResponse.java
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class FeedbackResponse {
+    private final User respondent;
+    private final Map<String, String> answers;
+    private final Date submittedAt;
+
+    public FeedbackResponse(User respondent, Map<String, String> answers) {
+        this.respondent = respondent;
+        this.answers = new LinkedHashMap<>(answers);
+        this.submittedAt = new Date();
+    }
+
+    public User getRespondent() {
+        return respondent;
+    }
+
+    public Map<String, String> getAnswers() {
+        return new LinkedHashMap<>(answers);
+    }
+
+    public Date getSubmittedAt() {
+        return new Date(submittedAt.getTime());
+    }
+}
+// File: FeedbackForm.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class FeedbackForm {
+    private final String title;
+    private final List<String> questions;
+    private final List<FeedbackResponse> responses;
+
+    public FeedbackForm(String title, List<String> questions) {
+        this.title = title;
+        this.questions = new ArrayList<>(questions);
+        this.responses = new ArrayList<>();
+    }
+
+    public void addResponse(FeedbackResponse response) {
+        responses.add(response);
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public List<String> getQuestions() {
+        return new ArrayList<>(questions);
+    }
+
+    public List<FeedbackResponse> getResponses() {
+        return new ArrayList<>(responses);
+    }
+}
+// File: PaperReference.java
+public class PaperReference {
+    private final String title;
+    private final String authors;
+    private final int year;
+    private final String doi;
+    private final String notes;
+    private final boolean groupShared;
+
+    public PaperReference(String title, String authors, int year, String doi, String notes, boolean groupShared) {
+        this.title = title;
+        this.authors = authors;
+        this.year = year;
+        this.doi = doi;
+        this.notes = notes;
+        this.groupShared = groupShared;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getAuthors() {
+        return authors;
+    }
+
+    public int getYear() {
+        return year;
+    }
+
+    public String getDoi() {
+        return doi;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public boolean isGroupShared() {
+        return groupShared;
+    }
+}
+// File: WormStrain.java
+public class WormStrain {
+    private final String name;
+    private final String genotype;
+    private final String wormbaseId;
+    private final String notes;
+
+    public WormStrain(String name, String genotype, String wormbaseId, String notes) {
+        this.name = name;
+        this.genotype = genotype;
+        this.wormbaseId = wormbaseId;
+        this.notes = notes;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getGenotype() {
+        return genotype;
+    }
+
+    public String getWormbaseId() {
+        return wormbaseId;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+}
+// File: InstallationTest.java
+public class InstallationTest {
+    private final String name;
+    private final boolean passed;
+    private final String details;
+
+    public InstallationTest(String name, boolean passed, String details) {
+        this.name = name;
+        this.passed = passed;
+        this.details = details;
+    }
+
+    public static InstallationTest check(String name, java.util.function.BooleanSupplier condition,
+                                         String success, String failure) {
+        boolean ok = condition.getAsBoolean();
+        return new InstallationTest(name, ok, ok ? success : failure);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public boolean isPassed() {
+        return passed;
+    }
+
+    public String getDetails() {
+        return details;
+    }
+}
+// File: InstallationManager.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class InstallationManager {
+    private final List<String> installedPackages = new ArrayList<>();
+    private boolean nodeInstalled;
+
+    public List<String> installDependencies(String osVersion) {
+        List<String> log = new ArrayList<>();
+        log.add("Checking operating system: " + osVersion);
+        if (osVersion != null && osVersion.contains("Ubuntu 10.04")) {
+            installedPackages.add("openjdk-17-jdk");
+            installedPackages.add("postgresql");
+            installedPackages.add("tomcat9");
+            log.add("Installed Neurohub dependencies using apt.");
+        } else {
+            installedPackages.add("openjdk-17-jdk");
+            log.add("Installed generic Java runtime dependency.");
+        }
+        return log;
+    }
+
+    public InstallationTest installNeurohubNode(User admin) {
+        if (admin == null || !admin.can(Permission.INSTALL_SYSTEM)) {
+            return new InstallationTest("Install Neurohub node", false, "Permission denied");
+        }
+        nodeInstalled = true;
+        return new InstallationTest("Install Neurohub node", true,
+                "Neurohub node installed on a virgin Ubuntu operating system");
+    }
+
+    public InstallationTest testInstallation() {
+        boolean ok = nodeInstalled && installedPackages.contains("openjdk-17-jdk");
+        return new InstallationTest("Functionality test", ok,
+                ok ? "Web interface, database and file storage checks passed"
+                   : "Installation is incomplete");
+    }
+
+    public boolean isNodeInstalled() {
+        return nodeInstalled;
+    }
+
+    public List<String> getInstalledPackages() {
+        return new ArrayList<>(installedPackages);
+    }
+}
+// File: AcceptanceTestResult.java
+import java.util.Date;
+
+public class AcceptanceTestResult {
+    private final String testName;
+    private final TestStatus status;
+    private final String message;
+    private final Date timestamp;
+
+    public AcceptanceTestResult(String testName, TestStatus status, String message) {
+        this.testName = testName;
+        this.status = status;
+        this.message = message;
+        this.timestamp = new Date();
+    }
+
+    public String getTestName() {
+        return testName;
+    }
+
+    public TestStatus getStatus() {
+        return status;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public Date getTimestamp() {
+        return new Date(timestamp.getTime());
+    }
+}
+// File: AcceptanceTest.java
+import java.util.function.BooleanSupplier;
+
+public class AcceptanceTest {
+    private final String name;
+    private final BooleanSupplier test;
+
+    public AcceptanceTest(String name, BooleanSupplier test) {
+        this.name = name;
+        this.test = test;
+    }
+
+    public AcceptanceTestResult run(User user) {
+        try {
+            boolean ok = test.getAsBoolean();
+            return new AcceptanceTestResult(name, ok ? TestStatus.PASSED : TestStatus.FAILED,
+                    ok ? "Test passed" : "Test failed");
+        } catch (RuntimeException e) {
+            return new AcceptanceTestResult(name, TestStatus.FAILED, e.getMessage());
+        }
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+// File: AcceptanceTestRunner.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class AcceptanceTestRunner {
+    private final List<AcceptanceTest> tests = new ArrayList<>();
+
+    public void addTest(AcceptanceTest test) {
+        tests.add(test);
+    }
+
+    public List<AcceptanceTestResult> runAll(User user) {
+        List<AcceptanceTestResult> results = new ArrayList<>();
+        for (AcceptanceTest test : tests) {
+            results.add(test.run(user));
+        }
+        return results;
+    }
+
+    public String report(List<AcceptanceTestResult> results) {
+        StringBuilder builder = new StringBuilder("Acceptance test report:\n");
+        for (AcceptanceTestResult result : results) {
+            builder.append(result.getTestName())
+                    .append(": ")
+                    .append(result.getStatus())
+                    .append(" - ")
+                    .append(result.getMessage())
+                    .append("\n");
+        }
+        return builder.toString();
+    }
+
+    public List<AcceptanceTestResult> runNightlyBuild(User releaseEngineer, InstallationManager installer) {
+        List<AcceptanceTestResult> results = new ArrayList<>();
+        if (releaseEngineer == null || !releaseEngineer.can(Permission.CONFIGURE_NIGHTLY_BUILD)) {
+            results.add(new AcceptanceTestResult("Nightly build permission", TestStatus.FAILED,
+                    "Permission denied"));
+            return results;
+        }
+        installer.installDependencies("Ubuntu 10.04 LTS");
+        User systemAdmin = new User("system", "system", Role.SYSTEM_ADMINISTRATOR);
+        InstallationTest install = installer.installNeurohubNode(systemAdmin);
+        results.add(new AcceptanceTestResult("Nightly install",
+                install.isPassed() ? TestStatus.PASSED : TestStatus.FAILED, install.getDetails()));
+        InstallationTest functionality = installer.testInstallation();
+        results.add(new AcceptanceTestResult("Nightly functionality",
+                functionality.isPassed() ? TestStatus.PASSED : TestStatus.FAILED,
+                functionality.getDetails()));
+        results.addAll(runAll(releaseEngineer));
+        return results;
+    }
+}
+// File: BackupManager.java
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+public class BackupManager {
+    private String schedule;
+    private Path lastBackup;
+    private boolean verified;
+
+    public BackupManager() {
+        this.schedule = "daily";
+    }
+
+    public void setSchedule(String schedule) {
+        this.schedule = schedule;
+    }
+
+    public List<String> backup(Path source, Path destination) throws IOException {
+        List<String> log = new ArrayList<>();
+        if (!Files.exists(source)) {
+            throw new IOException("Backup source does not exist: " + source);
+        }
+        Files.createDirectories(destination);
+        Path target = destination.resolve("neurohub-backup-" + System.currentTimeMillis() + ".zip");
+        Files.writeString(target, "Neurohub backup of " + source + " using schedule " + schedule);
+        lastBackup = target;
+        verified = Files.exists(target);
+        log.add("Backed up " + source + " to " + target);
+        log.add("Backup verified: " + verified);
+        return log;
+    }
+
+    public boolean verify(Path backup) {
+        return backup != null && Files.exists(backup);
+    }
+
+    public boolean restore(Path backup, Path destination) throws IOException {
+        if (!verify(backup)) {
+            return false;
+        }
+        Files.createDirectories(destination);
+        Files.writeString(destination.resolve("restored-marker.txt"), "Restored from " + backup);
+        return true;
+    }
+
+    public String getSchedule() {
+        return schedule;
+    }
+
+    public Path getLastBackup() {
+        return lastBackup;
+    }
+
+    public boolean isVerified() {
+        return verified;
+    }
+}
+// File: SearchService.java
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class SearchService {
+    public List<FileResource> searchFiles(Collection<FileResource> files, String query,
+                                          String mimePrefix, Set<Tag> tags, Date from, Date to) {
+        List<FileResource> results = new ArrayList<>();
+        String q = query == null ? null : query.toLowerCase();
+        for (FileResource file : files) {
+            if (file.isDeleted()) {
+                continue;
+            }
+            boolean matches = true;
+            if (q != null && !q.isBlank()) {
+                boolean textMatch = file.getFileName().toLowerCase().contains(q);
+                if (!textMatch) {
+                    for (MetadataValue value : file.getMetadata().values()) {
+                        if (value.getValue().toLowerCase().contains(q)) {
+                            textMatch = true;
+                            break;
+                        }
+                    }
+                }
+                matches = textMatch;
+            }
+            if (matches && mimePrefix != null && !mimePrefix.isBlank()) {
+                matches = file.getMimeType().startsWith(mimePrefix);
+            }
+            if (matches && tags != null && !tags.isEmpty()) {
+                matches = file.getTags().containsAll(tags);
+            }
+            if (matches && from != null) {
+                matches = !file.getUploadDate().before(from);
+            }
+            if (matches && to != null) {
+                matches = !file.getUploadDate().after(to);
+            }
+            if (matches) {
+                results.add(file);
+            }
+        }
+        return results;
+    }
+
+    public List<LogBookPage> searchPages(Collection<LogBookPage> pages, String query) {
+        List<LogBookPage> results = new ArrayList<>();
+        String q = query == null ? "" : query.toLowerCase();
+        for (LogBookPage page : pages) {
+            if (page.getTitle().toLowerCase().contains(q) || page.getContent().toLowerCase().contains(q)) {
+                results.add(page);
+            }
+        }
+        return results;
+    }
+
+    public List<Protocol> searchProtocols(Collection<Protocol> protocols, String query) {
+        List<Protocol> results = new ArrayList<>();
+        String q = query == null ? "" : query.toLowerCase();
+        for (Protocol protocol : protocols) {
+            boolean match = protocol.getTitle().toLowerCase().contains(q);
+            if (!match) {
+                for (ProtocolVersion version : protocol.getVersions()) {
+                    if (version.getContent().toLowerCase().contains(q)) {
+                        match = true;
+                        break;
+                    }
+                }
+            }
+            if (match) {
+                results.add(protocol);
+            }
+        }
+        return results;
+    }
+
+    public Map<String, byte[]> downloadMultiple(Collection<FileResource> files, User user) {
+        Map<String, byte[]> result = new LinkedHashMap<>();
+        if (!user.can(Permission.DOWNLOAD_MULTIPLE) && !user.can(Permission.DOWNLOAD_FILE)) {
+            return result;
+        }
+        for (FileResource file : files) {
+            boolean allowed = file.getOwner().equals(user)
+                    || user.can(Permission.ADMIN_ACCESS)
+                    || file.getShareLevel() == ShareLevel.PUBLIC
+                    || file.getShareLevel() == ShareLevel.GROUP
+                    || file.getSharedWith().contains(user);
+            if (allowed && !file.isDeleted()) {
+                result.put(file.getFileName(), file.getCurrentVersion().getContent());
+            }
+        }
+        return result;
+    }
+}
+// File: NeurohubSystem.java
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+public class NeurohubSystem {
+    private final Map<String, User> users = new LinkedHashMap<>();
+    private final Map<String, Workspace> workspaces = new LinkedHashMap<>();
+    private final Map<String, LogBook> logBooks = new LinkedHashMap<>();
+    private final Map<String, FileResource> files = new LinkedHashMap<>();
+    private final Map<String, Protocol> protocols = new LinkedHashMap<>();
+    private final Map<String, Experiment> experiments = new LinkedHashMap<>();
+    private final List<CalendarEvent> events = new ArrayList<>();
+    private final List<Equipment> equipment = new ArrayList<>();
+    private final List<Consumable> consumables = new ArrayList<>();
+    private final List<FeedbackForm> feedbackForms = new ArrayList<>();
+    private final List<PaperReference> papers = new ArrayList<>();
+    private final List<WormStrain> wormStrains = new ArrayList<>();
+    private final InstallationManager installationManager = new InstallationManager();
+    private final AcceptanceTestRunner acceptanceTestRunner = new AcceptanceTestRunner();
+    private final BackupManager backupManager = new BackupManager();
+    private final SearchService searchService = new SearchService();
+
+    public User registerUser(String id, String username, Role role) {
+        User user = new User(id, username, role);
+        users.put(id, user);
+        workspaces.put(id, new Workspace(user));
+        return user;
+    }
+
+    public Workspace getWorkspace(User user) {
+        return workspaces.computeIfAbsent(user.getId(), key -> new Workspace(user));
+    }
+
+    public FileResource uploadFile(User uploader, String id, String fileName, String mimeType, byte[] content) {
+        if (!uploader.can(Permission.UPLOAD_FILE)) {
+            throw new IllegalStateException("User cannot upload files");
+        }
+        FileResource file = new FileResource(id, fileName, mimeType, uploader, content);
+        files.put(id, file);
+        getWorkspace(uploader).addFile(file);
+        return file;
+    }
+
+    public DirectoryUpload uploadDirectory(User uploader, String id, String directoryName,
+                                           Map<String, byte[]> directoryFiles) {
+        if (!uploader.can(Permission.BULK_UPLOAD) && !uploader.can(Permission.UPLOAD_FILE)) {
+            throw new IllegalStateException("User cannot bulk upload files");
+        }
+        List<FileResource> uploaded = new ArrayList<>();
+        for (Map.Entry<String, byte[]> entry : directoryFiles.entrySet()) {
+            String fileId = id + "-" + entry.getKey();
+            FileResource file = uploadFile(uploader, fileId, entry.getKey(),
+                    "application/octet-stream", entry.getValue());
+            uploaded.add(file);
+        }
+        return new DirectoryUpload(id, directoryName, uploader, uploaded);
+    }
+
+    public LogBook createLogBook(User owner, String id, String name) {
+        if (!owner.can(Permission.CREATE_LOG_BOOK)) {
+            throw new IllegalStateException("User cannot create log books");
+        }
+        LogBook logBook = new LogBook(id, name, owner);
+        logBooks.put(id, logBook);
+        return logBook;
+    }
+
+    public LogBookPage createPage(User author, String logBookId, String sectionName, String pageId,
+                                  String title, PageTemplate template, Map<String, String> metadataValues) {
+        if (!author.can(Permission.CREATE_PAGE)) {
+            throw new IllegalStateException("User cannot create log book pages");
+        }
+        LogBook logBook = logBooks.get(logBookId);
+        if (logBook == null) {
+            throw new IllegalArgumentException("Unknown log book: " + logBookId);
+        }
+        LogBookSection section = logBook.getSection(sectionName).orElseGet(() -> logBook.addSection(sectionName));
+        if (template != null) {
+            template.validateMetadata(metadataValues == null ? Map.of() : metadataValues);
+        }
+        LogBookPage page = section.createPage(pageId, title, author, template);
+        if (template != null && metadataValues != null) {
+            for (Map.Entry<String, String> entry : metadataValues.entrySet()) {
+                Optional<MetadataField> field = template.getFields().stream()
+                        .filter(f -> f.getName().equals(entry.getKey()))
+                        .findFirst();
+                field.ifPresent(f -> page.setMetadata(f, entry.getValue(), author));
+            }
+        }
+        return page;
+    }
+
+    public void attachFileToPage(User user, LogBookPage page, FileResource file) {
+        if (!user.can(Permission.ATTACH_FILE)) {
+            throw new IllegalStateException("User cannot attach files");
+        }
+        page.attachFile(file);
+        Workspace workspace = workspaces.get(file.getOwner().getId());
+        if (workspace != null) {
+            workspace.markAttached(file);
+        }
+    }
+
+    public void attachFilesToPage(User user, LogBookPage page, Collection<FileResource> filesToAttach) {
+        if (!user.can(Permission.ATTACH_MULTIPLE) && !user.can(Permission.ATTACH_FILE)) {
+            throw new IllegalStateException("User cannot attach multiple files");
+        }
+        for (FileResource file : filesToAttach) {
+            attachFileToPage(user, page, file);
+        }
+    }
+
+    public byte[] downloadFile(User user, FileResource file) {
+        if (!user.can(Permission.DOWNLOAD_FILE)) {
+            throw new IllegalStateException("User cannot download files");
+        }
+        if (file.isDeleted()) {
+            throw new IllegalStateException("File is deleted");
+        }
+        return file.getCurrentVersion().getContent();
+    }
+
+    public List<FileResource> searchFiles(String query, String mimePrefix, Set<Tag> tags) {
+        return searchService.searchFiles(files.values(), query, mimePrefix, tags, null, null);
+    }
+
+    public List<LogBookPage> searchPages(String query) {
+        List<LogBookPage> allPages = new ArrayList<>();
+        for (LogBook logBook : logBooks.values()) {
+            allPages.addAll(logBook.getPages());
+        }
+        return searchService.searchPages(allPages, query);
+    }
+
+    public List<Protocol> searchProtocols(String query) {
+        return searchService.searchProtocols(protocols.values(), query);
+    }
+
+    public Map<String, byte[]> downloadMultiple(User user, Collection<FileResource> filesToDownload) {
+        return searchService.downloadMultiple(filesToDownload, user);
+    }
+
+    public Protocol createProtocol(User owner, String id, String title, String content,
+                                   Map<String, MetadataValue> metadata) {
+        if (!owner.can(Permission.CREATE_PROTOCOL)) {
+            throw new IllegalStateException("User cannot create protocols");
+        }
+        Protocol protocol = new Protocol(id, title, owner);
+        protocol.addVersion(content, metadata, owner);
+        protocols.put(id, protocol);
+        return protocol;
+    }
+
+    public ProtocolVersion addProtocolVersion(Protocol protocol, User author, String content,
+                                               Map<String, MetadataValue> metadata) {
+        if (!author.can(Permission.MODIFY_PROTOCOL)) {
+            throw new IllegalStateException("User cannot modify protocols");
+        }
+        return protocol.addVersion(content, metadata, author);
+    }
+
+    public Protocol branchProtocol(User author, Protocol original, String id, String title) {
+        if (!author.can(Permission.MODIFY_PROTOCOL)) {
+            throw new IllegalStateException("User cannot branch protocols");
+        }
+        Protocol branch = original.branch(id, title, author);
+        protocols.put(id, branch);
+        return branch;
+    }
+
+    public Experiment createExperiment(User owner, String id, String title, Protocol protocol) {
+        if (!owner.can(Permission.ASSOCIATE_EXPERIMENT)) {
+            throw new IllegalStateException("User cannot create experiments");
+        }
+        Experiment experiment = new Experiment(id, title, owner, protocol);
+        experiments.put(id, experiment);
+        return experiment;
+    }
+
+    public ExperimentalRun addRun(Experiment experiment, String id, String description, Date date) {
+        ExperimentalRun run = new ExperimentalRun(id, description, date);
+        experiment.addRun(run);
+        return run;
+    }
+
+    public WorkflowExecution recordWorkflow(User user, ExperimentalRun run, String id,
+                                             String workflowName, String plan, String result) {
+        if (!user.can(Permission.RECORD_WORKFLOW)) {
+            throw new IllegalStateException("User cannot record workflows");
+        }
+        WorkflowExecution execution = new WorkflowExecution(id, workflowName, plan);
+        execution.recordStep("workflow started");
+        execution.complete(result);
+        run.addWorkflowExecution(execution);
+        return execution;
+    }
+
+    public CalendarEvent createCalendarEvent(User creator, String id, String title, Date start,
+                                              Date end, boolean sharedWithGroup) {
+        CalendarEvent event = new CalendarEvent(id, title, start, end, creator, sharedWithGroup);
+        events.add(event);
+        return event;
+    }
+
+    public Equipment addEquipment(String id, String name, int quantity) {
+        Equipment item = new Equipment(id, name, quantity);
+        equipment.add(item);
+        return item;
+    }
+
+    public Consumable addConsumable(String name, int quantity, String unit, int reorderLevel) {
+        Consumable item = new Consumable(name, quantity, unit, reorderLevel);
+        consumables.add(item);
+        return item;
+    }
+
+    public FeedbackForm createFeedbackForm(User creator, String title, List<String> questions) {
+        if (!creator.can(Permission.CREATE_FEEDBACK)) {
+            throw new IllegalStateException("User cannot create feedback forms");
+        }
+        FeedbackForm form = new FeedbackForm(title, questions);
+        feedbackForms.add(form);
+        return form;
+    }
+
+    public PaperReference addPaper(User user, String title, String authors, int year,
+                                   String doi, boolean groupShared) {
+        if (!user.can(Permission.MANAGE_REFERENCES)) {
+            throw new IllegalStateException("User cannot manage references");
+        }
+        PaperReference paper = new PaperReference(title, authors, year, doi, "", groupShared);
+        papers.add(paper);
+        return paper;
+    }
+
+    public WormStrain addWormStrain(User user, String name, String genotype,
+                                    String wormbaseId) {
+        if (!user.can(Permission.MANAGE_WORM_STRAIN)) {
+            throw new IllegalStateException("User cannot manage worm strains");
+        }
+        WormStrain strain = new WormStrain(name, genotype, wormbaseId, "");
+        wormStrains.add(strain);
+        return strain;
+    }
+
+    public List<String> installDependencies(User admin, String osVersion) {
+        if (!admin.can(Permission.MANAGE_DEPENDENCIES) && !admin.can(Permission.INSTALL_SYSTEM)) {
+            throw new IllegalStateException("User cannot install dependencies");
+        }
+        return installationManager.installDependencies(osVersion);
+    }
+
+    public InstallationTest installNode(User admin) {
+        return installationManager.installNeurohubNode(admin);
+    }
+
+    public InstallationTest testInstallation() {
+        return installationManager.testInstallation();
+    }
+
+    public void registerAcceptanceTest(AcceptanceTest test) {
+        acceptanceTestRunner.addTest(test);
+    }
+
+    public List<AcceptanceTestResult> runAcceptanceTests(User user) {
+        return acceptanceTestRunner.runAll(user);
+    }
+
+    public String getAcceptanceReport(List<AcceptanceTestResult> results) {
+        return acceptanceTestRunner.report(results);
+    }
+
+    public List<AcceptanceTestResult> runNightlyBuild(User releaseEngineer) {
+        return acceptanceTestRunner.runNightlyBuild(releaseEngineer, installationManager);
+    }
+
+    public List<String> backup(Path source, Path destination) throws IOException {
+        return backupManager.backup(source, destination);
+    }
+
+    public boolean restore(Path backup, Path destination) throws IOException {
+        return backupManager.restore(backup, destination);
+    }
+
+    public User getUser(String id) {
+        return users.get(id);
+    }
+
+    public Collection<FileResource> getAllFiles() {
+        return new ArrayList<>(files.values());
+    }
+
+    public Collection<LogBook> getAllLogBooks() {
+        return new ArrayList<>(logBooks.values());
+    }
+
+    public Collection<Experiment> getAllExperiments() {
+        return new ArrayList<>(experiments.values());
+    }
+
+    public List<CalendarEvent> getEvents() {
+        return new ArrayList<>(events);
+    }
+
+    public List<Equipment> getEquipment() {
+        return new ArrayList<>(equipment);
+    }
+
+    public List<Consumable> getConsumables() {
+        return new ArrayList<>(consumables);
+    }
+
+    public List<FeedbackForm> getFeedbackForms() {
+        return new ArrayList<>(feedbackForms);
+    }
+
+    public List<PaperReference> getPapers() {
+        return new ArrayList<>(papers);
+    }
+
+    public List<WormStrain> getWormStrains() {
+        return new ArrayList<>(wormStrains);
+    }
+}
+// File: Main.java
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        NeurohubSystem system = new NeurohubSystem();
+
+        User admin = system.registerUser("u1", "admin", Role.SYSTEM_ADMINISTRATOR);
+        User researcher = system.registerUser("u2", "alice", Role.RESEARCHER);
+        User release = system.registerUser("u3", "release", Role.RELEASE_ENGINEER);
+        User labAdmin = system.registerUser("u4", "labadmin", Role.LAB_ADMIN);
+
+        System.out.println("== Installation ==");
+        System.out.println(system.installDependencies(admin, "Ubuntu 10.04 LTS"));
+        System.out.println(system.installNode(admin).getDetails());
+        System.out.println(system.testInstallation().getDetails());
+
+        MetadataField genotype = new MetadataField("genotype", MetadataType.TEXT, false);
+        PageTemplate template = new PageTemplate("Experiment page", List.of(genotype), Map.of("genotype", "N2"));
+        LogBook logBook = system.createLogBook(researcher, "lb1", "Alice Lab Book");
+        LogBookPage page = system.createPage(researcher, "lb1", "Behaviour", "p1",
+                "Drug response run 1", template, Map.of("genotype", "N2"));
+        page.appendHtmlTable(List.of(List.of("Date", "Response"), List.of("2024-01-01", "Normal")));
+        page.insertGreekSymbol(" α ");
+
+        FileResource file = system.uploadFile(researcher, "f1", "video.mp4", "video/mp4", new byte[2048]);
+        file.setMetadata(genotype, "N2", researcher);
+        file.assignTag(new Tag("behaviour", "controlled"));
+        system.attachFileToPage(researcher, page, file);
+        System.out.println("Page proof: " + page.getDigitalProof());
+        System.out.println("Attachments: " + page.getAttachments().size());
+
+        FileResource analysis = system.uploadFile(researcher, "f2", "analysis.csv", "text/csv", new byte[128]);
+        analysis.addLink(file, LinkType.ANALYSIS_OF);
+        System.out.println("Links: " + analysis.getLinks().size());
+
+        ControlledVocabulary vocabulary = new ControlledVocabulary("controlled");
+        vocabulary.addTag(new Tag("behaviour", "controlled"));
+        System.out.println("Tags: " + file.getTags());
+
+        Experiment experiment = system.createExperiment(researcher, "e1", "Learning assay", null);
+        experiment.associateFile(file);
+        ExperimentalRun run = system.addRun(experiment, "r1", "Training", new Date());
+        run.addFile(file);
+        WorkflowExecution workflow = system.recordWorkflow(researcher, run, "w1",
+                "Video analysis", "Analyze video", "completed");
+        workflow.attachToLogBook(page);
+        experiment.markQuality(file, QualityStatus.GOOD);
+
+        system.registerAcceptanceTest(new AcceptanceTest("Node responds",
+                () -> system.testInstallation().isPassed()));
+        system.registerAcceptanceTest(new AcceptanceTest("Researcher can upload",
+                () -> system.getWorkspace(researcher).getFiles().size() > 0));
+        List<AcceptanceTestResult> results = system.runAcceptanceTests(release);
+        System.out.println("\n== Acceptance ==");
+        System.out.println(system.getAcceptanceReport(results));
+        System.out.println("Nightly results: " + system.runNightlyBuild(release).size());
+
+        system.createCalendarEvent(researcher, "ev1", "Lab meeting", new Date(),
+                new Date(System.currentTimeMillis() + 3600000), true);
+        system.addEquipment("eq1", "Microscope", 2);
+        system.addConsumable("Gloves", 100, "box", 20);
+        system.createFeedbackForm(labAdmin, "Course feedback", List.of("Was it useful?"));
+        system.addPaper(researcher, "A paper", "Alice", 2024, "doi:123", true);
+        system.addWormStrain(labAdmin, "N2", "wild type", "WBStrain00000001");
+
+        Path temp = Files.createTempDirectory("neurohub-demo");
+        system.backup(temp, temp.resolve("backup"));
+        System.out.println("Demo complete.");
+    }
+}

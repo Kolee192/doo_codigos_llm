@@ -1,0 +1,1273 @@
+// File: AccessLevel.java
+public enum AccessLevel {
+    PUBLIC,
+    AUTHENTICATED,
+    RESTRICTED,
+    PRIVATE
+}
+
+// File: ReplicationPolicy.java
+public enum ReplicationPolicy {
+    DISABLED,
+    PRIMARY_REMOTE,
+    PRIMARY_AND_SECONDARY
+}
+
+// File: ReplicationStatus.java
+public enum ReplicationStatus {
+    NOT_REQUIRED,
+    QUEUED,
+    IN_PROGRESS,
+    REPLICATED,
+    FAILED
+}
+
+// File: User.java
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class User {
+    private final String id;
+    private final String name;
+    private final String email;
+    private final Set<String> roles = ConcurrentHashMap.newKeySet();
+
+    public User(String id, String name, String email) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("User id is required");
+        }
+        this.id = id;
+        this.name = name == null ? id : name;
+        this.email = email;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public Set<String> getRoles() {
+        return Set.copyOf(roles);
+    }
+
+    public void addRole(String role) {
+        if (role != null && !role.isBlank()) {
+            roles.add(role);
+        }
+    }
+
+    public void removeRole(String role) {
+        roles.remove(role);
+    }
+
+    public boolean hasRole(String role) {
+        return roles.contains(role);
+    }
+}
+
+// File: FinancialContact.java
+public class FinancialContact {
+    private final String name;
+    private final String phone;
+    private final String email;
+    private final String title;
+    private final String address;
+
+    public FinancialContact(String name, String phone, String email, String title, String address) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Contact name is required");
+        }
+        this.name = name;
+        this.phone = phone;
+        this.email = email;
+        this.title = title;
+        this.address = address;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+}
+
+// File: AuditEvent.java
+import java.time.Instant;
+import java.util.UUID;
+
+public record AuditEvent(
+        String id,
+        String objectId,
+        String eventType,
+        String actorId,
+        String comment,
+        Instant occurredAt) {
+
+    public AuditEvent(String objectId, String eventType, String actorId, String comment) {
+        this(UUID.randomUUID().toString(), objectId, eventType, actorId, comment, Instant.now());
+    }
+}
+
+// File: DepositForm.java
+import java.util.List;
+import java.util.Set;
+
+public class DepositForm {
+    private final String name;
+    private final Set<String> requiredFields;
+    private final List<String> acceptedLicenses;
+    private final boolean allowEmbargo;
+
+    public DepositForm(String name, Set<String> requiredFields, List<String> acceptedLicenses, boolean allowEmbargo) {
+        this.name = name == null ? "Default deposit form" : name;
+        this.requiredFields = requiredFields == null ? Set.of() : Set.copyOf(requiredFields);
+        this.acceptedLicenses = acceptedLicenses == null ? List.of() : List.copyOf(acceptedLicenses);
+        this.allowEmbargo = allowEmbargo;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Set<String> getRequiredFields() {
+        return requiredFields;
+    }
+
+    public List<String> getAcceptedLicenses() {
+        return acceptedLicenses;
+    }
+
+    public boolean isAllowEmbargo() {
+        return allowEmbargo;
+    }
+}
+
+// File: Component.java
+import java.util.Arrays;
+
+public class Component {
+    private final String id;
+    private final String name;
+    private byte[] data;
+    private String checksum;
+    private boolean encrypted;
+    private ReplicationStatus replicationStatus = ReplicationStatus.NOT_REQUIRED;
+
+    public Component(String id, String name, byte[] data) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("Component id is required");
+        }
+        this.id = id;
+        this.name = name == null ? id : name;
+        this.data = data == null ? new byte[0] : Arrays.copyOf(data, data.length);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public synchronized byte[] getData() {
+        return Arrays.copyOf(data, data.length);
+    }
+
+    public synchronized void replaceData(byte[] newData) {
+        data = Arrays.copyOf(newData, newData.length);
+    }
+
+    public synchronized long getSize() {
+        return data.length;
+    }
+
+    public synchronized String getChecksum() {
+        return checksum;
+    }
+
+    public synchronized void setChecksum(String checksum) {
+        this.checksum = checksum;
+    }
+
+    public synchronized boolean isEncrypted() {
+        return encrypted;
+    }
+
+    public synchronized void setEncrypted(boolean encrypted) {
+        this.encrypted = encrypted;
+    }
+
+    public synchronized ReplicationStatus getReplicationStatus() {
+        return replicationStatus;
+    }
+
+    public synchronized void setReplicationStatus(ReplicationStatus replicationStatus) {
+        this.replicationStatus = replicationStatus;
+    }
+}
+
+// File: Item.java
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Item {
+    private final String id;
+    private final String administrativeCollectionId;
+    private final Map<String, String> metadata = new LinkedHashMap<>();
+    private final List<Component> components = new ArrayList<>();
+    private final Set<String> appearingCollectionIds = new LinkedHashSet<>();
+    private final Set<String> permittedUsers = new LinkedHashSet<>();
+    private final Set<String> referers = new LinkedHashSet<>();
+    private final List<Map<String, String>> versions = new ArrayList<>();
+    private final Set<String> authorIdentifiers = new LinkedHashSet<>();
+
+    private FinancialContact financialContact;
+    private LocalDate expirationDate;
+    private LocalDate embargoReleaseDate;
+    private LocalDate publishedAt;
+    private AccessLevel accessLevel = AccessLevel.PUBLIC;
+    private AccessLevel accessAfterEmbargo = AccessLevel.PUBLIC;
+    private boolean published = true;
+    private String license;
+    private ReplicationStatus replicationStatus = ReplicationStatus.NOT_REQUIRED;
+    private Instant createdAt = Instant.now();
+    private long revision;
+
+    public Item(String id, String administrativeCollectionId) {
+        if (id == null || id.isBlank() || administrativeCollectionId == null || administrativeCollectionId.isBlank()) {
+            throw new IllegalArgumentException("Item and collection ids are required");
+        }
+        this.id = id;
+        this.administrativeCollectionId = administrativeCollectionId;
+        this.appearingCollectionIds.add(administrativeCollectionId);
+        this.publishedAt = LocalDate.now();
+    }
+
+    public synchronized String getId() {
+        return id;
+    }
+
+    public String getAdministrativeCollectionId() {
+        return administrativeCollectionId;
+    }
+
+    public synchronized Map<String, String> getMetadata() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(metadata));
+    }
+
+    public synchronized void setMetadata(String key, String value) {
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("Metadata key is required");
+        }
+        metadata.put(key, value == null ? "" : value);
+        revision++;
+    }
+
+    public synchronized void setMetadata(Map<String, String> values) {
+        metadata.putAll(values);
+        revision++;
+    }
+
+    public synchronized List<Component> getComponents() {
+        return List.copyOf(components);
+    }
+
+    public synchronized void addComponent(Component component) {
+        components.add(component);
+        revision++;
+    }
+
+    public synchronized Set<String> getAppearingCollectionIds() {
+        return Set.copyOf(appearingCollectionIds);
+    }
+
+    public synchronized void addAppearingCollection(String collectionId) {
+        appearingCollectionIds.add(collectionId);
+    }
+
+    public synchronized void removeAppearingCollection(String collectionId) {
+        if (!administrativeCollectionId.equals(collectionId)) {
+            appearingCollectionIds.remove(collectionId);
+        }
+    }
+
+    public synchronized FinancialContact getFinancialContact() {
+        return financialContact;
+    }
+
+    public synchronized void setFinancialContact(FinancialContact financialContact) {
+        this.financialContact = financialContact;
+    }
+
+    public synchronized LocalDate getExpirationDate() {
+        return expirationDate;
+    }
+
+    public synchronized void setExpirationDate(LocalDate expirationDate) {
+        this.expirationDate = expirationDate;
+        revision++;
+    }
+
+    public synchronized LocalDate getEmbargoReleaseDate() {
+        return embargoReleaseDate;
+    }
+
+    public synchronized void setEmbargo(LocalDate releaseDate, AccessLevel accessAfterRelease) {
+        this.embargoReleaseDate = releaseDate;
+        this.accessAfterEmbargo = accessAfterRelease == null ? AccessLevel.PUBLIC : accessAfterRelease;
+        this.accessLevel = AccessLevel.RESTRICTED;
+        revision++;
+    }
+
+    public synchronized void liftEmbargo() {
+        if (embargoReleaseDate != null) {
+            accessLevel = accessAfterEmbargo;
+            embargoReleaseDate = null;
+            revision++;
+        }
+    }
+
+    public synchronized boolean isEmbargoed(LocalDate date) {
+        return embargoReleaseDate != null && date.isBefore(embargoReleaseDate);
+    }
+
+    public synchronized LocalDate getPublishedAt() {
+        return publishedAt;
+    }
+
+    public synchronized boolean isPublished() {
+        return published;
+    }
+
+    public synchronized void setPublished(boolean published, LocalDate date) {
+        this.published = published;
+        this.publishedAt = published ? date : null;
+        revision++;
+    }
+
+    public synchronized AccessLevel getAccessLevel() {
+        return accessLevel;
+    }
+
+    public synchronized void setAccessLevel(AccessLevel accessLevel) {
+        this.accessLevel = accessLevel == null ? AccessLevel.PRIVATE : accessLevel;
+        revision++;
+    }
+
+    public synchronized AccessLevel getAccessAfterEmbargo() {
+        return accessAfterEmbargo;
+    }
+
+    public synchronized boolean isAccessible(User user, String remoteAddress, boolean isStaff, LocalDate today) {
+        if (isStaff) {
+            return true;
+        }
+        if (isEmbargoed(today)) {
+            return false;
+        }
+        return switch (accessLevel) {
+            case PUBLIC -> true;
+            case AUTHENTICATED -> user != null;
+            case RESTRICTED -> user != null && permittedUsers.contains(user.getId());
+            case PRIVATE -> false;
+        };
+    }
+
+    public synchronized boolean isMetadataDiscoverable(LocalDate today) {
+        return published && (isEmbargoed(today) || accessLevel != AccessLevel.PRIVATE);
+    }
+
+    public synchronized void permitUser(String userId) {
+        permittedUsers.add(userId);
+    }
+
+    public synchronized void revokeUser(String userId) {
+        permittedUsers.remove(userId);
+    }
+
+    public synchronized Set<String> getPermittedUsers() {
+        return Set.copyOf(permittedUsers);
+    }
+
+    public synchronized String getLicense() {
+        return license;
+    }
+
+    public synchronized void setLicense(String license) {
+        this.license = license;
+        if (license != null) {
+            metadata.put("license", license);
+        }
+        revision++;
+    }
+
+    public synchronized ReplicationStatus getReplicationStatus() {
+        return replicationStatus;
+    }
+
+    public synchronized void setReplicationStatus(ReplicationStatus replicationStatus) {
+        this.replicationStatus = replicationStatus;
+        for (Component component : components) {
+            component.setReplicationStatus(replicationStatus);
+        }
+    }
+
+    public synchronized long getStorageBytes() {
+        return components.stream().mapToLong(Component::getSize).sum();
+    }
+
+    public synchronized long getRevision() {
+        return revision;
+    }
+
+    public synchronized void saveVersion() {
+        versions.add(new LinkedHashMap<>(metadata));
+    }
+
+    public synchronized List<Map<String, String>> getVersions() {
+        return versions.stream().map(Map::copyOf).toList();
+    }
+
+    public synchronized void restoreVersion(int versionIndex) {
+        if (versionIndex < 0 || versionIndex >= versions.size()) {
+            throw new IllegalArgumentException("Version does not exist");
+        }
+        metadata.clear();
+        metadata.putAll(versions.get(versionIndex));
+        revision++;
+    }
+
+    public synchronized void addAuthorIdentifier(String identifier) {
+        if (identifier != null && !identifier.isBlank()) {
+            authorIdentifiers.add(identifier);
+        }
+    }
+
+    public synchronized Set<String> getAuthorIdentifiers() {
+        return Set.copyOf(authorIdentifiers);
+    }
+
+    public synchronized void addReferer(String referer) {
+        if (referer != null && !referer.isBlank()) {
+            referers.add(referer);
+        }
+    }
+
+    public synchronized Set<String> getReferers() {
+        return Set.copyOf(referers);
+    }
+
+    public synchronized Instant getCreatedAt() {
+        return createdAt;
+    }
+}
+
+// File: RepositoryCollection.java
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class RepositoryCollection {
+    private final String id;
+    private final String name;
+    private final Set<String> itemIds = new LinkedHashSet<>();
+    private final Map<String, LocalDate> depositors = new LinkedHashMap<>();
+    private final Map<String, LocalDate> depositWindows = new LinkedHashMap<>();
+    private final Set<String> curatorIds = new LinkedHashSet<>();
+    private final Set<String> whitelistedIps = new LinkedHashSet<>();
+    private final List<Instant> depositActivity = new ArrayList<>();
+
+    private DepositForm depositForm = new DepositForm("Default", Set.of(), List.of(), true);
+    private ReplicationPolicy replicationPolicy = ReplicationPolicy.DISABLED;
+    private AccessLevel defaultAccess = AccessLevel.PUBLIC;
+    private LocalDate depositWindowCloses;
+    private boolean encrypted;
+
+    public RepositoryCollection(String id, String name) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("Collection id is required");
+        }
+        this.id = id;
+        this.name = name == null ? id : name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public synchronized void addItem(String itemId) {
+        itemIds.add(itemId);
+        depositActivity.add(Instant.now());
+    }
+
+    public synchronized void removeItem(String itemId) {
+        itemIds.remove(itemId);
+    }
+
+    public synchronized Set<String> getItemIds() {
+        return Set.copyOf(itemIds);
+    }
+
+    public synchronized DepositForm getDepositForm() {
+        return depositForm;
+    }
+
+    public synchronized void setDepositForm(DepositForm depositForm) {
+        this.depositForm = depositForm;
+    }
+
+    public synchronized ReplicationPolicy getReplicationPolicy() {
+        return replicationPolicy;
+    }
+
+    public synchronized void setReplicationPolicy(ReplicationPolicy replicationPolicy) {
+        this.replicationPolicy = replicationPolicy == null ? ReplicationPolicy.DISABLED : replicationPolicy;
+    }
+
+    public synchronized AccessLevel getDefaultAccess() {
+        return defaultAccess;
+    }
+
+    public synchronized void setDefaultAccess(AccessLevel defaultAccess) {
+        this.defaultAccess = defaultAccess == null ? AccessLevel.PRIVATE : defaultAccess;
+    }
+
+    public synchronized void addCurator(String userId) {
+        curatorIds.add(userId);
+    }
+
+    public synchronized boolean isCurator(String userId) {
+        return curatorIds.contains(userId);
+    }
+
+    public synchronized Set<String> getCuratorIds() {
+        return Set.copyOf(curatorIds);
+    }
+
+    public synchronized void setEncrypted(boolean encrypted) {
+        this.encrypted = encrypted;
+    }
+
+    public synchronized boolean isEncrypted() {
+        return encrypted;
+    }
+
+    public synchronized void addWhitelistedIp(String address) {
+        whitelistedIps.add(address);
+    }
+
+    public synchronized Set<String> getWhitelistedIps() {
+        return Set.copyOf(whitelistedIps);
+    }
+
+    public synchronized void addDepositor(String userId) {
+        depositors.put(userId, depositWindowCloses);
+    }
+
+    public synchronized void removeDepositor(String userId) {
+        depositors.remove(userId);
+        depositWindows.remove(userId);
+    }
+
+    public synchronized void addDepositors(Set<String> userIds) {
+        userIds.forEach(this::addDepositor);
+    }
+
+    public synchronized Set<String> getDepositorIds() {
+        return Set.copyOf(depositors.keySet());
+    }
+
+    public synchronized void setDepositWindowCloses(LocalDate date) {
+        depositWindowCloses = date;
+        for (String userId : depositors.keySet()) {
+            depositWindows.put(userId, date);
+        }
+    }
+
+    public synchronized void setDepositorWindow(String userId, LocalDate date) {
+        if (!depositors.containsKey(userId)) {
+            throw new IllegalArgumentException("User is not a depositor in this collection");
+        }
+        depositWindows.put(userId, date);
+    }
+
+    public synchronized boolean canDeposit(String userId, LocalDate date) {
+        if (!depositors.containsKey(userId)) {
+            return false;
+        }
+        LocalDate close = depositWindows.getOrDefault(userId, depositWindowCloses);
+        return close == null || !date.isAfter(close);
+    }
+
+    public synchronized List<Instant> getDepositActivity() {
+        return List.copyOf(depositActivity);
+    }
+}
+
+// File: SearchQuery.java
+import java.time.LocalDate;
+
+public record SearchQuery(String text, LocalDate fromDate, LocalDate toDate) {
+    public SearchQuery {
+        text = text == null ? "" : text;
+        if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+            throw new IllegalArgumentException("Start date must not be after end date");
+        }
+    }
+
+    public boolean matchesDate(Item item) {
+        LocalDate date = item.getPublishedAt();
+        if (date == null) {
+            return false;
+        }
+        if (fromDate != null && date.isBefore(fromDate)) {
+            return false;
+        }
+        return toDate == null || !date.isAfter(toDate);
+    }
+}
+
+// File: Repository.java
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+public class Repository {
+    private final Map<String, RepositoryCollection> collections = new ConcurrentHashMap<>();
+    private final Map<String, Item> items = new ConcurrentHashMap<>();
+    private final Map<String, User> users = new ConcurrentHashMap<>();
+    private final List<AuditEvent> auditEvents = java.util.Collections.synchronizedList(new ArrayList<>());
+    private final Map<String, SecretKey> collectionKeys = new ConcurrentHashMap<>();
+    private final Map<String, String> errorMessages = new ConcurrentHashMap<>();
+    private final Map<String, String> scheduledMessages = new ConcurrentHashMap<>();
+
+    private volatile boolean superuserScope;
+    private volatile boolean indexRebuilding;
+
+    public void registerUser(User user) {
+        users.put(user.getId(), user);
+    }
+
+    public void addCollection(RepositoryCollection collection) {
+        collections.put(collection.getId(), collection);
+    }
+
+    public RepositoryCollection getCollection(String collectionId) {
+        RepositoryCollection collection = collections.get(collectionId);
+        if (collection == null) {
+            throw new IllegalArgumentException("Unknown collection: " + collectionId);
+        }
+        return collection;
+    }
+
+    public Item getItem(String itemId) {
+        Item item = items.get(itemId);
+        if (item == null) {
+            throw new IllegalArgumentException("Unknown item: " + itemId);
+        }
+        return item;
+    }
+
+    public Collection<RepositoryCollection> getCollections() {
+        return List.copyOf(collections.values());
+    }
+
+    public Collection<Item> getItems() {
+        return List.copyOf(items.values());
+    }
+
+    public synchronized Item ingest(
+            String collectionId,
+            String itemId,
+            User depositor,
+            Map<String, String> metadata,
+            List<Component> components,
+            String license,
+            LocalDate embargoReleaseDate) {
+
+        RepositoryCollection collection = getCollection(collectionId);
+        LocalDate today = LocalDate.now();
+
+        if (depositor != null && !collection.getDepositorIds().isEmpty()
+                && !collection.canDeposit(depositor.getId(), today)) {
+            throw new SecurityException("Depositor is not authorized or the deposit window has closed");
+        }
+        if (collection.getDepositForm().isAllowEmbargo() == false && embargoReleaseDate != null) {
+            throw new IllegalArgumentException("This collection does not allow embargoes");
+        }
+        List<String> acceptedLicenses = collection.getDepositForm().getAcceptedLicenses();
+        if (!acceptedLicenses.isEmpty() && (license == null || !acceptedLicenses.contains(license))) {
+            throw new SecurityException("A license accepted by this collection is required");
+        }
+
+        for (String required : collection.getDepositForm().getRequiredFields()) {
+            if (metadata == null || metadata.get(required) == null || metadata.get(required).isBlank()) {
+                throw new IllegalArgumentException("Required metadata is missing: " + required);
+            }
+        }
+
+        Item item = new Item(itemId, collectionId);
+        item.setMetadata(metadata == null ? Map.of() : metadata);
+        item.setAccessLevel(collection.getDefaultAccess());
+        item.setLicense(license);
+        if (components != null) {
+            components.forEach(item::addComponent);
+        }
+        if (embargoReleaseDate != null) {
+            item.setEmbargo(embargoReleaseDate, collection.getDefaultAccess());
+        }
+
+        Item previous = items.putIfAbsent(itemId, item);
+        if (previous != null) {
+            throw new IllegalArgumentException("Item id already exists: " + itemId);
+        }
+        collection.addItem(itemId);
+
+        if (collection.getReplicationPolicy() != ReplicationPolicy.DISABLED) {
+            item.setReplicationStatus(ReplicationStatus.QUEUED);
+        }
+        if (collection.isEncrypted()) {
+            encryptItemComponents(collection, item);
+        }
+
+        auditEvents.add(new AuditEvent(itemId, "INGESTED", depositor == null ? "system" : depositor.getId(), null));
+        return item;
+    }
+
+    public Item ingestProQuestETD(
+            String collectionId,
+            String itemId,
+            Map<String, String> metadata,
+            List<Component> components,
+            LocalDate releaseDate,
+            AccessLevel postEmbargoAccess) {
+
+        Item item = ingest(collectionId, itemId, null, metadata, components, null, null);
+        if (releaseDate != null && releaseDate.isAfter(LocalDate.now())) {
+            item.setEmbargo(releaseDate, postEmbargoAccess);
+        }
+        auditEvents.add(new AuditEvent(itemId, "ETD_BATCH_INGESTED", "batch", "ProQuest ETD"));
+        return item;
+    }
+
+    public void mapItemToCollection(String itemId, String collectionId) {
+        getCollection(collectionId);
+        getItem(itemId).addAppearingCollection(collectionId);
+    }
+
+    public void moveItem(String itemId, String destinationCollectionId) {
+        Item item = getItem(itemId);
+        RepositoryCollection destination = getCollection(destinationCollectionId);
+        RepositoryCollection source = getCollection(item.getAdministrativeCollectionId());
+        source.removeItem(itemId);
+        destination.addItem(itemId);
+        mapItemToCollection(itemId, destinationCollectionId);
+        auditEvents.add(new AuditEvent(itemId, "MOVED_COLLECTION", "system", destinationCollectionId));
+    }
+
+    public void setExpirationDate(String itemId, LocalDate expirationDate) {
+        getItem(itemId).setExpirationDate(expirationDate);
+    }
+
+    public List<String> processExpirations(LocalDate today, boolean hideBeforeDelete) {
+        List<String> deleted = new ArrayList<>();
+        for (Item item : items.values()) {
+            LocalDate expiry = item.getExpirationDate();
+            if (expiry == null || today.isBefore(expiry)) {
+                continue;
+            }
+            if (hideBeforeDelete && item.isPublished()) {
+                item.setPublished(false, today);
+                auditEvents.add(new AuditEvent(item.getId(), "HIDDEN_FOR_EXPIRATION", "system", null));
+            } else {
+                items.remove(item.getId());
+                for (RepositoryCollection collection : collections.values()) {
+                    collection.removeItem(item.getId());
+                }
+                deleted.add(item.getId());
+                auditEvents.add(new AuditEvent(item.getId(), "EXPIRED_AND_DELETED", "system", null));
+            }
+        }
+        return List.copyOf(deleted);
+    }
+
+    public void publish(String itemId, String actorId, String comment) {
+        Item item = getItem(itemId);
+        item.setPublished(true, LocalDate.now());
+        auditEvents.add(new AuditEvent(itemId, "PUBLISHED", actorId, comment));
+    }
+
+    public void unpublish(String itemId, String actorId, String comment) {
+        Item item = getItem(itemId);
+        item.setPublished(false, LocalDate.now());
+        auditEvents.add(new AuditEvent(itemId, "UNPUBLISHED", actorId, comment));
+    }
+
+    public void liftEmbargo(String itemId, String actorId) {
+        Item item = getItem(itemId);
+        item.liftEmbargo();
+        auditEvents.add(new AuditEvent(itemId, "EMBARGO_LIFTED", actorId, null));
+    }
+
+    public List<String> processDueEmbargoes(LocalDate today) {
+        List<String> released = new ArrayList<>();
+        for (Item item : items.values()) {
+            LocalDate releaseDate = item.getEmbargoReleaseDate();
+            if (releaseDate != null && !today.isBefore(releaseDate)) {
+                item.liftEmbargo();
+                released.add(item.getId());
+                auditEvents.add(new AuditEvent(item.getId(), "EMBARGO_RELEASED", "system", null));
+            }
+        }
+        return List.copyOf(released);
+    }
+
+    public boolean canAccess(String itemId, User user, String remoteAddress, boolean isStaff) {
+        Item item = getItem(itemId);
+        RepositoryCollection collection = getCollection(item.getAdministrativeCollectionId());
+        if (isStaff || collection.getCuratorIds().contains(user == null ? "" : user.getId())) {
+            return true;
+        }
+        if (remoteAddress != null && collection.getWhitelistedIps().contains(remoteAddress)) {
+            return true;
+        }
+        if (collection.getDefaultAccess() == AccessLevel.AUTHENTICATED && user == null) {
+            return false;
+        }
+        return item.isAccessible(user, remoteAddress, false, LocalDate.now());
+    }
+
+    public List<Item> search(SearchQuery query) {
+        String text = query.text().toLowerCase();
+        return items.values().stream()
+                .filter(item -> query.matchesDate(item))
+                .filter(Item::isPublished)
+                .filter(item -> {
+                    if (text.isBlank()) {
+                        return true;
+                    }
+                    return item.getMetadata().entrySet().stream()
+                            .anyMatch(entry -> entry.getKey().toLowerCase().contains(text)
+                                    || entry.getValue().toLowerCase().contains(text));
+                })
+                .sorted(Comparator.comparing(Item::getId))
+                .toList();
+    }
+
+    public List<AuditEvent> getAuditEvents() {
+        synchronized (auditEvents) {
+            return List.copyOf(auditEvents);
+        }
+    }
+
+    public Map<String, Long> storageByFinancialContact() {
+        Map<String, Long> totals = new LinkedHashMap<>();
+        for (Item item : items.values()) {
+            FinancialContact contact = item.getFinancialContact();
+            String key = contact == null ? "Unassigned" : contact.getName();
+            totals.merge(key, item.getStorageBytes(), Long::sum);
+        }
+        return Map.copyOf(totals);
+    }
+
+    public Map<String, Map<String, Long>> collectionStatistics() {
+        Map<String, Map<String, Long>> report = new LinkedHashMap<>();
+        for (RepositoryCollection collection : collections.values()) {
+            long storage = 0;
+            long componentCount = 0;
+            for (String itemId : collection.getItemIds()) {
+                Item item = items.get(itemId);
+                if (item != null) {
+                    storage += item.getStorageBytes();
+                    componentCount += item.getComponents().size();
+                }
+            }
+            report.put(collection.getId(), Map.of(
+                    "items", (long) collection.getItemIds().size(),
+                    "components", componentCount,
+                    "storageBytes", storage));
+        }
+        return Map.copyOf(report);
+    }
+
+    public Map<String, Object> collectionReplicationSummary(String collectionId) {
+        RepositoryCollection collection = getCollection(collectionId);
+        Map<String, Long> counts = new LinkedHashMap<>();
+        for (ReplicationStatus status : ReplicationStatus.values()) {
+            counts.put(status.name(), 0L);
+        }
+        for (String itemId : collection.getItemIds()) {
+            Item item = items.get(itemId);
+            if (item != null) {
+                counts.merge(item.getReplicationStatus().name(), 1L, Long::sum);
+            }
+        }
+        return Map.of("collectionId", collectionId, "statusCounts", Map.copyOf(counts));
+    }
+
+    public void updateReplicationStatus(String itemId, ReplicationStatus status) {
+        getItem(itemId).setReplicationStatus(status);
+    }
+
+    public void encryptCollection(String collectionId) {
+        RepositoryCollection collection = getCollection(collectionId);
+        collection.setEncrypted(true);
+        ensureCollectionKey(collectionId);
+        for (String itemId : collection.getItemIds()) {
+            Item item = items.get(itemId);
+            if (item != null) {
+                encryptItemComponents(collection, item);
+            }
+        }
+    }
+
+    private void encryptItemComponents(RepositoryCollection collection, Item item) {
+        SecretKey key = ensureCollectionKey(collection.getId());
+        for (Component component : item.getComponents()) {
+            if (component.isEncrypted()) {
+                continue;
+            }
+            try {
+                byte[] plain = component.getData();
+                byte[] checksum = MessageDigest.getInstance("SHA-256").digest(plain);
+                byte[] nonce = new byte[12];
+                new SecureRandom().nextBytes(nonce);
+                Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+                cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(128, nonce));
+                byte[] encrypted = cipher.doFinal(plain);
+                byte[] packed = new byte[nonce.length + encrypted.length];
+                System.arraycopy(nonce, 0, packed, 0, nonce.length);
+                System.arraycopy(encrypted, 0, packed, nonce.length, encrypted.length);
+                component.replaceData(packed);
+                component.setChecksum(HexFormat.of().formatHex(checksum));
+                component.setEncrypted(true);
+                if (collection.getReplicationPolicy() != ReplicationPolicy.DISABLED) {
+                    component.setReplicationStatus(ReplicationStatus.QUEUED);
+                }
+            } catch (Exception exception) {
+                throw new IllegalStateException("Unable to encrypt component", exception);
+            }
+        }
+    }
+
+    private SecretKey ensureCollectionKey(String collectionId) {
+        return collectionKeys.computeIfAbsent(collectionId, ignored -> {
+            try {
+                KeyGenerator generator = KeyGenerator.getInstance("AES");
+                generator.init(256);
+                return generator.generateKey();
+            } catch (Exception exception) {
+                throw new IllegalStateException("Unable to create collection encryption key", exception);
+            }
+        });
+    }
+
+    public Map<String, String> getEmbargoSummary() {
+        Map<String, String> result = new LinkedHashMap<>();
+        for (Item item : items.values()) {
+            if (item.getEmbargoReleaseDate() != null) {
+                result.put(item.getId(), item.getEmbargoReleaseDate().toString());
+            }
+        }
+        return Map.copyOf(result);
+    }
+
+    public String exposeOaiPmh() {
+        StringBuilder xml = new StringBuilder("<?xml version=\"1.0\"?><records>");
+        for (Item item : items.values()) {
+            if (item.isPublished() && item.isMetadataDiscoverable(LocalDate.now())) {
+                xml.append("<record id=\"").append(escape(item.getId())).append("\">");
+                item.getMetadata().forEach((key, value) -> xml.append("<metadata key=\"")
+                        .append(escape(key)).append("\">").append(escape(value)).append("</metadata>"));
+                xml.append("</record>");
+            }
+        }
+        return xml.append("</records>").toString();
+    }
+
+    public String linkedData(String itemId) {
+        Item item = getItem(itemId);
+        StringBuilder json = new StringBuilder("{\"@id\":\"").append(escape(item.getId())).append("\",\"metadata\":{");
+        boolean first = true;
+        for (Map.Entry<String, String> entry : item.getMetadata().entrySet()) {
+            if (!first) {
+                json.append(',');
+            }
+            json.append('"').append(escape(entry.getKey())).append("\":\"").append(escape(entry.getValue())).append('"');
+            first = false;
+        }
+        return json.append("}}").toString();
+    }
+
+    private static String escape(String value) {
+        return Objects.toString(value, "")
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
+    }
+
+    public void propagateMetadataToDoi(String itemId, String doi) {
+        Item item = getItem(itemId);
+        item.setMetadata("doi", doi);
+        auditEvents.add(new AuditEvent(itemId, "DOI_METADATA_UPDATED", "system", doi));
+    }
+
+    public void addReferer(String itemId, String referer) {
+        getItem(itemId).addReferer(referer);
+    }
+
+    public Set<String> getReferers(String itemId) {
+        return getItem(itemId).getReferers();
+    }
+
+    public void addDepositors(String collectionId, Set<String> userIds) {
+        getCollection(collectionId).addDepositors(userIds);
+    }
+
+    public void removeDepositor(String collectionId, String userId) {
+        getCollection(collectionId).removeDepositor(userId);
+    }
+
+    public void setDepositWindow(String collectionId, LocalDate closesOn) {
+        getCollection(collectionId).setDepositWindowCloses(closesOn);
+    }
+
+    public void setDepositorWindow(String collectionId, String userId, LocalDate closesOn) {
+        getCollection(collectionId).setDepositorWindow(userId, closesOn);
+    }
+
+    public void changePermissions(Collection<String> itemIds, AccessLevel level) {
+        for (String itemId : itemIds) {
+            Item item = getItem(itemId);
+            item.saveVersion();
+            item.setAccessLevel(level);
+            auditEvents.add(new AuditEvent(itemId, "PERMISSIONS_CHANGED", "system", level.name()));
+        }
+    }
+
+    public void restoreItemVersion(String itemId, int versionIndex) {
+        getItem(itemId).restoreVersion(versionIndex);
+    }
+
+    public void scheduleMessage(String messageId, String message, Instant start, Instant end) {
+        scheduledMessages.put(messageId, start + "|" + end + "|" + message);
+    }
+
+    public List<String> getActiveMessages(Instant now) {
+        List<String> result = new ArrayList<>();
+        for (String value : scheduledMessages.values()) {
+            String[] parts = value.split("\\|", 3);
+            Instant start = Instant.parse(parts[0]);
+            Instant end = Instant.parse(parts[1]);
+            if (!now.isBefore(start) && now.isBefore(end)) {
+                result.add(parts[2]);
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    public void recordError(String message) {
+        if (message != null && !message.isBlank()) {
+            errorMessages.putIfAbsent(message.trim(), message.trim());
+        }
+    }
+
+    public List<String> getRecentDeduplicatedErrors() {
+        return List.copyOf(errorMessages.values());
+    }
+
+    public Set<String> getAuthenticatedActiveUsers() {
+        return users.values().stream()
+                .filter(user -> user.hasRole("ACTIVE"))
+                .map(User::getId)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    public long getAnonymousUserCount() {
+        return 0;
+    }
+
+    public void enterSuperuserScope() {
+        superuserScope = true;
+    }
+
+    public void exitSuperuserScope() {
+        superuserScope = false;
+    }
+
+    public boolean isSuperuserScope() {
+        return superuserScope;
+    }
+
+    public void rebuildIndexWithoutDowntime(Runnable indexBuildAction) {
+        indexRebuilding = true;
+        try {
+            indexBuildAction.run();
+        } finally {
+            indexRebuilding = false;
+        }
+    }
+
+    public boolean isIndexRebuilding() {
+        return indexRebuilding;
+    }
+
+    public List<Item> recentSubmissions(String collectionId, int limit) {
+        RepositoryCollection collection = getCollection(collectionId);
+        return collection.getItemIds().stream()
+                .map(items::get)
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(Item::getCreatedAt).reversed())
+                .limit(Math.max(0, limit))
+                .toList();
+    }
+
+    public Map<String, Boolean> submissionStatus(String collectionId, Set<String> expectedUserIds) {
+        RepositoryCollection collection = getCollection(collectionId);
+        Map<String, Boolean> status = new LinkedHashMap<>();
+        for (String userId : expectedUserIds) {
+            boolean submitted = collection.getItemIds().stream()
+                    .map(items::get)
+                    .filter(Objects::nonNull)
+                    .anyMatch(item -> userId.equals(item.getMetadata().get("depositorId")));
+            status.put(userId, submitted);
+        }
+        return Map.copyOf(status);
+    }
+
+    public String createId() {
+        return UUID.randomUUID().toString();
+    }
+
+    public String checksum(byte[] bytes) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+        } catch (Exception exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
+    public String describeBatchFormat() {
+        return "Batch format: one metadata CSV/JSON record per item plus a directory of files; "
+                + "include itemId, title, creator, license, optional embargoReleaseDate, and component filenames.";
+    }
+
+    public String getDisasterRecoveryPlan() {
+        return "Maintain replicated remote copies, verify checksums, and restore the repository from the latest backup.";
+    }
+
+    public String getServiceLevelAgreement() {
+        return "Service availability target: 99.9% monthly, excluding scheduled maintenance.";
+    }
+
+    public String getSupportedFormats() {
+        return "Accepted and recommended formats are collection-specific; contact repository staff for current guidance.";
+    }
+
+    public String getDoiGuidance() {
+        return "DOI assignment requires a stable, publicly citable item and complete descriptive metadata.";
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Main {
+    public static void main(String[] args) {
+        Repository repository = new Repository();
+
+        User curator = new User("curator-1", "Alex Curator", "alex@example.org");
+        curator.addRole("ACTIVE");
+        repository.registerUser(curator);
+
+        RepositoryCollection collection = new RepositoryCollection("collection-1", "Climate Data");
+        collection.addCurator(curator.getId());
+        collection.setReplicationPolicy(ReplicationPolicy.PRIMARY_REMOTE);
+        collection.setDepositForm(new DepositForm(
+                "Climate data deposit",
+                Set.of("title"),
+                List.of("CC-BY-4.0"),
+                true));
+        repository.addCollection(collection);
+
+        Component file = new Component("component-1", "observations.csv",
+                "year,temperature\n2024,12.3".getBytes());
+        Item item = repository.ingest(
+                collection.getId(),
+                "item-1",
+                curator,
+                Map.of("title", "Annual observations", "creator", "Research Team"),
+                List.of(file),
+                "CC-BY-4.0",
+                LocalDate.now().plusDays(30));
+
+        item.setFinancialContact(new FinancialContact(
+                "Research Office", "+1-555-0100", "finance@example.org", "Manager", "Example University"));
+
+        System.out.println("Ingested item: " + item.getId());
+        System.out.println("Storage report: " + repository.storageByFinancialContact());
+        System.out.println("Replication summary: " + repository.collectionReplicationSummary(collection.getId()));
+        System.out.println("Embargo summary: " + repository.getEmbargoSummary());
+    }
+}

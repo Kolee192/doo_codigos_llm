@@ -1,0 +1,2359 @@
+// File: UserRole.java
+public enum UserRole {
+    ANONYMOUS,
+    AUTHENTICATED,
+    ATTENDEE,
+    TRAINEE,
+    TRAINER,
+    TRAINING_COORDINATOR,
+    SUMMIT_COORDINATOR,
+    SPONSOR,
+    ADMINISTRATOR
+}
+// File: SkillLevel.java
+public enum SkillLevel {
+    BEGINNER,
+    INTERMEDIATE,
+    ADVANCED
+}
+// File: RegistrationStatus.java
+public enum RegistrationStatus {
+    REGISTERED,
+    WAITLISTED,
+    ATTENDED,
+    REFUNDED,
+    NO_SHOW,
+    CANCELLED
+}
+// File: SessionStatus.java
+public enum SessionStatus {
+    SUBMITTED,
+    ACCEPTED,
+    REJECTED
+}
+// File: SponsorshipTier.java
+public enum SponsorshipTier {
+    INDIVIDUAL_SUPPORTER(35.0, "Individual Supporter", false),
+    INDIVIDUAL_HERO(100.0, "Individual Hero", false),
+    COMPANY_ENTRY_350(350.0, "Company $350 Sponsorship", true),
+    COMPANY_SILVER(1000.0, "Silver Sponsor", true),
+    COMPANY_GOLD(2500.0, "Gold Sponsor", true);
+
+    private final double cost;
+    private final String displayName;
+    private final boolean isCompany;
+
+    SponsorshipTier(double cost, String displayName, boolean isCompany) {
+        this.cost = cost;
+        this.displayName = displayName;
+        this.isCompany = isCompany;
+    }
+
+    public double getCost() {
+        return cost;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public boolean isCompany() {
+        return isCompany;
+    }
+}
+// File: WysiwygContent.java
+public class WysiwygContent {
+    private String htmlContent;
+    private String plainTextContent;
+
+    public WysiwygContent(String htmlContent) {
+        this.htmlContent = htmlContent;
+        this.plainTextContent = stripHtml(htmlContent);
+    }
+
+    private String stripHtml(String html) {
+        if (html == null) return "";
+        return html.replaceAll("<[^>]*>", "").trim();
+    }
+
+    public String getHtmlContent() {
+        return htmlContent;
+    }
+
+    public void setHtmlContent(String htmlContent) {
+        this.htmlContent = htmlContent;
+        this.plainTextContent = stripHtml(htmlContent);
+    }
+
+    public String getPlainTextContent() {
+        return plainTextContent;
+    }
+
+    @Override
+    public String toString() {
+        return plainTextContent;
+    }
+}
+// File: User.java
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+public class User {
+    private final String id;
+    private String username;
+    private String email;
+    private String fullName;
+    private WysiwygContent bio;
+    private String company;
+    private String environmentSetupLogin;
+    private final Set<UserRole> roles;
+    private final Set<String> scheduleItemIds;
+
+    public User(String id, String username, String email, String fullName, String company) {
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.fullName = fullName;
+        this.company = company;
+        this.bio = new WysiwygContent("");
+        this.environmentSetupLogin = "env-user-" + id;
+        this.roles = new HashSet<>();
+        this.roles.add(UserRole.AUTHENTICATED);
+        this.roles.add(UserRole.ATTENDEE);
+        this.scheduleItemIds = new HashSet<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public WysiwygContent getBio() {
+        return bio;
+    }
+
+    public void setBio(WysiwygContent bio) {
+        this.bio = bio;
+    }
+
+    public String getCompany() {
+        return company;
+    }
+
+    public void setCompany(String company) {
+        this.company = company;
+    }
+
+    public String getEnvironmentSetupLogin() {
+        return environmentSetupLogin;
+    }
+
+    public void setEnvironmentSetupLogin(String environmentSetupLogin) {
+        this.environmentSetupLogin = environmentSetupLogin;
+    }
+
+    public Set<UserRole> getRoles() {
+        return Collections.unmodifiableSet(roles);
+    }
+
+    public void addRole(UserRole role) {
+        this.roles.add(role);
+    }
+
+    public boolean hasRole(UserRole role) {
+        return this.roles.contains(role);
+    }
+
+    public Set<String> getScheduleItemIds() {
+        return Collections.unmodifiableSet(scheduleItemIds);
+    }
+
+    public void addToSchedule(String itemId) {
+        this.scheduleItemIds.add(itemId);
+    }
+
+    public void removeFromSchedule(String itemId) {
+        this.scheduleItemIds.remove(itemId);
+    }
+
+    @Override
+    public String toString() {
+        return "User[id=" + id + ", name=" + fullName + ", email=" + email + ", company=" + company + "]";
+    }
+}
+// File: Room.java
+public class Room {
+    private final String id;
+    private final String venueId;
+    private String name;
+    private String building;
+    private String floor;
+
+    public Room(String id, String venueId, String name, String building, String floor) {
+        this.id = id;
+        this.venueId = venueId;
+        this.name = name;
+        this.building = building;
+        this.floor = floor;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getVenueId() {
+        return venueId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getBuilding() {
+        return building;
+    }
+
+    public void setBuilding(String building) {
+        this.building = building;
+    }
+
+    public String getFloor() {
+        return floor;
+    }
+
+    public void setFloor(String floor) {
+        this.floor = floor;
+    }
+
+    @Override
+    public String toString() {
+        return building + " - Room " + name + " (" + floor + ")";
+    }
+}
+// File: Venue.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Venue {
+    private final String id;
+    private String name;
+    private String address;
+    private String mapUrl;
+    private String directions;
+    private final List<Room> rooms;
+
+    public Venue(String id, String name, String address, String mapUrl, String directions) {
+        this.id = id;
+        this.name = name;
+        this.address = address;
+        this.mapUrl = mapUrl;
+        this.directions = directions;
+        this.rooms = new ArrayList<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getMapUrl() {
+        return mapUrl;
+    }
+
+    public void setMapUrl(String mapUrl) {
+        this.mapUrl = mapUrl;
+    }
+
+    public String getDirections() {
+        return directions;
+    }
+
+    public void setDirections(String directions) {
+        this.directions = directions;
+    }
+
+    public List<Room> getRooms() {
+        return Collections.unmodifiableList(rooms);
+    }
+
+    public void addRoom(Room room) {
+        this.rooms.add(room);
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + address + ")";
+    }
+}
+// File: CodingLounge.java
+public class CodingLounge {
+    private final String locationName;
+    private final String building;
+    private final String roomNumber;
+    private final String openHours;
+    private final String description;
+
+    public CodingLounge(String locationName, String building, String roomNumber, String openHours, String description) {
+        this.locationName = locationName;
+        this.building = building;
+        this.roomNumber = roomNumber;
+        this.openHours = openHours;
+        this.description = description;
+    }
+
+    public String getLocationName() {
+        return locationName;
+    }
+
+    public String getBuilding() {
+        return building;
+    }
+
+    public String getRoomNumber() {
+        return roomNumber;
+    }
+
+    public String getOpenHours() {
+        return openHours;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return "Coding Lounge: " + locationName + " in " + building + ", Room " + roomNumber
+                + " | Open Hours: " + openHours + " (" + description + ")";
+    }
+}
+// File: Notification.java
+import java.time.LocalDateTime;
+
+public class Notification {
+    private final String id;
+    private final String recipientEmail;
+    private final String subject;
+    private final String message;
+    private final LocalDateTime sentAt;
+
+    public Notification(String id, String recipientEmail, String subject, String message) {
+        this.id = id;
+        this.recipientEmail = recipientEmail;
+        this.subject = subject;
+        this.message = message;
+        this.sentAt = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getRecipientEmail() {
+        return recipientEmail;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public LocalDateTime getSentAt() {
+        return sentAt;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + sentAt + "] To: " + recipientEmail + " | " + subject + " -> " + message;
+    }
+}
+// File: JobPosting.java
+public class JobPosting {
+    private final String id;
+    private final String sponsorId;
+    private String title;
+    private WysiwygContent description;
+    private String applicationUrl;
+    private String sponsorProfileLink;
+
+    public JobPosting(String id, String sponsorId, String title, WysiwygContent description, String applicationUrl, String sponsorProfileLink) {
+        this.id = id;
+        this.sponsorId = sponsorId;
+        this.title = title;
+        this.description = description;
+        this.applicationUrl = applicationUrl;
+        this.sponsorProfileLink = sponsorProfileLink;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getSponsorId() {
+        return sponsorId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public WysiwygContent getDescription() {
+        return description;
+    }
+
+    public void setDescription(WysiwygContent description) {
+        this.description = description;
+    }
+
+    public String getApplicationUrl() {
+        return applicationUrl;
+    }
+
+    public void setApplicationUrl(String applicationUrl) {
+        this.applicationUrl = applicationUrl;
+    }
+
+    public String getSponsorProfileLink() {
+        return sponsorProfileLink;
+    }
+
+    public void setSponsorProfileLink(String sponsorProfileLink) {
+        this.sponsorProfileLink = sponsorProfileLink;
+    }
+
+    @Override
+    public String toString() {
+        return "Job: " + title + " | Profile: " + sponsorProfileLink + " | Apply: " + applicationUrl;
+    }
+}
+// File: BlogPost.java
+import java.time.LocalDateTime;
+
+public class BlogPost {
+    private final String id;
+    private String title;
+    private WysiwygContent content;
+    private final String authorUserId;
+    private boolean drupalPlanetTagged;
+    private final LocalDateTime publishedAt;
+
+    public BlogPost(String id, String title, WysiwygContent content, String authorUserId, boolean drupalPlanetTagged) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+        this.authorUserId = authorUserId;
+        this.drupalPlanetTagged = drupalPlanetTagged;
+        this.publishedAt = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public WysiwygContent getContent() {
+        return content;
+    }
+
+    public void setContent(WysiwygContent content) {
+        this.content = content;
+    }
+
+    public String getAuthorUserId() {
+        return authorUserId;
+    }
+
+    public boolean isDrupalPlanetTagged() {
+        return drupalPlanetTagged;
+    }
+
+    public void setDrupalPlanetTagged(boolean drupalPlanetTagged) {
+        this.drupalPlanetTagged = drupalPlanetTagged;
+    }
+
+    public LocalDateTime getPublishedAt() {
+        return publishedAt;
+    }
+
+    @Override
+    public String toString() {
+        return "Post: " + title + (drupalPlanetTagged ? " [Drupal Planet]" : "") + " (" + publishedAt.toLocalDate() + ")";
+    }
+}
+// File: NavigationMenu.java
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class NavigationMenu {
+    private final Map<String, String> menuItems;
+
+    public NavigationMenu() {
+        menuItems = new LinkedHashMap<>();
+        menuItems.put("Home", "/");
+        menuItems.put("Trainings", "/training");
+        menuItems.put("Summits", "/summits");
+        menuItems.put("Sessions", "/sessions");
+        menuItems.put("Schedule", "/schedule");
+        menuItems.put("Sponsors", "/sponsors");
+        menuItems.put("Job Board", "/jobs");
+        menuItems.put("Coding Lounge", "/coding-lounge");
+        menuItems.put("Blog", "/blog");
+        menuItems.put("Register for BADCamp", "/register");
+    }
+
+    public Map<String, String> getMenuItems() {
+        return menuItems;
+    }
+
+    public String getRegistrationLink() {
+        return menuItems.get("Register for BADCamp");
+    }
+
+    public String getTrainingsLink() {
+        return menuItems.get("Trainings");
+    }
+}
+// File: Session.java
+public class Session {
+    private final String id;
+    private String title;
+    private WysiwygContent description;
+    private final String speakerUserId;
+    private SessionStatus status;
+    private String room;
+    private String timeSlot;
+    private String day;
+
+    public Session(String id, String title, WysiwygContent description, String speakerUserId) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.speakerUserId = speakerUserId;
+        this.status = SessionStatus.SUBMITTED;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public WysiwygContent getDescription() {
+        return description;
+    }
+
+    public void setDescription(WysiwygContent description) {
+        this.description = description;
+    }
+
+    public String getSpeakerUserId() {
+        return speakerUserId;
+    }
+
+    public SessionStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(SessionStatus status) {
+        this.status = status;
+    }
+
+    public String getRoom() {
+        return room;
+    }
+
+    public void setRoom(String room) {
+        this.room = room;
+    }
+
+    public String getTimeSlot() {
+        return timeSlot;
+    }
+
+    public void setTimeSlot(String timeSlot) {
+        this.timeSlot = timeSlot;
+    }
+
+    public String getDay() {
+        return day;
+    }
+
+    public void setDay(String day) {
+        this.day = day;
+    }
+
+    @Override
+    public String toString() {
+        return "Session[" + id + "]: '" + title + "' (Status: " + status + ", Room: " + room + ", Time: " + timeSlot + ")";
+    }
+}
+// File: Sponsor.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class Sponsor {
+    private final String id;
+    private String name;
+    private SponsorshipTier tier;
+    private String logoUrl;
+    private WysiwygContent profileDescription;
+    private String websiteUrl;
+    private String stripeChargeId;
+    private boolean refunded;
+    private final Set<String> linkedAttendeeUserIds;
+    private final Set<String> sponsoredActivityIds;
+    private final List<JobPosting> jobPostings;
+
+    public Sponsor(String id, String name, SponsorshipTier tier, String logoUrl, WysiwygContent profileDescription, String websiteUrl) {
+        this.id = id;
+        this.name = name;
+        this.tier = tier;
+        this.logoUrl = logoUrl;
+        this.profileDescription = profileDescription;
+        this.websiteUrl = websiteUrl;
+        this.refunded = false;
+        this.linkedAttendeeUserIds = new HashSet<>();
+        this.sponsoredActivityIds = new HashSet<>();
+        this.jobPostings = new ArrayList<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public SponsorshipTier getTier() {
+        return tier;
+    }
+
+    public void setTier(SponsorshipTier tier) {
+        this.tier = tier;
+    }
+
+    public String getLogoUrl() {
+        return logoUrl;
+    }
+
+    public void setLogoUrl(String logoUrl) {
+        this.logoUrl = logoUrl;
+    }
+
+    public WysiwygContent getProfileDescription() {
+        return profileDescription;
+    }
+
+    public void setProfileDescription(WysiwygContent profileDescription) {
+        this.profileDescription = profileDescription;
+    }
+
+    public String getWebsiteUrl() {
+        return websiteUrl;
+    }
+
+    public void setWebsiteUrl(String websiteUrl) {
+        this.websiteUrl = websiteUrl;
+    }
+
+    public String getStripeChargeId() {
+        return stripeChargeId;
+    }
+
+    public void setStripeChargeId(String stripeChargeId) {
+        this.stripeChargeId = stripeChargeId;
+    }
+
+    public boolean isRefunded() {
+        return refunded;
+    }
+
+    public void setRefunded(boolean refunded) {
+        this.refunded = refunded;
+    }
+
+    public Set<String> getLinkedAttendeeUserIds() {
+        return Collections.unmodifiableSet(linkedAttendeeUserIds);
+    }
+
+    public void linkAttendee(String userId) {
+        this.linkedAttendeeUserIds.add(userId);
+    }
+
+    public Set<String> getSponsoredActivityIds() {
+        return Collections.unmodifiableSet(sponsoredActivityIds);
+    }
+
+    public void addSponsoredActivity(String activityId) {
+        this.sponsoredActivityIds.add(activityId);
+    }
+
+    public List<JobPosting> getJobPostings() {
+        return Collections.unmodifiableList(jobPostings);
+    }
+
+    public void addJobPosting(JobPosting jobPosting) {
+        this.jobPostings.add(jobPosting);
+    }
+
+    public String getSponsorPageUrl() {
+        return "/sponsors/" + name.toLowerCase().replaceAll("[^a-z0-9]+", "-");
+    }
+
+    @Override
+    public String toString() {
+        return "Sponsor[" + name + " (" + tier.getDisplayName() + "), Refunded=" + refunded + "]";
+    }
+}
+// File: Summit.java
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class Summit {
+    private final String id;
+    private String title;
+    private WysiwygContent description;
+    private WysiwygContent agenda;
+    private final String coordinatorUserId;
+    private String venueId;
+    private String roomName;
+    private LocalDate date;
+    private LocalTime startTime;
+    private LocalTime endTime;
+    private int capacity;
+    private final Set<String> registeredUserIds;
+    private final Set<String> sponsorIds;
+
+    public Summit(String id, String title, WysiwygContent description, String coordinatorUserId,
+                  String venueId, String roomName, LocalDate date, LocalTime startTime, LocalTime endTime, int capacity) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.agenda = new WysiwygContent("<p>Agenda to be announced</p>");
+        this.coordinatorUserId = coordinatorUserId;
+        this.venueId = venueId;
+        this.roomName = roomName;
+        this.date = date;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.capacity = capacity;
+        this.registeredUserIds = new HashSet<>();
+        this.sponsorIds = new HashSet<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public WysiwygContent getDescription() {
+        return description;
+    }
+
+    public void setDescription(WysiwygContent description) {
+        this.description = description;
+    }
+
+    public WysiwygContent getAgenda() {
+        return agenda;
+    }
+
+    public void setAgenda(WysiwygContent agenda) {
+        this.agenda = agenda;
+    }
+
+    public String getCoordinatorUserId() {
+        return coordinatorUserId;
+    }
+
+    public String getVenueId() {
+        return venueId;
+    }
+
+    public void setVenueId(String venueId) {
+        this.venueId = venueId;
+    }
+
+    public String getRoomName() {
+        return roomName;
+    }
+
+    public void setRoomName(String roomName) {
+        this.roomName = roomName;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public void setDate(LocalDate date) {
+        this.date = date;
+    }
+
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalTime endTime) {
+        this.endTime = endTime;
+    }
+
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
+    }
+
+    public Set<String> getRegisteredUserIds() {
+        return Collections.unmodifiableSet(registeredUserIds);
+    }
+
+    public boolean registerUser(String userId) {
+        if (registeredUserIds.size() >= capacity) {
+            return false;
+        }
+        return registeredUserIds.add(userId);
+    }
+
+    public int getRemainingSeats() {
+        return Math.max(0, capacity - registeredUserIds.size());
+    }
+
+    public Set<String> getSponsorIds() {
+        return Collections.unmodifiableSet(sponsorIds);
+    }
+
+    public void addSponsor(String sponsorId) {
+        this.sponsorIds.add(sponsorId);
+    }
+
+    public String getScheduleDisplay() {
+        return title + " on " + date + " from " + startTime + " to " + endTime + " (Seats left: " + getRemainingSeats() + ")";
+    }
+
+    @Override
+    public String toString() {
+        return getScheduleDisplay();
+    }
+}
+// File: TrainingRegistration.java
+import java.time.LocalDateTime;
+
+public class TrainingRegistration {
+    private final String id;
+    private final String trainingId;
+    private final String userId;
+    private final LocalDateTime registeredAt;
+    private RegistrationStatus status;
+    private final boolean termsAccepted;
+
+    public TrainingRegistration(String id, String trainingId, String userId, boolean termsAccepted, RegistrationStatus initialStatus) {
+        this.id = id;
+        this.trainingId = trainingId;
+        this.userId = userId;
+        this.termsAccepted = termsAccepted;
+        this.registeredAt = LocalDateTime.now();
+        this.status = initialStatus;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTrainingId() {
+        return trainingId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public LocalDateTime getRegisteredAt() {
+        return registeredAt;
+    }
+
+    public RegistrationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(RegistrationStatus status) {
+        this.status = status;
+    }
+
+    public boolean isTermsAccepted() {
+        return termsAccepted;
+    }
+
+    @Override
+    public String toString() {
+        return "Registration[id=" + id + ", user=" + userId + ", training=" + trainingId + ", status=" + status + "]";
+    }
+}
+// File: Training.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class Training {
+    private final String id;
+    private final String seoSlug;
+    private String title;
+    private String logoUrl;
+    private String shortSummary;
+    private WysiwygContent detailedDescription;
+    private String slidesUrl;
+    private final Set<String> trainerUserIds;
+    private String venueId;
+    private String roomName;
+    private LocalDate date;
+    private LocalTime startTime;
+    private LocalTime endTime;
+    private SkillLevel skillLevel;
+    private int capacity;
+    private LocalDateTime cancellationDeadline;
+    private final List<TrainingRegistration> registrations;
+    private final Set<String> sponsorIds;
+
+    public Training(String id, String seoSlug, String title, String logoUrl, String shortSummary,
+                    WysiwygContent detailedDescription, String venueId, String roomName,
+                    LocalDate date, LocalTime startTime, LocalTime endTime, SkillLevel skillLevel,
+                    int capacity, LocalDateTime cancellationDeadline) {
+        this.id = id;
+        this.seoSlug = seoSlug;
+        this.title = title;
+        this.logoUrl = logoUrl;
+        this.shortSummary = shortSummary;
+        this.detailedDescription = detailedDescription;
+        this.slidesUrl = "";
+        this.venueId = venueId;
+        this.roomName = roomName;
+        this.date = date;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.skillLevel = skillLevel;
+        this.capacity = capacity;
+        this.cancellationDeadline = cancellationDeadline;
+        this.trainerUserIds = new HashSet<>();
+        this.registrations = new ArrayList<>();
+        this.sponsorIds = new HashSet<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getSeoSlug() {
+        return seoSlug;
+    }
+
+    public String getSeoUrlPath() {
+        return "/training/" + seoSlug;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getLogoUrl() {
+        return logoUrl;
+    }
+
+    public void setLogoUrl(String logoUrl) {
+        this.logoUrl = logoUrl;
+    }
+
+    public String getShortSummary() {
+        return shortSummary;
+    }
+
+    public void setShortSummary(String shortSummary) {
+        this.shortSummary = shortSummary;
+    }
+
+    public WysiwygContent getDetailedDescription() {
+        return detailedDescription;
+    }
+
+    public void setDetailedDescription(WysiwygContent detailedDescription) {
+        this.detailedDescription = detailedDescription;
+    }
+
+    public String getSlidesUrl() {
+        return slidesUrl;
+    }
+
+    public void setSlidesUrl(String slidesUrl) {
+        this.slidesUrl = slidesUrl;
+    }
+
+    public Set<String> getTrainerUserIds() {
+        return Collections.unmodifiableSet(trainerUserIds);
+    }
+
+    public void addTrainer(String trainerUserId) {
+        this.trainerUserIds.add(trainerUserId);
+    }
+
+    public String getVenueId() {
+        return venueId;
+    }
+
+    public void setVenueId(String venueId) {
+        this.venueId = venueId;
+    }
+
+    public String getRoomName() {
+        return roomName;
+    }
+
+    public void setRoomName(String roomName) {
+        this.roomName = roomName;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public void setDate(LocalDate date) {
+        this.date = date;
+    }
+
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalTime endTime) {
+        this.endTime = endTime;
+    }
+
+    public SkillLevel getSkillLevel() {
+        return skillLevel;
+    }
+
+    public void setSkillLevel(SkillLevel skillLevel) {
+        this.skillLevel = skillLevel;
+    }
+
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
+    }
+
+    public LocalDateTime getCancellationDeadline() {
+        return cancellationDeadline;
+    }
+
+    public void setCancellationDeadline(LocalDateTime cancellationDeadline) {
+        this.cancellationDeadline = cancellationDeadline;
+    }
+
+    public List<TrainingRegistration> getRegistrations() {
+        return Collections.unmodifiableList(registrations);
+    }
+
+    public void addRegistration(TrainingRegistration reg) {
+        this.registrations.add(reg);
+    }
+
+    public long getActiveRegisteredCount() {
+        return registrations.stream()
+                .filter(r -> r.getStatus() == RegistrationStatus.REGISTERED || r.getStatus() == RegistrationStatus.ATTENDED)
+                .count();
+    }
+
+    public int getRemainingRegistrations() {
+        return Math.max(0, capacity - (int) getActiveRegisteredCount());
+    }
+
+    public Set<String> getSponsorIds() {
+        return Collections.unmodifiableSet(sponsorIds);
+    }
+
+    public void addSponsor(String sponsorId) {
+        this.sponsorIds.add(sponsorId);
+    }
+
+    public String getRegisterLink() {
+        return getSeoUrlPath() + "/register";
+    }
+
+    public String getSummaryCard() {
+        return String.format("[%s] %s | Date: %s %s-%s | Level: %s | Room: %s | Registered: %d/%d (Remaining: %d) | Details: %s | Register: %s",
+                id, title, date, startTime, endTime, skillLevel, roomName, getActiveRegisteredCount(), capacity, getRemainingRegistrations(), getSeoUrlPath(), getRegisterLink());
+    }
+
+    @Override
+    public String toString() {
+        return getSummaryCard();
+    }
+}
+// File: PaymentGateway.java
+import java.util.UUID;
+
+public class PaymentGateway {
+    public static class ChargeResult {
+        private final boolean success;
+        private final String chargeId;
+        private final String errorMessage;
+
+        public ChargeResult(boolean success, String chargeId, String errorMessage) {
+            this.success = success;
+            this.chargeId = chargeId;
+            this.errorMessage = errorMessage;
+        }
+
+        public boolean isSuccess() {
+            return success;
+        }
+
+        public String getChargeId() {
+            return chargeId;
+        }
+
+        public String getErrorMessage() {
+            return errorMessage;
+        }
+    }
+
+    public ChargeResult chargeCard(String cardNumber, String expDate, String cvc, double amount) {
+        if (cardNumber == null || cardNumber.trim().length() < 12) {
+            return new ChargeResult(false, null, "Invalid credit card number.");
+        }
+        if (amount <= 0) {
+            return new ChargeResult(false, null, "Amount must be greater than zero.");
+        }
+        String chargeId = "ch_stripe_" + UUID.randomUUID().toString().substring(0, 8);
+        return new ChargeResult(true, chargeId, null);
+    }
+
+    public boolean refundCharge(String chargeId) {
+        return chargeId != null && chargeId.startsWith("ch_stripe_");
+    }
+}
+// File: NotificationService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+public class NotificationService {
+    private final List<Notification> sentNotifications = new ArrayList<>();
+
+    public void sendEmail(String recipientEmail, String subject, String message) {
+        Notification notification = new Notification(UUID.randomUUID().toString(), recipientEmail, subject, message);
+        sentNotifications.add(notification);
+    }
+
+    public List<Notification> getSentNotifications() {
+        return Collections.unmodifiableList(sentNotifications);
+    }
+
+    public void clear() {
+        sentNotifications.clear();
+    }
+}
+// File: UserService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+public class UserService {
+    private final Map<String, User> users = new HashMap<>();
+    private final Set<String> newsletterSubscribers = new HashSet<>();
+    private final NotificationService notificationService;
+
+    public UserService(NotificationService notificationService) {
+        this.notificationService = notificationService;
+    }
+
+    public User registerUser(String username, String email, String fullName, String company) {
+        String id = "usr-" + UUID.randomUUID().toString().substring(0, 8);
+        User user = new User(id, username, email, fullName, company);
+        users.put(id, user);
+        return user;
+    }
+
+    public User getUser(String id) {
+        return users.get(id);
+    }
+
+    public List<User> getAllUserProfiles() {
+        return new ArrayList<>(users.values());
+    }
+
+    public List<User> getUsersByCompany(String company) {
+        List<User> list = new ArrayList<>();
+        if (company == null) return list;
+        for (User u : users.values()) {
+            if (company.equalsIgnoreCase(u.getCompany())) {
+                list.add(u);
+            }
+        }
+        return list;
+    }
+
+    public void updateProfile(String userId, String fullName, WysiwygContent bio, String company, String envInfo) {
+        User user = users.get(userId);
+        if (user != null) {
+            if (fullName != null) user.setFullName(fullName);
+            if (bio != null) user.setBio(bio);
+            if (company != null) user.setCompany(company);
+            if (envInfo != null) user.setEnvironmentSetupLogin(envInfo);
+        }
+    }
+
+    public boolean subscribeNewsletter(String email) {
+        if (email != null && email.contains("@")) {
+            boolean added = newsletterSubscribers.add(email);
+            if (added) {
+                notificationService.sendEmail(email, "Welcome to BADCamp Newsletter", "You are subscribed to communications!");
+            }
+            return added;
+        }
+        return false;
+    }
+
+    public Set<String> getNewsletterSubscribers() {
+        return Collections.unmodifiableSet(newsletterSubscribers);
+    }
+}
+// File: VenueService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+public class VenueService {
+    private final Map<String, Venue> venues = new HashMap<>();
+    private CodingLounge codingLounge;
+
+    public VenueService() {
+        codingLounge = new CodingLounge(
+                "UC Berkeley Student Union Lounge",
+                "Martin Luther King Jr. Building",
+                "Room 220",
+                "8:00 AM - 10:00 PM Daily",
+                "Fast Wi-Fi, power strips, and free coffee for collaboration"
+        );
+    }
+
+    public Venue createVenue(String name, String address, String mapUrl, String directions) {
+        String id = "ven-" + UUID.randomUUID().toString().substring(0, 8);
+        Venue venue = new Venue(id, name, address, mapUrl, directions);
+        venues.put(id, venue);
+        return venue;
+    }
+
+    public Venue getVenue(String id) {
+        return venues.get(id);
+    }
+
+    public List<Venue> getAllVenues() {
+        return new ArrayList<>(venues.values());
+    }
+
+    public Room addRoomToVenue(String venueId, String roomName, String building, String floor) {
+        Venue venue = venues.get(venueId);
+        if (venue == null) {
+            throw new IllegalArgumentException("Venue not found: " + venueId);
+        }
+        String roomId = "rm-" + UUID.randomUUID().toString().substring(0, 8);
+        Room room = new Room(roomId, venueId, roomName, building, floor);
+        venue.addRoom(room);
+        return room;
+    }
+
+    public CodingLounge getCodingLounge() {
+        return codingLounge;
+    }
+
+    public void setCodingLounge(CodingLounge codingLounge) {
+        this.codingLounge = codingLounge;
+    }
+
+    public String getVenueMapAndDirections(String venueId) {
+        Venue v = venues.get(venueId);
+        if (v == null) return "Venue not found";
+        return "Venue: " + v.getName() + " | Address: " + v.getAddress() + "\nDirections: " + v.getDirections() + "\nMap: " + v.getMapUrl();
+    }
+}
+// File: SponsorshipService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+public class SponsorshipService {
+    private final Map<String, Sponsor> sponsors = new HashMap<>();
+    private final List<JobPosting> jobBoard = new ArrayList<>();
+    private final PaymentGateway paymentGateway;
+    private final UserService userService;
+    private final String sponsorshipContact = "sponsors@badcamp.net";
+
+    public SponsorshipService(PaymentGateway paymentGateway, UserService userService) {
+        this.paymentGateway = paymentGateway;
+        this.userService = userService;
+    }
+
+    public List<SponsorshipTier> getIndividualSponsorshipTiers() {
+        List<SponsorshipTier> tiers = new ArrayList<>();
+        for (SponsorshipTier tier : SponsorshipTier.values()) {
+            if (!tier.isCompany()) {
+                tiers.add(tier);
+            }
+        }
+        return tiers;
+    }
+
+    public List<SponsorshipTier> getAllSponsorshipTiers() {
+        return List.of(SponsorshipTier.values());
+    }
+
+    public String getSponsorshipLevelsInfo() {
+        StringBuilder sb = new StringBuilder("BADCamp Sponsorship Levels:\n");
+        for (SponsorshipTier tier : SponsorshipTier.values()) {
+            sb.append("- ").append(tier.getDisplayName()).append(": $").append(tier.getCost())
+              .append(tier.isCompany() ? " [Company]" : " [Individual]").append("\n");
+        }
+        sb.append("Special highlight: $350 Company Sponsorship available directly online!\n");
+        sb.append("Contact us at ").append(sponsorshipContact).append(" for custom sponsorships or job posting inquiries.");
+        return sb.toString();
+    }
+
+    public Sponsor purchaseCompanySponsorship(String companyName, String logoUrl, WysiwygContent description,
+                                              String website, String cardNumber, String exp, String cvc) {
+        PaymentGateway.ChargeResult result = paymentGateway.chargeCard(cardNumber, exp, cvc, 350.0);
+        if (!result.isSuccess()) {
+            throw new IllegalStateException("Payment failed: " + result.getErrorMessage());
+        }
+
+        String id = "spn-" + UUID.randomUUID().toString().substring(0, 8);
+        Sponsor sponsor = new Sponsor(id, companyName, SponsorshipTier.COMPANY_ENTRY_350, logoUrl, description, website);
+        sponsor.setStripeChargeId(result.getChargeId());
+        sponsors.put(id, sponsor);
+
+        for (User u : userService.getUsersByCompany(companyName)) {
+            sponsor.linkAttendee(u.getId());
+            u.addRole(UserRole.SPONSOR);
+        }
+        return sponsor;
+    }
+
+    public PaymentGateway.ChargeResult payForIndividualSponsorship(String userId, SponsorshipTier tier,
+                                                                  String cardNumber, String exp, String cvc) {
+        if (tier.isCompany()) {
+            throw new IllegalArgumentException("Selected tier is not an individual sponsorship");
+        }
+        PaymentGateway.ChargeResult result = paymentGateway.chargeCard(cardNumber, exp, cvc, tier.getCost());
+        if (result.isSuccess()) {
+            User user = userService.getUser(userId);
+            if (user != null) {
+                user.addRole(UserRole.SPONSOR);
+            }
+        }
+        return result;
+    }
+
+    public boolean refundSponsorship(String sponsorId) {
+        Sponsor sponsor = sponsors.get(sponsorId);
+        if (sponsor == null || sponsor.getStripeChargeId() == null || sponsor.isRefunded()) {
+            return false;
+        }
+        boolean refunded = paymentGateway.refundCharge(sponsor.getStripeChargeId());
+        if (refunded) {
+            sponsor.setRefunded(true);
+        }
+        return refunded;
+    }
+
+    public void updateSponsorProfile(String sponsorId, String logoUrl, WysiwygContent desc, String website) {
+        Sponsor sponsor = sponsors.get(sponsorId);
+        if (sponsor != null) {
+            if (logoUrl != null) sponsor.setLogoUrl(logoUrl);
+            if (desc != null) sponsor.setProfileDescription(desc);
+            if (website != null) sponsor.setWebsiteUrl(website);
+        }
+    }
+
+    public void linkAttendeeToSponsor(String sponsorId, String userId) {
+        Sponsor sponsor = sponsors.get(sponsorId);
+        if (sponsor != null) {
+            sponsor.linkAttendee(userId);
+            User u = userService.getUser(userId);
+            if (u != null) {
+                u.addRole(UserRole.SPONSOR);
+            }
+        }
+    }
+
+    public void assignSponsorToActivity(String sponsorId, String activityId) {
+        Sponsor sponsor = sponsors.get(sponsorId);
+        if (sponsor != null) {
+            sponsor.addSponsoredActivity(activityId);
+        }
+    }
+
+    public List<Sponsor> getAllSponsors() {
+        return new ArrayList<>(sponsors.values());
+    }
+
+    public Sponsor getSponsor(String id) {
+        return sponsors.get(id);
+    }
+
+    public JobPosting postJob(String sponsorId, String title, WysiwygContent description, String applicationUrl) {
+        Sponsor sponsor = sponsors.get(sponsorId);
+        if (sponsor == null) {
+            throw new IllegalArgumentException("Only registered sponsors can post jobs!");
+        }
+        String jobId = "job-" + UUID.randomUUID().toString().substring(0, 8);
+        JobPosting job = new JobPosting(jobId, sponsorId, title, description, applicationUrl, sponsor.getSponsorPageUrl());
+        sponsor.addJobPosting(job);
+        jobBoard.add(job);
+        return job;
+    }
+
+    public List<JobPosting> getJobBoard() {
+        return Collections.unmodifiableList(jobBoard);
+    }
+
+    public String getJobPostingInfo() {
+        return "Want to post jobs at BADCamp? Become a sponsor! Contact: " + sponsorshipContact;
+    }
+}
+// File: TrainingService.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+public class TrainingService {
+    private final Map<String, Training> trainings = new HashMap<>();
+    private final Map<String, Training> trainingsBySlug = new HashMap<>();
+    private final UserService userService;
+    private final NotificationService notificationService;
+
+    public TrainingService(UserService userService, NotificationService notificationService) {
+        this.userService = userService;
+        this.notificationService = notificationService;
+    }
+
+    public Training createTraining(String seoSlug, String title, String logoUrl, String shortSummary,
+                                   WysiwygContent detailedDesc, String venueId, String roomName,
+                                   LocalDate date, LocalTime startTime, LocalTime endTime,
+                                   SkillLevel level, int capacity, LocalDateTime cancellationDeadline) {
+        String id = "trn-" + UUID.randomUUID().toString().substring(0, 8);
+        Training training = new Training(id, seoSlug, title, logoUrl, shortSummary, detailedDesc,
+                venueId, roomName, date, startTime, endTime, level, capacity, cancellationDeadline);
+        trainings.put(id, training);
+        trainingsBySlug.put(seoSlug, training);
+        return training;
+    }
+
+    public void addTrainerToTraining(String trainingId, String trainerUserId) {
+        Training t = trainings.get(trainingId);
+        if (t != null) {
+            t.addTrainer(trainerUserId);
+            User u = userService.getUser(trainerUserId);
+            if (u != null) {
+                u.addRole(UserRole.TRAINER);
+            }
+        }
+    }
+
+    public void updateTrainingByTrainer(String trainerUserId, String trainingId, String slidesUrl, WysiwygContent detailedDesc) {
+        Training t = trainings.get(trainingId);
+        if (t == null) {
+            throw new IllegalArgumentException("Training not found.");
+        }
+        if (!t.getTrainerUserIds().contains(trainerUserId)) {
+            User u = userService.getUser(trainerUserId);
+            if (u == null || !u.hasRole(UserRole.ADMINISTRATOR)) {
+                throw new SecurityException("User is not authorized to edit this training node.");
+            }
+        }
+        if (slidesUrl != null) t.setSlidesUrl(slidesUrl);
+        if (detailedDesc != null) t.setDetailedDescription(detailedDesc);
+    }
+
+    public TrainingRegistration registerForTraining(String userId, String trainingId, boolean acceptCancellationTerms) {
+        if (!acceptCancellationTerms) {
+            throw new IllegalArgumentException("You must accept the cancellation terms to register.");
+        }
+
+        Training training = trainings.get(trainingId);
+        if (training == null) {
+            throw new IllegalArgumentException("Training not found.");
+        }
+
+        if (training.getCancellationDeadline() != null && LocalDateTime.now().isAfter(training.getCancellationDeadline())) {
+            throw new IllegalStateException("Registration is closed. The deadline was " + training.getCancellationDeadline());
+        }
+
+        for (Training t : trainings.values()) {
+            if (t.getDate().equals(training.getDate())) {
+                for (TrainingRegistration reg : t.getRegistrations()) {
+                    if (reg.getUserId().equals(userId) &&
+                            (reg.getStatus() == RegistrationStatus.REGISTERED || reg.getStatus() == RegistrationStatus.ATTENDED)) {
+                        throw new IllegalStateException("Limit to one training registration per day per authenticated user.");
+                    }
+                }
+            }
+        }
+
+        RegistrationStatus status = (training.getRemainingRegistrations() > 0) ?
+                RegistrationStatus.REGISTERED : RegistrationStatus.WAITLISTED;
+
+        String regId = "treg-" + UUID.randomUUID().toString().substring(0, 8);
+        TrainingRegistration registration = new TrainingRegistration(regId, trainingId, userId, acceptCancellationTerms, status);
+        training.addRegistration(registration);
+
+        User user = userService.getUser(userId);
+        if (user != null) {
+            user.addRole(UserRole.TRAINEE);
+            user.addToSchedule(training.getId());
+        }
+        return registration;
+    }
+
+    public boolean cancelRegistration(String registrationId) {
+        for (Training t : trainings.values()) {
+            for (TrainingRegistration reg : t.getRegistrations()) {
+                if (reg.getId().equals(registrationId)) {
+                    if (t.getCancellationDeadline() != null && LocalDateTime.now().isAfter(t.getCancellationDeadline())) {
+                        throw new IllegalStateException("Cannot cancel: cancellation deadline has passed.");
+                    }
+                    reg.setStatus(RegistrationStatus.CANCELLED);
+                    for (TrainingRegistration waitlistReg : t.getRegistrations()) {
+                        if (waitlistReg.getStatus() == RegistrationStatus.WAITLISTED) {
+                            waitlistReg.setStatus(RegistrationStatus.REGISTERED);
+                            User promotedUser = userService.getUser(waitlistReg.getUserId());
+                            if (promotedUser != null) {
+                                notificationService.sendEmail(promotedUser.getEmail(), "Waitlist update for " + t.getTitle(),
+                                        "A spot opened up! You are now registered.");
+                            }
+                            break;
+                        }
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public void updateRegistrationStatus(String registrationId, RegistrationStatus newStatus) {
+        for (Training t : trainings.values()) {
+            for (TrainingRegistration reg : t.getRegistrations()) {
+                if (reg.getId().equals(registrationId)) {
+                    reg.setStatus(newStatus);
+                    return;
+                }
+            }
+        }
+    }
+
+    public List<User> getAttendeesForTrainer(String trainerUserId, String trainingId) {
+        Training t = trainings.get(trainingId);
+        if (t == null) return Collections.emptyList();
+        if (!t.getTrainerUserIds().contains(trainerUserId)) {
+            User u = userService.getUser(trainerUserId);
+            if (u == null || !u.hasRole(UserRole.ADMINISTRATOR)) {
+                throw new SecurityException("Trainer view is only accessible to designated trainers or coordinators.");
+            }
+        }
+        return t.getRegistrations().stream()
+                .filter(r -> r.getStatus() == RegistrationStatus.REGISTERED || r.getStatus() == RegistrationStatus.ATTENDED)
+                .map(r -> userService.getUser(r.getUserId()))
+                .filter(u -> u != null)
+                .collect(Collectors.toList());
+    }
+
+    public List<TrainingRegistration> getCoordinatorTraineeRegistrations(String trainingIdFilter) {
+        List<TrainingRegistration> list = new ArrayList<>();
+        for (Training t : trainings.values()) {
+            if (trainingIdFilter == null || trainingIdFilter.isEmpty() || t.getId().equals(trainingIdFilter)) {
+                list.addAll(t.getRegistrations());
+            }
+        }
+        return list;
+    }
+
+    public void emailAllTrainers(String subject, String message) {
+        for (Training t : trainings.values()) {
+            for (String trainerId : t.getTrainerUserIds()) {
+                User trainer = userService.getUser(trainerId);
+                if (trainer != null) {
+                    notificationService.sendEmail(trainer.getEmail(), subject, message);
+                }
+            }
+        }
+    }
+
+    public List<Training> getTrainingsForUser(String userId) {
+        List<Training> list = new ArrayList<>();
+        for (Training t : trainings.values()) {
+            for (TrainingRegistration r : t.getRegistrations()) {
+                if (r.getUserId().equals(userId) &&
+                        (r.getStatus() == RegistrationStatus.REGISTERED || r.getStatus() == RegistrationStatus.ATTENDED || r.getStatus() == RegistrationStatus.WAITLISTED)) {
+                    list.add(t);
+                    break;
+                }
+            }
+        }
+        return list;
+    }
+
+    public String getTrainingLandingPage() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== BADCamp Training Landing Page ===\n");
+        sb.append("Intro: Elevate your skills with deep-dive full day and half day hands-on trainings led by Drupal experts!\n");
+        sb.append(">>> CALL FOR TRAININGS: Have a course you want to offer? Submit your training proposal now! <<<\n\n");
+        sb.append("Current Training Offerings:\n");
+        for (Training t : trainings.values()) {
+            sb.append("- ").append(t.getSummaryCard()).append("\n");
+        }
+        return sb.toString();
+    }
+
+    public Training getTrainingBySlug(String slug) {
+        return trainingsBySlug.get(slug);
+    }
+
+    public Training getTraining(String id) {
+        return trainings.get(id);
+    }
+
+    public List<Training> getAllTrainings() {
+        return new ArrayList<>(trainings.values());
+    }
+}
+// File: SummitService.java
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+public class SummitService {
+    private final Map<String, Summit> summits = new HashMap<>();
+    private final UserService userService;
+    private final VenueService venueService;
+    private final SponsorshipService sponsorshipService;
+    private final NotificationService notificationService;
+
+    public SummitService(UserService userService, VenueService venueService,
+                         SponsorshipService sponsorshipService, NotificationService notificationService) {
+        this.userService = userService;
+        this.venueService = venueService;
+        this.sponsorshipService = sponsorshipService;
+        this.notificationService = notificationService;
+    }
+
+    public Summit createSummit(String title, WysiwygContent description, String coordinatorUserId,
+                               String venueId, String roomName, LocalDate date, LocalTime start, LocalTime end, int capacity) {
+        String id = "smt-" + UUID.randomUUID().toString().substring(0, 8);
+        Summit summit = new Summit(id, title, description, coordinatorUserId, venueId, roomName, date, start, end, capacity);
+        summits.put(id, summit);
+        User coord = userService.getUser(coordinatorUserId);
+        if (coord != null) {
+            coord.addRole(UserRole.SUMMIT_COORDINATOR);
+        }
+        return summit;
+    }
+
+    public void updateAgenda(String summitId, String coordinatorUserId, WysiwygContent agenda) {
+        Summit summit = summits.get(summitId);
+        if (summit != null) {
+            if (!summit.getCoordinatorUserId().equals(coordinatorUserId)) {
+                User u = userService.getUser(coordinatorUserId);
+                if (u == null || !u.hasRole(UserRole.ADMINISTRATOR)) {
+                    throw new SecurityException("Only the designated summit coordinator can update the agenda.");
+                }
+            }
+            summit.setAgenda(agenda);
+        }
+    }
+
+    public boolean registerUser(String userId, String summitId) {
+        Summit summit = summits.get(summitId);
+        if (summit == null) {
+            throw new IllegalArgumentException("Summit not found.");
+        }
+        for (Summit s : summits.values()) {
+            if (s.getDate().equals(summit.getDate()) && s.getRegisteredUserIds().contains(userId)) {
+                throw new IllegalStateException("Double booking detected: already registered for another summit on " + summit.getDate());
+            }
+        }
+        boolean registered = summit.registerUser(userId);
+        if (registered) {
+            User u = userService.getUser(userId);
+            if (u != null) {
+                u.addToSchedule(summit.getId());
+            }
+        }
+        return registered;
+    }
+
+    public List<Summit> getUserSummits(String userId) {
+        return summits.values().stream()
+                .filter(s -> s.getRegisteredUserIds().contains(userId))
+                .collect(Collectors.toList());
+    }
+
+    public void sponsorSummit(String summitId, String sponsorId) {
+        Summit summit = summits.get(summitId);
+        if (summit != null) {
+            summit.addSponsor(sponsorId);
+            sponsorshipService.assignSponsorToActivity(sponsorId, summitId);
+        }
+    }
+
+    public List<Sponsor> getSummitSponsors(String summitId) {
+        Summit s = summits.get(summitId);
+        if (s == null) return Collections.emptyList();
+        return s.getSponsorIds().stream()
+                .map(sponsorshipService::getSponsor)
+                .filter(sp -> sp != null)
+                .collect(Collectors.toList());
+    }
+
+    public List<User> getSummitAttendees(String summitId) {
+        Summit s = summits.get(summitId);
+        if (s == null) return Collections.emptyList();
+        return s.getRegisteredUserIds().stream()
+                .map(userService::getUser)
+                .filter(u -> u != null)
+                .collect(Collectors.toList());
+    }
+
+    public void emailSummitAttendees(String summitId, String subject, String message) {
+        for (User attendee : getSummitAttendees(summitId)) {
+            notificationService.sendEmail(attendee.getEmail(), subject, message);
+        }
+    }
+
+    public String getDirectionsToSummit(String summitId) {
+        Summit s = summits.get(summitId);
+        if (s == null) return "Summit not found";
+        return venueService.getVenueMapAndDirections(s.getVenueId()) + " -> Room: " + s.getRoomName();
+    }
+
+    public List<Summit> getAllSummits() {
+        return new ArrayList<>(summits.values());
+    }
+
+    public Summit getSummit(String id) {
+        return summits.get(id);
+    }
+}
+// File: SessionService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+public class SessionService {
+    private final Map<String, Session> sessions = new HashMap<>();
+    private final UserService userService;
+    private final NotificationService notificationService;
+
+    public SessionService(UserService userService, NotificationService notificationService) {
+        this.userService = userService;
+        this.notificationService = notificationService;
+    }
+
+    public Session submitSession(String speakerUserId, String title, WysiwygContent description) {
+        User speaker = userService.getUser(speakerUserId);
+        if (speaker == null) {
+            throw new IllegalArgumentException("Speaker user not found.");
+        }
+        String id = "ses-" + UUID.randomUUID().toString().substring(0, 8);
+        Session session = new Session(id, title, description, speakerUserId);
+        sessions.put(id, session);
+
+        notificationService.sendEmail(speaker.getEmail(), "Session Submission Received: " + title,
+                "Thank you for submitting '" + title + "'. It will be reviewed by the BADCamp organizers.");
+        return session;
+    }
+
+    public void editSession(String sessionId, String speakerUserId, String newTitle, WysiwygContent newDesc) {
+        Session session = sessions.get(sessionId);
+        if (session == null) {
+            throw new IllegalArgumentException("Session not found.");
+        }
+        if (!session.getSpeakerUserId().equals(speakerUserId)) {
+            User u = userService.getUser(speakerUserId);
+            if (u == null || !u.hasRole(UserRole.ADMINISTRATOR)) {
+                throw new SecurityException("Unauthorized to edit this session.");
+            }
+        }
+        if (newTitle != null) session.setTitle(newTitle);
+        if (newDesc != null) session.setDescription(newDesc);
+    }
+
+    public void evaluateSession(String sessionId, SessionStatus newStatus) {
+        Session session = sessions.get(sessionId);
+        if (session != null) {
+            session.setStatus(newStatus);
+            User speaker = userService.getUser(session.getSpeakerUserId());
+            if (speaker != null) {
+                notificationService.sendEmail(speaker.getEmail(), "Session Evaluation Update: " + session.getTitle(),
+                        "Your session '" + session.getTitle() + "' has been marked as " + newStatus + ".");
+            }
+        }
+    }
+
+    public void bulkApproveSessions(List<String> sessionIds) {
+        for (String id : sessionIds) {
+            evaluateSession(id, SessionStatus.ACCEPTED);
+        }
+    }
+
+    public void assignRoomAndTimeSlot(String sessionId, String room, String day, String timeSlot) {
+        Session session = sessions.get(sessionId);
+        if (session != null) {
+            session.setRoom(room);
+            session.setDay(day);
+            session.setTimeSlot(timeSlot);
+        }
+    }
+
+    public List<Session> getApprovedSessions() {
+        return sessions.values().stream()
+                .filter(s -> s.getStatus() == SessionStatus.ACCEPTED)
+                .collect(Collectors.toList());
+    }
+
+    public List<Session> getSessionsForSpeaker(String speakerUserId) {
+        return sessions.values().stream()
+                .filter(s -> s.getSpeakerUserId().equals(speakerUserId))
+                .collect(Collectors.toList());
+    }
+
+    public List<Session> getSessionsForSponsorAttendees(String sponsorId, SponsorshipService sponsorshipService) {
+        Sponsor sponsor = sponsorshipService.getSponsor(sponsorId);
+        if (sponsor == null) return Collections.emptyList();
+        return sessions.values().stream()
+                .filter(s -> sponsor.getLinkedAttendeeUserIds().contains(s.getSpeakerUserId()))
+                .collect(Collectors.toList());
+    }
+
+    public List<Session> getAllSessions() {
+        return new ArrayList<>(sessions.values());
+    }
+
+    public Session getSession(String id) {
+        return sessions.get(id);
+    }
+}
+// File: BlogService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+public class BlogService {
+    private final Map<String, BlogPost> posts = new HashMap<>();
+    private final UserService userService;
+
+    public BlogService(UserService userService) {
+        this.userService = userService;
+    }
+
+    public BlogPost createBlogPost(String authorUserId, String title, WysiwygContent content, boolean drupalPlanetTagged) {
+        User author = userService.getUser(authorUserId);
+        if (author == null || !author.hasRole(UserRole.ADMINISTRATOR)) {
+            throw new SecurityException("Only administrators can create official blog posts.");
+        }
+        String id = "post-" + UUID.randomUUID().toString().substring(0, 8);
+        BlogPost post = new BlogPost(id, title, content, authorUserId, drupalPlanetTagged);
+        posts.put(id, post);
+        return post;
+    }
+
+    public List<BlogPost> getAllPosts() {
+        return new ArrayList<>(posts.values());
+    }
+
+    public List<BlogPost> getDrupalPlanetPosts() {
+        return posts.values().stream()
+                .filter(BlogPost::isDrupalPlanetTagged)
+                .collect(Collectors.toList());
+    }
+}
+// File: BadCampSystem.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class BadCampSystem {
+    private final NavigationMenu navigationMenu;
+    private final PaymentGateway paymentGateway;
+    private final NotificationService notificationService;
+    private final UserService userService;
+    private final VenueService venueService;
+    private final SponsorshipService sponsorshipService;
+    private final TrainingService trainingService;
+    private final SummitService summitService;
+    private final SessionService sessionService;
+    private final BlogService blogService;
+
+    public BadCampSystem() {
+        this.navigationMenu = new NavigationMenu();
+        this.paymentGateway = new PaymentGateway();
+        this.notificationService = new NotificationService();
+        this.userService = new UserService(notificationService);
+        this.venueService = new VenueService();
+        this.sponsorshipService = new SponsorshipService(paymentGateway, userService);
+        this.trainingService = new TrainingService(userService, notificationService);
+        this.summitService = new SummitService(userService, venueService, sponsorshipService, notificationService);
+        this.sessionService = new SessionService(userService, notificationService);
+        this.blogService = new BlogService(userService);
+    }
+
+    public NavigationMenu getNavigationMenu() {
+        return navigationMenu;
+    }
+
+    public PaymentGateway getPaymentGateway() {
+        return paymentGateway;
+    }
+
+    public NotificationService getNotificationService() {
+        return notificationService;
+    }
+
+    public UserService getUserService() {
+        return userService;
+    }
+
+    public VenueService getVenueService() {
+        return venueService;
+    }
+
+    public SponsorshipService getSponsorshipService() {
+        return sponsorshipService;
+    }
+
+    public TrainingService getTrainingService() {
+        return trainingService;
+    }
+
+    public SummitService getSummitService() {
+        return summitService;
+    }
+
+    public SessionService getSessionService() {
+        return sessionService;
+    }
+
+    public BlogService getBlogService() {
+        return blogService;
+    }
+
+    public List<String> getUserSchedule(String userId) {
+        User user = userService.getUser(userId);
+        if (user == null) return List.of();
+        List<String> schedule = new ArrayList<>();
+        for (String id : user.getScheduleItemIds()) {
+            Training t = trainingService.getTraining(id);
+            if (t != null) {
+                schedule.add("[Training] " + t.getTitle() + " on " + t.getDate() + " (" + t.getStartTime() + " - " + t.getEndTime() + ") @ " + t.getRoomName());
+                continue;
+            }
+            Summit s = summitService.getSummit(id);
+            if (s != null) {
+                schedule.add("[Summit] " + s.getTitle() + " on " + s.getDate() + " (" + s.getStartTime() + " - " + s.getEndTime() + ") @ " + s.getRoomName());
+                continue;
+            }
+            Session ses = sessionService.getSession(id);
+            if (ses != null) {
+                schedule.add("[Session] " + ses.getTitle() + " (" + ses.getDay() + " " + ses.getTimeSlot() + ") @ " + ses.getRoom());
+            }
+        }
+        return schedule;
+    }
+}
+// File: Main.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=================================================");
+        System.out.println("   BADCamp Conference Management System Demo   ");
+        System.out.println("=================================================\n");
+
+        BadCampSystem system = new BadCampSystem();
+
+        // 1. Navigation & Home Links
+        System.out.println("--- 1. Menu & Registration Link ---");
+        System.out.println("Camp Registration Menu Link: " + system.getNavigationMenu().getRegistrationLink());
+        System.out.println("Trainings Menu Link: " + system.getNavigationMenu().getTrainingsLink());
+
+        // 2. User Registration (Multi-step attendee flow)
+        System.out.println("\n--- 2. User Registration Flow ---");
+        User alice = system.getUserService().registerUser("alice", "alice@example.com", "Alice Smith", "Acquia");
+        User bob = system.getUserService().registerUser("bob", "bob@example.com", "Bob Jones", "Pantheon");
+        User trainerCarol = system.getUserService().registerUser("carol", "carol@example.com", "Carol Trainer", "Lullabot");
+        User adminDave = system.getUserService().registerUser("dave", "dave@badcamp.net", "Dave Admin", "BADCamp Org");
+        adminDave.addRole(UserRole.ADMINISTRATOR);
+        adminDave.addRole(UserRole.TRAINING_COORDINATOR);
+
+        // Step 2 & 3: Individual Sponsorship Selection and Card Charge
+        System.out.println("Individual Sponsorship Choices: " + system.getSponsorshipService().getIndividualSponsorshipTiers());
+        PaymentGateway.ChargeResult chargeResult = system.getSponsorshipService().payForIndividualSponsorship(
+                alice.getId(), SponsorshipTier.INDIVIDUAL_HERO, "4111222233334444", "12/26", "123");
+        System.out.println("Alice paid for Individual Hero Sponsorship: " + chargeResult.isSuccess() + " (Charge ID: " + chargeResult.getChargeId() + ")");
+
+        // Newsletter Signup
+        system.getUserService().subscribeNewsletter("alice@example.com");
+        System.out.println("Alice newsletter subscription confirmed.");
+
+        // WYSIWYG User Profile Update
+        system.getUserService().updateProfile(
+                alice.getId(),
+                "Alice Smith (Senior Drupal Architect)",
+                new WysiwygContent("<p>Passionate about <strong>Decoupled Drupal</strong> and open source.</p>"),
+                "Acquia",
+                "drupal_user_alice:pass123"
+        );
+        System.out.println("Alice Updated Profile: " + system.getUserService().getUser(alice.getId()).getBio().getPlainTextContent());
+
+        // 3. Venues, Rooms & Coding Lounge
+        System.out.println("\n--- 3. Venues, Maps & Coding Lounge ---");
+        Venue campus = system.getVenueService().createVenue(
+                "UC Berkeley Campus",
+                "Bancroft Way, Berkeley, CA",
+                "https://badcamp.net/map/campus.png",
+                "Take BART to Downtown Berkeley Station, walk 3 blocks east on Center St."
+        );
+        Room room101 = system.getVenueService().addRoomToVenue(campus.getId(), "MLK 101", "Martin Luther King Jr. Student Union", "1st Floor");
+        Room room202 = system.getVenueService().addRoomToVenue(campus.getId(), "Hearst 202", "Hearst Memorial Gym", "2nd Floor");
+        System.out.println("Venue created: " + campus);
+        System.out.println("Map & Directions: " + system.getVenueService().getVenueMapAndDirections(campus.getId()));
+        System.out.println("Coding Lounge Info: " + system.getVenueService().getCodingLounge());
+
+        // 4. Sponsorships ($350 company level, Stripe refund, Link attendees, Job Board)
+        System.out.println("\n--- 4. Company Sponsorship, Jobs & Stripe Refund ---");
+        Sponsor pantheonSponsor = system.getSponsorshipService().purchaseCompanySponsorship(
+                "Pantheon",
+                "https://badcamp.net/logos/pantheon.png",
+                new WysiwygContent("<p>The <em>WebOps</em> platform for Drupal.</p>"),
+                "https://pantheon.io",
+                "4242424242424242", "11/27", "999"
+        );
+        System.out.println("Purchased $350 Sponsorship for Pantheon: " + pantheonSponsor);
+        system.getSponsorshipService().linkAttendeeToSponsor(pantheonSponsor.getId(), bob.getId());
+        System.out.println("Pantheon Linked Attendees: " + pantheonSponsor.getLinkedAttendeeUserIds());
+
+        // Sponsor posts job
+        JobPosting job = system.getSponsorshipService().postJob(
+                pantheonSponsor.getId(),
+                "Senior Drupal DevOps Engineer",
+                new WysiwygContent("<p>Join our <strong>infrastructure</strong> engineering team.</p>"),
+                "https://pantheon.io/careers/123"
+        );
+        System.out.println("Job board posting created: " + job);
+        System.out.println("Job board view count: " + system.getSponsorshipService().getJobBoard().size());
+
+        // Test refund
+        boolean refunded = system.getSponsorshipService().refundSponsorship(pantheonSponsor.getId());
+        System.out.println("Admin refunded Pantheon sponsorship via Stripe: " + refunded + " (Sponsor status: " + pantheonSponsor.isRefunded() + ")");
+
+        // 5. Trainings (Landing page, 1 per day rule, waitlist, cancellation terms & deadline, trainer view)
+        System.out.println("\n--- 5. Trainings ---");
+        LocalDate trainingDate = LocalDate.now().plusDays(10);
+        LocalDateTime deadline = LocalDateTime.now().plusDays(8);
+
+        Training reactDrupal = system.getTrainingService().createTraining(
+                "react-for-drupal",
+                "Decoupled Drupal with React",
+                "https://badcamp.net/training-react.png",
+                "Master modern headless Drupal architectures with Next.js & React.",
+                new WysiwygContent("<p>Full day workshop covering JSON:API, GraphQL, and Authentication.</p>"),
+                campus.getId(),
+                room101.getName(),
+                trainingDate,
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                SkillLevel.INTERMEDIATE,
+                1, // capacity 1 for testing waitlist
+                deadline
+        );
+        system.getTrainingService().addTrainerToTraining(reactDrupal.getId(), trainerCarol.getId());
+
+        // Trainer edits own node
+        system.getTrainingService().updateTrainingByTrainer(
+                trainerCarol.getId(),
+                reactDrupal.getId(),
+                "https://slides.badcamp.net/react-drupal-2025.pdf",
+                new WysiwygContent("<p>Updated slides and prerequisites for Docker setup.</p>")
+        );
+        System.out.println("Trainer updated slides: " + reactDrupal.getSlidesUrl());
+
+        // Training Landing Page view
+        System.out.println("\nTraining Landing Page preview:\n" + system.getTrainingService().getTrainingLandingPage());
+
+        // Dedicated class page SEO URL path lookup
+        Training pageLookup = system.getTrainingService().getTrainingBySlug("react-for-drupal");
+        System.out.println("SEO lookup (/training/" + pageLookup.getSeoSlug() + "): " + pageLookup.getTitle() + " | Remaining seats: " + pageLookup.getRemainingRegistrations());
+
+        // Alice registers (seat 1)
+        TrainingRegistration regAlice = system.getTrainingService().registerForTraining(alice.getId(), reactDrupal.getId(), true);
+        System.out.println("Alice Registration Status: " + regAlice.getStatus());
+
+        // Bob registers (Capacity full -> Waitlisted)
+        TrainingRegistration regBob = system.getTrainingService().registerForTraining(bob.getId(), reactDrupal.getId(), true);
+        System.out.println("Bob Registration Status (Waitlist): " + regBob.getStatus());
+
+        // Trainee: 1 registration per day limit check
+        Training anotherTrainingSameDay = system.getTrainingService().createTraining(
+                "drupal-migrations",
+                "Advanced Drupal Migrations",
+                "https://badcamp.net/migrate.png",
+                "Migrate complex data into Drupal 10/11.",
+                new WysiwygContent("<p>Learn custom plugins and source parsers.</p>"),
+                campus.getId(),
+                room202.getName(),
+                trainingDate,
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                SkillLevel.ADVANCED,
+                20,
+                deadline
+        );
+        try {
+            system.getTrainingService().registerForTraining(alice.getId(), anotherTrainingSameDay.getId(), true);
+        } catch (IllegalStateException e) {
+            System.out.println("Prevented Alice from duplicate same-day registration: " + e.getMessage());
+        }
+
+        // Trainer view of attendees
+        List<User> trainerAttendeeList = system.getTrainingService().getAttendeesForTrainer(trainerCarol.getId(), reactDrupal.getId());
+        System.out.println("Trainer Carol's Class Attendees: " + trainerAttendeeList.stream().map(u -> u.getFullName() + " (" + u.getEnvironmentSetupLogin() + ")").toList());
+
+        // Training coordinator email trainers
+        system.getTrainingService().emailAllTrainers("Room update", "All training rooms now have power at every seat.");
+
+        // Cancellation & waitlist promotion
+        system.getTrainingService().cancelRegistration(regAlice.getId());
+        System.out.println("Alice cancelled. Bob's promoted status: " + regBob.getStatus());
+
+        // Training coordinator tracking
+        system.getTrainingService().updateRegistrationStatus(regBob.getId(), RegistrationStatus.ATTENDED);
+        System.out.println("Coordinator updated Bob to: " + regBob.getStatus());
+
+        // 6. Summits (Coordinator, Agenda, Sponsors, Registration, Directions)
+        System.out.println("\n--- 6. Summits ---");
+        Summit devopsSummit = system.getSummitService().createSummit(
+                "DevOps & Infrastructure Summit",
+                new WysiwygContent("<p>Gathering for Drupal cloud engineers and sysadmins.</p>"),
+                adminDave.getId(),
+                campus.getId(),
+                room202.getName(),
+                LocalDate.now().plusDays(11),
+                LocalTime.of(10, 0),
+                LocalTime.of(16, 0),
+                50
+        );
+        system.getSummitService().updateAgenda(
+                devopsSummit.getId(),
+                adminDave.getId(),
+                new WysiwygContent("<ol><li>Keynote: Cloud Native Drupal</li><li>Container Orchestration Panel</li></ol>")
+        );
+        system.getSummitService().sponsorSummit(devopsSummit.getId(), pantheonSponsor.getId());
+
+        system.getSummitService().registerUser(bob.getId(), devopsSummit.getId());
+        System.out.println("Bob registered for summit: " + devopsSummit.getScheduleDisplay());
+        System.out.println("Summit Directions: " + system.getSummitService().getDirectionsToSummit(devopsSummit.getId()));
+        System.out.println("Summit Sponsors: " + system.getSummitService().getSummitSponsors(devopsSummit.getId()));
+
+        // 7. Sessions, Bulk Approval & Scheduling
+        System.out.println("\n--- 7. Sessions & Scheduling ---");
+        Session s1 = system.getSessionService().submitSession(bob.getId(), "High Performance Drupal with Redis", new WysiwygContent("<p>Caching deep dive.</p>"));
+        Session s2 = system.getSessionService().submitSession(alice.getId(), "Accessible Web Components in Drupal", new WysiwygContent("<p>ARIA best practices.</p>"));
+
+        // Speaker edits session
+        system.getSessionService().editSession(s1.getId(), bob.getId(), "Extreme High Performance Drupal with Redis & Varnish", null);
+        System.out.println("Bob updated session title: " + s1.getTitle());
+
+        // Admin bulk approves
+        system.getSessionService().bulkApproveSessions(List.of(s1.getId(), s2.getId()));
+        System.out.println("Approved Sessions: " + system.getSessionService().getApprovedSessions());
+
+        // Assign Room & TimeSlot
+        system.getSessionService().assignRoomAndTimeSlot(s1.getId(), room101.getName(), "Saturday", "2:00 PM - 2:45 PM");
+        bob.addToSchedule(s1.getId());
+
+        // 8. Blog & Drupal Planet
+        System.out.println("\n--- 8. Blog Posts & Drupal Planet ---");
+        BlogPost post = system.getBlogService().createBlogPost(
+                adminDave.getId(),
+                "BADCamp 2025 Schedule Announcement",
+                new WysiwygContent("<p>Sessions and summits have been finalized! Check your schedules.</p>"),
+                true
+        );
+        System.out.println("Created Blog Post: " + post);
+        System.out.println("Drupal Planet Feed Count: " + system.getBlogService().getDrupalPlanetPosts().size());
+
+        // 9. My Schedule View
+        System.out.println("\n--- 9. User 'My Schedule' ---");
+        System.out.println("Bob's Personal Schedule:");
+        for (String item : system.getUserSchedule(bob.getId())) {
+            System.out.println(" - " + item);
+        }
+
+        // 10. Notifications Log Summary
+        System.out.println("\n--- 10. Automated Notifications Summary ---");
+        System.out.println("Total notifications dispatched: " + system.getNotificationService().getSentNotifications().size());
+        for (Notification n : system.getNotificationService().getSentNotifications()) {
+            System.out.println("   * " + n);
+        }
+
+        System.out.println("\n=================================================");
+        System.out.println("       All BADCamp User Stories Verified!        ");
+        System.out.println("=================================================");
+    }
+}

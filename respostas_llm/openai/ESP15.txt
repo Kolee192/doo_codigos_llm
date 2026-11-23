@@ -1,0 +1,1322 @@
+// File: Role.java
+public enum Role {
+    FACULTY,
+    STUDENT,
+    RESEARCHER,
+    LIBRARY_STAFF,
+    REPOSITORY_SUPPORT,
+    DB_IR_ADMIN,
+    ADMINISTRATOR,
+    PATRON,
+    EXTERNAL_USER
+}
+
+// File: AccessLevel.java
+public enum AccessLevel {
+    PRIVATE,
+    UNIVERSITY,
+    PUBLIC
+}
+
+// File: License.java
+public enum License {
+    ALL_RIGHTS_RESERVED,
+    CC_BY,
+    CC0,
+    CUSTOM
+}
+
+// File: User.java
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class User {
+    private final String id;
+    private volatile String name;
+    private volatile String email;
+    private final Role role;
+    private volatile String orcid;
+    private volatile boolean institutionalUser;
+    private volatile String password;
+    private final Set<String> permissions = ConcurrentHashMap.newKeySet();
+    private final List<String> notifications = new CopyOnWriteArrayList<>();
+
+    public User(String id, String name, String email, Role role, boolean institutionalUser) {
+        if (id == null || id.isBlank() || name == null || name.isBlank()
+                || email == null || email.isBlank() || role == null) {
+            throw new IllegalArgumentException("User id, name, email, and role are required.");
+        }
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.role = role;
+        this.institutionalUser = institutionalUser;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public synchronized void setName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Name cannot be blank.");
+        }
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public synchronized void setEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email cannot be blank.");
+        }
+        this.email = email;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public String getOrcid() {
+        return orcid;
+    }
+
+    public void setOrcid(String orcid) {
+        this.orcid = orcid;
+    }
+
+    public boolean isInstitutionalUser() {
+        return institutionalUser;
+    }
+
+    public void setInstitutionalUser(boolean institutionalUser) {
+        this.institutionalUser = institutionalUser;
+    }
+
+    public boolean isAuthenticated() {
+        return password != null;
+    }
+
+    public synchronized void setPassword(String password) {
+        if (password == null || password.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters.");
+        }
+        this.password = password;
+    }
+
+    public synchronized boolean authenticate(String candidate) {
+        return password != null && password.equals(candidate);
+    }
+
+    public void grantPermission(String permission) {
+        if (permission != null && !permission.isBlank()) {
+            permissions.add(permission);
+        }
+    }
+
+    public void revokePermission(String permission) {
+        permissions.remove(permission);
+    }
+
+    public boolean hasPermission(String permission) {
+        return permissions.contains(permission);
+    }
+
+    public void notify(String message) {
+        if (message != null && !message.isBlank()) {
+            notifications.add(message);
+        }
+    }
+
+    public List<String> getNotifications() {
+        return List.copyOf(notifications);
+    }
+}
+
+// File: ItemMetadata.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+public class ItemMetadata {
+    private String title;
+    private String description;
+    private final List<String> authors;
+    private String documentType;
+    private String status;
+    private String subjectArea;
+    private final List<String> keywords;
+    private String releaseFrequency;
+    private final Map<String, String> customFields = new LinkedHashMap<>();
+
+    public ItemMetadata(String title, String description, List<String> authors,
+                        String documentType, String subjectArea, List<String> keywords) {
+        setTitle(title);
+        this.description = description == null ? "" : description;
+        this.authors = new ArrayList<>(authors == null ? List.of() : authors);
+        this.documentType = documentType == null ? "Other" : documentType;
+        this.subjectArea = subjectArea == null ? "" : subjectArea;
+        this.keywords = new ArrayList<>(keywords == null ? List.of() : keywords);
+        this.status = "Published";
+    }
+
+    public synchronized String getTitle() {
+        return title;
+    }
+
+    public synchronized void setTitle(String title) {
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("Title is required.");
+        }
+        this.title = title;
+    }
+
+    public synchronized String getDescription() {
+        return description;
+    }
+
+    public synchronized void setDescription(String description) {
+        this.description = description == null ? "" : description;
+    }
+
+    public synchronized List<String> getAuthors() {
+        return List.copyOf(authors);
+    }
+
+    public synchronized void addAuthor(String author) {
+        if (author != null && !author.isBlank() && !authors.contains(author)) {
+            authors.add(author);
+        }
+    }
+
+    public synchronized String getDocumentType() {
+        return documentType;
+    }
+
+    public synchronized void setDocumentType(String documentType) {
+        this.documentType = documentType == null || documentType.isBlank() ? "Other" : documentType;
+    }
+
+    public synchronized String getStatus() {
+        return status;
+    }
+
+    public synchronized void setStatus(String status) {
+        this.status = status == null ? "" : status;
+    }
+
+    public synchronized String getSubjectArea() {
+        return subjectArea;
+    }
+
+    public synchronized void setSubjectArea(String subjectArea) {
+        this.subjectArea = subjectArea == null ? "" : subjectArea;
+    }
+
+    public synchronized List<String> getKeywords() {
+        return List.copyOf(keywords);
+    }
+
+    public synchronized void addKeyword(String keyword) {
+        if (keyword != null && !keyword.isBlank() && !keywords.contains(keyword)) {
+            keywords.add(keyword);
+        }
+    }
+
+    public synchronized String getReleaseFrequency() {
+        return releaseFrequency;
+    }
+
+    public synchronized void setReleaseFrequency(String releaseFrequency) {
+        this.releaseFrequency = releaseFrequency;
+    }
+
+    public synchronized void setCustomField(String name, String value) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Custom field name is required.");
+        }
+        customFields.put(name, value == null ? "" : value);
+    }
+
+    public synchronized Map<String, String> getCustomFields() {
+        return Map.copyOf(customFields);
+    }
+
+    public synchronized boolean containsText(String query) {
+        if (query == null || query.isBlank()) {
+            return true;
+        }
+        String needle = query.toLowerCase(Locale.ROOT);
+        return title.toLowerCase(Locale.ROOT).contains(needle)
+                || description.toLowerCase(Locale.ROOT).contains(needle)
+                || authors.stream().anyMatch(a -> a.toLowerCase(Locale.ROOT).contains(needle))
+                || documentType.toLowerCase(Locale.ROOT).contains(needle)
+                || subjectArea.toLowerCase(Locale.ROOT).contains(needle)
+                || keywords.stream().anyMatch(k -> k.toLowerCase(Locale.ROOT).contains(needle))
+                || customFields.entrySet().stream().anyMatch(e ->
+                    e.getKey().toLowerCase(Locale.ROOT).contains(needle)
+                            || e.getValue().toLowerCase(Locale.ROOT).contains(needle));
+    }
+
+    public synchronized ItemMetadata copy() {
+        ItemMetadata copy = new ItemMetadata(title, description, authors, documentType, subjectArea, keywords);
+        copy.status = status;
+        copy.releaseFrequency = releaseFrequency;
+        copy.customFields.putAll(customFields);
+        return copy;
+    }
+}
+
+// File: DigitalFile.java
+import java.util.UUID;
+
+public class DigitalFile {
+    private final String id;
+    private final String name;
+    private final String format;
+    private final long sizeBytes;
+    private final String doi;
+    private final String checksum;
+    private final boolean streaming;
+
+    public DigitalFile(String name, String format, long sizeBytes, String doi, String checksum, boolean streaming) {
+        if (name == null || name.isBlank() || sizeBytes < 0) {
+            throw new IllegalArgumentException("A file name and non-negative size are required.");
+        }
+        this.id = UUID.randomUUID().toString();
+        this.name = name;
+        this.format = format == null ? "unknown" : format;
+        this.sizeBytes = sizeBytes;
+        this.doi = doi;
+        this.checksum = checksum;
+        this.streaming = streaming;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getFormat() {
+        return format;
+    }
+
+    public long getSizeBytes() {
+        return sizeBytes;
+    }
+
+    public String getDoi() {
+        return doi;
+    }
+
+    public String getChecksum() {
+        return checksum;
+    }
+
+    public boolean isStreaming() {
+        return streaming;
+    }
+}
+
+// File: ItemVersion.java
+import java.time.Instant;
+import java.util.List;
+
+public class ItemVersion {
+    private final int versionNumber;
+    private final ItemMetadata metadata;
+    private final List<DigitalFile> files;
+    private final Instant createdAt;
+    private final String uploadedBy;
+    private final String revisionNote;
+
+    public ItemVersion(int versionNumber, ItemMetadata metadata, List<DigitalFile> files,
+                       String uploadedBy, String revisionNote) {
+        this.versionNumber = versionNumber;
+        this.metadata = metadata.copy();
+        this.files = List.copyOf(files == null ? List.of() : files);
+        this.createdAt = Instant.now();
+        this.uploadedBy = uploadedBy;
+        this.revisionNote = revisionNote == null ? "" : revisionNote;
+    }
+
+    public int getVersionNumber() {
+        return versionNumber;
+    }
+
+    public ItemMetadata getMetadata() {
+        return metadata.copy();
+    }
+
+    public List<DigitalFile> getFiles() {
+        return files;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public String getUploadedBy() {
+        return uploadedBy;
+    }
+
+    public String getRevisionNote() {
+        return revisionNote;
+    }
+}
+
+// File: RepositoryItem.java
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+public class RepositoryItem {
+    private final String id;
+    private final String persistentUrl;
+    private final String ownerId;
+    private final List<ItemVersion> versions = new ArrayList<>();
+    private final Set<String> collectionIds = new LinkedHashSet<>();
+    private final List<String> previousNames = new ArrayList<>();
+    private final List<String> relatedItemIds = new ArrayList<>();
+    private final List<String> revisionHistory = new ArrayList<>();
+    private AccessLevel accessLevel;
+    private License license;
+    private boolean published;
+    private boolean emailEnabled;
+    private boolean embargoActive;
+    private LocalDate embargoUntil;
+    private Instant lastUpdated;
+
+    public RepositoryItem(String ownerId, ItemMetadata metadata, List<DigitalFile> files,
+                          AccessLevel accessLevel, License license, String uploadedBy,
+                          boolean emailEnabled) {
+        this.id = UUID.randomUUID().toString();
+        this.persistentUrl = "https://repository.example.edu/items/" + id;
+        this.ownerId = ownerId;
+        this.accessLevel = accessLevel == null ? AccessLevel.PUBLIC : accessLevel;
+        this.license = license == null ? License.ALL_RIGHTS_RESERVED : license;
+        this.published = true;
+        this.emailEnabled = emailEnabled;
+        this.lastUpdated = Instant.now();
+        versions.add(new ItemVersion(1, metadata, files, uploadedBy, "Initial deposit"));
+        revisionHistory.add("Initial deposit by " + uploadedBy + " at " + lastUpdated);
+    }
+
+    public synchronized String getId() {
+        return id;
+    }
+
+    public String getPersistentUrl() {
+        return persistentUrl;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public synchronized ItemMetadata getMetadata() {
+        return currentVersion().getMetadata();
+    }
+
+    public synchronized List<DigitalFile> getFiles() {
+        return currentVersion().getFiles();
+    }
+
+    public synchronized List<ItemVersion> getVersions() {
+        return List.copyOf(versions);
+    }
+
+    public synchronized ItemVersion getVersion(int number) {
+        return versions.stream().filter(v -> v.getVersionNumber() == number).findFirst().orElse(null);
+    }
+
+    public synchronized int addVersion(ItemMetadata metadata, List<DigitalFile> files,
+                                       String uploadedBy, String revisionNote) {
+        String oldTitle = currentVersion().getMetadata().getTitle();
+        String newTitle = metadata.getTitle();
+        if (!oldTitle.equals(newTitle)) {
+            previousNames.add(oldTitle);
+        }
+        int number = versions.size() + 1;
+        versions.add(new ItemVersion(number, metadata, files, uploadedBy, revisionNote));
+        lastUpdated = Instant.now();
+        revisionHistory.add("Version " + number + " uploaded by " + uploadedBy + ": "
+                + (revisionNote == null ? "" : revisionNote) + " at " + lastUpdated);
+        return number;
+    }
+
+    public synchronized boolean isAccessibleTo(User user) {
+        if (!published || (embargoActive && embargoUntil != null && LocalDate.now().isBefore(embargoUntil))) {
+            return false;
+        }
+        if (user != null && (user.getId().equals(ownerId)
+                || user.getRole() == Role.ADMINISTRATOR
+                || user.getRole() == Role.DB_IR_ADMIN
+                || user.getRole() == Role.LIBRARY_STAFF
+                || user.getRole() == Role.REPOSITORY_SUPPORT)) {
+            return true;
+        }
+        return switch (accessLevel) {
+            case PUBLIC -> true;
+            case UNIVERSITY -> user != null && user.isInstitutionalUser();
+            case PRIVATE -> false;
+        };
+    }
+
+    private ItemVersion currentVersion() {
+        return versions.get(versions.size() - 1);
+    }
+
+    public synchronized AccessLevel getAccessLevel() {
+        return accessLevel;
+    }
+
+    public synchronized void setAccessLevel(AccessLevel accessLevel) {
+        this.accessLevel = accessLevel;
+    }
+
+    public synchronized License getLicense() {
+        return license;
+    }
+
+    public synchronized void setLicense(License license) {
+        this.license = license;
+    }
+
+    public synchronized boolean isPublished() {
+        return published;
+    }
+
+    public synchronized void setPublished(boolean published) {
+        this.published = published;
+    }
+
+    public synchronized boolean isEmailEnabled() {
+        return emailEnabled;
+    }
+
+    public synchronized void setEmailEnabled(boolean emailEnabled) {
+        this.emailEnabled = emailEnabled;
+    }
+
+    public synchronized void applyEmbargo(LocalDate until) {
+        if (until == null) {
+            throw new IllegalArgumentException("Embargo end date is required.");
+        }
+        embargoUntil = until;
+        embargoActive = true;
+    }
+
+    public synchronized void removeEmbargo() {
+        embargoActive = false;
+        embargoUntil = null;
+    }
+
+    public synchronized boolean isEmbargoActive() {
+        return embargoActive && embargoUntil != null && LocalDate.now().isBefore(embargoUntil);
+    }
+
+    public synchronized LocalDate getEmbargoUntil() {
+        return embargoUntil;
+    }
+
+    public synchronized void addCollection(String collectionId) {
+        collectionIds.add(collectionId);
+    }
+
+    public synchronized void removeCollection(String collectionId) {
+        collectionIds.remove(collectionId);
+    }
+
+    public synchronized Set<String> getCollectionIds() {
+        return Set.copyOf(collectionIds);
+    }
+
+    public synchronized void addRelatedItem(String itemId) {
+        if (itemId != null && !itemId.equals(id) && !relatedItemIds.contains(itemId)) {
+            relatedItemIds.add(itemId);
+        }
+    }
+
+    public synchronized List<String> getRelatedItemIds() {
+        return List.copyOf(relatedItemIds);
+    }
+
+    public synchronized List<String> getPreviousNames() {
+        return List.copyOf(previousNames);
+    }
+
+    public synchronized List<String> getRevisionHistory() {
+        return List.copyOf(revisionHistory);
+    }
+
+    public synchronized Instant getLastUpdated() {
+        return lastUpdated;
+    }
+}
+
+// File: RepositoryCollection.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+public class RepositoryCollection {
+    private final String id;
+    private String name;
+    private String description;
+    private String ownerId;
+    private String branding;
+    private AccessLevel accessLevel;
+    private final Set<String> itemIds = new LinkedHashSet<>();
+    private final Map<String, String> aliases = new LinkedHashMap<>();
+    private final Set<String> customMetadataFields = new LinkedHashSet<>();
+    private final List<String> auditHistory = new ArrayList<>();
+
+    public RepositoryCollection(String name, String description, String ownerId,
+                                AccessLevel accessLevel, String branding) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Collection name is required.");
+        }
+        this.id = UUID.randomUUID().toString();
+        this.name = name;
+        this.description = description == null ? "" : description;
+        this.ownerId = ownerId;
+        this.accessLevel = accessLevel == null ? AccessLevel.PUBLIC : accessLevel;
+        this.branding = branding == null ? "" : branding;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public synchronized String getName() {
+        return name;
+    }
+
+    public synchronized void rename(String name, String actor) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Collection name is required.");
+        }
+        String old = this.name;
+        this.name = name;
+        auditHistory.add(actor + " renamed collection from '" + old + "' to '" + name + "'");
+    }
+
+    public synchronized String getDescription() {
+        return description;
+    }
+
+    public synchronized void setDescription(String description) {
+        this.description = description == null ? "" : description;
+    }
+
+    public synchronized String getOwnerId() {
+        return ownerId;
+    }
+
+    public synchronized void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
+    }
+
+    public synchronized String getBranding() {
+        return branding;
+    }
+
+    public synchronized void setBranding(String branding) {
+        this.branding = branding == null ? "" : branding;
+    }
+
+    public synchronized AccessLevel getAccessLevel() {
+        return accessLevel;
+    }
+
+    public synchronized void setAccessLevel(AccessLevel accessLevel) {
+        this.accessLevel = accessLevel;
+    }
+
+    public synchronized void addItem(String itemId) {
+        itemIds.add(itemId);
+    }
+
+    public synchronized void removeItem(String itemId) {
+        itemIds.remove(itemId);
+    }
+
+    public synchronized Set<String> getItemIds() {
+        return Set.copyOf(itemIds);
+    }
+
+    public synchronized void aliasItem(String itemId, String aliasCollectionId) {
+        aliases.put(itemId, aliasCollectionId);
+    }
+
+    public synchronized Map<String, String> getAliases() {
+        return Map.copyOf(aliases);
+    }
+
+    public synchronized void addCustomMetadataField(String fieldName) {
+        if (fieldName != null && !fieldName.isBlank()) {
+            customMetadataFields.add(fieldName);
+        }
+    }
+
+    public synchronized Set<String> getCustomMetadataFields() {
+        return Set.copyOf(customMetadataFields);
+    }
+
+    public synchronized void reorderItems(List<String> orderedIds) {
+        List<String> newOrder = new ArrayList<>();
+        for (String itemId : orderedIds) {
+            if (itemIds.contains(itemId) && !newOrder.contains(itemId)) {
+                newOrder.add(itemId);
+            }
+        }
+        for (String itemId : itemIds) {
+            if (!newOrder.contains(itemId)) {
+                newOrder.add(itemId);
+            }
+        }
+        itemIds.clear();
+        itemIds.addAll(newOrder);
+    }
+
+    public synchronized List<String> getAuditHistory() {
+        return List.copyOf(auditHistory);
+    }
+}
+
+// File: UsageStatistics.java
+import java.util.concurrent.atomic.AtomicLong;
+
+public class UsageStatistics {
+    private final AtomicLong views = new AtomicLong();
+    private final AtomicLong downloads = new AtomicLong();
+
+    public void recordView() {
+        views.incrementAndGet();
+    }
+
+    public void recordDownload() {
+        downloads.incrementAndGet();
+    }
+
+    public long getViews() {
+        return views.get();
+    }
+
+    public long getDownloads() {
+        return downloads.get();
+    }
+
+    public long getAltmetricScore() {
+        return views.get() + downloads.get() * 2;
+    }
+}
+
+// File: AuditEntry.java
+import java.time.Instant;
+
+public class AuditEntry {
+    private final Instant timestamp;
+    private final String actorId;
+    private final String action;
+    private final String targetId;
+    private final String details;
+
+    public AuditEntry(String actorId, String action, String targetId, String details) {
+        this.timestamp = Instant.now();
+        this.actorId = actorId;
+        this.action = action;
+        this.targetId = targetId;
+        this.details = details == null ? "" : details;
+    }
+
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+
+    public String getActorId() {
+        return actorId;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public String getTargetId() {
+        return targetId;
+    }
+
+    public String getDetails() {
+        return details;
+    }
+
+    @Override
+    public String toString() {
+        return timestamp + " [" + actorId + "] " + action + " " + targetId + " " + details;
+    }
+}
+
+// File: Repository.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class Repository {
+    private final Map<String, User> users = new ConcurrentHashMap<>();
+    private final Map<String, RepositoryItem> items = new ConcurrentHashMap<>();
+    private final Map<String, RepositoryCollection> collections = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> subscriptions = new ConcurrentHashMap<>();
+    private final Map<String, UsageStatistics> itemStatistics = new ConcurrentHashMap<>();
+    private final List<AuditEntry> auditLog = new ArrayList<>();
+    private final Map<String, LocalDate> releaseCalendar = new LinkedHashMap<>();
+    private final Map<String, String> subjectClassifications = new LinkedHashMap<>();
+    private final Map<String, Set<String>> relationshipGroups = new LinkedHashMap<>();
+    private final String repositoryName;
+
+    public Repository(String repositoryName) {
+        this.repositoryName = repositoryName == null || repositoryName.isBlank()
+                ? "Research Repository" : repositoryName;
+    }
+
+    public String getRepositoryName() {
+        return repositoryName;
+    }
+
+    public synchronized User createUser(String name, String email, Role role, boolean institutionalUser) {
+        User user = new User(UUID.randomUUID().toString(), name, email, role, institutionalUser);
+        users.put(user.getId(), user);
+        audit(null, "CREATE_USER", user.getId(), email);
+        return user;
+    }
+
+    public synchronized void deleteUser(String actorId, String userId) {
+        requireAdmin(actorId);
+        User removed = users.remove(userId);
+        subscriptions.remove(userId);
+        if (removed != null) {
+            audit(actorId, "DELETE_USER", userId, removed.getEmail());
+        }
+    }
+
+    public List<User> searchUsers(String actorId, String query) {
+        requireAdmin(actorId);
+        String q = query == null ? "" : query.toLowerCase(Locale.ROOT);
+        return users.values().stream()
+                .filter(u -> u.getName().toLowerCase(Locale.ROOT).contains(q)
+                        || u.getEmail().toLowerCase(Locale.ROOT).contains(q))
+                .sorted(Comparator.comparing(User::getName))
+                .toList();
+    }
+
+    public User remoteShibbolethLogin(String email) {
+        return users.values().stream()
+                .filter(User::isInstitutionalUser)
+                .filter(u -> u.getEmail().equalsIgnoreCase(email))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No institutional account found."));
+    }
+
+    public synchronized RepositoryCollection createCollection(String actorId, String name,
+            String description, AccessLevel accessLevel, String branding) {
+        User actor = requireUser(actorId);
+        RepositoryCollection collection =
+                new RepositoryCollection(name, description, actorId, accessLevel, branding);
+        collections.put(collection.getId(), collection);
+        audit(actorId, "CREATE_COLLECTION", collection.getId(), collection.getName());
+        return collection;
+    }
+
+    public synchronized void renameCollection(String actorId, String collectionId, String newName) {
+        requireStaffOrAdmin(actorId);
+        RepositoryCollection collection = requireCollection(collectionId);
+        collection.rename(newName, actorId);
+        audit(actorId, "RENAME_COLLECTION", collectionId, newName);
+    }
+
+    public synchronized void moveCollection(String actorId, String collectionId, String newOwnerId) {
+        requireStaffOrAdmin(actorId);
+        RepositoryCollection collection = requireCollection(collectionId);
+        collection.setOwnerId(newOwnerId);
+        audit(actorId, "MOVE_COLLECTION", collectionId, "owner=" + newOwnerId);
+    }
+
+    public synchronized RepositoryItem deposit(String actorId, ItemMetadata metadata,
+            List<DigitalFile> files, AccessLevel accessLevel, License license,
+            boolean emailEnabled) {
+        User actor = requireUser(actorId);
+        RepositoryItem item = new RepositoryItem(actorId, metadata, files, accessLevel, license,
+                actorId, emailEnabled);
+        items.put(item.getId(), item);
+        itemStatistics.put(item.getId(), new UsageStatistics());
+        audit(actorId, "DEPOSIT", item.getId(), metadata.getTitle());
+        return item;
+    }
+
+    public synchronized RepositoryItem depositOnBehalf(String staffId, String ownerId,
+            ItemMetadata metadata, List<DigitalFile> files, AccessLevel accessLevel, License license) {
+        requireStaffOrAdmin(staffId);
+        requireUser(ownerId);
+        RepositoryItem item = new RepositoryItem(ownerId, metadata, files, accessLevel, license,
+                staffId, false);
+        items.put(item.getId(), item);
+        itemStatistics.put(item.getId(), new UsageStatistics());
+        audit(staffId, "DEPOSIT_ON_BEHALF", item.getId(), "owner=" + ownerId);
+        return item;
+    }
+
+    public synchronized List<RepositoryItem> batchDeposit(String staffId,
+            List<ItemMetadata> metadataList, List<List<DigitalFile>> fileLists,
+            AccessLevel accessLevel, License license) {
+        requireStaffOrAdmin(staffId);
+        if (metadataList == null || fileLists == null || metadataList.size() != fileLists.size()) {
+            throw new IllegalArgumentException("Metadata and file batches must have equal sizes.");
+        }
+        List<RepositoryItem> result = new ArrayList<>();
+        for (int i = 0; i < metadataList.size(); i++) {
+            result.add(deposit(staffId, metadataList.get(i), fileLists.get(i),
+                    accessLevel, license, false));
+        }
+        return List.copyOf(result);
+    }
+
+    public synchronized void addVersion(String actorId, String itemId, ItemMetadata metadata,
+                                        List<DigitalFile> files, String note) {
+        requireStaffOrOwner(actorId, itemId);
+        RepositoryItem item = requireItem(itemId);
+        item.addVersion(metadata, files, actorId, note);
+        audit(actorId, "ADD_VERSION", itemId, note);
+    }
+
+    public synchronized void addItemToCollection(String actorId, String itemId, String collectionId) {
+        requireStaffOrOwner(actorId, itemId);
+        RepositoryItem item = requireItem(itemId);
+        RepositoryCollection collection = requireCollection(collectionId);
+        collection.addItem(itemId);
+        item.addCollection(collectionId);
+        audit(actorId, "ADD_TO_COLLECTION", itemId, collectionId);
+    }
+
+    public synchronized void removeItemFromCollection(String actorId, String itemId, String collectionId) {
+        requireStaffOrOwner(actorId, itemId);
+        RepositoryItem item = requireItem(itemId);
+        RepositoryCollection collection = requireCollection(collectionId);
+        collection.removeItem(itemId);
+        item.removeCollection(collectionId);
+        audit(actorId, "REMOVE_FROM_COLLECTION", itemId, collectionId);
+    }
+
+    public synchronized void aliasItem(String supportId, String itemId, String targetCollectionId) {
+        requireStaffOrAdmin(supportId);
+        RepositoryItem item = requireItem(itemId);
+        RepositoryCollection collection = requireCollection(targetCollectionId);
+        collection.aliasItem(itemId, targetCollectionId);
+        collection.addItem(itemId);
+        item.addCollection(targetCollectionId);
+        audit(supportId, "ALIAS_ITEM", itemId, targetCollectionId);
+    }
+
+    public synchronized void addCustomCollectionField(String staffId, String collectionId, String field) {
+        requireStaffOrAdmin(staffId);
+        requireCollection(collectionId).addCustomMetadataField(field);
+        audit(staffId, "ADD_CUSTOM_FIELD", collectionId, field);
+    }
+
+    public RepositoryItem getItem(String itemId, User viewer) {
+        RepositoryItem item = requireItem(itemId);
+        if (!item.isAccessibleTo(viewer)) {
+            throw new SecurityException("Item is not accessible to this user.");
+        }
+        itemStatistics.computeIfAbsent(itemId, ignored -> new UsageStatistics()).recordView();
+        return item;
+    }
+
+    public String getPersistentUrl(String itemId) {
+        return requireItem(itemId).getPersistentUrl();
+    }
+
+    public List<RepositoryItem> getCollectionItems(String collectionId, User viewer) {
+        RepositoryCollection collection = requireCollection(collectionId);
+        if (!collectionAccessible(collection, viewer)) {
+            throw new SecurityException("Collection is not accessible to this user.");
+        }
+        return collection.getItemIds().stream()
+                .map(items::get)
+                .filter(item -> item != null && item.isAccessibleTo(viewer))
+                .toList();
+    }
+
+    public List<RepositoryItem> search(String query, String collectionId, User viewer) {
+        Set<String> candidateIds = null;
+        if (collectionId != null) {
+            RepositoryCollection collection = requireCollection(collectionId);
+            if (!collectionAccessible(collection, viewer)) {
+                throw new SecurityException("Collection is not accessible to this user.");
+            }
+            candidateIds = new LinkedHashSet<>(collection.getItemIds());
+        }
+        Set<String> ids = candidateIds;
+        return items.values().stream()
+                .filter(item -> ids == null || ids.contains(item.getId()))
+                .filter(item -> item.isAccessibleTo(viewer))
+                .filter(item -> item.getMetadata().containsText(query))
+                .sorted(Comparator.comparing(i -> i.getMetadata().getTitle(),
+                        String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
+    public List<RepositoryItem> searchByAuthor(String author, User viewer) {
+        return search(author, null, viewer).stream()
+                .filter(item -> item.getMetadata().getAuthors().stream()
+                        .anyMatch(a -> a.toLowerCase(Locale.ROOT)
+                                .contains(author == null ? "" : author.toLowerCase(Locale.ROOT))))
+                .toList();
+    }
+
+    public synchronized void setItemAccess(String actorId, String itemId, AccessLevel level) {
+        requireStaffOrOwner(actorId, itemId);
+        requireItem(itemId).setAccessLevel(level);
+        audit(actorId, "SET_ACCESS", itemId, String.valueOf(level));
+    }
+
+    public synchronized void applyEmbargo(String staffId, String itemId, LocalDate until) {
+        requireStaffOrAdmin(staffId);
+        requireItem(itemId).applyEmbargo(until);
+        audit(staffId, "APPLY_EMBARGO", itemId, until.toString());
+    }
+
+    public synchronized void removeEmbargo(String staffId, String itemId) {
+        requireStaffOrAdmin(staffId);
+        requireItem(itemId).removeEmbargo();
+        audit(staffId, "REMOVE_EMBARGO", itemId, "");
+    }
+
+    public synchronized void setPublicationState(String adminId, String itemId, boolean published) {
+        requireAdmin(adminId);
+        requireItem(itemId).setPublished(published);
+        audit(adminId, published ? "PUBLISH" : "UNPUBLISH", itemId, "");
+    }
+
+    public synchronized void setEmailEnabled(String adminId, String itemId, boolean enabled) {
+        requireAdmin(adminId);
+        requireItem(itemId).setEmailEnabled(enabled);
+        audit(adminId, "SET_EMAIL_ENABLED", itemId, String.valueOf(enabled));
+    }
+
+    public synchronized void subscribe(String userId, String itemId) {
+        User user = requireUser(userId);
+        RepositoryItem item = requireItem(itemId);
+        if (!item.isEmailEnabled()) {
+            throw new IllegalStateException("Email notifications are disabled for this item.");
+        }
+        subscriptions.computeIfAbsent(userId, ignored -> ConcurrentHashMap.newKeySet()).add(itemId);
+        audit(userId, "SUBSCRIBE", itemId, user.getEmail());
+    }
+
+    public synchronized void unsubscribe(String userId, String itemId) {
+        requireUser(userId);
+        subscriptions.computeIfAbsent(userId, ignored -> ConcurrentHashMap.newKeySet()).remove(itemId);
+        audit(userId, "UNSUBSCRIBE", itemId, "");
+    }
+
+    public synchronized void setSubscriptions(String userId, Collection<String> itemIds) {
+        requireUser(userId);
+        Set<String> replacement = ConcurrentHashMap.newKeySet();
+        for (String itemId : itemIds) {
+            RepositoryItem item = requireItem(itemId);
+            if (item.isEmailEnabled()) {
+                replacement.add(itemId);
+            }
+        }
+        subscriptions.put(userId, replacement);
+        audit(userId, "SET_SUBSCRIPTIONS", userId, replacement.toString());
+    }
+
+    public List<User> getSubscribers(String adminId, String itemId) {
+        requireAdmin(adminId);
+        requireItem(itemId);
+        return subscriptions.entrySet().stream()
+                .filter(entry -> entry.getValue().contains(itemId))
+                .map(entry -> users.get(entry.getKey()))
+                .filter(user -> user != null)
+                .toList();
+    }
+
+    public synchronized void announceNewVersion(String actorId, String itemId,
+            ItemMetadata metadata, List<DigitalFile> files, String note) {
+        requireStaffOrAdmin(actorId);
+        RepositoryItem item = requireItem(itemId);
+        item.addVersion(metadata, files, actorId, note);
+        String message = "New version available: " + metadata.getTitle() + " " + item.getPersistentUrl();
+        for (Map.Entry<String, Set<String>> entry : subscriptions.entrySet()) {
+            if (entry.getValue().contains(itemId)) {
+                User subscriber = users.get(entry.getKey());
+                if (subscriber != null) {
+                    subscriber.notify(message);
+                }
+            }
+        }
+        User owner = users.get(item.getOwnerId());
+        if (owner != null) {
+            owner.notify("A new version of your item was deposited: " + item.getPersistentUrl());
+        }
+        audit(actorId, "ANNOUNCE_VERSION", itemId, note);
+    }
+
+    public synchronized void recordDownload(String itemId, String fileId, User downloader) {
+        RepositoryItem item = requireItem(itemId);
+        if (!item.isAccessibleTo(downloader)) {
+            throw new SecurityException("Item is not accessible to this user.");
+        }
+        boolean exists = item.getFiles().stream().anyMatch(file -> file.getId().equals(fileId));
+        if (!exists) {
+            throw new IllegalArgumentException("File does not belong to the current item version.");
+        }
+        itemStatistics.computeIfAbsent(itemId, ignored -> new UsageStatistics()).recordDownload();
+        User owner = users.get(item.getOwnerId());
+        if (owner != null && (downloader == null || !owner.getId().equals(downloader.getId()))) {
+            owner.notify("A file was downloaded from '" + item.getMetadata().getTitle() + "'.");
+        }
+        audit(downloader == null ? "anonymous" : downloader.getId(), "DOWNLOAD", itemId, fileId);
+    }
+
+    public synchronized void addReleaseDate(String adminId, String itemId, LocalDate date) {
+        requireAdmin(adminId);
+        requireItem(itemId);
+        releaseCalendar.put(itemId, date);
+        audit(adminId, "ADD_RELEASE_DATE", itemId, String.valueOf(date));
+    }
+
+    public synchronized Map<String, LocalDate> getReleaseCalendar() {
+        return Map.copyOf(releaseCalendar);
+    }
+
+    public synchronized String exportReleaseCalendar() {
+        StringBuilder csv = new StringBuilder("itemId,title,releaseDate\n");
+        releaseCalendar.forEach((id, date) -> {
+            RepositoryItem item = items.get(id);
+            if (item != null) {
+                csv.append(id).append(",\"")
+                        .append(item.getMetadata().getTitle().replace("\"", "\"\""))
+                        .append("\",").append(date).append('\n');
+            }
+        });
+        return csv.toString();
+    }
+
+    public synchronized void addSubjectClassification(String adminId, String subject, String description) {
+        requireAdmin(adminId);
+        subjectClassifications.put(subject, description);
+        audit(adminId, "SET_SUBJECT_CLASSIFICATION", subject, description);
+    }
+
+    public synchronized Map<String, String> getSubjectClassifications() {
+        return Map.copyOf(subjectClassifications);
+    }
+
+    public synchronized void setRelationshipGroup(String adminId, String name, Set<String> relatedItemIds) {
+        requireAdmin(adminId);
+        relationshipGroups.put(name, new LinkedHashSet<>(relatedItemIds));
+        audit(adminId, "SET_RELATIONSHIP_GROUP", name, relatedItemIds.toString());
+    }
+
+    public synchronized Set<String> getRelationshipGroup(String name) {
+        return Set.copyOf(relationshipGroups.getOrDefault(name, Set.of()));
+    }
+
+    public UsageStatistics getItemStatistics(String itemId) {
+        requireItem(itemId);
+        return itemStatistics.computeIfAbsent(itemId, ignored -> new UsageStatistics());
+    }
+
+    public UsageStatistics getCollectionStatistics(String collectionId) {
+        RepositoryCollection collection = requireCollection(collectionId);
+        UsageStatistics aggregate = new UsageStatistics();
+        for (String itemId : collection.getItemIds()) {
+            UsageStatistics stats = getItemStatistics(itemId);
+            for (long i = 0; i < stats.getViews(); i++) {
+                aggregate.recordView();
+            }
+            for (long i = 0; i < stats.getDownloads(); i++) {
+                aggregate.recordDownload();
+            }
+        }
+        return aggregate;
+    }
+
+    public synchronized List<Map<String, String>> harvestOai(String sinceItemId) {
+        return items.values().stream()
+                .filter(item -> sinceItemId == null || item.getId().compareTo(sinceItemId) > 0)
+                .sorted(Comparator.comparing(RepositoryItem::getId))
+                .map(item -> {
+                    Map<String, String> record = new LinkedHashMap<>();
+                    record.put("id", item.getId());
+                    record.put("url", item.getPersistentUrl());
+                    record.put("title", item.getMetadata().getTitle());
+                    record.put("description", item.getMetadata().getDescription());
+                    record.put("authors", String.join("; ", item.getMetadata().getAuthors()));
+                    record.put("subject", item.getMetadata().getSubjectArea());
+                    record.put("updated", item.getLastUpdated().toString());
+                    return Map.copyOf(record);
+                })
+                .toList();
+    }
+
+    public synchronized List<AuditEntry> getAuditLog(String actorId) {
+        requireStaffOrAdmin(actorId);
+        return List.copyOf(auditLog);
+    }
+
+    private boolean collectionAccessible(RepositoryCollection collection, User viewer) {
+        if (viewer != null && (viewer.getId().equals(collection.getOwnerId())
+                || viewer.getRole() == Role.ADMINISTRATOR
+                || viewer.getRole() == Role.DB_IR_ADMIN
+                || viewer.getRole() == Role.LIBRARY_STAFF
+                || viewer.getRole() == Role.REPOSITORY_SUPPORT)) {
+            return true;
+        }
+        return switch (collection.getAccessLevel()) {
+            case PUBLIC -> true;
+            case UNIVERSITY -> viewer != null && viewer.isInstitutionalUser();
+            case PRIVATE -> false;
+        };
+    }
+
+    private User requireUser(String userId) {
+        User user = users.get(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Unknown user: " + userId);
+        }
+        return user;
+    }
+
+    private RepositoryItem requireItem(String itemId) {
+        RepositoryItem item = items.get(itemId);
+        if (item == null) {
+            throw new IllegalArgumentException("Unknown item: " + itemId);
+        }
+        return item;
+    }
+
+    private RepositoryCollection requireCollection(String collectionId) {
+        RepositoryCollection collection = collections.get(collectionId);
+        if (collection == null) {
+            throw new IllegalArgumentException("Unknown collection: " + collectionId);
+        }
+        return collection;
+    }
+
+    private void requireAdmin(String userId) {
+        User user = requireUser(userId);
+        if (user.getRole() != Role.ADMINISTRATOR && user.getRole() != Role.DB_IR_ADMIN) {
+            throw new SecurityException("Administrator permission required.");
+        }
+    }
+
+    private void requireStaffOrAdmin(String userId) {
+        User user = requireUser(userId);
+        if (user.getRole() != Role.ADMINISTRATOR && user.getRole() != Role.DB_IR_ADMIN
+                && user.getRole() != Role.LIBRARY_STAFF
+                && user.getRole() != Role.REPOSITORY_SUPPORT) {
+            throw new SecurityException("Staff permission required.");
+        }
+    }
+
+    private void requireStaffOrOwner(String userId, String itemId) {
+        User user = requireUser(userId);
+        RepositoryItem item = requireItem(itemId);
+        if (!item.getOwnerId().equals(userId)
+                && user.getRole() != Role.ADMINISTRATOR
+                && user.getRole() != Role.DB_IR_ADMIN
+                && user.getRole() != Role.LIBRARY_STAFF
+                && user.getRole() != Role.REPOSITORY_SUPPORT) {
+            throw new SecurityException("Item owner or staff permission required.");
+        }
+    }
+
+    private synchronized void audit(String actorId, String action, String targetId, String details) {
+        auditLog.add(new AuditEntry(actorId == null ? "system" : actorId, action, targetId, details));
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        Repository repository = new Repository("Cornell Research Repository");
+
+        User faculty = repository.createUser(
+                "Dr. Ada Researcher", "ada@example.edu", Role.FACULTY, true);
+        User patron = repository.createUser(
+                "Sam Patron", "sam@example.org", Role.PATRON, false);
+        User admin = repository.createUser(
+                "Repository Admin", "admin@example.edu", Role.DB_IR_ADMIN, true);
+
+        RepositoryCollection collection = repository.createCollection(
+                faculty.getId(), "Climate Research", "Research outputs about climate.",
+                AccessLevel.PUBLIC, "Cornell University");
+
+        ItemMetadata metadata = new ItemMetadata(
+                "Climate Data 2025",
+                "A sample dataset for repository demonstration.",
+                List.of(faculty.getName()),
+                "Dataset",
+                "Climate science",
+                List.of("climate", "data", "research"));
+        metadata.setCustomField("Project", "North Campus Study");
+
+        DigitalFile dataFile = new DigitalFile(
+                "climate-data.csv", "text/csv", 1024, "10.1234/example", "sha256:demo", false);
+
+        RepositoryItem item = repository.deposit(
+                faculty.getId(), metadata, List.of(dataFile), AccessLevel.PUBLIC, License.CC_BY, true);
+        repository.addItemToCollection(faculty.getId(), item.getId(), collection.getId());
+        repository.subscribe(patron.getId(), item.getId());
+
+        ItemMetadata revisedMetadata = metadata.copy();
+        revisedMetadata.setDescription("Updated and quality-checked climate dataset.");
+        repository.announceNewVersion(admin.getId(), item.getId(),
+                revisedMetadata, List.of(dataFile), "Corrected data values");
+
+        System.out.println("Collection: " + collection.getName());
+        System.out.println("Persistent URL: " + item.getPersistentUrl());
+        System.out.println("Search results: " + repository.search("climate", null, patron).size());
+        System.out.println("Patron notifications: " + patron.getNotifications().size());
+        System.out.println("Release calendar CSV:\n" + repository.exportReleaseCalendar());
+
+        repository.addReleaseDate(admin.getId(), item.getId(), LocalDate.now().plusMonths(1));
+        System.out.println("License: " + item.getLicense());
+    }
+}

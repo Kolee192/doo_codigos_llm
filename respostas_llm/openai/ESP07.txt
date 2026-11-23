@@ -1,0 +1,957 @@
+// File: Visibility.java
+public enum Visibility {
+    PUBLIC,
+    SELECTED_USERS,
+    PRIVATE
+}
+
+// File: Role.java
+public enum Role {
+    MEMBER,
+    OWNER
+}
+
+// File: User.java
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public final class User {
+    private final String id;
+    private final String email;
+    private String name;
+    private final String provider;
+    private final Map<String, String> profile = new LinkedHashMap<>();
+
+    User(String id, String email, String name, String provider) {
+        this.id = id;
+        this.email = email;
+        this.name = name;
+        this.provider = provider;
+    }
+
+    public String getId() { return id; }
+    public String getEmail() { return email; }
+    public String getName() { return name; }
+    public String getProvider() { return provider; }
+    public Map<String, String> getProfile() {
+        return Collections.unmodifiableMap(profile);
+    }
+
+    void setName(String name) { this.name = name; }
+    void setProfileValue(String key, String value) { profile.put(key, value); }
+
+    @Override
+    public String toString() {
+        return name + " <" + email + ">";
+    }
+}
+
+// File: PackageResource.java
+import java.util.Arrays;
+
+public final class PackageResource {
+    private final String name;
+    private final String format;
+    private byte[] data;
+    private String sourceUrl;
+
+    public PackageResource(String name, String format, byte[] data) {
+        this(name, format, data, null);
+    }
+
+    public PackageResource(String name, String format, byte[] data, String sourceUrl) {
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Resource name is required");
+        this.name = name;
+        this.format = format == null ? "" : format;
+        this.data = data == null ? new byte[0] : Arrays.copyOf(data, data.length);
+        this.sourceUrl = sourceUrl;
+    }
+
+    public String getName() { return name; }
+    public String getFormat() { return format; }
+    public byte[] getData() { return Arrays.copyOf(data, data.length); }
+    public String getSourceUrl() { return sourceUrl; }
+
+    void updateData(byte[] data) {
+        this.data = data == null ? new byte[0] : Arrays.copyOf(data, data.length);
+    }
+
+    void setSourceUrl(String sourceUrl) { this.sourceUrl = sourceUrl; }
+
+    PackageResource copy() {
+        return new PackageResource(name, format, data, sourceUrl);
+    }
+}
+
+// File: ValidationResult.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public final class ValidationResult {
+    private final List<String> errors = new ArrayList<>();
+    private final List<String> warnings = new ArrayList<>();
+
+    void addError(String error) { errors.add(error); }
+    void addWarning(String warning) { warnings.add(warning); }
+
+    public boolean isValid() { return errors.isEmpty(); }
+    public List<String> getErrors() { return Collections.unmodifiableList(errors); }
+    public List<String> getWarnings() { return Collections.unmodifiableList(warnings); }
+
+    @Override
+    public String toString() {
+        return "ValidationResult{valid=" + isValid() + ", errors=" + errors
+                + ", warnings=" + warnings + "}";
+    }
+}
+
+// File: PackageSnapshot.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public final class PackageSnapshot {
+    private final String version;
+    private final Instant createdAt;
+    private final Map<String, Object> descriptor;
+    private final List<PackageResource> resources;
+
+    PackageSnapshot(String version, Map<String, Object> descriptor, List<PackageResource> resources) {
+        this.version = version;
+        this.createdAt = Instant.now();
+        this.descriptor = new LinkedHashMap<>(descriptor);
+        this.resources = new ArrayList<>();
+        for (PackageResource resource : resources) this.resources.add(resource.copy());
+    }
+
+    public String getVersion() { return version; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Map<String, Object> getDescriptor() {
+        return Collections.unmodifiableMap(descriptor);
+    }
+    public List<PackageResource> getResources() {
+        List<PackageResource> result = new ArrayList<>();
+        for (PackageResource resource : resources) result.add(resource.copy());
+        return Collections.unmodifiableList(result);
+    }
+}
+
+// File: DataPackage.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public final class DataPackage {
+    private final String id;
+    private final String publisherId;
+    private String title;
+    private String description;
+    private Visibility visibility;
+    private final Map<String, Object> descriptor = new LinkedHashMap<>();
+    private final List<PackageResource> resources = new ArrayList<>();
+    private final Set<String> permittedUserIds = new LinkedHashSet<>();
+    private final Map<String, PackageSnapshot> versions = new LinkedHashMap<>();
+    private final Map<String, PackageSnapshot> tags = new LinkedHashMap<>();
+    private String currentVersion;
+    private boolean deleted;
+    private boolean permanentlyDeleted;
+    private long downloads;
+    private Instant updatedAt = Instant.now();
+
+    DataPackage(String id, String publisherId, String title, String description,
+                Visibility visibility, Map<String, Object> descriptor,
+                List<PackageResource> resources) {
+        this.id = id;
+        this.publisherId = publisherId;
+        this.title = title;
+        this.description = description == null ? "" : description;
+        this.visibility = visibility == null ? Visibility.PUBLIC : visibility;
+        if (descriptor != null) this.descriptor.putAll(descriptor);
+        if (resources != null) {
+            for (PackageResource resource : resources) this.resources.add(resource.copy());
+        }
+    }
+
+    public String getId() { return id; }
+    public String getPublisherId() { return publisherId; }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public Visibility getVisibility() { return visibility; }
+    public String getCurrentVersion() { return currentVersion; }
+    public boolean isDeleted() { return deleted; }
+    public boolean isPermanentlyDeleted() { return permanentlyDeleted; }
+    public long getDownloads() { return downloads; }
+    public Instant getUpdatedAt() { return updatedAt; }
+    public Map<String, Object> getDescriptor() {
+        return Collections.unmodifiableMap(descriptor);
+    }
+    public List<PackageResource> getResources() {
+        List<PackageResource> copy = new ArrayList<>();
+        for (PackageResource resource : resources) copy.add(resource.copy());
+        return Collections.unmodifiableList(copy);
+    }
+    public Map<String, PackageSnapshot> getVersions() {
+        return Collections.unmodifiableMap(versions);
+    }
+    public Map<String, PackageSnapshot> getTags() {
+        return Collections.unmodifiableMap(tags);
+    }
+
+    void setVisibility(Visibility visibility) { this.visibility = visibility; }
+    void setDeleted(boolean deleted) { this.deleted = deleted; }
+    void setPermanentlyDeleted(boolean value) { this.permanentlyDeleted = value; }
+    void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    void incrementDownloads() { downloads++; }
+    void replaceDescriptor(Map<String, Object> newDescriptor) {
+        descriptor.clear();
+        descriptor.putAll(newDescriptor);
+    }
+    void replaceResources(List<PackageResource> newResources) {
+        resources.clear();
+        for (PackageResource resource : newResources) resources.add(resource.copy());
+    }
+    void addPermittedUser(String userId) { permittedUserIds.add(userId); }
+    boolean hasPermittedUser(String userId) { return permittedUserIds.contains(userId); }
+    Map<String, Object> mutableDescriptor() { return descriptor; }
+    List<PackageResource> mutableResources() { return resources; }
+
+    PackageSnapshot addVersion(String version) {
+        PackageSnapshot snapshot = new PackageSnapshot(version, descriptor, resources);
+        versions.put(version, snapshot);
+        currentVersion = version;
+        updatedAt = Instant.now();
+        return snapshot;
+    }
+}
+
+// File: PricingPlan.java
+import java.math.BigDecimal;
+
+public final class PricingPlan {
+    private final String id;
+    private final String name;
+    private final BigDecimal monthlyPrice;
+    private final String description;
+
+    public PricingPlan(String id, String name, BigDecimal monthlyPrice, String description) {
+        if (id == null || id.isBlank()) throw new IllegalArgumentException("Plan id is required");
+        this.id = id;
+        this.name = name;
+        this.monthlyPrice = monthlyPrice == null ? BigDecimal.ZERO : monthlyPrice;
+        this.description = description == null ? "" : description;
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public BigDecimal getMonthlyPrice() { return monthlyPrice; }
+    public String getDescription() { return description; }
+
+    @Override
+    public String toString() {
+        return name + " (" + monthlyPrice + " per month): " + description;
+    }
+}
+
+// File: Publisher.java
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public final class Publisher {
+    private final String id;
+    private String name;
+    private String description = "";
+    private final Map<String, Role> members = new LinkedHashMap<>();
+    private String pricingPlanId;
+
+    Publisher(String id, String name, String ownerUserId) {
+        this.id = id;
+        this.name = name;
+        members.put(ownerUserId, Role.OWNER);
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getDescription() { return description; }
+    public Map<String, Role> getMembers() {
+        return Collections.unmodifiableMap(members);
+    }
+    public String getPricingPlanId() { return pricingPlanId; }
+
+    void setName(String name) { this.name = name; }
+    void setDescription(String description) { this.description = description; }
+    void setPricingPlanId(String id) { this.pricingPlanId = id; }
+    Role roleOf(String userId) { return members.get(userId); }
+}
+
+// File: DataRegistry.java
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+public final class DataRegistry {
+    private final Map<String, User> users = new LinkedHashMap<>();
+    private final Map<String, String> userIdsByEmail = new HashMap<>();
+    private final Map<String, Publisher> publishers = new LinkedHashMap<>();
+    private final Map<String, DataPackage> packages = new LinkedHashMap<>();
+    private final Map<String, String> invitations = new HashMap<>();
+    private final Map<String, PricingPlan> plans = new LinkedHashMap<>();
+    private final Map<String, List<String>> subscriptions = new HashMap<>();
+    private final Map<String, String> siteConfig = new LinkedHashMap<>();
+    private final Map<String, Long> apiUsage = new HashMap<>();
+    private final List<String> activity = new ArrayList<>();
+    private String adminUserId;
+
+    public DataRegistry() {
+        siteConfig.put("title", "Data Registry");
+        siteConfig.put("description", "A registry for reusable data packages");
+        addPricingPlan(new PricingPlan("free", "Free", BigDecimal.ZERO, "Community publishing"));
+        addPricingPlan(new PricingPlan("pro", "Pro", new BigDecimal("19.00"), "For active publishers"));
+    }
+
+    public synchronized User signUp(String email, String name) {
+        return signUp(email, name, "password");
+    }
+
+    public synchronized User signUpWithOAuth(String email, String name, String provider) {
+        if (!"github".equalsIgnoreCase(provider) && !"google".equalsIgnoreCase(provider)) {
+            throw new IllegalArgumentException("Supported providers are GitHub and Google");
+        }
+        return signUp(email, name, provider.toLowerCase(Locale.ROOT));
+    }
+
+    private User signUp(String email, String name, String provider) {
+        if (email == null || email.isBlank()) throw new IllegalArgumentException("Email is required");
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        String existingId = userIdsByEmail.get(normalizedEmail);
+        if (existingId != null) return users.get(existingId);
+
+        User user = new User(id(), normalizedEmail, name == null ? normalizedEmail : name, provider);
+        users.put(user.getId(), user);
+        userIdsByEmail.put(normalizedEmail, user.getId());
+        activity.add("User joined: " + user.getId());
+        if (adminUserId == null) adminUserId = user.getId();
+
+        String invitedPublisherId = invitations.remove(normalizedEmail);
+        if (invitedPublisherId != null) {
+            Publisher publisher = publishers.get(invitedPublisherId);
+            if (publisher != null) publisher.members.put(user.getId(), Role.MEMBER);
+        }
+        return user;
+    }
+
+    public synchronized Publisher createPublisher(String ownerUserId, String name) {
+        requireUser(ownerUserId);
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Publisher name is required");
+        Publisher publisher = new Publisher(id(), name, ownerUserId);
+        publishers.put(publisher.getId(), publisher);
+        activity.add("Publisher created: " + publisher.getId());
+        return publisher;
+    }
+
+    public synchronized DataPackage createPackage(String userId, String publisherId, String title,
+                                                   String description, Visibility visibility,
+                                                   Map<String, Object> descriptor,
+                                                   List<PackageResource> resources) {
+        requirePublisherMember(userId, publisherId);
+        if (title == null || title.isBlank()) throw new IllegalArgumentException("Package title is required");
+        String packageId = slug(title) + "-" + UUID.randomUUID().toString().substring(0, 8);
+        DataPackage dataPackage = new DataPackage(packageId, publisherId, title, description,
+                visibility, descriptor, resources);
+        packages.put(packageId, dataPackage);
+        activity.add("Package created: " + packageId);
+        return dataPackage;
+    }
+
+    public synchronized DataPackage publish(String userId, String packageId) {
+        DataPackage dataPackage = requirePackage(packageId);
+        requirePublisherMember(userId, dataPackage.getPublisherId());
+        ensureNotPermanentlyDeleted(dataPackage);
+        ValidationResult validation = validate(dataPackage);
+        if (!validation.isValid()) {
+            throw new IllegalStateException("Package validation failed: " + validation.getErrors());
+        }
+        dataPackage.setDeleted(false);
+        String version = nextVersion(dataPackage);
+        dataPackage.addVersion(version);
+        activity.add("Package published: " + packageId + "@" + version);
+        notifySubscribers(dataPackage, "Package updated: " + packageId + "@" + version);
+        return dataPackage;
+    }
+
+    public synchronized ValidationResult validate(String userId, String packageId) {
+        DataPackage dataPackage = requirePackage(packageId);
+        requirePublisherMember(userId, dataPackage.getPublisherId());
+        return validate(dataPackage);
+    }
+
+    private ValidationResult validate(DataPackage dataPackage) {
+        ValidationResult result = new ValidationResult();
+        if (dataPackage.getTitle() == null || dataPackage.getTitle().isBlank()) {
+            result.addError("Package title is missing");
+        }
+        if (dataPackage.mutableResources().isEmpty()) {
+            result.addError("At least one resource is required");
+        }
+        for (PackageResource resource : dataPackage.mutableResources()) {
+            if (resource.getData().length == 0) result.addError("Resource is empty: " + resource.getName());
+            if (resource.getName().contains("..")) result.addError("Invalid resource path: " + resource.getName());
+        }
+        Object declaredName = dataPackage.getDescriptor().get("name");
+        if (declaredName != null && !(declaredName instanceof String)) {
+            result.addError("Descriptor name must be text");
+        }
+        if (dataPackage.getDescription().isBlank()) result.addWarning("Package description is empty");
+        return result;
+    }
+
+    public synchronized void updatePackage(String userId, String packageId,
+                                           Map<String, Object> descriptor,
+                                           List<PackageResource> resources) {
+        DataPackage dataPackage = requirePackage(packageId);
+        requirePublisherMember(userId, dataPackage.getPublisherId());
+        ensureNotPermanentlyDeleted(dataPackage);
+        if (descriptor != null) dataPackage.replaceDescriptor(descriptor);
+        if (resources != null) dataPackage.replaceResources(resources);
+        dataPackage.setUpdatedAt(Instant.now());
+    }
+
+    public synchronized void setVisibility(String userId, String packageId, Visibility visibility) {
+        DataPackage dataPackage = requirePackage(packageId);
+        requirePublisherMember(userId, dataPackage.getPublisherId());
+        dataPackage.setVisibility(Objects.requireNonNull(visibility));
+    }
+
+    public synchronized void grantPackageAccess(String userId, String packageId, String permittedUserId) {
+        DataPackage dataPackage = requirePackage(packageId);
+        requirePublisherMember(userId, dataPackage.getPublisherId());
+        requireUser(permittedUserId);
+        dataPackage.addPermittedUser(permittedUserId);
+        dataPackage.setVisibility(Visibility.SELECTED_USERS);
+    }
+
+    public synchronized void unpublish(String userId, String packageId) {
+        DataPackage dataPackage = requirePackage(packageId);
+        requirePublisherMember(userId, dataPackage.getPublisherId());
+        dataPackage.setDeleted(true);
+        activity.add("Package unpublished: " + packageId);
+    }
+
+    public synchronized void deletePermanently(String userId, String packageId) {
+        DataPackage dataPackage = requirePackage(packageId);
+        requirePublisherMember(userId, dataPackage.getPublisherId());
+        dataPackage.setDeleted(true);
+        dataPackage.setPermanentlyDeleted(true);
+        dataPackage.replaceResources(Collections.emptyList());
+        dataPackage.mutableDescriptor().clear();
+        activity.add("Package permanently deleted: " + packageId);
+    }
+
+    public synchronized void restore(String userId, String packageId) {
+        DataPackage dataPackage = requirePackage(packageId);
+        requirePublisherMember(userId, dataPackage.getPublisherId());
+        ensureNotPermanentlyDeleted(dataPackage);
+        dataPackage.setDeleted(false);
+        activity.add("Package restored: " + packageId);
+    }
+
+    public synchronized PackageSnapshot tag(String userId, String packageId, String tag,
+                                            boolean overwrite) {
+        DataPackage dataPackage = requirePackage(packageId);
+        requirePublisherMember(userId, dataPackage.getPublisherId());
+        ensureNotPermanentlyDeleted(dataPackage);
+        if (tag == null || tag.isBlank()) throw new IllegalArgumentException("Tag is required");
+        PackageSnapshot previous = dataPackage.getTags().get(tag);
+        if (previous != null && !overwrite) {
+            throw new IllegalStateException("Tag already exists; pass overwrite=true to replace it");
+        }
+        String version = dataPackage.getCurrentVersion();
+        if (version == null) throw new IllegalStateException("Publish the package before tagging it");
+        PackageSnapshot snapshot = dataPackage.getVersions().get(version);
+        PackageSnapshot tagged = new PackageSnapshot(snapshot.getVersion(), snapshot.getDescriptor(),
+                snapshot.getResources());
+        dataPackage.mutableTags().put(tag, tagged);
+        return tagged;
+    }
+
+    public synchronized PackageSnapshot getTaggedVersion(String packageId, String tag) {
+        DataPackage dataPackage = requireVisiblePackage(null, packageId);
+        PackageSnapshot snapshot = dataPackage.getTags().get(tag);
+        if (snapshot == null) throw new IllegalArgumentException("Unknown tag: " + tag);
+        return snapshot;
+    }
+
+    public synchronized List<DataPackage> search(String query) {
+        countApi("search");
+        String term = query == null ? "" : query.toLowerCase(Locale.ROOT);
+        List<DataPackage> result = new ArrayList<>();
+        for (DataPackage dataPackage : packages.values()) {
+            if (!isDiscoverable(dataPackage)) continue;
+            String text = dataPackage.getTitle() + " " + dataPackage.getDescription() + " "
+                    + dataPackage.getDescriptor();
+            if (text.toLowerCase(Locale.ROOT).contains(term)) result.add(dataPackage);
+        }
+        result.sort(Comparator.comparing(DataPackage::getTitle, String.CASE_INSENSITIVE_ORDER));
+        return Collections.unmodifiableList(result);
+    }
+
+    public synchronized List<DataPackage> listPackages(String userId) {
+        List<DataPackage> result = new ArrayList<>();
+        for (DataPackage dataPackage : packages.values()) {
+            if (canAccess(dataPackage, userId) && !dataPackage.isDeleted()
+                    && !dataPackage.isPermanentlyDeleted()) result.add(dataPackage);
+        }
+        return Collections.unmodifiableList(result);
+    }
+
+    public synchronized DataPackage getPackage(String userId, String packageId) {
+        return requireVisiblePackage(userId, packageId);
+    }
+
+    public synchronized PackageSnapshot getVersion(String userId, String packageId, String version) {
+        DataPackage dataPackage = requireVisiblePackage(userId, packageId);
+        PackageSnapshot snapshot = dataPackage.getVersions().get(version);
+        if (snapshot == null) throw new IllegalArgumentException("Unknown package version: " + version);
+        return snapshot;
+    }
+
+    public synchronized byte[] downloadResource(String userId, String packageId, String resourceName) {
+        DataPackage dataPackage = requireVisiblePackage(userId, packageId);
+        for (PackageResource resource : dataPackage.mutableResources()) {
+            if (resource.getName().equals(resourceName)) {
+                dataPackage.incrementDownloads();
+                countApi("download");
+                return resource.getData();
+            }
+        }
+        throw new IllegalArgumentException("Resource not found: " + resourceName);
+    }
+
+    public synchronized byte[] downloadVersionResource(String userId, String packageId,
+                                                       String version, String resourceName) {
+        PackageSnapshot snapshot = getVersion(userId, packageId, version);
+        for (PackageResource resource : snapshot.getResources()) {
+            if (resource.getName().equals(resourceName)) {
+                requirePackage(packageId).incrementDownloads();
+                return resource.getData();
+            }
+        }
+        throw new IllegalArgumentException("Resource not found: " + resourceName);
+    }
+
+    public synchronized byte[] downloadPackageZip(String userId, String packageId) {
+        DataPackage dataPackage = requireVisiblePackage(userId, packageId);
+        try {
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            try (ZipOutputStream zip = new ZipOutputStream(bytes)) {
+                String descriptor = descriptorJson(dataPackage);
+                zip.putNextEntry(new ZipEntry("datapackage.json"));
+                zip.write(descriptor.getBytes(StandardCharsets.UTF_8));
+                zip.closeEntry();
+                for (PackageResource resource : dataPackage.mutableResources()) {
+                    zip.putNextEntry(new ZipEntry(resource.getName()));
+                    zip.write(resource.getData());
+                    zip.closeEntry();
+                }
+            }
+            dataPackage.incrementDownloads();
+            countApi("download");
+            return bytes.toByteArray();
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to create package archive", exception);
+        }
+    }
+
+    public synchronized byte[] downloadAsSql(String userId, String packageId) {
+        DataPackage dataPackage = requireVisiblePackage(userId, packageId);
+        StringBuilder sql = new StringBuilder("-- SQLite-compatible import script\n");
+        for (PackageResource resource : dataPackage.mutableResources()) {
+            String table = sqlIdentifier(resource.getName());
+            sql.append("CREATE TABLE IF NOT EXISTS \"").append(table)
+                    .append("\" (\"value\" TEXT);\n");
+            String content = new String(resource.getData(), StandardCharsets.UTF_8);
+            String[] lines = content.split("\\R");
+            for (String line : lines) {
+                sql.append("INSERT INTO \"").append(table).append("\" (\"value\") VALUES ('")
+                        .append(line.replace("'", "''")).append("');\n");
+            }
+        }
+        dataPackage.incrementDownloads();
+        countApi("download");
+        return sql.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    public synchronized Map<String, String> preview(String userId, String packageId) {
+        DataPackage dataPackage = requirePackage(packageId);
+        requirePublisherMember(userId, dataPackage.getPublisherId());
+        Map<String, String> result = new LinkedHashMap<>();
+        for (PackageResource resource : dataPackage.mutableResources()) {
+            String content = new String(resource.getData(), StandardCharsets.UTF_8);
+            String[] lines = content.split("\\R");
+            StringBuilder preview = new StringBuilder();
+            for (int i = 0; i < Math.min(lines.length, 5); i++) {
+                if (i > 0) preview.append('\n');
+                preview.append(lines[i]);
+            }
+            result.put(resource.getName(), preview.toString());
+        }
+        return Collections.unmodifiableMap(result);
+    }
+
+    public synchronized String compareVersions(String userId, String packageId,
+                                               String firstVersion, String secondVersion) {
+        PackageSnapshot first = getVersion(userId, packageId, firstVersion);
+        PackageSnapshot second = getVersion(userId, packageId, secondVersion);
+        Map<String, Object> a = first.getDescriptor();
+        Map<String, Object> b = second.getDescriptor();
+        List<String> changes = new ArrayList<>();
+        for (String key : a.keySet()) {
+            if (!b.containsKey(key)) changes.add("Removed descriptor field: " + key);
+            else if (!Objects.equals(a.get(key), b.get(key))) changes.add("Changed descriptor field: " + key);
+        }
+        for (String key : b.keySet()) {
+            if (!a.containsKey(key)) changes.add("Added descriptor field: " + key);
+        }
+        List<String> oldResources = resourceNames(first);
+        List<String> newResources = resourceNames(second);
+        for (String name : oldResources) if (!newResources.contains(name)) changes.add("Removed resource: " + name);
+        for (String name : newResources) if (!oldResources.contains(name)) changes.add("Added resource: " + name);
+        return changes.isEmpty() ? "No descriptor or resource changes" : String.join("\n", changes);
+    }
+
+    public synchronized void subscribe(String userId, String packageId) {
+        requireUser(userId);
+        requireVisiblePackage(userId, packageId);
+        subscriptions.computeIfAbsent(packageId, ignored -> new ArrayList<>()).add(userId);
+    }
+
+    public synchronized List<String> getNotifications(String userId) {
+        requireUser(userId);
+        List<String> result = new ArrayList<>();
+        for (Map.Entry<String, List<String>> entry : subscriptions.entrySet()) {
+            if (entry.getValue().contains(userId)) {
+                // Notifications are also exposed through the registry activity stream.
+                String prefix = "Package updated: " + entry.getKey() + "@";
+                for (String event : activity) if (event.startsWith(prefix)) result.add(event);
+            }
+        }
+        return Collections.unmodifiableList(result);
+    }
+
+    public synchronized void inviteExistingUser(String ownerUserId, String publisherId, String invitedUserId) {
+        requireOwner(ownerUserId, publisherId);
+        requireUser(invitedUserId);
+        publishers.get(publisherId).members.put(invitedUserId, Role.MEMBER);
+    }
+
+    public synchronized void inviteByEmail(String ownerUserId, String publisherId, String email) {
+        requireOwner(ownerUserId, publisherId);
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        String existingUserId = userIdsByEmail.get(normalizedEmail);
+        if (existingUserId != null) {
+            publishers.get(publisherId).members.put(existingUserId, Role.MEMBER);
+        } else {
+            invitations.put(normalizedEmail, publisherId);
+        }
+    }
+
+    public synchronized void removeMember(String ownerUserId, String publisherId, String memberUserId) {
+        requireOwner(ownerUserId, publisherId);
+        if (ownerUserId.equals(memberUserId)) throw new IllegalArgumentException("An owner cannot remove themselves");
+        publishers.get(publisherId).members.remove(memberUserId);
+    }
+
+    public synchronized void makeOwner(String ownerUserId, String publisherId, String memberUserId) {
+        requireOwner(ownerUserId, publisherId);
+        if (!publishers.get(publisherId).members.containsKey(memberUserId)) {
+            throw new IllegalArgumentException("User is not a publisher member");
+        }
+        publishers.get(publisherId).members.put(memberUserId, Role.OWNER);
+    }
+
+    public synchronized void makeMember(String ownerUserId, String publisherId, String memberUserId) {
+        requireOwner(ownerUserId, publisherId);
+        if (!publishers.get(publisherId).members.containsKey(memberUserId)) {
+            throw new IllegalArgumentException("User is not a publisher member");
+        }
+        long owners = publishers.get(publisherId).members.values().stream()
+                .filter(role -> role == Role.OWNER).count();
+        if (publishers.get(publisherId).roleOf(memberUserId) == Role.OWNER && owners <= 1) {
+            throw new IllegalStateException("Publisher must have at least one owner");
+        }
+        publishers.get(publisherId).members.put(memberUserId, Role.MEMBER);
+    }
+
+    public synchronized Publisher getPublisher(String publisherId) {
+        Publisher publisher = publishers.get(publisherId);
+        if (publisher == null) throw new IllegalArgumentException("Unknown publisher: " + publisherId);
+        return publisher;
+    }
+
+    public synchronized List<Publisher> searchPublishers(String query) {
+        String term = query == null ? "" : query.toLowerCase(Locale.ROOT);
+        List<Publisher> result = new ArrayList<>();
+        for (Publisher publisher : publishers.values()) {
+            if ((publisher.getName() + " " + publisher.getDescription()).toLowerCase(Locale.ROOT).contains(term)) {
+                result.add(publisher);
+            }
+        }
+        return Collections.unmodifiableList(result);
+    }
+
+    public synchronized List<DataPackage> packagesForPublisher(String publisherId, String query) {
+        String term = query == null ? "" : query.toLowerCase(Locale.ROOT);
+        List<DataPackage> result = new ArrayList<>();
+        for (DataPackage dataPackage : packages.values()) {
+            if (dataPackage.getPublisherId().equals(publisherId) && isDiscoverable(dataPackage)
+                    && (dataPackage.getTitle() + " " + dataPackage.getDescription())
+                    .toLowerCase(Locale.ROOT).contains(term)) result.add(dataPackage);
+        }
+        return Collections.unmodifiableList(result);
+    }
+
+    public synchronized void editProfile(String userId, String name, Map<String, String> profile) {
+        User user = requireUser(userId);
+        if (name != null && !name.isBlank()) user.setName(name);
+        if (profile != null) profile.forEach(user::setProfileValue);
+    }
+
+    public synchronized void editPublisherProfile(String userId, String publisherId,
+                                                  String name, String description) {
+        requireOwner(userId, publisherId);
+        Publisher publisher = publishers.get(publisherId);
+        if (name != null && !name.isBlank()) publisher.setName(name);
+        if (description != null) publisher.setDescription(description);
+    }
+
+    public synchronized void setPricingPlan(String userId, String publisherId, String planId) {
+        requirePublisherMember(userId, publisherId);
+        if (!plans.containsKey(planId)) throw new IllegalArgumentException("Unknown pricing plan");
+        publishers.get(publisherId).setPricingPlanId(planId);
+    }
+
+    public synchronized void addPricingPlan(PricingPlan plan) {
+        plans.put(plan.getId(), plan);
+    }
+
+    public synchronized List<PricingPlan> getPricingPlans() {
+        return Collections.unmodifiableList(new ArrayList<>(plans.values()));
+    }
+
+    public synchronized void configureSite(String userId, String key, String value) {
+        requireAdmin(userId);
+        siteConfig.put(key, value);
+    }
+
+    public synchronized Map<String, String> getSiteConfig() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(siteConfig));
+    }
+
+    public synchronized Map<String, Long> getAdminMetrics(String userId) {
+        requireAdmin(userId);
+        Map<String, Long> result = new LinkedHashMap<>();
+        result.put("users", (long) users.size());
+        result.put("publishers", (long) publishers.size());
+        result.put("packages", (long) packages.size());
+        result.put("downloads", packages.values().stream().mapToLong(DataPackage::getDownloads).sum());
+        apiUsage.forEach((key, value) -> result.put("api." + key, value));
+        return Collections.unmodifiableMap(result);
+    }
+
+    public synchronized List<String> getActivity() {
+        return Collections.unmodifiableList(new ArrayList<>(activity));
+    }
+
+    public synchronized List<DataPackage> mostDownloaded(int limit) {
+        return packages.values().stream().filter(this::isDiscoverable)
+                .sorted(Comparator.comparingLong(DataPackage::getDownloads).reversed())
+                .limit(Math.max(0, limit)).toList();
+    }
+
+    public synchronized Map<String, Object> nextSteps(String userId) {
+        requireUser(userId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("suggestions", List.of("Create a publisher profile", "Configure your client",
+                "Create a data package", "Validate and publish your package"));
+        result.put("publishers", publishers.values().stream()
+                .filter(publisher -> publisher.roleOf(userId) != null).map(Publisher::getId).toList());
+        return Collections.unmodifiableMap(result);
+    }
+
+    private void notifySubscribers(DataPackage dataPackage, String message) {
+        // Subscription membership is recorded; the activity log provides the notification feed.
+        activity.add(message);
+    }
+
+    private boolean isDiscoverable(DataPackage dataPackage) {
+        return !dataPackage.isDeleted() && !dataPackage.isPermanentlyDeleted()
+                && dataPackage.getVisibility() == Visibility.PUBLIC;
+    }
+
+    private boolean canAccess(DataPackage dataPackage, String userId) {
+        if (dataPackage.isDeleted() || dataPackage.isPermanentlyDeleted()) return false;
+        if (dataPackage.getVisibility() == Visibility.PUBLIC) return true;
+        if (userId == null) return false;
+        if (dataPackage.getVisibility() == Visibility.SELECTED_USERS
+                && dataPackage.hasPermittedUser(userId)) return true;
+        Publisher publisher = publishers.get(dataPackage.getPublisherId());
+        return publisher != null && publisher.roleOf(userId) != null;
+    }
+
+    private DataPackage requireVisiblePackage(String userId, String packageId) {
+        DataPackage dataPackage = requirePackage(packageId);
+        if (!canAccess(dataPackage, userId)) throw new SecurityException("Package is not available to this user");
+        return dataPackage;
+    }
+
+    private DataPackage requirePackage(String packageId) {
+        DataPackage dataPackage = packages.get(packageId);
+        if (dataPackage == null) throw new IllegalArgumentException("Unknown package: " + packageId);
+        return dataPackage;
+    }
+
+    private User requireUser(String userId) {
+        User user = users.get(userId);
+        if (user == null) throw new IllegalArgumentException("Unknown user: " + userId);
+        return user;
+    }
+
+    private void requirePublisherMember(String userId, String publisherId) {
+        requireUser(userId);
+        Publisher publisher = publishers.get(publisherId);
+        if (publisher == null || publisher.roleOf(userId) == null) {
+            throw new SecurityException("User is not a member of this publisher");
+        }
+    }
+
+    private void requireOwner(String userId, String publisherId) {
+        requirePublisherMember(userId, publisherId);
+        if (publishers.get(publisherId).roleOf(userId) != Role.OWNER) {
+            throw new SecurityException("Publisher owner role required");
+        }
+    }
+
+    private void requireAdmin(String userId) {
+        requireUser(userId);
+        if (!userId.equals(adminUserId)) throw new SecurityException("Administrator role required");
+    }
+
+    private void ensureNotPermanentlyDeleted(DataPackage dataPackage) {
+        if (dataPackage.isPermanentlyDeleted()) {
+            throw new IllegalStateException("Package has been permanently deleted");
+        }
+    }
+
+    private String nextVersion(DataPackage dataPackage) {
+        int maximum = 0;
+        for (String version : dataPackage.getVersions().keySet()) {
+            try {
+                maximum = Math.max(maximum, Integer.parseInt(version.replaceFirst("^v", "")));
+            } catch (NumberFormatException ignored) {
+                // Existing custom versions do not affect the sequential version counter.
+            }
+        }
+        return "v" + (maximum + 1);
+    }
+
+    private void countApi(String operation) {
+        apiUsage.merge(operation, 1L, Long::sum);
+    }
+
+    private static String id() { return UUID.randomUUID().toString(); }
+
+    private static String slug(String value) {
+        return value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("(^-|-$)", "");
+    }
+
+    private static String sqlIdentifier(String value) {
+        return value.replaceAll("[^A-Za-z0-9_]", "_");
+    }
+
+    private static List<String> resourceNames(PackageSnapshot snapshot) {
+        return snapshot.getResources().stream().map(PackageResource::getName).toList();
+    }
+
+    private static String descriptorJson(DataPackage dataPackage) {
+        StringBuilder json = new StringBuilder("{\n");
+        json.append("  \"name\": \"").append(escape(dataPackage.getId())).append("\",\n");
+        json.append("  \"title\": \"").append(escape(dataPackage.getTitle())).append("\",\n");
+        json.append("  \"description\": \"").append(escape(dataPackage.getDescription())).append("\",\n");
+        json.append("  \"resources\": [");
+        List<PackageResource> resources = dataPackage.getResources();
+        for (int i = 0; i < resources.size(); i++) {
+            if (i > 0) json.append(", ");
+            json.append("{\"path\": \"").append(escape(resources.get(i).getName())).append("\"}");
+        }
+        return json.append("]\n}\n").toString();
+    }
+
+    private static String escape(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\n", "\\n").replace("\r", "\\r");
+    }
+
+    public synchronized User getUser(String userId) { return requireUser(userId); }
+}
+
+// File: Main.java
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+
+public final class Main {
+    public static void main(String[] args) {
+        DataRegistry registry = new DataRegistry();
+
+        User publisherUser = registry.signUp("alex@example.org", "Alex");
+        Publisher publisher = registry.createPublisher(publisherUser.getId(), "Open Data Lab");
+
+        PackageResource resource = new PackageResource(
+                "people.csv",
+                "csv",
+                "name,city\nAda,London\nGrace,New York\n".getBytes(StandardCharsets.UTF_8)
+        );
+
+        DataPackage dataPackage = registry.createPackage(
+                publisherUser.getId(),
+                publisher.getId(),
+                "People",
+                "A small example people dataset",
+                Visibility.PUBLIC,
+                Map.of("name", "people", "views", List.of("table")),
+                List.of(resource)
+        );
+
+        System.out.println(registry.validate(publisherUser.getId(), dataPackage.getId()));
+        registry.publish(publisherUser.getId(), dataPackage.getId());
+
+        System.out.println("Published " + dataPackage.getId() + " at " + dataPackage.getCurrentVersion());
+        System.out.println("Preview: " + registry.preview(publisherUser.getId(), dataPackage.getId()));
+        System.out.println("Search results: " + registry.search("people").size());
+    }
+}

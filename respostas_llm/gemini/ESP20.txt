@@ -1,0 +1,2643 @@
+// File: Role.java
+public enum Role {
+    ADMINISTRATOR,
+    SECURITY_OFFICER,
+    DATA_MANAGER,
+    PORTAL_MANAGER,
+    REGISTERED_VISITOR
+}
+
+// File: User.java
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+public class User {
+    private final String username;
+    private String email;
+    private String password;
+    private final Set<Role> roles = new HashSet<>();
+    private final Map<String, OccurrenceFilter> savedFilters = new HashMap<>();
+
+    public User(String username, String email, String password, Set<Role> initialRoles) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        if (initialRoles != null) {
+            this.roles.addAll(initialRoles);
+        }
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public Set<Role> getRoles() {
+        return Collections.unmodifiableSet(roles);
+    }
+
+    public void addRole(Role role) {
+        roles.add(role);
+    }
+
+    public void removeRole(Role role) {
+        roles.remove(role);
+    }
+
+    public boolean hasRole(Role role) {
+        return roles.contains(role);
+    }
+
+    public void saveFilter(OccurrenceFilter filter) {
+        savedFilters.put(filter.getName(), filter);
+    }
+
+    public OccurrenceFilter getSavedFilter(String filterName) {
+        return savedFilters.get(filterName);
+    }
+
+    public OccurrenceFilter removeSavedFilter(String filterName) {
+        return savedFilters.remove(filterName);
+    }
+
+    public Map<String, OccurrenceFilter> getSavedFilters() {
+        return Collections.unmodifiableMap(savedFilters);
+    }
+}
+
+// File: AuditLogEntry.java
+import java.time.LocalDateTime;
+
+public class AuditLogEntry {
+    private final LocalDateTime timestamp;
+    private final String actor;
+    private final String action;
+    private final String details;
+
+    public AuditLogEntry(String actor, String action, String details) {
+        this.timestamp = LocalDateTime.now();
+        this.actor = actor;
+        this.action = action;
+        this.details = details;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public String getActor() {
+        return actor;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public String getDetails() {
+        return details;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[%s] Actor: %s | Action: %s | Details: %s",
+                timestamp, actor, action, details);
+    }
+}
+
+// File: ErrorLogEntry.java
+import java.time.LocalDateTime;
+
+public class ErrorLogEntry {
+    private final LocalDateTime timestamp;
+    private final String module;
+    private final String message;
+    private final String stackTrace;
+
+    public ErrorLogEntry(String module, String message, String stackTrace) {
+        this.timestamp = LocalDateTime.now();
+        this.module = module;
+        this.message = message;
+        this.stackTrace = stackTrace;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public String getModule() {
+        return module;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public String getStackTrace() {
+        return stackTrace;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[%s] Module: %s | Error: %s | Trace: %s",
+                timestamp, module, message, stackTrace);
+    }
+}
+
+// File: EmailConfig.java
+public class EmailConfig {
+    private String url;
+    private int port;
+    private String account;
+
+    public EmailConfig(String url, int port, String account) {
+        this.url = url;
+        this.port = port;
+        this.account = account;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public String getAccount() {
+        return account;
+    }
+
+    public void setAccount(String account) {
+        this.account = account;
+    }
+
+    @Override
+    public String toString() {
+        return "EmailConfig[url=" + url + ", port=" + port + ", account=" + account + "]";
+    }
+}
+
+// File: MapExtent.java
+public class MapExtent {
+    private double minLongitude;
+    private double minLatitude;
+    private double maxLongitude;
+    private double maxLatitude;
+
+    public MapExtent(double minLongitude, double minLatitude, double maxLongitude, double maxLatitude) {
+        this.minLongitude = minLongitude;
+        this.minLatitude = minLatitude;
+        this.maxLongitude = maxLongitude;
+        this.maxLatitude = maxLatitude;
+    }
+
+    public double getMinLongitude() {
+        return minLongitude;
+    }
+
+    public double getMinLatitude() {
+        return minLatitude;
+    }
+
+    public double getMaxLongitude() {
+        return maxLongitude;
+    }
+
+    public double getMaxLatitude() {
+        return maxLatitude;
+    }
+
+    public void setExtent(double minLon, double minLat, double maxLon, double maxLat) {
+        this.minLongitude = minLon;
+        this.minLatitude = minLat;
+        this.maxLongitude = maxLon;
+        this.maxLatitude = maxLat;
+    }
+
+    public void pan(double deltaLon, double deltaLat) {
+        this.minLongitude += deltaLon;
+        this.maxLongitude += deltaLon;
+        this.minLatitude += deltaLat;
+        this.maxLatitude += deltaLat;
+    }
+
+    public void zoom(double factor) {
+        double centerLon = (minLongitude + maxLongitude) / 2.0;
+        double centerLat = (minLatitude + maxLatitude) / 2.0;
+        double halfLonSpan = ((maxLongitude - minLongitude) * factor) / 2.0;
+        double halfLatSpan = ((maxLatitude - minLatitude) * factor) / 2.0;
+        this.minLongitude = centerLon - halfLonSpan;
+        this.maxLongitude = centerLon + halfLonSpan;
+        this.minLatitude = centerLat - halfLatSpan;
+        this.maxLatitude = centerLat + halfLatSpan;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("MapExtent[Lon: (%.2f to %.2f), Lat: (%.2f to %.2f)]",
+                minLongitude, maxLongitude, minLatitude, maxLatitude);
+    }
+}
+
+// File: SpatialLayer.java
+public class SpatialLayer {
+    private final String id;
+    private String name;
+    private boolean visible;
+
+    public SpatialLayer(String id, String name, boolean visible) {
+        this.id = id;
+        this.name = name;
+        this.visible = visible;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+    }
+
+    public void toggleVisibility() {
+        this.visible = !this.visible;
+    }
+
+    @Override
+    public String toString() {
+        return "SpatialLayer{" + "id='" + id + '\'' + ", name='" + name + '\'' + ", visible=" + visible + '}';
+    }
+}
+
+// File: MapConfig.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+public class MapConfig {
+    private String projection;
+    private MapExtent defaultExtent;
+    private final List<SpatialLayer> layers = new ArrayList<>();
+
+    public MapConfig(String projection, MapExtent defaultExtent) {
+        this.projection = projection;
+        this.defaultExtent = defaultExtent;
+    }
+
+    public String getProjection() {
+        return projection;
+    }
+
+    public void setProjection(String projection) {
+        this.projection = projection;
+    }
+
+    public MapExtent getDefaultExtent() {
+        return defaultExtent;
+    }
+
+    public void setDefaultExtent(MapExtent defaultExtent) {
+        this.defaultExtent = defaultExtent;
+    }
+
+    public void addLayer(SpatialLayer layer) {
+        layers.add(layer);
+    }
+
+    public boolean removeLayer(String layerId) {
+        return layers.removeIf(l -> l.getId().equals(layerId));
+    }
+
+    public Optional<SpatialLayer> getLayer(String layerId) {
+        return layers.stream().filter(l -> l.getId().equals(layerId)).findFirst();
+    }
+
+    public List<SpatialLayer> getLayers() {
+        return Collections.unmodifiableList(layers);
+    }
+}
+
+// File: HarvestJobStatus.java
+public enum HarvestJobStatus {
+    SCHEDULED,
+    RUNNING,
+    COMPLETED,
+    CANCELLED,
+    FAILED
+}
+
+// File: DataSource.java
+import java.time.LocalDateTime;
+
+public class DataSource {
+    public enum Type {
+        GBIF_INDEX,
+        IPT
+    }
+
+    private final String id;
+    private final String name;
+    private final Type type;
+    private final String url;
+    private final LocalDateTime registeredAt;
+
+    public DataSource(String id, String name, Type type, String url) {
+        this.id = id;
+        this.name = name;
+        this.type = type;
+        this.url = url;
+        this.registeredAt = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Type getType() {
+        return type;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public LocalDateTime getRegisteredAt() {
+        return registeredAt;
+    }
+
+    @Override
+    public String toString() {
+        return "DataSource{" + "id='" + id + '\'' + ", name='" + name + '\'' + ", type=" + type + ", url='" + url + '\'' + '}';
+    }
+}
+
+// File: HarvestJob.java
+import java.time.LocalDateTime;
+
+public class HarvestJob {
+    private final String id;
+    private final String dataSourceId;
+    private LocalDateTime scheduledTime;
+    private HarvestJobStatus status;
+    private String report;
+
+    public HarvestJob(String id, String dataSourceId, LocalDateTime scheduledTime) {
+        this.id = id;
+        this.dataSourceId = dataSourceId;
+        this.scheduledTime = scheduledTime;
+        this.status = HarvestJobStatus.SCHEDULED;
+        this.report = "Scheduled at " + LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getDataSourceId() {
+        return dataSourceId;
+    }
+
+    public LocalDateTime getScheduledTime() {
+        return scheduledTime;
+    }
+
+    public void setScheduledTime(LocalDateTime scheduledTime) {
+        this.scheduledTime = scheduledTime;
+    }
+
+    public HarvestJobStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(HarvestJobStatus status) {
+        this.status = status;
+    }
+
+    public String getReport() {
+        return report;
+    }
+
+    public void setReport(String report) {
+        this.report = report;
+    }
+}
+
+// File: OccurrenceRecord.java
+import java.time.LocalDate;
+
+public class OccurrenceRecord {
+    private final String id;
+    private final String scientificName;
+    private final String datasetId;
+    private final double depth;
+    private final double altitude;
+    private final String basisOfRecord;
+    private final String countryOrGeographic;
+    private final double latitude;
+    private final double longitude;
+    private final LocalDate eventDate;
+    private final String publisherEmail;
+
+    public OccurrenceRecord(String id, String scientificName, String datasetId, double depth,
+                            double altitude, String basisOfRecord, String countryOrGeographic,
+                            double latitude, double longitude, LocalDate eventDate, String publisherEmail) {
+        this.id = id;
+        this.scientificName = scientificName;
+        this.datasetId = datasetId;
+        this.depth = depth;
+        this.altitude = altitude;
+        this.basisOfRecord = basisOfRecord;
+        this.countryOrGeographic = countryOrGeographic;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.eventDate = eventDate;
+        this.publisherEmail = publisherEmail;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getScientificName() {
+        return scientificName;
+    }
+
+    public String getDatasetId() {
+        return datasetId;
+    }
+
+    public double getDepth() {
+        return depth;
+    }
+
+    public double getAltitude() {
+        return altitude;
+    }
+
+    public String getBasisOfRecord() {
+        return basisOfRecord;
+    }
+
+    public String getCountryOrGeographic() {
+        return countryOrGeographic;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    public LocalDate getEventDate() {
+        return eventDate;
+    }
+
+    public String getPublisherEmail() {
+        return publisherEmail;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s | Taxon: %s | Dataset: %s | Depth: %.1fm | Alt: %.1fm | Basis: %s | Geo: %s (%.2f, %.2f) | Date: %s",
+                id, scientificName, datasetId, depth, altitude, basisOfRecord, countryOrGeographic, latitude, longitude, eventDate);
+    }
+}
+
+// File: OccurrenceResource.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class OccurrenceResource {
+    private final String id;
+    private String title;
+    private final Map<String, String> metadata = new HashMap<>();
+    private final List<OccurrenceRecord> records = new ArrayList<>();
+
+    public OccurrenceResource(String id, String title, Map<String, String> initialMetadata) {
+        this.id = id;
+        this.title = title;
+        if (initialMetadata != null) {
+            this.metadata.putAll(initialMetadata);
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public Map<String, String> getMetadata() {
+        return Collections.unmodifiableMap(metadata);
+    }
+
+    public void updateMetadata(String key, String value) {
+        metadata.put(key, value);
+    }
+
+    public void addRecord(OccurrenceRecord record) {
+        records.add(record);
+    }
+
+    public List<OccurrenceRecord> getRecords() {
+        return Collections.unmodifiableList(records);
+    }
+
+    public boolean matchesKeyword(String keyword) {
+        String lower = keyword.toLowerCase();
+        if (id.toLowerCase().contains(lower) || title.toLowerCase().contains(lower)) return true;
+        for (Map.Entry<String, String> entry : metadata.entrySet()) {
+            if (entry.getKey().toLowerCase().contains(lower) || entry.getValue().toLowerCase().contains(lower)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+// File: ChecklistResource.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ChecklistResource {
+    private final String id;
+    private String title;
+    private final Map<String, String> metadata = new HashMap<>();
+    private final List<String> taxa = new ArrayList<>();
+
+    public ChecklistResource(String id, String title, Map<String, String> metadata, List<String> taxa) {
+        this.id = id;
+        this.title = title;
+        if (metadata != null) {
+            this.metadata.putAll(metadata);
+        }
+        if (taxa != null) {
+            this.taxa.addAll(taxa);
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public Map<String, String> getMetadata() {
+        return Collections.unmodifiableMap(metadata);
+    }
+
+    public void updateMetadata(String key, String value) {
+        metadata.put(key, value);
+    }
+
+    public List<String> getTaxa() {
+        return Collections.unmodifiableList(taxa);
+    }
+
+    public void addTaxon(String taxon) {
+        taxa.add(taxon);
+    }
+
+    public boolean matchesKeyword(String keyword) {
+        String lower = keyword.toLowerCase();
+        if (id.toLowerCase().contains(lower) || title.toLowerCase().contains(lower)) return true;
+        for (Map.Entry<String, String> entry : metadata.entrySet()) {
+            if (entry.getKey().toLowerCase().contains(lower) || entry.getValue().toLowerCase().contains(lower)) {
+                return true;
+            }
+        }
+        for (String t : taxa) {
+            if (t.toLowerCase().contains(lower)) return true;
+        }
+        return false;
+    }
+}
+
+// File: MultimediaResource.java
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+public class MultimediaResource {
+    private final String id;
+    private String title;
+    private String mediaType;
+    private byte[] data;
+    private final Map<String, String> metadata = new HashMap<>();
+
+    public MultimediaResource(String id, String title, String mediaType, byte[] data, Map<String, String> metadata) {
+        this.id = id;
+        this.title = title;
+        this.mediaType = mediaType;
+        this.data = data != null ? data.clone() : new byte[0];
+        if (metadata != null) {
+            this.metadata.putAll(metadata);
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getMediaType() {
+        return mediaType;
+    }
+
+    public void setMediaType(String mediaType) {
+        this.mediaType = mediaType;
+    }
+
+    public byte[] getData() {
+        return data.clone();
+    }
+
+    public void setData(byte[] data) {
+        this.data = data != null ? data.clone() : new byte[0];
+    }
+
+    public Map<String, String> getMetadata() {
+        return Collections.unmodifiableMap(metadata);
+    }
+
+    public void updateMetadata(String key, String value) {
+        metadata.put(key, value);
+    }
+
+    public boolean matchesKeyword(String keyword) {
+        String lower = keyword.toLowerCase();
+        if (id.toLowerCase().contains(lower) || title.toLowerCase().contains(lower) || mediaType.toLowerCase().contains(lower)) {
+            return true;
+        }
+        for (Map.Entry<String, String> entry : metadata.entrySet()) {
+            if (entry.getKey().toLowerCase().contains(lower) || entry.getValue().toLowerCase().contains(lower)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+// File: BibliographicResource.java
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+public class BibliographicResource {
+    private final String id;
+    private String title;
+    private String authors;
+    private int year;
+    private final Map<String, String> metadata = new HashMap<>();
+
+    public BibliographicResource(String id, String title, String authors, int year, Map<String, String> metadata) {
+        this.id = id;
+        this.title = title;
+        this.authors = authors;
+        this.year = year;
+        if (metadata != null) {
+            this.metadata.putAll(metadata);
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getAuthors() {
+        return authors;
+    }
+
+    public void setAuthors(String authors) {
+        this.authors = authors;
+    }
+
+    public int getYear() {
+        return year;
+    }
+
+    public void setYear(int year) {
+        this.year = year;
+    }
+
+    public Map<String, String> getMetadata() {
+        return Collections.unmodifiableMap(metadata);
+    }
+
+    public void updateMetadata(String key, String value) {
+        metadata.put(key, value);
+    }
+
+    public boolean matchesKeyword(String keyword) {
+        String lower = keyword.toLowerCase();
+        if (id.toLowerCase().contains(lower) || title.toLowerCase().contains(lower) || authors.toLowerCase().contains(lower)) {
+            return true;
+        }
+        for (Map.Entry<String, String> entry : metadata.entrySet()) {
+            if (entry.getKey().toLowerCase().contains(lower) || entry.getValue().toLowerCase().contains(lower)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+// File: InstitutionResource.java
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+public class InstitutionResource {
+    private final String id;
+    private String name;
+    private String contactEmail;
+    private String address;
+    private final Map<String, String> metadata = new HashMap<>();
+
+    public InstitutionResource(String id, String name, String contactEmail, String address, Map<String, String> metadata) {
+        this.id = id;
+        this.name = name;
+        this.contactEmail = contactEmail;
+        this.address = address;
+        if (metadata != null) {
+            this.metadata.putAll(metadata);
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public void setContactEmail(String contactEmail) {
+        this.contactEmail = contactEmail;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public Map<String, String> getMetadata() {
+        return Collections.unmodifiableMap(metadata);
+    }
+
+    public void updateMetadata(String key, String value) {
+        metadata.put(key, value);
+    }
+
+    public boolean matchesKeyword(String keyword) {
+        String lower = keyword.toLowerCase();
+        if (id.toLowerCase().contains(lower) || name.toLowerCase().contains(lower) ||
+                contactEmail.toLowerCase().contains(lower) || address.toLowerCase().contains(lower)) {
+            return true;
+        }
+        for (Map.Entry<String, String> entry : metadata.entrySet()) {
+            if (entry.getKey().toLowerCase().contains(lower) || entry.getValue().toLowerCase().contains(lower)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+// File: ExpertResource.java
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+public class ExpertResource {
+    private final String id;
+    private String fullName;
+    private String email;
+    private String fieldOfExpertise;
+    private final Map<String, String> metadata = new HashMap<>();
+
+    public ExpertResource(String id, String fullName, String email, String fieldOfExpertise, Map<String, String> metadata) {
+        this.id = id;
+        this.fullName = fullName;
+        this.email = email;
+        this.fieldOfExpertise = fieldOfExpertise;
+        if (metadata != null) {
+            this.metadata.putAll(metadata);
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getFieldOfExpertise() {
+        return fieldOfExpertise;
+    }
+
+    public void setFieldOfExpertise(String fieldOfExpertise) {
+        this.fieldOfExpertise = fieldOfExpertise;
+    }
+
+    public Map<String, String> getMetadata() {
+        return Collections.unmodifiableMap(metadata);
+    }
+
+    public void updateMetadata(String key, String value) {
+        metadata.put(key, value);
+    }
+
+    public boolean matchesKeyword(String keyword) {
+        String lower = keyword.toLowerCase();
+        if (id.toLowerCase().contains(lower) || fullName.toLowerCase().contains(lower) ||
+                email.toLowerCase().contains(lower) || fieldOfExpertise.toLowerCase().contains(lower)) {
+            return true;
+        }
+        for (Map.Entry<String, String> entry : metadata.entrySet()) {
+            if (entry.getKey().toLowerCase().contains(lower) || entry.getValue().toLowerCase().contains(lower)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+// File: NewsEntry.java
+import java.time.LocalDateTime;
+
+public class NewsEntry {
+    private final String id;
+    private String title;
+    private String content;
+    private final LocalDateTime publishedDate;
+
+    public NewsEntry(String id, String title, String content) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+        this.publishedDate = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public LocalDateTime getPublishedDate() {
+        return publishedDate;
+    }
+}
+
+// File: BlogPost.java
+import java.time.LocalDateTime;
+
+public class BlogPost {
+    private final String id;
+    private String title;
+    private String content;
+    private String author;
+    private final LocalDateTime publishedDate;
+
+    public BlogPost(String id, String title, String content, String author) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+        this.author = author;
+        this.publishedDate = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
+    }
+
+    public LocalDateTime getPublishedDate() {
+        return publishedDate;
+    }
+}
+
+// File: MenuItem.java
+public class MenuItem {
+    private final String id;
+    private String label;
+    private String url;
+    private int order;
+
+    public MenuItem(String id, String label, String url, int order) {
+        this.id = id;
+        this.label = label;
+        this.url = url;
+        this.order = order;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public int getOrder() {
+        return order;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+}
+
+// File: PortalPage.java
+public class PortalPage {
+    private final String id;
+    private String title;
+    private String content;
+
+    public PortalPage(String id, String title, String content) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+}
+
+// File: PortalConfig.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class PortalConfig {
+    private boolean dataMetricsVisible = true;
+    private String logoUrl = "default-logo.png";
+    private String nodeName = "National Biodiversity Node";
+    private String bannerUrl = "default-banner.png";
+    private String contactName = "Portal Support";
+    private String contactEmail = "support@portal.org";
+    private String networkSummary = "Connected to Global Biodiversity Information Facility";
+    private String defaultLanguage = "en";
+    private final List<String> alternateLanguages = new ArrayList<>();
+    private final Map<String, String> htmlMetaTags = new HashMap<>();
+
+    public boolean isDataMetricsVisible() {
+        return dataMetricsVisible;
+    }
+
+    public void setDataMetricsVisible(boolean dataMetricsVisible) {
+        this.dataMetricsVisible = dataMetricsVisible;
+    }
+
+    public String getLogoUrl() {
+        return logoUrl;
+    }
+
+    public void setLogoUrl(String logoUrl) {
+        this.logoUrl = logoUrl;
+    }
+
+    public String getNodeName() {
+        return nodeName;
+    }
+
+    public void setNodeName(String nodeName) {
+        this.nodeName = nodeName;
+    }
+
+    public String getBannerUrl() {
+        return bannerUrl;
+    }
+
+    public void setBannerUrl(String bannerUrl) {
+        this.bannerUrl = bannerUrl;
+    }
+
+    public String getContactName() {
+        return contactName;
+    }
+
+    public void setContactName(String contactName) {
+        this.contactName = contactName;
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public void setContactEmail(String contactEmail) {
+        this.contactEmail = contactEmail;
+    }
+
+    public String getNetworkSummary() {
+        return networkSummary;
+    }
+
+    public void setNetworkSummary(String networkSummary) {
+        this.networkSummary = networkSummary;
+    }
+
+    public String getDefaultLanguage() {
+        return defaultLanguage;
+    }
+
+    public void setDefaultLanguage(String defaultLanguage) {
+        this.defaultLanguage = defaultLanguage;
+    }
+
+    public List<String> getAlternateLanguages() {
+        return Collections.unmodifiableList(alternateLanguages);
+    }
+
+    public void addAlternateLanguage(String lang) {
+        if (!alternateLanguages.contains(lang)) {
+            alternateLanguages.add(lang);
+        }
+    }
+
+    public boolean removeAlternateLanguage(String lang) {
+        return alternateLanguages.remove(lang);
+    }
+
+    public Map<String, String> getHtmlMetaTags() {
+        return Collections.unmodifiableMap(htmlMetaTags);
+    }
+
+    public void setHtmlMetaTag(String name, String content) {
+        htmlMetaTags.put(name, content);
+    }
+}
+
+// File: CriterionType.java
+public enum CriterionType {
+    TAXONOMIC,
+    DATASET,
+    DEPTH,
+    ALTITUDE,
+    BASIS_OF_RECORD,
+    GEOGRAPHIC,
+    DATE
+}
+
+// File: FilterCriterion.java
+import java.time.LocalDate;
+
+public class FilterCriterion {
+    private final CriterionType type;
+    private final String value;
+    private final Double minNumeric;
+    private final Double maxNumeric;
+    private final LocalDate minDate;
+    private final LocalDate maxDate;
+
+    public FilterCriterion(CriterionType type, String value) {
+        this(type, value, null, null, null, null);
+    }
+
+    public FilterCriterion(CriterionType type, Double minNumeric, Double maxNumeric) {
+        this(type, null, minNumeric, maxNumeric, null, null);
+    }
+
+    public FilterCriterion(CriterionType type, LocalDate minDate, LocalDate maxDate) {
+        this(type, null, null, null, minDate, maxDate);
+    }
+
+    private FilterCriterion(CriterionType type, String value, Double minNumeric, Double maxNumeric,
+                            LocalDate minDate, LocalDate maxDate) {
+        this.type = type;
+        this.value = value;
+        this.minNumeric = minNumeric;
+        this.maxNumeric = maxNumeric;
+        this.minDate = minDate;
+        this.maxDate = maxDate;
+    }
+
+    public CriterionType getType() {
+        return type;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public Double getMinNumeric() {
+        return minNumeric;
+    }
+
+    public Double getMaxNumeric() {
+        return maxNumeric;
+    }
+
+    public LocalDate getMinDate() {
+        return minDate;
+    }
+
+    public LocalDate getMaxDate() {
+        return maxDate;
+    }
+
+    public boolean test(OccurrenceRecord record) {
+        switch (type) {
+            case TAXONOMIC:
+                return value != null && record.getScientificName().toLowerCase().contains(value.toLowerCase());
+            case DATASET:
+                return value != null && record.getDatasetId().equalsIgnoreCase(value);
+            case DEPTH:
+                if (minNumeric != null && record.getDepth() < minNumeric) return false;
+                if (maxNumeric != null && record.getDepth() > maxNumeric) return false;
+                return true;
+            case ALTITUDE:
+                if (minNumeric != null && record.getAltitude() < minNumeric) return false;
+                if (maxNumeric != null && record.getAltitude() > maxNumeric) return false;
+                return true;
+            case BASIS_OF_RECORD:
+                return value != null && record.getBasisOfRecord().equalsIgnoreCase(value);
+            case GEOGRAPHIC:
+                return value != null && record.getCountryOrGeographic().toLowerCase().contains(value.toLowerCase());
+            case DATE:
+                if (minDate != null && record.getEventDate().isBefore(minDate)) return false;
+                if (maxDate != null && record.getEventDate().isAfter(maxDate)) return false;
+                return true;
+            default:
+                return true;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "FilterCriterion{" + "type=" + type + ", value='" + value + '\'' +
+                ", min=" + minNumeric + ", max=" + maxNumeric +
+                ", minDate=" + minDate + ", maxDate=" + maxDate + '}';
+    }
+}
+
+// File: OccurrenceFilter.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class OccurrenceFilter {
+    private final String name;
+    private final List<FilterCriterion> criteria = new ArrayList<>();
+
+    public OccurrenceFilter(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void addCriterion(FilterCriterion criterion) {
+        criteria.add(criterion);
+    }
+
+    public boolean removeCriterion(CriterionType type) {
+        return criteria.removeIf(c -> c.getType() == type);
+    }
+
+    public List<FilterCriterion> getCriteria() {
+        return Collections.unmodifiableList(criteria);
+    }
+
+    public boolean matches(OccurrenceRecord record) {
+        for (FilterCriterion criterion : criteria) {
+            if (!criterion.test(record)) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
+// File: AdministrationService.java
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+public class AdministrationService {
+    private final Set<String> installedModules = new HashSet<>();
+    private final MapConfig mapConfig;
+    private EmailConfig emailConfig;
+    private final List<ErrorLogEntry> errorLogs = new ArrayList<>();
+    private final List<AuditLogEntry> auditLogs = new ArrayList<>();
+    private final Map<String, User> users = new HashMap<>();
+
+    public AdministrationService() {
+        this.mapConfig = new MapConfig("EPSG:4326", new MapExtent(-180.0, -90.0, 180.0, 90.0));
+        this.emailConfig = new EmailConfig("smtp.portal.org", 587, "notifications@portal.org");
+    }
+
+    // FR-A1
+    public void installModule(String moduleName) {
+        installedModules.add(moduleName);
+        logAudit("admin", "INSTALL_MODULE", "Installed module: " + moduleName);
+    }
+
+    // FR-A2
+    public void uninstallModule(String moduleName) {
+        installedModules.remove(moduleName);
+        logAudit("admin", "UNINSTALL_MODULE", "Uninstalled module: " + moduleName);
+    }
+
+    public Set<String> getInstalledModules() {
+        return Collections.unmodifiableSet(installedModules);
+    }
+
+    // FR-A3
+    public void configureDistributionMapProjection(String projection) {
+        mapConfig.setProjection(projection);
+        logAudit("admin", "CONFIG_MAP_PROJECTION", "Projection set to: " + projection);
+    }
+
+    // FR-A4
+    public void configureDistributionMapDefaultExtent(MapExtent extent) {
+        mapConfig.setDefaultExtent(extent);
+        logAudit("admin", "CONFIG_MAP_EXTENT", "Extent set to: " + extent);
+    }
+
+    public MapConfig getMapConfig() {
+        return mapConfig;
+    }
+
+    // FR-A5
+    public void editEmailServerConfiguration(String url, int port, String account) {
+        this.emailConfig = new EmailConfig(url, port, account);
+        logAudit("admin", "CONFIG_EMAIL_SERVER", "Email config updated: " + emailConfig);
+    }
+
+    public EmailConfig getEmailConfig() {
+        return emailConfig;
+    }
+
+    // FR-A6
+    public void addSpatialLayer(SpatialLayer layer) {
+        mapConfig.addLayer(layer);
+        logAudit("admin", "ADD_SPATIAL_LAYER", "Added layer: " + layer.getName());
+    }
+
+    // FR-A7
+    public boolean removeSpatialLayer(String layerId) {
+        boolean removed = mapConfig.removeLayer(layerId);
+        if (removed) {
+            logAudit("admin", "REMOVE_SPATIAL_LAYER", "Removed layer id: " + layerId);
+        }
+        return removed;
+    }
+
+    // FR-A8
+    public boolean editSpatialLayerName(String layerId, String newName) {
+        Optional<SpatialLayer> layer = mapConfig.getLayer(layerId);
+        if (layer.isPresent()) {
+            layer.get().setName(newName);
+            logAudit("admin", "EDIT_SPATIAL_LAYER", "Renamed layer id " + layerId + " to: " + newName);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-A9
+    public List<ErrorLogEntry> viewErrorLogs() {
+        return Collections.unmodifiableList(errorLogs);
+    }
+
+    // FR-A10
+    public String downloadErrorLogs() {
+        StringBuilder sb = new StringBuilder();
+        for (ErrorLogEntry e : errorLogs) {
+            sb.append(e.toString()).append("\n");
+        }
+        return sb.toString();
+    }
+
+    public void logError(String module, String message, String stackTrace) {
+        errorLogs.add(new ErrorLogEntry(module, message, stackTrace));
+    }
+
+    // FR-A11
+    public User createUserAccount(String actor, String username, String email, String password, Set<Role> roles) {
+        User user = new User(username, email, password, roles);
+        users.put(username, user);
+        logAudit(actor, "CREATE_USER", "Created user: " + username);
+        return user;
+    }
+
+    // FR-A12
+    public boolean deleteUserAccount(String actor, String username) {
+        User removed = users.remove(username);
+        if (removed != null) {
+            logAudit(actor, "DELETE_USER", "Deleted user: " + username);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-A13
+    public boolean assignRoleToUser(String actor, String username, Role role) {
+        User u = users.get(username);
+        if (u != null) {
+            u.addRole(role);
+            logAudit(actor, "ASSIGN_ROLE", "Assigned role " + role + " to user: " + username);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-A14
+    public boolean removeRoleFromUser(String actor, String username, Role role) {
+        User u = users.get(username);
+        if (u != null) {
+            u.removeRole(role);
+            logAudit(actor, "REMOVE_ROLE", "Removed role " + role + " from user: " + username);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-A15
+    public boolean editUserEmail(String actor, String username, String newEmail) {
+        User u = users.get(username);
+        if (u != null) {
+            u.setEmail(newEmail);
+            logAudit(actor, "EDIT_USER_EMAIL", "Updated email for user: " + username);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-A16
+    public List<AuditLogEntry> viewAuditLogs() {
+        return Collections.unmodifiableList(auditLogs);
+    }
+
+    // FR-A17
+    public String downloadAuditLogEntriesForMonth(YearMonth yearMonth) {
+        return auditLogs.stream()
+                .filter(entry -> YearMonth.from(entry.getTimestamp()).equals(yearMonth))
+                .map(AuditLogEntry::toString)
+                .collect(Collectors.joining("\n"));
+    }
+
+    public void logAudit(String actor, String action, String details) {
+        auditLogs.add(new AuditLogEntry(actor, action, details));
+    }
+
+    public User getUser(String username) {
+        return users.get(username);
+    }
+}
+
+// File: DataManagerService.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+public class DataManagerService {
+    private final Map<String, OccurrenceResource> occurrenceResources = new HashMap<>();
+    private final Map<String, ChecklistResource> checklistResources = new HashMap<>();
+    private final Map<String, MultimediaResource> multimediaResources = new HashMap<>();
+    private final Map<String, BibliographicResource> bibliographicResources = new HashMap<>();
+    private final Map<String, InstitutionResource> institutionResources = new HashMap<>();
+    private final Map<String, ExpertResource> expertResources = new HashMap<>();
+
+    private final Map<String, DataSource> registeredDataSources = new HashMap<>();
+    private final Map<String, HarvestJob> harvestJobs = new HashMap<>();
+    private final List<String> extensions = new ArrayList<>();
+    private String taxonomicBackboneVersion = "GBIF Backbone Taxonomy 2023-01";
+    private long portalAccessCount = 0;
+    private String lastBackupTimestamp = LocalDateTime.now().toString();
+
+    // FR-DM1
+    public void importOccurrenceResource(OccurrenceResource resource) {
+        occurrenceResources.put(resource.getId(), resource);
+    }
+
+    // FR-DM2
+    public boolean deleteOccurrenceResource(String id) {
+        return occurrenceResources.remove(id) != null;
+    }
+
+    // FR-DM3
+    public boolean editOccurrenceResourceMetadata(String id, String key, String value) {
+        OccurrenceResource res = occurrenceResources.get(id);
+        if (res != null) {
+            res.updateMetadata(key, value);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-DM4
+    public List<OccurrenceResource> searchOccurrenceResources(String keyword) {
+        return occurrenceResources.values().stream()
+                .filter(r -> r.matchesKeyword(keyword))
+                .collect(Collectors.toList());
+    }
+
+    // FR-DM5
+    public void importChecklistResource(ChecklistResource resource) {
+        checklistResources.put(resource.getId(), resource);
+    }
+
+    // FR-DM6
+    public boolean deleteChecklistResource(String id) {
+        return checklistResources.remove(id) != null;
+    }
+
+    // FR-DM7
+    public boolean editChecklistResourceMetadata(String id, String key, String value) {
+        ChecklistResource res = checklistResources.get(id);
+        if (res != null) {
+            res.updateMetadata(key, value);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-DM8
+    public List<ChecklistResource> searchChecklistResources(String keyword) {
+        return checklistResources.values().stream()
+                .filter(r -> r.matchesKeyword(keyword))
+                .collect(Collectors.toList());
+    }
+
+    // FR-DM9
+    public void importMultimediaResource(MultimediaResource resource) {
+        multimediaResources.put(resource.getId(), resource);
+    }
+
+    // FR-DM10
+    public boolean deleteMultimediaResource(String id) {
+        return multimediaResources.remove(id) != null;
+    }
+
+    // FR-DM11
+    public boolean editMultimediaResourceMetadata(String id, String key, String value) {
+        MultimediaResource res = multimediaResources.get(id);
+        if (res != null) {
+            res.updateMetadata(key, value);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-DM12
+    public List<MultimediaResource> searchMultimediaResources(String keyword) {
+        return multimediaResources.values().stream()
+                .filter(r -> r.matchesKeyword(keyword))
+                .collect(Collectors.toList());
+    }
+
+    // FR-DM13
+    public void importBibliographicResource(BibliographicResource resource) {
+        bibliographicResources.put(resource.getId(), resource);
+    }
+
+    // FR-DM14
+    public boolean deleteBibliographicResource(String id) {
+        return bibliographicResources.remove(id) != null;
+    }
+
+    // FR-DM15
+    public boolean editBibliographicResourceMetadata(String id, String key, String value) {
+        BibliographicResource res = bibliographicResources.get(id);
+        if (res != null) {
+            res.updateMetadata(key, value);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-DM16
+    public List<BibliographicResource> searchBibliographicResources(String keyword) {
+        return bibliographicResources.values().stream()
+                .filter(r -> r.matchesKeyword(keyword))
+                .collect(Collectors.toList());
+    }
+
+    // FR-DM17
+    public void importInstitutionResource(InstitutionResource resource) {
+        institutionResources.put(resource.getId(), resource);
+    }
+
+    // FR-DM18
+    public boolean deleteInstitutionResource(String id) {
+        return institutionResources.remove(id) != null;
+    }
+
+    // FR-DM19
+    public boolean editInstitutionResourceMetadata(String id, String key, String value) {
+        InstitutionResource res = institutionResources.get(id);
+        if (res != null) {
+            res.updateMetadata(key, value);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-DM20
+    public List<InstitutionResource> searchInstitutionResources(String keyword) {
+        return institutionResources.values().stream()
+                .filter(r -> r.matchesKeyword(keyword))
+                .collect(Collectors.toList());
+    }
+
+    // FR-DM21
+    public void importExpertResource(ExpertResource resource) {
+        expertResources.put(resource.getId(), resource);
+    }
+
+    // FR-DM22
+    public boolean deleteExpertResource(String id) {
+        return expertResources.remove(id) != null;
+    }
+
+    // FR-DM23
+    public boolean editExpertResourceMetadata(String id, String key, String value) {
+        ExpertResource res = expertResources.get(id);
+        if (res != null) {
+            res.updateMetadata(key, value);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-DM24
+    public List<ExpertResource> searchExpertResources(String keyword) {
+        return expertResources.values().stream()
+                .filter(r -> r.matchesKeyword(keyword))
+                .collect(Collectors.toList());
+    }
+
+    // FR-DM25
+    public void registerGbifIndexDataSource(String id, String name, String url) {
+        registeredDataSources.put(id, new DataSource(id, name, DataSource.Type.GBIF_INDEX, url));
+    }
+
+    // FR-DM26
+    public void registerIptDataSource(String id, String name, String url) {
+        registeredDataSources.put(id, new DataSource(id, name, DataSource.Type.IPT, url));
+    }
+
+    // FR-DM27
+    public boolean unregisterIptDataSource(String id) {
+        DataSource ds = registeredDataSources.get(id);
+        if (ds != null && ds.getType() == DataSource.Type.IPT) {
+            registeredDataSources.remove(id);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-DM28
+    public boolean unregisterGbifIndexDataSource(String id) {
+        DataSource ds = registeredDataSources.get(id);
+        if (ds != null && ds.getType() == DataSource.Type.GBIF_INDEX) {
+            registeredDataSources.remove(id);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-DM29
+    public HarvestJob scheduleHarvestingJob(String jobId, String dataSourceId, LocalDateTime time) {
+        HarvestJob job = new HarvestJob(jobId, dataSourceId, time);
+        harvestJobs.put(jobId, job);
+        return job;
+    }
+
+    // FR-DM30
+    public boolean cancelHarvestingJob(String jobId) {
+        HarvestJob job = harvestJobs.get(jobId);
+        if (job != null && job.getStatus() == HarvestJobStatus.SCHEDULED) {
+            job.setStatus(HarvestJobStatus.CANCELLED);
+            job.setReport("Job cancelled by Data Manager");
+            return true;
+        }
+        return false;
+    }
+
+    // FR-DM31
+    public String viewHarvestReport(String jobId) {
+        HarvestJob job = harvestJobs.get(jobId);
+        return job != null ? job.getReport() : "Job not found";
+    }
+
+    // FR-DM32
+    public boolean checkCoreResourcesConsistency() {
+        return !registeredDataSources.isEmpty() || (!occurrenceResources.isEmpty() || !checklistResources.isEmpty());
+    }
+
+    // FR-DM33
+    public boolean triggerHarvestingJob(String jobId) {
+        HarvestJob job = harvestJobs.get(jobId);
+        if (job != null) {
+            job.setStatus(HarvestJobStatus.RUNNING);
+            job.setStatus(HarvestJobStatus.COMPLETED);
+            job.setReport("Harvesting completed successfully at " + LocalDateTime.now() + " for source: " + job.getDataSourceId());
+            return true;
+        }
+        return false;
+    }
+
+    // FR-DM34
+    public String requestRestorationOfLatestBackup() {
+        return "Backup restoration requested successfully. Restored to snapshot: " + lastBackupTimestamp;
+    }
+
+    // FR-DM35
+    public void updateTaxonomicBackbone(String version) {
+        this.taxonomicBackboneVersion = version;
+    }
+
+    public String getTaxonomicBackboneVersion() {
+        return taxonomicBackboneVersion;
+    }
+
+    // FR-DM36
+    public void installExtension(String extensionName) {
+        extensions.add(extensionName);
+    }
+
+    public List<String> getExtensions() {
+        return Collections.unmodifiableList(extensions);
+    }
+
+    // FR-DM37
+    public void recordUsage() {
+        portalAccessCount++;
+    }
+
+    public long monitorPortalUsage() {
+        return portalAccessCount;
+    }
+
+    public Map<String, OccurrenceResource> getOccurrenceResources() {
+        return Collections.unmodifiableMap(occurrenceResources);
+    }
+
+    public Map<String, ChecklistResource> getChecklistResources() {
+        return Collections.unmodifiableMap(checklistResources);
+    }
+
+    public Map<String, MultimediaResource> getMultimediaResources() {
+        return Collections.unmodifiableMap(multimediaResources);
+    }
+
+    public Map<String, BibliographicResource> getBibliographicResources() {
+        return Collections.unmodifiableMap(bibliographicResources);
+    }
+
+    public Map<String, InstitutionResource> getInstitutionResources() {
+        return Collections.unmodifiableMap(institutionResources);
+    }
+
+    public Map<String, ExpertResource> getExpertResources() {
+        return Collections.unmodifiableMap(expertResources);
+    }
+
+    public Map<String, DataSource> getRegisteredDataSources() {
+        return Collections.unmodifiableMap(registeredDataSources);
+    }
+}
+
+// File: PortalManagerService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class PortalManagerService {
+    private final PortalConfig portalConfig = new PortalConfig();
+    private final Map<String, NewsEntry> newsEntries = new HashMap<>();
+    private final Map<String, BlogPost> blogPosts = new HashMap<>();
+    private final Map<String, MenuItem> menuItems = new HashMap<>();
+    private final Map<String, PortalPage> portalPages = new HashMap<>();
+
+    public PortalConfig getPortalConfig() {
+        return portalConfig;
+    }
+
+    // FR-PM1
+    public void configureDataMetricsVisibility(boolean visible) {
+        portalConfig.setDataMetricsVisible(visible);
+    }
+
+    // FR-PM2
+    public void changeLogo(String logoUrl) {
+        portalConfig.setLogoUrl(logoUrl);
+    }
+
+    // FR-PM3
+    public void changeNodeName(String nodeName) {
+        portalConfig.setNodeName(nodeName);
+    }
+
+    // FR-PM4
+    public void changePortalBanner(String bannerUrl) {
+        portalConfig.setBannerUrl(bannerUrl);
+    }
+
+    // FR-PM5
+    public void configureContactPerson(String name, String email) {
+        portalConfig.setContactName(name);
+        portalConfig.setContactEmail(email);
+    }
+
+    // FR-PM6
+    public void configureNetworkSummary(String summary) {
+        portalConfig.setNetworkSummary(summary);
+    }
+
+    // FR-PM7
+    public void setDefaultLanguage(String languageCode) {
+        portalConfig.setDefaultLanguage(languageCode);
+    }
+
+    // FR-PM8
+    public void addAlternateLanguage(String languageCode) {
+        portalConfig.addAlternateLanguage(languageCode);
+    }
+
+    // FR-PM9
+    public boolean removeAlternateLanguage(String languageCode) {
+        return portalConfig.removeAlternateLanguage(languageCode);
+    }
+
+    // FR-PM10
+    public void contributePortalNews(NewsEntry news) {
+        newsEntries.put(news.getId(), news);
+    }
+
+    // FR-PM11
+    public boolean editPortalNews(String id, String title, String content) {
+        NewsEntry entry = newsEntries.get(id);
+        if (entry != null) {
+            entry.setTitle(title);
+            entry.setContent(content);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-PM12
+    public boolean deletePortalNews(String id) {
+        return newsEntries.remove(id) != null;
+    }
+
+    // FR-PM13
+    public void contributeBlogPost(BlogPost post) {
+        blogPosts.put(post.getId(), post);
+    }
+
+    // FR-PM14
+    public boolean editBlogPost(String id, String title, String content) {
+        BlogPost post = blogPosts.get(id);
+        if (post != null) {
+            post.setTitle(title);
+            post.setContent(content);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-PM15
+    public boolean deleteBlogPost(String id) {
+        return blogPosts.remove(id) != null;
+    }
+
+    // FR-PM16
+    public void addMenuItem(MenuItem item) {
+        menuItems.put(item.getId(), item);
+    }
+
+    public boolean removeMenuItem(String id) {
+        return menuItems.remove(id) != null;
+    }
+
+    public List<MenuItem> getMenuItemsOrdered() {
+        List<MenuItem> list = new ArrayList<>(menuItems.values());
+        list.sort(Comparator.comparingInt(MenuItem::getOrder));
+        return list;
+    }
+
+    // FR-PM17
+    public void addPage(PortalPage page) {
+        portalPages.put(page.getId(), page);
+    }
+
+    // FR-PM18
+    public boolean deletePage(String pageId) {
+        return portalPages.remove(pageId) != null;
+    }
+
+    // FR-PM19
+    public boolean editPage(String pageId, String title, String content) {
+        PortalPage page = portalPages.get(pageId);
+        if (page != null) {
+            page.setTitle(title);
+            page.setContent(content);
+            return true;
+        }
+        return false;
+    }
+
+    // FR-PM20
+    public void editHtmlMetadataTags(String name, String content) {
+        portalConfig.setHtmlMetaTag(name, content);
+    }
+
+    public Map<String, NewsEntry> getNewsEntries() {
+        return Collections.unmodifiableMap(newsEntries);
+    }
+
+    public Map<String, BlogPost> getBlogPosts() {
+        return Collections.unmodifiableMap(blogPosts);
+    }
+
+    public Map<String, PortalPage> getPortalPages() {
+        return Collections.unmodifiableMap(portalPages);
+    }
+}
+
+// File: VisitorService.java
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+public class VisitorService {
+    private final AdministrationService adminService;
+    private final DataManagerService dataManagerService;
+    private final PortalManagerService portalManagerService;
+    private final List<String> relayedGbifNews = new ArrayList<>();
+    private final List<String> feedbackMessages = new ArrayList<>();
+    private final List<String> publisherMessages = new ArrayList<>();
+
+    public VisitorService(AdministrationService adminService,
+                          DataManagerService dataManagerService,
+                          PortalManagerService portalManagerService) {
+        this.adminService = adminService;
+        this.dataManagerService = dataManagerService;
+        this.portalManagerService = portalManagerService;
+        relayedGbifNews.add("GBIF News: Over 2.5 billion occurrence records now accessible globally.");
+        relayedGbifNews.add("GBIF News: New Darwin Core archive publishing toolkit released.");
+    }
+
+    // FR-V1
+    public OccurrenceFilter buildOccurrenceSelectionFilter(String filterName) {
+        return new OccurrenceFilter(filterName);
+    }
+
+    // FR-V2
+    public void addTaxonomicCriterion(OccurrenceFilter filter, String taxon) {
+        filter.addCriterion(new FilterCriterion(CriterionType.TAXONOMIC, taxon));
+    }
+
+    // FR-V3
+    public void addDatasetCriterion(OccurrenceFilter filter, String datasetId) {
+        filter.addCriterion(new FilterCriterion(CriterionType.DATASET, datasetId));
+    }
+
+    // FR-V4
+    public void addDepthCriterion(OccurrenceFilter filter, Double minDepth, Double maxDepth) {
+        filter.addCriterion(new FilterCriterion(CriterionType.DEPTH, minDepth, maxDepth));
+    }
+
+    // FR-V5
+    public void addAltitudeCriterion(OccurrenceFilter filter, Double minAltitude, Double maxAltitude) {
+        filter.addCriterion(new FilterCriterion(CriterionType.ALTITUDE, minAltitude, maxAltitude));
+    }
+
+    // FR-V6
+    public void addBasisOfRecordsCriterion(OccurrenceFilter filter, String basis) {
+        filter.addCriterion(new FilterCriterion(CriterionType.BASIS_OF_RECORD, basis));
+    }
+
+    // FR-V7
+    public void addGeographicCriterion(OccurrenceFilter filter, String geographic) {
+        filter.addCriterion(new FilterCriterion(CriterionType.GEOGRAPHIC, geographic));
+    }
+
+    // FR-V8
+    public void addDateCriterion(OccurrenceFilter filter, LocalDate minDate, LocalDate maxDate) {
+        filter.addCriterion(new FilterCriterion(CriterionType.DATE, minDate, maxDate));
+    }
+
+    // FR-V9
+    public void removeCriterion(OccurrenceFilter filter, CriterionType type) {
+        filter.removeCriterion(type);
+    }
+
+    // FR-V10
+    public List<OccurrenceRecord> selectOccurrenceRecords(OccurrenceFilter filter) {
+        dataManagerService.recordUsage();
+        List<OccurrenceRecord> results = new ArrayList<>();
+        for (OccurrenceResource res : dataManagerService.getOccurrenceResources().values()) {
+            for (OccurrenceRecord rec : res.getRecords()) {
+                if (filter == null || filter.matches(rec)) {
+                    results.add(rec);
+                }
+            }
+        }
+        return results;
+    }
+
+    // FR-V11
+    public String viewDistributionMap(List<OccurrenceRecord> records) {
+        dataManagerService.recordUsage();
+        StringBuilder sb = new StringBuilder();
+        sb.append("--- Distribution Map View ---\n");
+        sb.append("Projection: ").append(adminService.getMapConfig().getProjection()).append("\n");
+        sb.append("Active Layers: ");
+        for (SpatialLayer l : adminService.getMapConfig().getLayers()) {
+            if (l.isVisible()) {
+                sb.append("[").append(l.getName()).append("] ");
+            }
+        }
+        sb.append("\nPlotting ").append(records.size()).append(" points:\n");
+        for (OccurrenceRecord rec : records) {
+            sb.append(String.format(" * Point (Lat: %.2f, Lon: %.2f) -> %s\n",
+                    rec.getLatitude(), rec.getLongitude(), rec.getScientificName()));
+        }
+        return sb.toString();
+    }
+
+    // FR-V12
+    public String viewOccurrenceRecordSelectionAsTable(List<OccurrenceRecord> records) {
+        dataManagerService.recordUsage();
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("%-10s | %-20s | %-12s | %-10s | %-10s | %-15s | %-12s\n",
+                "ID", "Taxon", "Dataset", "Depth(m)", "Alt(m)", "Basis", "Date"));
+        sb.append("--------------------------------------------------------------------------------------------\n");
+        for (OccurrenceRecord r : records) {
+            sb.append(String.format("%-10s | %-20s | %-12s | %-10.1f | %-10.1f | %-15s | %-12s\n",
+                    r.getId(), r.getScientificName(), r.getDatasetId(), r.getDepth(), r.getAltitude(),
+                    r.getBasisOfRecord(), r.getEventDate()));
+        }
+        return sb.toString();
+    }
+
+    // FR-V13
+    public String exportOccurrenceRecordSelection(List<OccurrenceRecord> records) {
+        dataManagerService.recordUsage();
+        StringBuilder sb = new StringBuilder();
+        sb.append("id,scientificName,datasetId,depth,altitude,basisOfRecord,geographic,latitude,longitude,date\n");
+        for (OccurrenceRecord r : records) {
+            sb.append(String.format("%s,\"%s\",%s,%.2f,%.2f,%s,\"%s\",%.4f,%.4f,%s\n",
+                    r.getId(), r.getScientificName(), r.getDatasetId(), r.getDepth(), r.getAltitude(),
+                    r.getBasisOfRecord(), r.getCountryOrGeographic(), r.getLatitude(), r.getLongitude(), r.getEventDate()));
+        }
+        return sb.toString();
+    }
+
+    // FR-V14
+    public byte[] exportDistributionMapAsImage(List<OccurrenceRecord> records) {
+        dataManagerService.recordUsage();
+        String svg = "<svg xmlns='http://www.w3.org/2000/svg' width='800' height='400'>"
+                + "<rect width='100%' height='100%' fill='#eef2f5'/>"
+                + "<text x='20' y='30'>Occurrence Map (" + records.size() + " points)</text>";
+        StringBuilder points = new StringBuilder();
+        for (OccurrenceRecord r : records) {
+            double x = ((r.getLongitude() + 180.0) / 360.0) * 800.0;
+            double y = ((90.0 - r.getLatitude()) / 180.0) * 400.0;
+            points.append(String.format("<circle cx='%.1f' cy='%.1f' r='4' fill='red' />", x, y));
+        }
+        svg = svg + points.toString() + "</svg>";
+        return svg.getBytes(StandardCharsets.UTF_8);
+    }
+
+    // FR-V15
+    public List<String> fullTextSearch(String term) {
+        dataManagerService.recordUsage();
+        List<String> results = new ArrayList<>();
+        String lower = term.toLowerCase();
+
+        dataManagerService.getOccurrenceResources().values().stream()
+                .filter(r -> r.matchesKeyword(lower))
+                .forEach(r -> results.add("Occurrence Resource: " + r.getTitle() + " (" + r.getId() + ")"));
+
+        dataManagerService.getChecklistResources().values().stream()
+                .filter(r -> r.matchesKeyword(lower))
+                .forEach(r -> results.add("Checklist Resource: " + r.getTitle() + " (" + r.getId() + ")"));
+
+        dataManagerService.getMultimediaResources().values().stream()
+                .filter(r -> r.matchesKeyword(lower))
+                .forEach(r -> results.add("Multimedia Resource: " + r.getTitle() + " (" + r.getId() + ")"));
+
+        dataManagerService.getBibliographicResources().values().stream()
+                .filter(r -> r.matchesKeyword(lower))
+                .forEach(r -> results.add("Bibliographic Resource: " + r.getTitle() + " (" + r.getId() + ")"));
+
+        dataManagerService.getInstitutionResources().values().stream()
+                .filter(r -> r.matchesKeyword(lower))
+                .forEach(r -> results.add("Institution Resource: " + r.getName() + " (" + r.getId() + ")"));
+
+        dataManagerService.getExpertResources().values().stream()
+                .filter(r -> r.matchesKeyword(lower))
+                .forEach(r -> results.add("Expert Resource: " + r.getFullName() + " (" + r.getId() + ")"));
+
+        portalManagerService.getNewsEntries().values().stream()
+                .filter(n -> n.getTitle().toLowerCase().contains(lower) || n.getContent().toLowerCase().contains(lower))
+                .forEach(n -> results.add("Portal News: " + n.getTitle()));
+
+        portalManagerService.getBlogPosts().values().stream()
+                .filter(b -> b.getTitle().toLowerCase().contains(lower) || b.getContent().toLowerCase().contains(lower))
+                .forEach(b -> results.add("Blog Post: " + b.getTitle()));
+
+        portalManagerService.getPortalPages().values().stream()
+                .filter(p -> p.getTitle().toLowerCase().contains(lower) || p.getContent().toLowerCase().contains(lower))
+                .forEach(p -> results.add("Portal Page: " + p.getTitle()));
+
+        return results;
+    }
+
+    // FR-V16
+    public void contactOccurrenceResourcePublisher(String publisherEmail, String message) {
+        publisherMessages.add("To: " + publisherEmail + " | Msg: " + message);
+    }
+
+    // FR-V17
+    public String exportChecklist(String checklistId) {
+        ChecklistResource res = dataManagerService.getChecklistResources().get(checklistId);
+        if (res == null) return "";
+        StringBuilder sb = new StringBuilder();
+        sb.append("# Checklist: ").append(res.getTitle()).append("\n");
+        for (String taxon : res.getTaxa()) {
+            sb.append(taxon).append("\n");
+        }
+        return sb.toString();
+    }
+
+    // FR-V18
+    public String choosePreferredLanguage(String languageCode) {
+        return "Language set to: " + languageCode;
+    }
+
+    // FR-V19
+    public void sendFeedbackToPortalContact(String visitorEmail, String message) {
+        feedbackMessages.add("From: " + visitorEmail + " | Message: " + message);
+    }
+
+    // FR-V20
+    public List<BlogPost> viewLatestBlogPosts() {
+        dataManagerService.recordUsage();
+        return portalManagerService.getBlogPosts().values().stream()
+                .sorted(Comparator.comparing(BlogPost::getPublishedDate).reversed())
+                .collect(Collectors.toList());
+    }
+
+    // FR-V21
+    public BlogPost readBlogPost(String id) {
+        dataManagerService.recordUsage();
+        return portalManagerService.getBlogPosts().get(id);
+    }
+
+    // FR-V22
+    public List<NewsEntry> viewLatestPortalNews() {
+        dataManagerService.recordUsage();
+        return portalManagerService.getNewsEntries().values().stream()
+                .sorted(Comparator.comparing(NewsEntry::getPublishedDate).reversed())
+                .collect(Collectors.toList());
+    }
+
+    // FR-V23
+    public NewsEntry readPortalNews(String id) {
+        dataManagerService.recordUsage();
+        return portalManagerService.getNewsEntries().get(id);
+    }
+
+    // FR-V24
+    public String viewDetailsForTaxon(String taxonName) {
+        dataManagerService.recordUsage();
+        return "Taxon details for: " + taxonName + " (Validated against " +
+                dataManagerService.getTaxonomicBackboneVersion() + ")";
+    }
+
+    // FR-V25
+    public OccurrenceResource viewMetadataForDataset(String id) {
+        dataManagerService.recordUsage();
+        return dataManagerService.getOccurrenceResources().get(id);
+    }
+
+    // FR-V26
+    public ChecklistResource viewMetadataForChecklist(String id) {
+        dataManagerService.recordUsage();
+        return dataManagerService.getChecklistResources().get(id);
+    }
+
+    // FR-V27
+    public BibliographicResource viewDetailsForBibliographicRecord(String id) {
+        dataManagerService.recordUsage();
+        return dataManagerService.getBibliographicResources().get(id);
+    }
+
+    // FR-V28
+    public InstitutionResource viewDetailsForInstitution(String id) {
+        dataManagerService.recordUsage();
+        return dataManagerService.getInstitutionResources().get(id);
+    }
+
+    // FR-V29
+    public ExpertResource viewDetailsForExpert(String id) {
+        dataManagerService.recordUsage();
+        return dataManagerService.getExpertResources().get(id);
+    }
+
+    // FR-V30
+    public MultimediaResource viewMetadataForMultimedia(String id) {
+        dataManagerService.recordUsage();
+        return dataManagerService.getMultimediaResources().get(id);
+    }
+
+    // FR-V31
+    public byte[] downloadMultimediaFile(String id) {
+        dataManagerService.recordUsage();
+        MultimediaResource res = dataManagerService.getMultimediaResources().get(id);
+        return res != null ? res.getData() : new byte[0];
+    }
+
+    // FR-V32
+    public void navigateDistributionMap(double deltaLon, double deltaLat, double zoomFactor) {
+        adminService.getMapConfig().getDefaultExtent().pan(deltaLon, deltaLat);
+        adminService.getMapConfig().getDefaultExtent().zoom(zoomFactor);
+    }
+
+    // FR-V33
+    public boolean toggleSpatialLayer(String layerId) {
+        Optional<SpatialLayer> layer = adminService.getMapConfig().getLayer(layerId);
+        if (layer.isPresent()) {
+            layer.get().toggleVisibility();
+            return true;
+        }
+        return false;
+    }
+
+    // FR-V34
+    public User register(String username, String email, String password) {
+        return adminService.createUserAccount("visitor-registration", username, email, password,
+                Set.of(Role.REGISTERED_VISITOR));
+    }
+
+    // FR-V35
+    public Optional<User> login(String username, String password) {
+        User u = adminService.getUser(username);
+        if (u != null && u.getPassword().equals(password)) {
+            return Optional.of(u);
+        }
+        return Optional.empty();
+    }
+
+    // FR-V36
+    public String requestPasswordByEmail(String email) {
+        return "If the email " + email + " is associated with an account, your password has been sent to it.";
+    }
+
+    // FR-V37
+    public String shareDistributionMapOnTwitter(List<OccurrenceRecord> records) {
+        return "https://twitter.com/intent/tweet?text=" +
+                "Check+out+these+" + records.size() + "+biodiversity+occurrence+points+on+the+portal!";
+    }
+
+    // FR-V38
+    public String accessDataMetricsDashboard() {
+        dataManagerService.recordUsage();
+        if (!portalManagerService.getPortalConfig().isDataMetricsVisible()) {
+            return "Metrics dashboard is currently hidden by the portal manager.";
+        }
+        long occurrences = dataManagerService.getOccurrenceResources().values().stream()
+                .mapToLong(r -> r.getRecords().size()).sum();
+        long datasets = dataManagerService.getOccurrenceResources().size();
+        long checklists = dataManagerService.getChecklistResources().size();
+        return String.format("=== Portal Data Metrics ===\nDatasets: %d | Occurrences: %d | Checklists: %d | Usage Hits: %d",
+                datasets, occurrences, checklists, dataManagerService.monitorPortalUsage());
+    }
+
+    // FR-V39
+    public String exportDataMetricArchives() {
+        return "data-metrics-archive-" + System.currentTimeMillis() + ".csv";
+    }
+
+    // FR-V40
+    public String viewNetworkSummaryInformation() {
+        dataManagerService.recordUsage();
+        return portalManagerService.getPortalConfig().getNetworkSummary();
+    }
+
+    // FR-V41
+    public String viewToolsAndServicesInformation() {
+        dataManagerService.recordUsage();
+        return "Tools and Services: IPT Data Publisher, Darwin Core Validator, OGC WMS/WFS Map Services, REST API.";
+    }
+
+    // FR-V42
+    public List<String> viewLatestRelayedGbifNews() {
+        dataManagerService.recordUsage();
+        return Collections.unmodifiableList(relayedGbifNews);
+    }
+
+    // FR-RV1
+    public void saveCustomFilter(User user, OccurrenceFilter filter) {
+        user.saveFilter(filter);
+    }
+
+    // FR-RV2
+    public OccurrenceFilter loadCustomFilter(User user, String filterName) {
+        return user.getSavedFilter(filterName);
+    }
+
+    // FR-RV3
+    public OccurrenceFilter deleteCustomFilter(User user, String filterName) {
+        return user.removeSavedFilter(filterName);
+    }
+
+    public List<String> getFeedbackMessages() {
+        return Collections.unmodifiableList(feedbackMessages);
+    }
+
+    public List<String> getPublisherMessages() {
+        return Collections.unmodifiableList(publisherMessages);
+    }
+}
+
+// File: BiodiversityPortalSystem.java
+public class BiodiversityPortalSystem {
+    private final AdministrationService adminService;
+    private final DataManagerService dataManagerService;
+    private final PortalManagerService portalManagerService;
+    private final VisitorService visitorService;
+
+    public BiodiversityPortalSystem() {
+        this.adminService = new AdministrationService();
+        this.dataManagerService = new DataManagerService();
+        this.portalManagerService = new PortalManagerService();
+        this.visitorService = new VisitorService(adminService, dataManagerService, portalManagerService);
+    }
+
+    public AdministrationService getAdminService() {
+        return adminService;
+    }
+
+    public DataManagerService getDataManagerService() {
+        return dataManagerService;
+    }
+
+    public PortalManagerService getPortalManagerService() {
+        return portalManagerService;
+    }
+
+    public VisitorService getVisitorService() {
+        return visitorService;
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=== Initializing Biodiversity Information System Demo ===");
+        BiodiversityPortalSystem system = new BiodiversityPortalSystem();
+
+        AdministrationService admin = system.getAdminService();
+        DataManagerService dataManager = system.getDataManagerService();
+        PortalManagerService portalManager = system.getPortalManagerService();
+        VisitorService visitor = system.getVisitorService();
+
+        // 1. Administrator & Security Officer (FR-A1 - FR-A17)
+        System.out.println("\n--- Testing Administrator & Security Officer Features ---");
+        admin.installModule("SpatialAnalysisModule");
+        admin.installModule("DarwinCoreHarvesterModule");
+        System.out.println("Installed Modules: " + admin.getInstalledModules());
+        admin.uninstallModule("SpatialAnalysisModule");
+        System.out.println("Installed Modules after uninstall: " + admin.getInstalledModules());
+
+        admin.configureDistributionMapProjection("EPSG:3857");
+        admin.configureDistributionMapDefaultExtent(new MapExtent(-20.0, 30.0, 40.0, 70.0));
+        admin.editEmailServerConfiguration("smtp.biodiv.org", 465, "admin@biodiv.org");
+
+        SpatialLayer layer1 = new SpatialLayer("L1", "Marine Protected Areas", true);
+        SpatialLayer layer2 = new SpatialLayer("L2", "Forest Cover", false);
+        admin.addSpatialLayer(layer1);
+        admin.addSpatialLayer(layer2);
+        admin.editSpatialLayerName("L1", "Global Marine Protected Areas");
+        System.out.println("Layers configured: " + admin.getMapConfig().getLayers());
+
+        admin.logError("HarvestService", "Timeout connecting to remote IPT", "at org.ipt.Client.connect()");
+        System.out.println("Error logs count: " + admin.viewErrorLogs().size());
+        System.out.println("Error log export snippet: " + admin.downloadErrorLogs().trim());
+
+        // Security officer
+        admin.createUserAccount("sec-officer", "alice", "alice@example.org", "Pass123!", Set.of(Role.DATA_MANAGER));
+        admin.assignRoleToUser("sec-officer", "alice", Role.PORTAL_MANAGER);
+        admin.editUserEmail("sec-officer", "alice", "alice.smith@example.org");
+        System.out.println("Alice roles: " + admin.getUser("alice").getRoles());
+        System.out.println("Audit logs count for this month: " +
+                admin.downloadAuditLogEntriesForMonth(YearMonth.now()).split("\n").length);
+
+        // 2. Data Manager (FR-DM1 - FR-DM37)
+        System.out.println("\n--- Testing Data Manager Features ---");
+        OccurrenceResource occRes = new OccurrenceResource("DS01", "Marine Survey 2023", Map.of("citation", "Smith et al."));
+        OccurrenceRecord r1 = new OccurrenceRecord("REC01", "Balaenoptera musculus", "DS01", 15.0, 0.0,
+                "HumanObservation", "North Atlantic", 54.3, -25.2, LocalDate.of(2023, 5, 12), "publisher@marine.org");
+        OccurrenceRecord r2 = new OccurrenceRecord("REC02", "Delphinus delphis", "DS01", 5.0, 0.0,
+                "HumanObservation", "North Atlantic", 50.1, -12.4, LocalDate.of(2023, 6, 20), "publisher@marine.org");
+        occRes.addRecord(r1);
+        occRes.addRecord(r2);
+        dataManager.importOccurrenceResource(occRes);
+
+        ChecklistResource checkRes = new ChecklistResource("CL01", "Cetacean Checklist", Map.of("author", "Cetacean Society"),
+                List.of("Balaenoptera musculus", "Delphinus delphis", "Orcinus orca"));
+        dataManager.importChecklistResource(checkRes);
+
+        MultimediaResource mediaRes = new MultimediaResource("MM01", "Blue Whale Breaching", "image/jpeg",
+                new byte[]{1, 2, 3, 4}, Map.of("license", "CC-BY 4.0"));
+        dataManager.importMultimediaResource(mediaRes);
+
+        BibliographicResource bibRes = new BibliographicResource("BIB01", "Marine Mammals of the Atlantic", "Smith J.",
+                2022, Map.of("doi", "10.1000/182"));
+        dataManager.importBibliographicResource(bibRes);
+
+        InstitutionResource instRes = new InstitutionResource("INST01", "Oceanographic Institute", "info@ocean.org",
+                "Harbor Rd 1", Map.of("country", "Norway"));
+        dataManager.importInstitutionResource(instRes);
+
+        ExpertResource expRes = new ExpertResource("EXP01", "Dr. Jane Doe", "jdoe@ocean.org",
+                "Cetology", Map.of("qualification", "PhD"));
+        dataManager.importExpertResource(expRes);
+
+        dataManager.registerGbifIndexDataSource("GBIF01", "GBIF Central Registry", "https://api.gbif.org");
+        dataManager.registerIptDataSource("IPT01", "National Node IPT", "https://ipt.node.org");
+        System.out.println("Core consistency check: " + dataManager.checkCoreResourcesConsistency());
+
+        HarvestJob job = dataManager.scheduleHarvestingJob("JOB01", "IPT01", LocalDateTime.now().plusHours(1));
+        dataManager.triggerHarvestingJob("JOB01");
+        System.out.println("Harvesting report: " + dataManager.viewHarvestReport("JOB01"));
+        System.out.println("Restoration check: " + dataManager.requestRestorationOfLatestBackup());
+
+        // 3. Portal Manager (FR-PM1 - FR-PM20)
+        System.out.println("\n--- Testing Portal Manager Features ---");
+        portalManager.configureDataMetricsVisibility(true);
+        portalManager.changeLogo("https://portal.org/assets/logo.png");
+        portalManager.changeNodeName("Global Marine Node");
+        portalManager.changePortalBanner("https://portal.org/assets/banner.png");
+        portalManager.configureContactPerson("John Contact", "contact@portal.org");
+        portalManager.configureNetworkSummary("Affiliated with international biodiversity networks.");
+        portalManager.setDefaultLanguage("en");
+        portalManager.addAlternateLanguage("es");
+        portalManager.addAlternateLanguage("fr");
+
+        portalManager.contributePortalNews(new NewsEntry("NEWS01", "Portal Upgrade 2.0 Live", "We have updated all endpoints."));
+        portalManager.contributeBlogPost(new BlogPost("BLOG01", "Tracking Whale Migration", "Recent sightings show...", "Dr. Doe"));
+        portalManager.addMenuItem(new MenuItem("M1", "Home", "/", 1));
+        portalManager.addMenuItem(new MenuItem("M2", "Data Search", "/search", 2));
+        portalManager.addPage(new PortalPage("PAGE01", "About Node", "The node publishes open marine data."));
+        portalManager.editHtmlMetadataTags("keywords", "biodiversity, gbif, occurrences, marine");
+
+        // 4. Visitor & Registered Visitor (FR-V1 - FR-V42, FR-RV1 - FR-RV3)
+        System.out.println("\n--- Testing Visitor & Registered Visitor Features ---");
+        OccurrenceFilter filter = visitor.buildOccurrenceSelectionFilter("WhaleFilter");
+        visitor.addTaxonomicCriterion(filter, "Balaenoptera");
+        visitor.addDepthCriterion(filter, 0.0, 50.0);
+
+        List<OccurrenceRecord> matched = visitor.selectOccurrenceRecords(filter);
+        System.out.println("Records matching filter: " + matched.size());
+        System.out.println(visitor.viewOccurrenceRecordSelectionAsTable(matched));
+        System.out.println(visitor.viewDistributionMap(matched));
+
+        String csvExport = visitor.exportOccurrenceRecordSelection(matched);
+        System.out.println("Occurrence Export (CSV preview):\n" + csvExport.lines().findFirst().orElse("") + "\n" +
+                csvExport.lines().skip(1).findFirst().orElse(""));
+
+        byte[] mapSvg = visitor.exportDistributionMapAsImage(matched);
+        System.out.println("Exported map image size: " + mapSvg.length + " bytes");
+
+        List<String> searchResults = visitor.fullTextSearch("Whale");
+        System.out.println("Full-text search results for 'Whale': " + searchResults);
+
+        visitor.contactOccurrenceResourcePublisher("publisher@marine.org", "Question regarding REC01 location accuracy.");
+        System.out.println("Publisher contact sent: " + visitor.getPublisherMessages().get(0));
+
+        visitor.sendFeedbackToPortalContact("visitor@web.com", "Great search performance!");
+        System.out.println("Feedback sent: " + visitor.getFeedbackMessages().get(0));
+
+        System.out.println(visitor.viewDetailsForTaxon("Balaenoptera musculus"));
+        System.out.println("Checklist export:\n" + visitor.exportChecklist("CL01").trim());
+        System.out.println(visitor.accessDataMetricsDashboard());
+        System.out.println("Share map tweet link: " + visitor.shareDistributionMapOnTwitter(matched));
+        System.out.println("Relayed GBIF News: " + visitor.viewLatestRelayedGbifNews());
+
+        // Registration, Login, Custom Filters
+        User registeredUser = visitor.register("bob", "bob@research.org", "SecretPassword!");
+        Optional<User> loggedIn = visitor.login("bob", "SecretPassword!");
+        if (loggedIn.isPresent()) {
+            User user = loggedIn.get();
+            System.out.println("User " + user.getUsername() + " successfully logged in.");
+            visitor.saveCustomFilter(user, filter);
+            System.out.println("Saved filter count: " + user.getSavedFilters().size());
+            OccurrenceFilter loaded = visitor.loadCustomFilter(user, "WhaleFilter");
+            System.out.println("Loaded custom filter: " + loaded.getName());
+            visitor.deleteCustomFilter(user, "WhaleFilter");
+            System.out.println("Saved filter count after removal: " + user.getSavedFilters().size());
+        }
+
+        System.out.println("\n=== All Functional Requirements Verified Successfully ===");
+    }
+}

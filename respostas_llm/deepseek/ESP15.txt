@@ -1,0 +1,1903 @@
+```java
+// File: Role.java
+public enum Role {
+    FACULTY,
+    PATRON,
+    ADMINISTRATOR,
+    LIBRARY_STAFF,
+    EXTENSION_ADMINISTRATOR,
+    RESEARCHER,
+    ASSET_MANAGER,
+    DATA_CURATOR,
+    REPOSITORY_SUPPORT,
+    DISCOVERY_OPERATOR
+}
+// File: AccessLevel.java
+public enum AccessLevel {
+    PRIVATE,
+    UNIVERSITY,
+    PUBLIC
+}
+// File: LicenseType.java
+public enum LicenseType {
+    CC_BY,
+    CC0,
+    ALL_RIGHTS_RESERVED,
+    CUSTOM
+}
+// File: ItemStatus.java
+public enum ItemStatus {
+    DRAFT,
+    PUBLISHED,
+    EMBARGOED,
+    UNPUBLISHED,
+    ERROR,
+    HISTORICAL
+}
+// File: DocumentType.java
+public enum DocumentType {
+    REPORT,
+    DATASET,
+    THESIS,
+    BROCHURE,
+    FAQ,
+    MEDIA,
+    COMPUTER_FILE,
+    OTHER
+}
+// File: ReleaseFrequency.java
+public enum ReleaseFrequency {
+    ONE_TIME,
+    ANNUAL,
+    QUARTERLY,
+    MONTHLY,
+    WEEKLY,
+    IRREGULAR
+}
+// File: NotificationType.java
+public enum NotificationType {
+    DOWNLOAD,
+    NEW_VERSION,
+    NEW_ITEM,
+    REMINDER,
+    ISSUE,
+    SUBSCRIPTION
+}
+// File: UserStatus.java
+public enum UserStatus {
+    ACTIVE,
+    CLOSED
+}
+// File: SortOrder.java
+public enum SortOrder {
+    TITLE,
+    DATE,
+    AUTHOR,
+    CUSTOM
+}
+// File: AuditAction.java
+public enum AuditAction {
+    CREATE,
+    UPDATE,
+    DELETE,
+    RENAME,
+    EMBARGO_APPLY,
+    EMBARGO_REMOVE,
+    UNPUBLISH,
+    MARK_ERROR,
+    ADD_VERSION,
+    MOVE,
+    ALIAS,
+    EXPORT,
+    IMPORT,
+    LOGIN
+}
+// File: SubscriptionTargetType.java
+public enum SubscriptionTargetType {
+    ITEM,
+    COLLECTION,
+    AUTHOR,
+    TOPIC
+}
+// File: Searchable.java
+public interface Searchable {
+    boolean matches(SearchQuery query);
+}
+// File: MetadataField.java
+public class MetadataField {
+    private String name;
+    private String value;
+
+    public MetadataField(String name, String value) {
+        this.name = name;
+        this.value = value;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+
+    @Override
+    public String toString() {
+        return name + "=" + value;
+    }
+}
+// File: License.java
+public class License {
+    private LicenseType type;
+    private String description;
+
+    public License(LicenseType type, String description) {
+        this.type = type;
+        this.description = description;
+    }
+
+    public static License ccBy() {
+        return new License(LicenseType.CC_BY, "Creative Commons Attribution 4.0");
+    }
+
+    public static License cc0() {
+        return new License(LicenseType.CC0, "Creative Commons Zero 1.0");
+    }
+
+    public static License allRightsReserved() {
+        return new License(LicenseType.ALL_RIGHTS_RESERVED, "All rights reserved");
+    }
+
+    public LicenseType getType() {
+        return type;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return type + " - " + description;
+    }
+}
+// File: SubjectClassification.java
+public class SubjectClassification {
+    private String code;
+    private String name;
+
+    public SubjectClassification(String code, String name) {
+        this.code = code;
+        this.name = name;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public String toString() {
+        return code + " - " + name;
+    }
+}
+// File: StorageCopy.java
+import java.util.Objects;
+
+public class StorageCopy {
+    private String location;
+    private String checksum;
+    private boolean corrupted;
+    private boolean monitored;
+
+    public StorageCopy(String location, String checksum, boolean corrupted, boolean monitored) {
+        this.location = location;
+        this.checksum = checksum;
+        this.corrupted = corrupted;
+        this.monitored = monitored;
+    }
+
+    public boolean verify(String expectedChecksum) {
+        return monitored && !corrupted && Objects.equals(checksum, expectedChecksum);
+    }
+
+    public void markCorrupted() {
+        this.corrupted = true;
+    }
+
+    public void repair(String checksum) {
+        this.checksum = checksum;
+        this.corrupted = false;
+        this.monitored = true;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public String getChecksum() {
+        return checksum;
+    }
+
+    public boolean isCorrupted() {
+        return corrupted;
+    }
+
+    public boolean isMonitored() {
+        return monitored;
+    }
+}
+// File: FileAsset.java
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
+public class FileAsset {
+    private final String id;
+    private String name;
+    private String mimeType;
+    private long sizeBytes;
+    private byte[] content;
+    private String doi;
+    private String checksum;
+    private List<StorageCopy> copies = new ArrayList<>();
+
+    public FileAsset(String name, String mimeType, long sizeBytes, byte[] content) {
+        this.id = UUID.randomUUID().toString();
+        this.name = name;
+        this.mimeType = mimeType;
+        this.sizeBytes = sizeBytes;
+        this.content = content == null ? new byte[0] : content.clone();
+        this.checksum = computeChecksum(this.content);
+        addCopy("primary");
+        addCopy("redundant");
+    }
+
+    private String computeChecksum(byte[] data) {
+        return Integer.toHexString(Arrays.hashCode(data));
+    }
+
+    public void addCopy(String location) {
+        copies.add(new StorageCopy(location, checksum, false, true));
+    }
+
+    public boolean verifyCopies() {
+        for (StorageCopy copy : copies) {
+            if (!copy.verify(checksum)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean isLargeFile() {
+        return sizeBytes > 1024L * 1024L * 1024L;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public long getSizeBytes() {
+        return sizeBytes;
+    }
+
+    public String getDoi() {
+        return doi;
+    }
+
+    public void setDoi(String doi) {
+        this.doi = doi;
+    }
+
+    public String getChecksum() {
+        return checksum;
+    }
+
+    public List<StorageCopy> getCopies() {
+        return copies;
+    }
+}
+// File: ItemVersion.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ItemVersion {
+    private int versionNumber;
+    private LocalDate releaseDate;
+    private List<FileAsset> files;
+    private String notes;
+    private String doi;
+    private License license;
+    private final LocalDateTime createdAt;
+
+    public ItemVersion(int versionNumber, LocalDate releaseDate, List<FileAsset> files, String notes, License license) {
+        this.versionNumber = versionNumber;
+        this.releaseDate = releaseDate;
+        this.files = files == null ? new ArrayList<>() : new ArrayList<>(files);
+        this.notes = notes;
+        this.license = license;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    public int getVersionNumber() {
+        return versionNumber;
+    }
+
+    public LocalDate getReleaseDate() {
+        return releaseDate;
+    }
+
+    public List<FileAsset> getFiles() {
+        return files;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public String getDoi() {
+        return doi;
+    }
+
+    public void setDoi(String doi) {
+        this.doi = doi;
+    }
+
+    public License getLicense() {
+        return license;
+    }
+
+    public void setLicense(License license) {
+        this.license = license;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+}
+// File: SearchQuery.java
+import java.time.LocalDate;
+
+public class SearchQuery {
+    private String keywords = "";
+    private String title = "";
+    private String author = "";
+    private String subject = "";
+    private LocalDate fromDate;
+    private LocalDate toDate;
+    private RepositoryCollection withinCollection;
+
+    public boolean matches(Item item) {
+        String keyword = keywords == null ? "" : keywords.trim().toLowerCase();
+        if (!title.isEmpty() && !item.getTitle().toLowerCase().contains(title.toLowerCase())) {
+            return false;
+        }
+        if (!author.isEmpty() && item.getAuthors().stream().noneMatch(a -> a.toLowerCase().contains(author.toLowerCase()))) {
+            return false;
+        }
+        if (!subject.isEmpty() && item.getSubjects().stream().noneMatch(s ->
+                s.getName().toLowerCase().contains(subject.toLowerCase()) ||
+                s.getCode().equalsIgnoreCase(subject))) {
+            return false;
+        }
+        if (!keyword.isEmpty()) {
+            boolean found = item.getTitle().toLowerCase().contains(keyword)
+                    || item.getDescription().toLowerCase().contains(keyword)
+                    || item.getKeywords().stream().anyMatch(k -> k.toLowerCase().contains(keyword))
+                    || item.getAuthors().stream().anyMatch(a -> a.toLowerCase().contains(keyword))
+                    || item.getMetadata().values().stream().anyMatch(v -> v.toLowerCase().contains(keyword));
+            if (!found) {
+                return false;
+            }
+        }
+        if (fromDate != null && (item.getPublicationDate() == null || item.getPublicationDate().isBefore(fromDate))) {
+            return false;
+        }
+        if (toDate != null && (item.getPublicationDate() == null || item.getPublicationDate().isAfter(toDate))) {
+            return false;
+        }
+        if (withinCollection != null && !item.getCollections().contains(withinCollection)) {
+            return false;
+        }
+        return true;
+    }
+
+    public String getKeywords() {
+        return keywords;
+    }
+
+    public void setKeywords(String keywords) {
+        this.keywords = keywords == null ? "" : keywords;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title == null ? "" : title;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author == null ? "" : author;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject == null ? "" : subject;
+    }
+
+    public LocalDate getFromDate() {
+        return fromDate;
+    }
+
+    public void setFromDate(LocalDate fromDate) {
+        this.fromDate = fromDate;
+    }
+
+    public LocalDate getToDate() {
+        return toDate;
+    }
+
+    public void setToDate(LocalDate toDate) {
+        this.toDate = toDate;
+    }
+
+    public RepositoryCollection getWithinCollection() {
+        return withinCollection;
+    }
+
+    public void setWithinCollection(RepositoryCollection withinCollection) {
+        this.withinCollection = withinCollection;
+    }
+}
+// File: Item.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+public class Item implements Searchable {
+    private final String id;
+    private String title;
+    private String description;
+    private List<String> authors = new ArrayList<>();
+    private DocumentType documentType;
+    private ItemStatus status = ItemStatus.DRAFT;
+    private List<FileAsset> files = new ArrayList<>();
+    private Map<String, String> metadata = new LinkedHashMap<>();
+    private List<SubjectClassification> subjects = new ArrayList<>();
+    private Set<String> keywords = new LinkedHashSet<>();
+    private boolean subscribable = true;
+    private ReleaseFrequency releaseFrequency = ReleaseFrequency.ONE_TIME;
+    private License license;
+    private LocalDate embargoUntil;
+    private List<ItemVersion> versions = new ArrayList<>();
+    private List<RepositoryCollection> collections = new ArrayList<>();
+    private List<String> previousNames = new ArrayList<>();
+    private List<Item> relatedItems = new ArrayList<>();
+    private String citation;
+    private String researcherId;
+    private String orcid;
+    private LocalDate publicationDate;
+    private String customSortKey;
+    private boolean emailAllowed = true;
+    private String doi;
+
+    public Item(String title, String description, List<String> authors, DocumentType documentType) {
+        this.id = UUID.randomUUID().toString();
+        this.title = title;
+        this.description = description == null ? "" : description;
+        this.authors = authors == null ? new ArrayList<>() : new ArrayList<>(authors);
+        this.documentType = documentType;
+    }
+
+    public void addFile(FileAsset file) {
+        files.add(file);
+    }
+
+    public void addVersion(String notes, List<FileAsset> newFiles, LocalDate releaseDate) {
+        int nextVersion = versions.size() + 1;
+        ItemVersion version = new ItemVersion(nextVersion, releaseDate, newFiles, notes, license);
+        versions.add(version);
+        files.clear();
+        if (newFiles != null) {
+            files.addAll(newFiles);
+        }
+    }
+
+    public ItemVersion getCurrentVersion() {
+        if (versions.isEmpty()) {
+            return null;
+        }
+        return versions.get(versions.size() - 1);
+    }
+
+    public void applyEmbargo(LocalDate until) {
+        this.embargoUntil = until;
+        this.status = ItemStatus.EMBARGOED;
+    }
+
+    public void removeEmbargo() {
+        this.embargoUntil = null;
+        if (status == ItemStatus.EMBARGOED) {
+            status = ItemStatus.PUBLISHED;
+        }
+    }
+
+    public boolean isViewable() {
+        return isViewableAt(LocalDate.now());
+    }
+
+    public boolean isViewableAt(LocalDate date) {
+        if (status == ItemStatus.DRAFT || status == ItemStatus.UNPUBLISHED || status == ItemStatus.ERROR) {
+            return false;
+        }
+        if (embargoUntil != null && date.isBefore(embargoUntil)) {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean isEmailAllowed() {
+        return emailAllowed && isViewable();
+    }
+
+    public void markError() {
+        status = ItemStatus.ERROR;
+        emailAllowed = false;
+    }
+
+    public void unpublish() {
+        status = ItemStatus.UNPUBLISHED;
+    }
+
+    public void publish() {
+        status = ItemStatus.PUBLISHED;
+        emailAllowed = true;
+    }
+
+    public void rename(String newTitle) {
+        if (!this.title.equals(newTitle)) {
+            previousNames.add(this.title);
+            this.title = newTitle;
+        }
+    }
+
+    public void addToCollection(RepositoryCollection collection) {
+        if (!collections.contains(collection)) {
+            collections.add(collection);
+            collection.addItem(this);
+        }
+    }
+
+    public void addRelatedItem(Item item) {
+        if (!relatedItems.contains(item)) {
+            relatedItems.add(item);
+            item.relatedItems.add(this);
+        }
+    }
+
+    public void addMetadata(String name, String value) {
+        metadata.put(name, value);
+    }
+
+    public void addSubject(SubjectClassification subject) {
+        subjects.add(subject);
+    }
+
+    public void addKeyword(String keyword) {
+        keywords.add(keyword);
+    }
+
+    public void setLicense(License license) {
+        this.license = license;
+        if (getCurrentVersion() != null) {
+            getCurrentVersion().setLicense(license);
+        }
+    }
+
+    public String generateCitation() {
+        if (citation != null && !citation.isBlank()) {
+            return citation;
+        }
+        String year = publicationDate == null ? "n.d." : String.valueOf(publicationDate.getYear());
+        String authorText = String.join(", ", authors);
+        return authorText + " (" + year + "). " + title + ". Cornell University Repository. " + getPersistentUrl();
+    }
+
+    public String getPersistentUrl() {
+        return "https://repository.cornell.edu/items/" + id;
+    }
+
+    @Override
+    public boolean matches(SearchQuery query) {
+        return query.matches(this);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public List<String> getAuthors() {
+        return authors;
+    }
+
+    public DocumentType getDocumentType() {
+        return documentType;
+    }
+
+    public ItemStatus getStatus() {
+        return status;
+    }
+
+    public List<FileAsset> getFiles() {
+        return files;
+    }
+
+    public Map<String, String> getMetadata() {
+        return metadata;
+    }
+
+    public List<SubjectClassification> getSubjects() {
+        return subjects;
+    }
+
+    public Set<String> getKeywords() {
+        return keywords;
+    }
+
+    public boolean isSubscribable() {
+        return subscribable;
+    }
+
+    public void setSubscribable(boolean subscribable) {
+        this.subscribable = subscribable;
+    }
+
+    public ReleaseFrequency getReleaseFrequency() {
+        return releaseFrequency;
+    }
+
+    public void setReleaseFrequency(ReleaseFrequency releaseFrequency) {
+        this.releaseFrequency = releaseFrequency;
+    }
+
+    public License getLicense() {
+        return license;
+    }
+
+    public LocalDate getEmbargoUntil() {
+        return embargoUntil;
+    }
+
+    public List<ItemVersion> getVersions() {
+        return versions;
+    }
+
+    public List<RepositoryCollection> getCollections() {
+        return collections;
+    }
+
+    public List<String> getPreviousNames() {
+        return previousNames;
+    }
+
+    public List<Item> getRelatedItems() {
+        return relatedItems;
+    }
+
+    public String getCitation() {
+        return citation;
+    }
+
+    public void setCitation(String citation) {
+        this.citation = citation;
+    }
+
+    public String getResearcherId() {
+        return researcherId;
+    }
+
+    public void setResearcherId(String researcherId) {
+        this.researcherId = researcherId;
+    }
+
+    public String getOrcid() {
+        return orcid;
+    }
+
+    public void setOrcid(String orcid) {
+        this.orcid = orcid;
+    }
+
+    public LocalDate getPublicationDate() {
+        return publicationDate;
+    }
+
+    public void setPublicationDate(LocalDate publicationDate) {
+        this.publicationDate = publicationDate;
+    }
+
+    public String getCustomSortKey() {
+        return customSortKey;
+    }
+
+    public void setCustomSortKey(String customSortKey) {
+        this.customSortKey = customSortKey;
+    }
+
+    public String getDoi() {
+        return doi;
+    }
+
+    public void setDoi(String doi) {
+        this.doi = doi;
+    }
+}
+// File: RepositoryCollection.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+public class RepositoryCollection implements Searchable {
+    private final String id;
+    private String name;
+    private String description;
+    private List<String> previousNames = new ArrayList<>();
+    private AccessLevel accessLevel;
+    private String branding;
+    private List<Item> items = new ArrayList<>();
+    private Map<String, String> customMetadataFields = new LinkedHashMap<>();
+    private SortOrder sortOrder = SortOrder.TITLE;
+    private String customSortKey;
+    private RepositoryCollection parent;
+    private String ownerId;
+
+    public RepositoryCollection(String name, String description, AccessLevel accessLevel) {
+        this.id = UUID.randomUUID().toString();
+        this.name = name;
+        this.description = description == null ? "" : description;
+        this.accessLevel = accessLevel;
+    }
+
+    public void addItem(Item item) {
+        if (!items.contains(item)) {
+            items.add(item);
+            if (!item.getCollections().contains(this)) {
+                item.getCollections().add(this);
+            }
+        }
+    }
+
+    public void removeItem(Item item) {
+        items.remove(item);
+        item.getCollections().remove(this);
+    }
+
+    public void rename(String newName) {
+        if (!name.equals(newName)) {
+            previousNames.add(name);
+            name = newName;
+        }
+    }
+
+    public void moveTo(RepositoryCollection newParent) {
+        this.parent = newParent;
+    }
+
+    public List<Item> getItemsSorted() {
+        List<Item> sorted = new ArrayList<>(items);
+        switch (sortOrder) {
+            case TITLE:
+                sorted.sort(Comparator.comparing(Item::getTitle, String.CASE_INSENSITIVE_ORDER));
+                break;
+            case DATE:
+                sorted.sort((a, b) -> {
+                    LocalDate da = a.getPublicationDate();
+                    LocalDate db = b.getPublicationDate();
+                    if (da == null && db == null) return 0;
+                    if (da == null) return 1;
+                    if (db == null) return -1;
+                    return da.compareTo(db);
+                });
+                break;
+            case AUTHOR:
+                sorted.sort(Comparator.comparing(i -> i.getAuthors().isEmpty() ? "" : i.getAuthors().get(0),
+                        String.CASE_INSENSITIVE_ORDER));
+                break;
+            case CUSTOM:
+                sorted.sort(Comparator.comparing(i -> i.getCustomSortKey() == null ? "" : i.getCustomSortKey(),
+                        String.CASE_INSENSITIVE_ORDER));
+                break;
+        }
+        return sorted;
+    }
+
+    @Override
+    public boolean matches(SearchQuery query) {
+        String keyword = query.getKeywords() == null ? "" : query.getKeywords().toLowerCase();
+        if (!keyword.isEmpty() && name.toLowerCase().contains(keyword)) {
+            return true;
+        }
+        for (Item item : items) {
+            if (query.matches(item)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public List<String> getPreviousNames() {
+        return previousNames;
+    }
+
+    public AccessLevel getAccessLevel() {
+        return accessLevel;
+    }
+
+    public void setAccessLevel(AccessLevel accessLevel) {
+        this.accessLevel = accessLevel;
+    }
+
+    public String getBranding() {
+        return branding;
+    }
+
+    public void setBranding(String branding) {
+        this.branding = branding;
+    }
+
+    public List<Item> getItems() {
+        return items;
+    }
+
+    public Map<String, String> getCustomMetadataFields() {
+        return customMetadataFields;
+    }
+
+    public void addCustomMetadataField(String field, String description) {
+        customMetadataFields.put(field, description);
+    }
+
+    public SortOrder getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(SortOrder sortOrder) {
+        this.sortOrder = sortOrder;
+    }
+
+    public String getCustomSortKey() {
+        return customSortKey;
+    }
+
+    public void setCustomSortKey(String customSortKey) {
+        this.customSortKey = customSortKey;
+    }
+
+    public RepositoryCollection getParent() {
+        return parent;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
+    }
+}
+// File: Subscription.java
+public class Subscription {
+    private final String id;
+    private String userId;
+    private SubscriptionTargetType targetType;
+    private String targetId;
+    private boolean active = true;
+    private boolean emailEnabled = true;
+
+    public Subscription(String userId, SubscriptionTargetType targetType, String targetId) {
+        this.id = java.util.UUID.randomUUID().toString();
+        this.userId = userId;
+        this.targetType = targetType;
+        this.targetId = targetId;
+    }
+
+    public boolean matches(Item item) {
+        if (!active) {
+            return false;
+        }
+        switch (targetType) {
+            case ITEM:
+                return targetId.equals(item.getId());
+            case COLLECTION:
+                return item.getCollections().stream().anyMatch(c -> c.getId().equals(targetId));
+            case AUTHOR:
+                return item.getAuthors().stream().anyMatch(a -> a.equalsIgnoreCase(targetId));
+            case TOPIC:
+                return item.getKeywords().stream().anyMatch(k -> k.equalsIgnoreCase(targetId))
+                        || item.getSubjects().stream().anyMatch(s -> s.getName().equalsIgnoreCase(targetId));
+            default:
+                return false;
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public SubscriptionTargetType getTargetType() {
+        return targetType;
+    }
+
+    public String getTargetId() {
+        return targetId;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public boolean isEmailEnabled() {
+        return emailEnabled;
+    }
+
+    public void setEmailEnabled(boolean emailEnabled) {
+        this.emailEnabled = emailEnabled;
+    }
+}
+// File: Notification.java
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+public class Notification {
+    private final String id;
+    private String recipientId;
+    private NotificationType type;
+    private String message;
+    private LocalDateTime createdAt;
+    private boolean read;
+
+    public Notification(String recipientId, NotificationType type, String message) {
+        this.id = UUID.randomUUID().toString();
+        this.recipientId = recipientId;
+        this.type = type;
+        this.message = message;
+        this.createdAt = LocalDateTime.now();
+        this.read = false;
+    }
+
+    public void markRead() {
+        this.read = true;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getRecipientId() {
+        return recipientId;
+    }
+
+    public NotificationType getType() {
+        return type;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public boolean isRead() {
+        return read;
+    }
+}
+// File: User.java
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+public class User {
+    private final String id;
+    private String username;
+    private String password;
+    private String email;
+    private String fullName;
+    private Set<Role> roles = new HashSet<>();
+    private UserStatus status = UserStatus.ACTIVE;
+    private List<Subscription> subscriptions = new ArrayList<>();
+    private List<Notification> notifications = new ArrayList<>();
+    private String orcid;
+    private String researcherId;
+
+    public User(String username, String password, String email, String fullName, Role... roles) {
+        this.id = UUID.randomUUID().toString();
+        this.username = username;
+        this.password = password;
+        this.email = email;
+        this.fullName = fullName;
+        this.roles.addAll(Arrays.asList(roles));
+    }
+
+    public boolean hasRole(Role role) {
+        return roles.contains(role);
+    }
+
+    public void addRole(Role role) {
+        roles.add(role);
+    }
+
+    public void changePassword(String oldPassword, String newPassword) {
+        if (!this.password.equals(oldPassword)) {
+            throw new IllegalArgumentException("Old password is incorrect");
+        }
+        this.password = newPassword;
+    }
+
+    public void resetPassword(String newPassword) {
+        this.password = newPassword;
+    }
+
+    public void closeAccount() {
+        this.status = UserStatus.CLOSED;
+    }
+
+    public Subscription subscribe(SubscriptionTargetType targetType, String targetId) {
+        Subscription subscription = new Subscription(id, targetType, targetId);
+        subscriptions.add(subscription);
+        return subscription;
+    }
+
+    public void notify(NotificationType type, String message) {
+        notifications.add(new Notification(id, type, message));
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    public UserStatus getStatus() {
+        return status;
+    }
+
+    public List<Subscription> getSubscriptions() {
+        return subscriptions;
+    }
+
+    public List<Notification> getNotifications() {
+        return notifications;
+    }
+
+    public String getOrcid() {
+        return orcid;
+    }
+
+    public void setOrcid(String orcid) {
+        this.orcid = orcid;
+    }
+
+    public String getResearcherId() {
+        return researcherId;
+    }
+
+    public void setResearcherId(String researcherId) {
+        this.researcherId = researcherId;
+    }
+}
+// File: DownloadEvent.java
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+public class DownloadEvent {
+    private final String id;
+    private String itemId;
+    private String userId;
+    private String fileId;
+    private LocalDateTime timestamp;
+
+    public DownloadEvent(String itemId, String userId, String fileId) {
+        this.id = UUID.randomUUID().toString();
+        this.itemId = itemId;
+        this.userId = userId;
+        this.fileId = fileId;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getItemId() {
+        return itemId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getFileId() {
+        return fileId;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+}
+// File: AuditLog.java
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+public class AuditLog {
+    private final String id;
+    private AuditAction action;
+    private String entityType;
+    private String entityId;
+    private String userId;
+    private String details;
+    private String reason;
+    private LocalDateTime timestamp;
+
+    public AuditLog(AuditAction action, String entityType, String entityId, String userId, String details, String reason) {
+        this.id = UUID.randomUUID().toString();
+        this.action = action;
+        this.entityType = entityType;
+        this.entityId = entityId;
+        this.userId = userId;
+        this.details = details;
+        this.reason = reason;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public AuditAction getAction() {
+        return action;
+    }
+
+    public String getEntityType() {
+        return entityType;
+    }
+
+    public String getEntityId() {
+        return entityId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getDetails() {
+        return details;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+}
+// File: CalendarEvent.java
+import java.time.LocalDate;
+import java.util.UUID;
+
+public class CalendarEvent {
+    private final String id;
+    private String itemId;
+    private LocalDate releaseDate;
+    private String title;
+
+    public CalendarEvent(String itemId, LocalDate releaseDate, String title) {
+        this.id = UUID.randomUUID().toString();
+        this.itemId = itemId;
+        this.releaseDate = releaseDate;
+        this.title = title;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getItemId() {
+        return itemId;
+    }
+
+    public LocalDate getReleaseDate() {
+        return releaseDate;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+}
+// File: UsageStatistics.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class UsageStatistics {
+    private Map<String, Integer> itemDownloads = new HashMap<>();
+    private Map<String, Integer> fileDownloads = new HashMap<>();
+    private Map<String, Integer> collectionViews = new HashMap<>();
+    private Map<String, Integer> authorDownloads = new HashMap<>();
+
+    public void recordDownload(Item item, FileAsset file) {
+        itemDownloads.merge(item.getId(), 1, Integer::sum);
+        if (file != null) {
+            fileDownloads.merge(file.getId(), 1, Integer::sum);
+        }
+        for (String author : item.getAuthors()) {
+            authorDownloads.merge(author, 1, Integer::sum);
+        }
+    }
+
+    public void recordCollectionView(RepositoryCollection collection) {
+        collectionViews.merge(collection.getId(), 1, Integer::sum);
+    }
+
+    public int getItemDownloads(String itemId) {
+        return itemDownloads.getOrDefault(itemId, 0);
+    }
+
+    public int getFileDownloads(String fileId) {
+        return fileDownloads.getOrDefault(fileId, 0);
+    }
+
+    public int getCollectionViews(String collectionId) {
+        return collectionViews.getOrDefault(collectionId, 0);
+    }
+
+    public int getAuthorDownloads(String author) {
+        return authorDownloads.getOrDefault(author, 0);
+    }
+
+    public Map<String, Integer> getAltmetrics(String itemId) {
+        Map<String, Integer> metrics = new HashMap<>();
+        metrics.put("downloads", getItemDownloads(itemId));
+        metrics.put("shares", 0);
+        metrics.put("views", 0);
+        return metrics;
+    }
+
+    public String digest() {
+        return "Item downloads=" + itemDownloads
+                + ", File downloads=" + fileDownloads
+                + ", Collection views=" + collectionViews
+                + ", Author downloads=" + authorDownloads;
+    }
+}
+// File: RelationshipGroup.java
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.UUID;
+
+public class RelationshipGroup {
+    private final String id;
+    private String name;
+    private Set<String> itemIds = new LinkedHashSet<>();
+
+    public RelationshipGroup(String name) {
+        this.id = UUID.randomUUID().toString();
+        this.name = name;
+    }
+
+    public void addItem(Item item) {
+        itemIds.add(item.getId());
+    }
+
+    public void removeItem(Item item) {
+        itemIds.remove(item.getId());
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Set<String> getItemIds() {
+        return itemIds;
+    }
+}
+// File: SearchResult.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class SearchResult {
+    private List<Item> items;
+    private int total;
+
+    public SearchResult(List<Item> items) {
+        this.items = items == null ? new ArrayList<>() : new ArrayList<>(items);
+        this.total = this.items.size();
+    }
+
+    public List<Item> getItems() {
+        return items;
+    }
+
+    public int getTotal() {
+        return total;
+    }
+}
+// File: OaiProvider.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class OaiProvider {
+    public List<String> harvest(RepositoryCollection collection) {
+        List<String> records = new ArrayList<>();
+        for (Item item : collection.getItems()) {
+            records.add("<record><id>" + item.getId() + "</id><title>" + item.getTitle()
+                    + "</title><authors>" + String.join(";", item.getAuthors())
+                    + "</authors><date>" + item.getPublicationDate() + "</date></record>");
+        }
+        return records;
+    }
+}
+// File: Repository.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
+
+public class Repository {
+    private List<User> users = new ArrayList<>();
+    private List<RepositoryCollection> collections = new ArrayList<>();
+    private List<Item> items = new ArrayList<>();
+    private List<SubjectClassification> subjects = new ArrayList<>();
+    private List<RelationshipGroup> relationshipGroups = new ArrayList<>();
+    private List<AuditLog> auditLogs = new ArrayList<>();
+    private List<DownloadEvent> downloadEvents = new ArrayList<>();
+    private List<CalendarEvent> calendarEvents = new ArrayList<>();
+    private UsageStatistics statistics = new UsageStatistics();
+    private OaiProvider oaiProvider = new OaiProvider();
+
+    public User createUser(String username, String password, String email, String fullName, Role... roles) {
+        User user = new User(username, password, email, fullName, roles);
+        users.add(user);
+        log(AuditAction.CREATE, "User", user.getId(), user.getId(), "Created user " + username, null);
+        return user;
+    }
+
+    public void deleteUser(User admin, User target) {
+        requireAdmin(admin);
+        target.closeAccount();
+        log(AuditAction.DELETE, "User", target.getId(), admin.getId(), "Closed user account", null);
+    }
+
+    public List<User> listAdministrators() {
+        List<User> admins = new ArrayList<>();
+        for (User user : users) {
+            if (user.hasRole(Role.ADMINISTRATOR)) {
+                admins.add(user);
+            }
+        }
+        return admins;
+    }
+
+    public List<User> searchUsers(String term) {
+        String value = term == null ? "" : term.toLowerCase();
+        List<User> result = new ArrayList<>();
+        for (User user : users) {
+            if (user.getEmail().toLowerCase().contains(value)
+                    || user.getFullName().toLowerCase().contains(value)
+                    || user.getUsername().toLowerCase().contains(value)) {
+                result.add(user);
+            }
+        }
+        return result;
+    }
+
+    public void resetPassword(User admin, User target, String newPassword) {
+        requireAdmin(admin);
+        target.resetPassword(newPassword);
+        log(AuditAction.UPDATE, "User", target.getId(), admin.getId(), "Reset password", null);
+    }
+
+    public void changeEmail(User admin, User target, String email) {
+        requireAdmin(admin);
+        target.setEmail(email);
+        log(AuditAction.UPDATE, "User", target.getId(), admin.getId(), "Changed email", null);
+    }
+
+    public List<Subscription> viewSubscriptions(User admin, User target) {
+        requireAdmin(admin);
+        return target.getSubscriptions();
+    }
+
+    public void changeSubscription(User admin, Subscription subscription, boolean active) {
+        requireAdmin(admin);
+        subscription.setActive(active);
+        log(AuditAction.UPDATE, "Subscription", subscription.getId(), admin.getId(), "Changed subscription active=" + active, null);
+    }
+
+    public RepositoryCollection createCollection(String name, String description, AccessLevel accessLevel, User owner) {
+        RepositoryCollection collection = new RepositoryCollection(name, description, accessLevel);
+        collection.setOwnerId(owner == null ? null : owner.getId());
+        collections.add(collection);
+        log(AuditAction.CREATE, "Collection", collection.getId(), owner == null ? "system" : owner.getId(),
+                "Created collection " + name, null);
+        return collection;
+    }
+
+    public SubjectClassification createSubject(String code, String name) {
+        SubjectClassification subject = new SubjectClassification(code, name);
+        subjects.add(subject);
+        return subject;
+    }
+
+    public RelationshipGroup createRelationshipGroup(String name) {
+        RelationshipGroup group = new RelationshipGroup(name);
+        relationshipGroups.add(group);
+        return group;
+    }
+
+    public void addItemToRelationshipGroup(RelationshipGroup group, Item item) {
+        group.addItem(item);
+    }
+
+    public void uploadItem(User uploader, Item item, RepositoryCollection collection) {
+        if (!items.contains(item)) {
+            items.add(item);
+        }
+        if (collection != null) {
+            item.addToCollection(collection);
+        }
+        if (item.getVersions().isEmpty() && !item.getFiles().isEmpty()) {
+            item.addVersion("Initial version", new ArrayList<>(item.getFiles()),
+                    item.getPublicationDate() == null ? LocalDate.now() : item.getPublicationDate());
+        }
+        log(AuditAction.CREATE, "Item", item.getId(), uploader.getId(), "Uploaded item", null);
+    }
+
+    public void batchUpload(User uploader, RepositoryCollection collection, List<Item> batch) {
+        for (Item item : batch) {
+            uploadItem(uploader, item, collection);
+        }
+    }
+
+    public ItemVersion addVersion(Item item, User user, List<FileAsset> files, String notes,
+                                  LocalDate releaseDate, boolean notifySubscribers) {
+        if (!items.contains(item)) {
+            throw new IllegalArgumentException("Item is not in repository");
+        }
+        item.addVersion(notes, files, releaseDate);
+        log(AuditAction.ADD_VERSION, "Item", item.getId(), user.getId(),
+                "Added version " + item.getCurrentVersion().getVersionNumber(), notes);
+        if (notifySubscribers) {
+            notifySubscribers(item, NotificationType.NEW_VERSION, "New version available: " + item.getTitle());
+        }
+        return item.getCurrentVersion();
+    }
+
+    public void applyEmbargo(Item item, User staff, LocalDate until) {
+        requireStaff(staff);
+        item.applyEmbargo(until);
+        log(AuditAction.EMBARGO_APPLY, "Item", item.getId(), staff.getId(), "Applied embargo until " + until, null);
+    }
+
+    public void removeEmbargo(Item item, User staff) {
+        requireStaff(staff);
+        item.removeEmbargo();
+        log(AuditAction.EMBARGO_REMOVE, "Item", item.getId(), staff.getId(), "Removed embargo", null);
+    }
+
+    public void unpublish(Item item, User admin) {
+        requireAdmin(admin);
+        item.unpublish();
+        log(AuditAction.UNPUBLISH, "Item", item.getId(), admin.getId(), "Unpublished item", null);
+    }
+
+    public void markError(Item item, User admin) {
+        requireAdmin(admin);
+        item.markError();
+        log(AuditAction.MARK_ERROR, "Item", item.getId(), admin.getId(), "Marked item as error", null);
+    }
+
+    public void renameItem(Item item, User user, String newTitle, String reason) {
+        String oldTitle = item.getTitle();
+        item.rename(newTitle);
+        log(AuditAction.RENAME, "Item", item.getId(), user.getId(),
+                "Renamed from " + oldTitle + " to " + newTitle, reason);
+    }
+
+    public void renameCollection(RepositoryCollection collection, String newName, User user) {
+        requireSupport(user);
+        String oldName = collection.getName();
+        collection.rename(newName);
+        log(AuditAction.RENAME, "Collection", collection.getId(), user.getId(),
+                "Renamed from " + oldName + " to " + newName, null);
+    }
+
+    public void moveCollection(RepositoryCollection collection, RepositoryCollection newParent, User user) {
+        requireSupport(user);
+        collection.moveTo(newParent);
+        log(AuditAction.MOVE, "Collection", collection.getId(), user.getId(),
+                "Moved collection", null);
+    }
+
+    public void aliasItemToCollection(Item item, RepositoryCollection collection, User user) {
+        item.addToCollection(collection);
+        log(AuditAction.ALIAS, "Item", item.getId(), user.getId(),
+                "Aliased item to collection " + collection.getName(), null);
+    }
+
+    public CalendarEvent addFutureReleaseDate(Item item, LocalDate releaseDate, User user) {
+        CalendarEvent event = new CalendarEvent(item.getId(), releaseDate, "Release: " + item.getTitle());
+        calendarEvents.add(event);
+        log(AuditAction.CREATE, "CalendarEvent", event.getId(), user.getId(),
+                "Added future release date " + releaseDate, null);
+        return event;
+    }
+
+    public Subscription subscribe(User user, SubscriptionTargetType targetType, String targetId) {
+        Subscription subscription = user.subscribe(targetType, targetId);
+        log(AuditAction.CREATE, "Subscription", subscription.getId(), user.getId(),
+                "Subscribed to " + targetType + " " + targetId, null);
+        return subscription;
+    }
+
+    public void notifySubscribers(Item item, NotificationType type, String message) {
+        if (!item.isEmailAllowed()) {
+            return;
+        }
+        for (User user : getSubscribers(item)) {
+            user.notify(type, message);
+        }
+    }
+
+    public List<User> getSubscribers(Item item) {
+        List<User> result = new ArrayList<>();
+        for (User user : users) {
+            if (user.getStatus() != UserStatus.ACTIVE) {
+                continue;
+            }
+            for (Subscription subscription : user.getSubscriptions()) {
+                if (subscription.matches(item)) {
+                    result.add(user);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public void downloadItem(Item item, User user, FileAsset file) {
+        if (!item.isViewable()) {
+            throw new IllegalStateException("Item is not viewable");
+        }
+        statistics.recordDownload(item, file);
+        downloadEvents.add(new DownloadEvent(item.getId(), user == null ? "anonymous" : user.getId(),
+                file == null ? null : file.getId()));
+        for (User recipient : users) {
+            if (recipient.hasRole(Role.FACULTY)
+                    && item.getAuthors().stream().anyMatch(a -> a.equalsIgnoreCase(recipient.getFullName()))) {
+                recipient.notify(NotificationType.DOWNLOAD, "Download of " + item.getTitle()
+                        + " by " + (user == null ? "anonymous" : user.getUsername()));
+            }
+        }
+        log(AuditAction.UPDATE, "Item", item.getId(), user == null ? "anonymous" : user.getId(),
+                "Downloaded file " + (file == null ? "none" : file.getName()), null);
+    }
+
+    public SearchResult search(SearchQuery query) {
+        List<Item> found = new ArrayList<>();
+        for (Item item : items) {
+            if (query.matches(item)) {
+                found.add(item);
+            }
+        }
+        found.sort(Comparator.comparing(Item::getTitle, String.CASE_INSENSITIVE_ORDER));
+        return new SearchResult(found);
+    }
+
+    public SearchResult browseByAuthor(String author) {
+        SearchQuery query = new SearchQuery();
+        query.setAuthor(author);
+        return search(query);
+    }
+
+    public SearchResult browseBySubject(String subject) {
+        SearchQuery query = new SearchQuery();
+        query.setSubject(subject);
+        return search(query);
+    }
+
+    public SearchResult searchWithinCollection(RepositoryCollection collection, SearchQuery query) {
+        query.setWithinCollection(collection);
+        return search(query);
+    }
+
+    public List<String> harvestOai(RepositoryCollection collection) {
+        return oaiProvider.harvest(collection);
+    }
+
+    public String exportRecords(RepositoryCollection collection) {
+        StringBuilder builder = new StringBuilder();
+        for (Item item : collection.getItems()) {
+            builder.append(item.getId()).append(",")
+                    .append(item.getTitle().replace(",", " ")).append(",")
+                    .append(String.join(";", item.getAuthors())).append(",")
+                    .append(item.getDocumentType()).append(",")
+                    .append(item.getStatus()).append("\n");
+        }
+        log(AuditAction.EXPORT, "Collection", collection.getId(), "system", "Exported records", null);
+        return builder.toString();
+    }
+
+    public int importRecords(String data, User user) {
+        int count = 0;
+        for (String line : data.split("\n")) {
+            if (line.isBlank()) {
+                continue;
+            }
+            String[] parts = line.split(",");
+            if (parts.length < 2) {
+                continue;
+            }
+            Item item = new Item(parts[1], "Imported record", List.of(user.getFullName()), DocumentType.OTHER);
+            items.add(item);
+            count++;
+        }
+        log(AuditAction.IMPORT, "Repository", UUID.randomUUID().toString(), user.getId(),
+                "Imported " + count + " records", null);
+        return count;
+    }
+
+    public Item findItemByPersistentUrl(String url) {
+        for (Item item : items) {
+            if (item.getPersistentUrl().equals(url)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public List<Item> getAllItems() {
+        return new ArrayList<>(items);
+    }
+
+    public List<RepositoryCollection> getAllCollections() {
+        return new ArrayList<>(collections);
+    }
+
+    public List<User> getAllUsers() {
+        return new ArrayList<>(users);
+    }
+
+    public List<SubjectClassification> getSubjects() {
+        return new ArrayList<>(subjects);
+    }
+
+    public List<RelationshipGroup> getRelationshipGroups() {
+        return new ArrayList<>(relationshipGroups);
+    }
+
+    public List<AuditLog> getAuditLogs() {
+        return new ArrayList<>(auditLogs);
+    }
+
+    public List<DownloadEvent> getDownloadEvents() {
+        return new ArrayList<>(downloadEvents);
+    }
+
+    public List<CalendarEvent> getCalendarEvents() {
+        return new ArrayList<>(calendarEvents);
+    }
+
+    public UsageStatistics getStatistics() {
+        return statistics;
+    }
+
+    private void requireAdmin(User user) {
+        if (user == null || !user.hasRole(Role.ADMINISTRATOR)) {
+            throw new SecurityException("Administrator role required");
+        }
+    }
+
+    private void requireStaff(User user) {
+        if (user == null || (!user.hasRole(Role.LIBRARY_STAFF)
+                && !user.hasRole(Role.ADMINISTRATOR)
+                && !user.hasRole(Role.REPOSITORY_SUPPORT))) {
+            throw new SecurityException("Library staff or administrator role required");
+        }
+    }
+
+    private void requireSupport(User user) {
+        if (user == null || (!user.hasRole(Role.REPOSITORY_SUPPORT) && !user.hasRole(Role.ADMINISTRATOR))) {
+            throw new SecurityException("Repository support or administrator role required");
+        }
+    }
+
+    private void log(AuditAction action, String entityType, String entityId, String userId,
+                     String details, String reason) {
+        auditLogs.add(new AuditLog(action, entityType, entityId, userId, details, reason));
+    }
+}
+// File: Main.java
+import java.time.LocalDate;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        Repository repository = new Repository();
+
+        User faculty = repository.createUser("faculty1", "pw", "faculty@cornell.edu",
+                "Dr. Ada Lovelace", Role.FACULTY);
+        User patron = repository.createUser("patron1", "pw", "patron@example.com",
+                "Patron One", Role.PATRON);
+        User admin = repository.createUser("admin1", "pw", "admin@cornell.edu",
+                "Admin User", Role.ADMINISTRATOR, Role.LIBRARY_STAFF);
+        User support = repository.createUser("support1", "pw", "support@cornell.edu",
+                "Support User", Role.REPOSITORY_SUPPORT);
+
+        RepositoryCollection collection = repository.createCollection(
+                "Computing Research", "Research materials in computing", AccessLevel.PUBLIC, faculty);
+        collection.setBranding("Cornell Computing");
+        collection.setSortOrder(SortOrder.TITLE);
+        collection.addCustomMetadataField("grant", "Funding grant identifier");
+
+        SubjectClassification subject = repository.createSubject("CS", "Computer Science");
+
+        Item dataset = new Item("Data for New Algorithms", "Sample dataset for algorithm research",
+                List.of("Dr. Ada Lovelace"), DocumentType.DATASET);
+        FileAsset dataFile = new FileAsset("data.csv", "text/csv", 2048, "a,b,c".getBytes());
+        dataset.addFile(dataFile);
+        dataset.addKeyword("algorithms");
+        dataset.addSubject(subject);
+        dataset.setLicense(License.ccBy());
+        dataset.setPublicationDate(LocalDate.now().minusDays(10));
+        dataset.setResearcherId("RID-123");
+        dataset.setOrcid("0000-0001-2345-6789");
+        dataset.addMetadata("grant", "NSF-001");
+        dataset.setCitation(dataset.generateCitation());
+
+        repository.uploadItem(faculty, dataset, collection);
+        dataset.publish();
+
+        repository.addVersion(dataset, faculty,
+                List.of(new FileAsset("data-v2.csv", "text/csv", 2048, "a,b,d".getBytes())),
+                "Corrected values", LocalDate.now(), true);
+
+        Item report = new Item("Annual Report", "Annual research report",
+                List.of("Dr. Ada Lovelace"), DocumentType.REPORT);
+        report.addFile(new FileAsset("report.pdf", "application/pdf", 1000, "pdf".getBytes()));
+        report.addSubject(subject);
+        repository.uploadItem(faculty, report, collection);
+        repository.applyEmbargo(report, admin, LocalDate.now().plusMonths(1));
+
+        repository.subscribe(patron, SubscriptionTargetType.COLLECTION, collection.getId());
+        repository.subscribe(patron, SubscriptionTargetType.AUTHOR, "Dr. Ada Lovelace");
+
+        repository.downloadItem(dataset, patron, dataFile);
+
+        SearchQuery query = new SearchQuery();
+        query.setKeywords("algorithms");
+        SearchResult result = repository.search(query);
+        System.out.println("Search results: " + result.getTotal());
+
+        repository.markError(report, admin);
+        repository.renameItem(dataset, faculty, "Data for New Algorithms v2", "Title update");
+        repository.renameCollection(collection, "Computing Research and Teaching", support);
+
+        RepositoryCollection teaching = repository.createCollection(
+                "Teaching Materials", "Items used in teaching", AccessLevel.UNIVERSITY, faculty);
+        repository.aliasItemToCollection(dataset, teaching, support);
+
+        RelationshipGroup relatedGroup = repository.createRelationshipGroup("Algorithms");
+        repository.addItemToRelationshipGroup(relatedGroup, dataset);
+        dataset.addRelatedItem(report);
+
+        repository.addFutureReleaseDate(report, LocalDate.now().plusMonths(2), admin);
+
+        System.out.println("Citation: " + dataset.generateCitation());
+        System.out.println("Subscribers for dataset: " + repository.getSubscribers(dataset).size());
+        System.out.println("Statistics: " + repository.getStatistics().digest());
+        System.out.println("Audit entries: " + repository.getAuditLogs().size());
+        System.out.println("OAI records: " + repository.harvestOai(collection).size());
+        System.out.println("Export lines: " + repository.exportRecords(collection).split("\n").length);
+        System.out.println("Persistent URL: " + dataset.getPersistentUrl());
+        System.out.println("Demo completed.");
+    }
+}
+```

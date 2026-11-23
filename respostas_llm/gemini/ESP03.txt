@@ -1,0 +1,2080 @@
+// File: Role.java
+public enum Role {
+    CONSUMER,
+    PUBLISHER,
+    ADMINISTRATOR
+}
+
+// File: User.java
+import java.util.Objects;
+
+public class User {
+    private final String id;
+    private String username;
+    private final String email;
+    private Role role;
+
+    public User(String id, String username, String email, Role role) {
+        this.id = Objects.requireNonNull(id, "id must not be null");
+        this.username = Objects.requireNonNull(username, "username must not be null");
+        this.email = Objects.requireNonNull(email, "email must not be null");
+        this.role = Objects.requireNonNull(role, "role must not be null");
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = Objects.requireNonNull(username, "username cannot be null");
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = Objects.requireNonNull(role, "role cannot be null");
+    }
+
+    public boolean isPublisher() {
+        return this.role == Role.PUBLISHER || this.role == Role.ADMINISTRATOR;
+    }
+
+    public boolean isAdministrator() {
+        return this.role == Role.ADMINISTRATOR;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" + "id='" + id + '\'' + ", username='" + username + '\'' + ", role=" + role + '}';
+    }
+}
+
+// File: DatasetVisibility.java
+public enum DatasetVisibility {
+    PUBLIC,
+    HIDDEN
+}
+
+// File: DataSourceType.java
+public enum DataSourceType {
+    CSV,
+    EXCEL,
+    JSON,
+    GOOGLE_SPREADSHEET,
+    FISCAL_DATA_PACKAGE
+}
+
+// File: DataSource.java
+import java.time.Instant;
+import java.util.Objects;
+
+public class DataSource {
+    private DataSourceType type;
+    private String locationUri;
+    private boolean autoUpdate;
+    private Instant lastUpdated;
+
+    public DataSource(DataSourceType type, String locationUri, boolean autoUpdate) {
+        this.type = Objects.requireNonNull(type, "type cannot be null");
+        this.locationUri = Objects.requireNonNull(locationUri, "locationUri cannot be null");
+        this.autoUpdate = autoUpdate;
+        this.lastUpdated = Instant.now();
+    }
+
+    public DataSourceType getType() {
+        return type;
+    }
+
+    public void setType(DataSourceType type) {
+        this.type = Objects.requireNonNull(type, "type cannot be null");
+    }
+
+    public String getLocationUri() {
+        return locationUri;
+    }
+
+    public void setLocationUri(String locationUri) {
+        this.locationUri = Objects.requireNonNull(locationUri, "locationUri cannot be null");
+    }
+
+    public boolean isAutoUpdate() {
+        return autoUpdate;
+    }
+
+    public void setAutoUpdate(boolean autoUpdate) {
+        this.autoUpdate = autoUpdate;
+    }
+
+    public Instant getLastUpdated() {
+        return lastUpdated;
+    }
+
+    public void refreshTimestamp() {
+        this.lastUpdated = Instant.now();
+    }
+
+    @Override
+    public String toString() {
+        return "DataSource{" + "type=" + type + ", locationUri='" + locationUri + '\'' + ", autoUpdate=" + autoUpdate + '}';
+    }
+}
+
+// File: DimensionType.java
+public enum DimensionType {
+    STRING,
+    YEAR,
+    DATE,
+    GEO_HASC,
+    CATEGORY
+}
+
+// File: Dimension.java
+import java.util.Objects;
+
+public class Dimension {
+    private final String name;
+    private final DimensionType type;
+    private final boolean isConstant;
+    private final Object constantValue;
+
+    public Dimension(String name, DimensionType type) {
+        this(name, type, false, null);
+    }
+
+    public Dimension(String name, DimensionType type, boolean isConstant, Object constantValue) {
+        this.name = Objects.requireNonNull(name, "Dimension name cannot be null");
+        this.type = Objects.requireNonNull(type, "Dimension type cannot be null");
+        this.isConstant = isConstant;
+        this.constantValue = constantValue;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public DimensionType getType() {
+        return type;
+    }
+
+    public boolean isConstant() {
+        return isConstant;
+    }
+
+    public Object getConstantValue() {
+        return constantValue;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Dimension dimension)) return false;
+        return Objects.equals(name, dimension.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
+    }
+
+    @Override
+    public String toString() {
+        return "Dimension{" + "name='" + name + '\'' + ", type=" + type + (isConstant ? ", constant=" + constantValue : "") + '}';
+    }
+}
+
+// File: Measure.java
+import java.util.Objects;
+
+public class Measure {
+    private final String name;
+    private String currency;
+
+    public Measure(String name, String currency) {
+        this.name = Objects.requireNonNull(name, "Measure name cannot be null");
+        this.currency = Objects.requireNonNull(currency, "Currency cannot be null");
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = Objects.requireNonNull(currency, "Currency cannot be null");
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Measure measure)) return false;
+        return Objects.equals(name, measure.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
+    }
+
+    @Override
+    public String toString() {
+        return "Measure{" + "name='" + name + '\'' + ", currency='" + currency + '\'' + '}';
+    }
+}
+
+// File: DataModel.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+public class DataModel {
+    private final List<Dimension> dimensions = new ArrayList<>();
+    private final List<Measure> measures = new ArrayList<>();
+
+    public DataModel() {}
+
+    public DataModel(List<Dimension> dimensions, List<Measure> measures) {
+        if (dimensions != null) this.dimensions.addAll(dimensions);
+        if (measures != null) this.measures.addAll(measures);
+    }
+
+    public void addDimension(Dimension dimension) {
+        dimensions.removeIf(d -> d.getName().equalsIgnoreCase(dimension.getName()));
+        dimensions.add(Objects.requireNonNull(dimension));
+    }
+
+    public void removeDimension(String name) {
+        dimensions.removeIf(d -> d.getName().equalsIgnoreCase(name));
+    }
+
+    public void addMeasure(Measure measure) {
+        measures.removeIf(m -> m.getName().equalsIgnoreCase(measure.getName()));
+        measures.add(Objects.requireNonNull(measure));
+    }
+
+    public void removeMeasure(String name) {
+        measures.removeIf(m -> m.getName().equalsIgnoreCase(name));
+    }
+
+    public List<Dimension> getDimensions() {
+        return Collections.unmodifiableList(dimensions);
+    }
+
+    public List<Measure> getMeasures() {
+        return Collections.unmodifiableList(measures);
+    }
+
+    public Optional<Dimension> findDimension(String name) {
+        return dimensions.stream().filter(d -> d.getName().equalsIgnoreCase(name)).findFirst();
+    }
+
+    public Optional<Measure> findMeasure(String name) {
+        return measures.stream().filter(m -> m.getName().equalsIgnoreCase(name)).findFirst();
+    }
+
+    public boolean hasGeoDimension() {
+        return dimensions.stream().anyMatch(d -> d.getType() == DimensionType.GEO_HASC);
+    }
+
+    public boolean hasYearDimension() {
+        return dimensions.stream().anyMatch(d -> d.getType() == DimensionType.YEAR);
+    }
+
+    @Override
+    public String toString() {
+        return "DataModel{" + "dimensions=" + dimensions + ", measures=" + measures + '}';
+    }
+}
+
+// File: DataRow.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class DataRow {
+    private final Map<String, Object> fields;
+
+    public DataRow() {
+        this.fields = new HashMap<>();
+    }
+
+    public DataRow(Map<String, Object> initial) {
+        this.fields = new HashMap<>(initial);
+    }
+
+    public void set(String column, Object value) {
+        fields.put(column, value);
+    }
+
+    public Object get(String column) {
+        return fields.get(column);
+    }
+
+    public String getString(String column) {
+        Object val = fields.get(column);
+        return val != null ? val.toString() : null;
+    }
+
+    public Double getDouble(String column) {
+        Object val = fields.get(column);
+        if (val instanceof Number n) {
+            return n.doubleValue();
+        } else if (val instanceof String s) {
+            try {
+                return Double.parseDouble(s);
+            } catch (NumberFormatException ignored) {}
+        }
+        return 0.0;
+    }
+
+    public Integer getInteger(String column) {
+        Object val = fields.get(column);
+        if (val instanceof Number n) {
+            return n.intValue();
+        } else if (val instanceof String s) {
+            try {
+                return Integer.parseInt(s);
+            } catch (NumberFormatException ignored) {}
+        }
+        return 0;
+    }
+
+    public Map<String, Object> getAll() {
+        return new HashMap<>(fields);
+    }
+
+    @Override
+    public String toString() {
+        return fields.toString();
+    }
+}
+
+// File: Dataset.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+public class Dataset {
+    private final String id;
+    private String title;
+    private String description;
+    private final String ownerUserId;
+    private DatasetVisibility visibility;
+    private DataModel model;
+    private DataSource dataSource;
+    private final List<DataRow> records = new ArrayList<>();
+    private final Map<String, String> metadata = new HashMap<>();
+    private final List<String> geoJsonSourceUrls = new ArrayList<>();
+
+    public Dataset(String id, String title, String description, String ownerUserId, DatasetVisibility visibility, DataModel model, DataSource dataSource) {
+        this.id = Objects.requireNonNull(id, "Dataset id cannot be null");
+        this.title = Objects.requireNonNull(title, "Title cannot be null");
+        this.description = description != null ? description : "";
+        this.ownerUserId = Objects.requireNonNull(ownerUserId, "Owner user ID cannot be null");
+        this.visibility = Objects.requireNonNull(visibility, "Visibility cannot be null");
+        this.model = Objects.requireNonNull(model, "DataModel cannot be null");
+        this.dataSource = Objects.requireNonNull(dataSource, "DataSource cannot be null");
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = Objects.requireNonNull(title);
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = Objects.requireNonNull(description);
+    }
+
+    public String getOwnerUserId() {
+        return ownerUserId;
+    }
+
+    public DatasetVisibility getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(DatasetVisibility visibility) {
+        this.visibility = Objects.requireNonNull(visibility);
+    }
+
+    public DataModel getModel() {
+        return model;
+    }
+
+    public void setModel(DataModel model) {
+        this.model = Objects.requireNonNull(model);
+    }
+
+    public DataSource getDataSource() {
+        return dataSource;
+    }
+
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = Objects.requireNonNull(dataSource);
+    }
+
+    public List<DataRow> getRecords() {
+        return records;
+    }
+
+    public void setRecords(List<DataRow> newRecords) {
+        this.records.clear();
+        if (newRecords != null) {
+            for (DataRow r : newRecords) {
+                // Apply constant dimensions if defined in model
+                for (Dimension d : model.getDimensions()) {
+                    if (d.isConstant() && d.getConstantValue() != null) {
+                        r.set(d.getName(), d.getConstantValue());
+                    }
+                }
+                this.records.add(r);
+            }
+        }
+    }
+
+    public Map<String, String> getMetadata() {
+        return metadata;
+    }
+
+    public void addMetadata(String key, String value) {
+        metadata.put(key, value);
+    }
+
+    public List<String> getGeoJsonSourceUrls() {
+        return geoJsonSourceUrls;
+    }
+
+    public void addGeoJsonSourceUrl(String url) {
+        geoJsonSourceUrls.add(Objects.requireNonNull(url));
+    }
+
+    @Override
+    public String toString() {
+        return "Dataset{" + "id='" + id + '\'' + ", title='" + title + '\'' + ", owner='" + ownerUserId + '\'' + ", visibility=" + visibility + ", records=" + records.size() + '}';
+    }
+}
+
+// File: CsvValidationResult.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class CsvValidationResult {
+    private final boolean valid;
+    private final List<String> errors;
+
+    public CsvValidationResult(boolean valid, List<String> errors) {
+        this.valid = valid;
+        this.errors = errors != null ? new ArrayList<>(errors) : new ArrayList<>();
+    }
+
+    public boolean isValid() {
+        return valid;
+    }
+
+    public List<String> getErrors() {
+        return errors;
+    }
+
+    @Override
+    public String toString() {
+        return "CsvValidationResult{valid=" + valid + ", errors=" + errors + '}';
+    }
+}
+
+// File: CsvValidator.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class CsvValidator {
+    public static CsvValidationResult validateCsv(String rawCsvContent) {
+        List<String> errors = new ArrayList<>();
+        if (rawCsvContent == null || rawCsvContent.trim().isEmpty()) {
+            errors.add("CSV content is empty.");
+            return new CsvValidationResult(false, errors);
+        }
+
+        String[] lines = rawCsvContent.split("\\r?\\n");
+        if (lines.length < 2) {
+            errors.add("CSV must contain at least a header and one row of data.");
+            return new CsvValidationResult(false, errors);
+        }
+
+        String[] headers = lines[0].split(",");
+        int expectedColumnCount = headers.length;
+
+        for (int i = 0; i < headers.length; i++) {
+            if (headers[i].trim().isEmpty()) {
+                errors.add("Header at column index " + (i + 1) + " is blank.");
+            }
+        }
+
+        for (int rowIdx = 1; rowIdx < lines.length; rowIdx++) {
+            String line = lines[rowIdx].trim();
+            if (line.isEmpty()) continue;
+            String[] tokens = line.split(",", -1);
+            if (tokens.length != expectedColumnCount) {
+                errors.add("Row " + (rowIdx + 1) + " has " + tokens.length + " columns; expected " + expectedColumnCount);
+            }
+        }
+
+        return new CsvValidationResult(errors.isEmpty(), errors);
+    }
+}
+
+// File: GeoMapRequirements.java
+import java.util.List;
+
+public class GeoMapRequirements {
+    private final boolean eligibleForMapVisualization;
+    private final List<String> missingRequirements;
+    private final String description;
+
+    public GeoMapRequirements(boolean eligibleForMapVisualization, List<String> missingRequirements, String description) {
+        this.eligibleForMapVisualization = eligibleForMapVisualization;
+        this.missingRequirements = missingRequirements;
+        this.description = description;
+    }
+
+    public boolean isEligibleForMapVisualization() {
+        return eligibleForMapVisualization;
+    }
+
+    public List<String> getMissingRequirements() {
+        return missingRequirements;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return "GeoMapRequirements{eligible=" + eligibleForMapVisualization + ", missing=" + missingRequirements + ", description='" + description + "'}";
+    }
+}
+
+// File: GeoRequirementChecker.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class GeoRequirementChecker {
+    public static GeoMapRequirements checkMapRequirements(Dataset dataset) {
+        List<String> missing = new ArrayList<>();
+        boolean hasGeo = dataset.getModel().getDimensions().stream()
+                .anyMatch(d -> d.getType() == DimensionType.GEO_HASC);
+
+        if (!hasGeo) {
+            missing.add("DataModel must have a GEO_HASC dimension (Hierarchical Administrative Subdivision Codes).");
+        }
+
+        boolean hasMeasure = !dataset.getModel().getMeasures().isEmpty();
+        if (!hasMeasure) {
+            missing.add("DataModel must contain at least one numeric measure to map as choropleth or bubble.");
+        }
+
+        boolean eligible = missing.isEmpty();
+        String desc = eligible
+                ? "Dataset fulfills map visual requirements. HASC code dimension linked."
+                : "Dataset requires a GEO_HASC dimension (e.g., US.CA, DE.NW) and at least one measure.";
+
+        return new GeoMapRequirements(eligible, missing, desc);
+    }
+}
+
+// File: DataPackager.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class DataPackager {
+
+    public static List<DataRow> importCsv(String rawCsv) {
+        List<DataRow> rows = new ArrayList<>();
+        String[] lines = rawCsv.split("\\r?\\n");
+        if (lines.length <= 1) return rows;
+
+        String[] headers = lines[0].split(",");
+        for (int i = 0; i < headers.length; i++) {
+            headers[i] = headers[i].trim();
+        }
+
+        for (int i = 1; i < lines.length; i++) {
+            String line = lines[i].trim();
+            if (line.isEmpty()) continue;
+            String[] tokens = line.split(",", -1);
+            DataRow row = new DataRow();
+            for (int col = 0; col < headers.length; col++) {
+                String val = col < tokens.length ? tokens[col].trim() : "";
+                row.set(headers[col], val);
+            }
+            rows.add(row);
+        }
+        return rows;
+    }
+
+    public static List<DataRow> importJson(String rawJson) {
+        // Simple JSON parser for array of flat objects: [{"k":"v"}, ...]
+        List<DataRow> rows = new ArrayList<>();
+        String trimmed = rawJson.trim();
+        if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+            String content = trimmed.substring(1, trimmed.length() - 1).trim();
+            String[] objects = content.split("(?<=\\}),\\s*(?=\\{)");
+            for (String objStr : objects) {
+                objStr = objStr.replace("{", "").replace("}", "").trim();
+                if (objStr.isEmpty()) continue;
+                DataRow row = new DataRow();
+                String[] pairs = objStr.split(",");
+                for (String pair : pairs) {
+                    String[] kv = pair.split(":", 2);
+                    if (kv.length == 2) {
+                        String k = kv[0].replaceAll("[\"\\s]", "");
+                        String v = kv[1].replaceAll("[\"\\s]", "");
+                        row.set(k, v);
+                    }
+                }
+                rows.add(row);
+            }
+        }
+        return rows;
+    }
+
+    public static List<DataRow> importExcelMock(String simulatedExcelRows) {
+        // Simulates Excel reading via TSV/CSV-like sheet representation
+        return importCsv(simulatedExcelRows);
+    }
+
+    public static List<DataRow> importGoogleSpreadsheetMock(String sheetUrl, String sheetContent) {
+        // In real system, calls Google Sheets API; parses tabular response
+        return importCsv(sheetContent);
+    }
+
+    public static List<DataRow> importFiscalDataPackageDescriptor(String descriptorJson, String csvData) {
+        // Reads Fiscal Data Package specification format and loads rows
+        return importCsv(csvData);
+    }
+}
+
+// File: GeoLocation.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+public class GeoLocation {
+    private final String hascCode;
+    private final String name;
+    private final String type; // Country, Region, City
+    private final double areaKm2;
+    private final long population;
+    private final double gdp;
+    private final double giniIndex;
+    private final String polygonGeoJson;
+    private final List<String> borderingHascCodes;
+
+    public GeoLocation(String hascCode, String name, String type, double areaKm2, long population, double gdp, double giniIndex, String polygonGeoJson, List<String> borderingHascCodes) {
+        this.hascCode = Objects.requireNonNull(hascCode);
+        this.name = Objects.requireNonNull(name);
+        this.type = Objects.requireNonNull(type);
+        this.areaKm2 = areaKm2;
+        this.population = population;
+        this.gdp = gdp;
+        this.giniIndex = giniIndex;
+        this.polygonGeoJson = polygonGeoJson != null ? polygonGeoJson : "{\"type\":\"Polygon\",\"coordinates\":[]}";
+        this.borderingHascCodes = borderingHascCodes != null ? new ArrayList<>(borderingHascCodes) : new ArrayList<>();
+    }
+
+    public String getHascCode() {
+        return hascCode;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public double getAreaKm2() {
+        return areaKm2;
+    }
+
+    public long getPopulation() {
+        return population;
+    }
+
+    public double getGdp() {
+        return gdp;
+    }
+
+    public double getGiniIndex() {
+        return giniIndex;
+    }
+
+    public String getPolygonGeoJson() {
+        return polygonGeoJson;
+    }
+
+    public List<String> getBorderingHascCodes() {
+        return Collections.unmodifiableList(borderingHascCodes);
+    }
+}
+
+// File: GeoSpatialService.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+public class GeoSpatialService {
+    private final Map<String, GeoLocation> geoDatabase = new HashMap<>();
+
+    public GeoSpatialService() {
+        initDefaultGeoData();
+    }
+
+    private void initDefaultGeoData() {
+        registerLocation(new GeoLocation(
+                "DE.NW", "North Rhine-Westphalia", "Region", 34110.0, 17925000, 711000000000.0, 0.29,
+                "{\"type\":\"Polygon\",\"coordinates\":[[[6.0,50.5],[9.4,50.5],[9.4,52.5],[6.0,52.5]]]}",
+                List.of("DE.HE", "DE.RP", "DE.NI")
+        ));
+        registerLocation(new GeoLocation(
+                "DE.HE", "Hesse", "Region", 21115.0, 6293000, 294000000000.0, 0.31,
+                "{\"type\":\"Polygon\",\"coordinates\":[[[7.8,49.4],[10.2,49.4],[10.2,51.6],[7.8,51.6]]]}",
+                List.of("DE.NW", "DE.RP", "DE.BW", "DE.BY", "DE.TH")
+        ));
+        registerLocation(new GeoLocation(
+                "DE.RP", "Rhineland-Palatinate", "Region", 19854.0, 4106000, 149000000000.0, 0.28,
+                "{\"type\":\"Polygon\",\"coordinates\":[[[6.1,49.0],[8.5,49.0],[8.5,50.9],[6.1,50.9]]]}",
+                List.of("DE.NW", "DE.HE", "DE.SL", "DE.BW")
+        ));
+    }
+
+    public void registerLocation(GeoLocation loc) {
+        geoDatabase.put(loc.getHascCode().toUpperCase(), loc);
+    }
+
+    public Optional<GeoLocation> findByHasc(String hascCode) {
+        return Optional.ofNullable(geoDatabase.get(hascCode.toUpperCase()));
+    }
+
+    public List<GeoLocation> getBorderingRegions(String hascCode) {
+        List<GeoLocation> neighbors = new ArrayList<>();
+        Optional<GeoLocation> locOpt = findByHasc(hascCode);
+        if (locOpt.isPresent()) {
+            for (String borderHasc : locOpt.get().getBorderingHascCodes()) {
+                findByHasc(borderHasc).ifPresent(neighbors::add);
+            }
+        }
+        return neighbors;
+    }
+
+    public String getPolygonForQuery(String hascCode) {
+        return findByHasc(hascCode)
+                .map(GeoLocation::getPolygonGeoJson)
+                .orElse("{\"type\":\"Polygon\",\"coordinates\":[]}");
+    }
+}
+
+// File: CurrencyConverter.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class CurrencyConverter {
+    private final Map<String, Double> ratesToUsd = new HashMap<>();
+
+    public CurrencyConverter() {
+        ratesToUsd.put("USD", 1.0);
+        ratesToUsd.put("EUR", 1.08); // 1 EUR = 1.08 USD
+        ratesToUsd.put("GBP", 1.25); // 1 GBP = 1.25 USD
+        ratesToUsd.put("JPY", 0.0064);
+        ratesToUsd.put("CHF", 1.10);
+    }
+
+    public void setExchangeRate(String currency, double rateToUsd) {
+        ratesToUsd.put(currency.toUpperCase(), rateToUsd);
+    }
+
+    public double convert(double amount, String fromCurrency, String toCurrency) {
+        if (fromCurrency.equalsIgnoreCase(toCurrency)) {
+            return amount;
+        }
+        Double fromRate = ratesToUsd.get(fromCurrency.toUpperCase());
+        Double toRate = ratesToUsd.get(toCurrency.toUpperCase());
+        if (fromRate == null || toRate == null) {
+            throw new IllegalArgumentException("Unsupported currency: " + fromCurrency + " or " + toCurrency);
+        }
+        double amountInUsd = amount * fromRate;
+        return amountInUsd / toRate;
+    }
+}
+
+// File: NormalizationType.java
+public enum NormalizationType {
+    NONE,
+    POPULATION,
+    AREA,
+    GDP,
+    GINI,
+    PERCENTAGE_OF_TOTAL
+}
+
+// File: AggregationType.java
+public enum AggregationType {
+    SUM,
+    AVG,
+    COUNT,
+    MIN,
+    MAX
+}
+
+// File: SortDirection.java
+public enum SortDirection {
+    ASC,
+    DESC
+}
+
+// File: CubeQuery.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class CubeQuery {
+    private final Map<String, Object> filters = new HashMap<>();
+    private final List<String> groupByDimensions = new ArrayList<>();
+    private String measure;
+    private AggregationType aggregation = AggregationType.SUM;
+    private String sortByDimensionOrMeasure;
+    private SortDirection sortDirection = SortDirection.ASC;
+    private String targetCurrency;
+    private NormalizationType normalization = NormalizationType.NONE;
+
+    public CubeQuery filter(String dimension, Object value) {
+        filters.put(dimension, value);
+        return this;
+    }
+
+    public CubeQuery groupBy(String dimension) {
+        groupByDimensions.add(dimension);
+        return this;
+    }
+
+    public CubeQuery measure(String measure) {
+        this.measure = measure;
+        return this;
+    }
+
+    public CubeQuery aggregate(AggregationType agg) {
+        this.aggregation = agg;
+        return this;
+    }
+
+    public CubeQuery sort(String field, SortDirection direction) {
+        this.sortByDimensionOrMeasure = field;
+        this.sortDirection = direction;
+        return this;
+    }
+
+    public CubeQuery targetCurrency(String currency) {
+        this.targetCurrency = currency;
+        return this;
+    }
+
+    public CubeQuery normalize(NormalizationType norm) {
+        this.normalization = norm;
+        return this;
+    }
+
+    public Map<String, Object> getFilters() {
+        return filters;
+    }
+
+    public List<String> getGroupByDimensions() {
+        return groupByDimensions;
+    }
+
+    public String getMeasure() {
+        return measure;
+    }
+
+    public AggregationType getAggregation() {
+        return aggregation;
+    }
+
+    public String getSortByDimensionOrMeasure() {
+        return sortByDimensionOrMeasure;
+    }
+
+    public SortDirection getSortDirection() {
+        return sortDirection;
+    }
+
+    public String getTargetCurrency() {
+        return targetCurrency;
+    }
+
+    public NormalizationType getNormalization() {
+        return normalization;
+    }
+}
+
+// File: CubeQueryResultRow.java
+import java.util.Collections;
+import java.util.Map;
+
+public class CubeQueryResultRow {
+    private final Map<String, Object> dimensions;
+    private final double value;
+    private final String measureName;
+    private final String currency;
+
+    public CubeQueryResultRow(Map<String, Object> dimensions, double value, String measureName, String currency) {
+        this.dimensions = dimensions;
+        this.value = value;
+        this.measureName = measureName;
+        this.currency = currency;
+    }
+
+    public Map<String, Object> getDimensions() {
+        return Collections.unmodifiableMap(dimensions);
+    }
+
+    public double getValue() {
+        return value;
+    }
+
+    public String getMeasureName() {
+        return measureName;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    @Override
+    public String toString() {
+        return "Row{dims=" + dimensions + ", " + measureName + "=" + value + (currency != null ? " " + currency : "") + "}";
+    }
+}
+
+// File: CubeQueryResult.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class CubeQueryResult {
+    private final List<CubeQueryResultRow> rows;
+    private final double totalMeasureSum;
+
+    public CubeQueryResult(List<CubeQueryResultRow> rows, double totalMeasureSum) {
+        this.rows = rows != null ? rows : new ArrayList<>();
+        this.totalMeasureSum = totalMeasureSum;
+    }
+
+    public List<CubeQueryResultRow> getRows() {
+        return rows;
+    }
+
+    public double getTotalMeasureSum() {
+        return totalMeasureSum;
+    }
+
+    public String toCsv() {
+        if (rows.isEmpty()) {
+            return "No data";
+        }
+        List<String> dimKeys = new ArrayList<>(rows.get(0).getDimensions().keySet());
+        StringBuilder sb = new StringBuilder();
+        for (String k : dimKeys) {
+            sb.append(k).append(",");
+        }
+        sb.append(rows.get(0).getMeasureName());
+        if (rows.get(0).getCurrency() != null) {
+            sb.append(",currency");
+        }
+        sb.append("\n");
+
+        for (CubeQueryResultRow row : rows) {
+            for (String k : dimKeys) {
+                sb.append(row.getDimensions().get(k)).append(",");
+            }
+            sb.append(row.getValue());
+            if (row.getCurrency() != null) {
+                sb.append(",").append(row.getCurrency());
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
+}
+
+// File: CubeEngine.java
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class CubeEngine {
+    private final CurrencyConverter currencyConverter;
+    private final GeoSpatialService geoSpatialService;
+
+    public CubeEngine(CurrencyConverter currencyConverter, GeoSpatialService geoSpatialService) {
+        this.currencyConverter = currencyConverter;
+        this.geoSpatialService = geoSpatialService;
+    }
+
+    public CubeQueryResult executeQuery(Dataset dataset, CubeQuery query) {
+        List<DataRow> filteredRows = new ArrayList<>(dataset.getRecords());
+
+        // Apply filters
+        for (Map.Entry<String, Object> entry : query.getFilters().entrySet()) {
+            filteredRows = filteredRows.stream()
+                    .filter(r -> Objects.equals(String.valueOf(r.get(entry.getKey())), String.valueOf(entry.getValue())))
+                    .collect(Collectors.toList());
+        }
+
+        String measureName = query.getMeasure();
+        if (measureName == null && !dataset.getModel().getMeasures().isEmpty()) {
+            measureName = dataset.getModel().getMeasures().get(0).getName();
+        }
+
+        final String activeMeasure = measureName;
+        String baseCurrency = dataset.getModel().findMeasure(activeMeasure)
+                .map(Measure::getCurrency)
+                .orElse("USD");
+
+        double totalOverall = 0.0;
+        for (DataRow r : filteredRows) {
+            totalOverall += r.getDouble(activeMeasure);
+        }
+
+        // Grouping
+        Map<Map<String, Object>, List<DataRow>> groups = new LinkedHashMap<>();
+        for (DataRow r : filteredRows) {
+            Map<String, Object> key = new LinkedHashMap<>();
+            for (String groupDim : query.getGroupByDimensions()) {
+                key.put(groupDim, r.get(groupDim));
+            }
+            groups.computeIfAbsent(key, k -> new ArrayList<>()).add(r);
+        }
+
+        List<CubeQueryResultRow> resultRows = new ArrayList<>();
+        String targetCurrency = query.getTargetCurrency() != null ? query.getTargetCurrency() : baseCurrency;
+
+        for (Map.Entry<Map<String, Object>, List<DataRow>> entry : groups.entrySet()) {
+            Map<String, Object> groupKey = entry.getKey();
+            List<DataRow> groupData = entry.getValue();
+
+            double aggValue = 0.0;
+            switch (query.getAggregation()) {
+                case SUM -> aggValue = groupData.stream().mapToDouble(r -> r.getDouble(activeMeasure)).sum();
+                case COUNT -> aggValue = groupData.size();
+                case AVG -> aggValue = groupData.stream().mapToDouble(r -> r.getDouble(activeMeasure)).average().orElse(0.0);
+                case MIN -> aggValue = groupData.stream().mapToDouble(r -> r.getDouble(activeMeasure)).min().orElse(0.0);
+                case MAX -> aggValue = groupData.stream().mapToDouble(r -> r.getDouble(activeMeasure)).max().orElse(0.0);
+            }
+
+            // Currency conversion if needed
+            if (query.getAggregation() != AggregationType.COUNT && !baseCurrency.equalsIgnoreCase(targetCurrency)) {
+                aggValue = currencyConverter.convert(aggValue, baseCurrency, targetCurrency);
+            }
+
+            // Normalization
+            if (query.getNormalization() == NormalizationType.PERCENTAGE_OF_TOTAL && totalOverall > 0) {
+                aggValue = (aggValue / totalOverall) * 100.0;
+            } else if (query.getNormalization() != NormalizationType.NONE) {
+                // If grouped by HASC or contains GEO
+                String hasc = null;
+                for (Object v : groupKey.values()) {
+                    if (v != null && geoSpatialService.findByHasc(v.toString()).isPresent()) {
+                        hasc = v.toString();
+                        break;
+                    }
+                }
+                if (hasc != null) {
+                    GeoLocation loc = geoSpatialService.findByHasc(hasc).get();
+                    switch (query.getNormalization()) {
+                        case POPULATION -> aggValue = loc.getPopulation() > 0 ? aggValue / loc.getPopulation() : aggValue;
+                        case AREA -> aggValue = loc.getAreaKm2() > 0 ? aggValue / loc.getAreaKm2() : aggValue;
+                        case GDP -> aggValue = loc.getGdp() > 0 ? aggValue / loc.getGdp() : aggValue;
+                        case GINI -> aggValue = loc.getGiniIndex() > 0 ? aggValue / loc.getGiniIndex() : aggValue;
+                        default -> {}
+                    }
+                }
+            }
+
+            resultRows.add(new CubeQueryResultRow(groupKey, aggValue, activeMeasure, targetCurrency));
+        }
+
+        // Sorting
+        if (query.getSortByDimensionOrMeasure() != null) {
+            String sortField = query.getSortByDimensionOrMeasure();
+            boolean isAsc = query.getSortDirection() == SortDirection.ASC;
+            resultRows.sort((r1, r2) -> {
+                int cmp;
+                if (sortField.equalsIgnoreCase(activeMeasure)) {
+                    cmp = Double.compare(r1.getValue(), r2.getValue());
+                } else {
+                    Object val1 = r1.getDimensions().get(sortField);
+                    Object val2 = r2.getDimensions().get(sortField);
+                    cmp = String.valueOf(val1).compareTo(String.valueOf(val2));
+                }
+                return isAsc ? cmp : -cmp;
+            });
+        }
+
+        return new CubeQueryResult(resultRows, totalOverall);
+    }
+
+    public Integer detectMostRecentYear(Dataset dataset) {
+        Optional<Dimension> yearDim = dataset.getModel().getDimensions().stream()
+                .filter(d -> d.getType() == DimensionType.YEAR)
+                .findFirst();
+        if (yearDim.isEmpty()) return null;
+
+        String name = yearDim.get().getName();
+        return dataset.getRecords().stream()
+                .map(r -> r.getInteger(name))
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(null);
+    }
+}
+
+// File: VisualizationType.java
+public enum VisualizationType {
+    TREEMAP,
+    BUBBLE_TREE,
+    MAP,
+    PIVOT_TABLE
+}
+
+// File: MapColorPalette.java
+public class MapColorPalette {
+    private final String lowColor;
+    private final String midColor;
+    private final String highColor;
+
+    public MapColorPalette(String lowColor, String midColor, String highColor) {
+        this.lowColor = lowColor;
+        this.midColor = midColor;
+        this.highColor = highColor;
+    }
+
+    public static MapColorPalette defaultPalette() {
+        return new MapColorPalette("#e0f3f8", "#67a9cf", "#02818a");
+    }
+
+    public String getLowColor() {
+        return lowColor;
+    }
+
+    public String getMidColor() {
+        return midColor;
+    }
+
+    public String getHighColor() {
+        return highColor;
+    }
+
+    @Override
+    public String toString() {
+        return "MapColorPalette{" + lowColor + " -> " + midColor + " -> " + highColor + "}";
+    }
+}
+
+// File: ViewState.java
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public class ViewState {
+    private final String id;
+    private final String datasetId;
+    private VisualizationType visualizationType;
+    private Integer selectedYear;
+    private int steppedZoomLevel = 1;
+    private MapColorPalette colorPalette;
+    private String textualDescription;
+    private final Map<String, Object> filters = new HashMap<>();
+
+    public ViewState(String datasetId, VisualizationType visualizationType) {
+        this.id = UUID.randomUUID().toString().substring(0, 8);
+        this.datasetId = datasetId;
+        this.visualizationType = visualizationType;
+        this.colorPalette = MapColorPalette.defaultPalette();
+        this.textualDescription = "Fiscal visualization for dataset " + datasetId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getDatasetId() {
+        return datasetId;
+    }
+
+    public VisualizationType getVisualizationType() {
+        return visualizationType;
+    }
+
+    public void setVisualizationType(VisualizationType visualizationType) {
+        this.visualizationType = visualizationType;
+    }
+
+    public Integer getSelectedYear() {
+        return selectedYear;
+    }
+
+    public void setSelectedYear(Integer selectedYear) {
+        this.selectedYear = selectedYear;
+    }
+
+    public int getSteppedZoomLevel() {
+        return steppedZoomLevel;
+    }
+
+    public void zoomIn() {
+        if (steppedZoomLevel < 10) steppedZoomLevel++;
+    }
+
+    public void zoomOut() {
+        if (steppedZoomLevel > 1) steppedZoomLevel--;
+    }
+
+    public void setSteppedZoomLevel(int level) {
+        if (level >= 1 && level <= 10) this.steppedZoomLevel = level;
+    }
+
+    public MapColorPalette getColorPalette() {
+        return colorPalette;
+    }
+
+    public void setColorPalette(MapColorPalette colorPalette) {
+        this.colorPalette = colorPalette;
+    }
+
+    public String getTextualDescription() {
+        return textualDescription;
+    }
+
+    public void setTextualDescription(String textualDescription) {
+        this.textualDescription = textualDescription;
+    }
+
+    public Map<String, Object> getFilters() {
+        return filters;
+    }
+
+    public void addFilter(String key, Object val) {
+        filters.put(key, val);
+    }
+
+    @Override
+    public String toString() {
+        return "ViewState{" + "id='" + id + '\'' + ", datasetId='" + datasetId + '\'' + ", type=" + visualizationType + ", year=" + selectedYear + ", zoom=" + steppedZoomLevel + '}';
+    }
+}
+
+// File: VisualStateRepository.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+public class VisualStateRepository {
+    private final Map<String, ViewState> states = new HashMap<>();
+
+    public void save(ViewState state) {
+        states.put(state.getId(), state);
+    }
+
+    public Optional<ViewState> findById(String id) {
+        return Optional.ofNullable(states.get(id));
+    }
+
+    public List<ViewState> findAll() {
+        return new ArrayList<>(states.values());
+    }
+}
+
+// File: SharingService.java
+import java.util.Base64;
+
+public class SharingService {
+    private final String baseUrl;
+
+    public SharingService(String baseUrl) {
+        this.baseUrl = baseUrl;
+    }
+
+    public String generateShareableUrl(ViewState viewState) {
+        return baseUrl + "/view/" + viewState.getId();
+    }
+
+    public String generateSocialShareLink(String platform, ViewState viewState) {
+        String url = generateShareableUrl(viewState);
+        String text = "Explore fiscal spending: " + viewState.getTextualDescription();
+        return switch (platform.toLowerCase()) {
+            case "twitter", "x" -> "https://twitter.com/intent/tweet?text=" + text.replace(" ", "%20") + "&url=" + url;
+            case "facebook" -> "https://www.facebook.com/sharer/sharer.php?u=" + url;
+            case "linkedin" -> "https://www.linkedin.com/sharing/share-offsite/?url=" + url;
+            default -> url;
+        };
+    }
+
+    public byte[] downloadImageOfViewState(ViewState viewState) {
+        // Generates an offline simulated PNG/SVG representation
+        String mockSvg = "<svg width='400' height='300' xmlns='http://www.w3.org/2000/svg'>" +
+                "<rect width='100%' height='100%' fill='" + viewState.getColorPalette().getMidColor() + "'/>" +
+                "<text x='20' y='50' fill='white'>" + viewState.getTextualDescription() + "</text>" +
+                "<text x='20' y='80' fill='white'>Type: " + viewState.getVisualizationType() + " | Year: " + viewState.getSelectedYear() + "</text>" +
+                "</svg>";
+        return mockSvg.getBytes();
+    }
+
+    public String shareImageToSocialNetwork(String platform, ViewState viewState) {
+        byte[] imageBytes = downloadImageOfViewState(viewState);
+        String base64 = Base64.getEncoder().encodeToString(imageBytes);
+        return "Shared " + imageBytes.length + " bytes image (" + viewState.getId() + ") to " + platform + " [DataPayloadBase64:" + base64.substring(0, 15) + "...]";
+    }
+}
+
+// File: VisualGalleryApp.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class VisualGalleryApp {
+    private final List<GalleryExample> examples = new ArrayList<>();
+
+    public record GalleryExample(String title, String description, VisualizationType type, String viewStateUrl) {}
+
+    public VisualGalleryApp() {
+        initExamples();
+    }
+
+    private void initExamples() {
+        examples.add(new GalleryExample(
+                "Health Spending Breakdown 2024",
+                "Treemap showing department-level health expenditures.",
+                VisualizationType.TREEMAP,
+                "https://openspending.org/view/health24"
+        ));
+        examples.add(new GalleryExample(
+                "Regional Infrastructure Map",
+                "Choropleth map of state highway spending across German federal states.",
+                VisualizationType.MAP,
+                "https://openspending.org/view/de-infra"
+        ));
+        examples.add(new GalleryExample(
+                "Education Bubble Tree",
+                "Hierarchical bubble tree of primary and higher education funding.",
+                VisualizationType.BUBBLE_TREE,
+                "https://openspending.org/view/edu-bubble"
+        ));
+    }
+
+    public List<GalleryExample> getExamples() {
+        return new ArrayList<>(examples);
+    }
+
+    public void addExample(GalleryExample example) {
+        examples.add(example);
+    }
+}
+
+// File: BrandConfig.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class BrandConfig {
+    private String brandName;
+    private String iconUrl;
+    private String primaryColor;
+    private final Map<String, String> viewerStyling = new HashMap<>();
+
+    public BrandConfig(String brandName, String iconUrl, String primaryColor) {
+        this.brandName = brandName;
+        this.iconUrl = iconUrl;
+        this.primaryColor = primaryColor;
+    }
+
+    public String getBrandName() {
+        return brandName;
+    }
+
+    public void setBrandName(String brandName) {
+        this.brandName = brandName;
+    }
+
+    public String getIconUrl() {
+        return iconUrl;
+    }
+
+    public void setIconUrl(String iconUrl) {
+        this.iconUrl = iconUrl;
+    }
+
+    public String getPrimaryColor() {
+        return primaryColor;
+    }
+
+    public void setPrimaryColor(String primaryColor) {
+        this.primaryColor = primaryColor;
+    }
+
+    public Map<String, String> getViewerStyling() {
+        return viewerStyling;
+    }
+
+    public void setStyleProperty(String property, String value) {
+        viewerStyling.put(property, value);
+    }
+
+    @Override
+    public String toString() {
+        return "BrandConfig{" + "name='" + brandName + '\'' + ", primaryColor='" + primaryColor + '\'' + ", styling=" + viewerStyling + '}';
+    }
+}
+
+// File: ViewerTranslationService.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class ViewerTranslationService {
+    // Language Code -> (DataType/HierarchyKey -> TranslatedString)
+    private final Map<String, Map<String, String>> translations = new HashMap<>();
+
+    public ViewerTranslationService() {
+        Map<String, String> es = new HashMap<>();
+        es.put("Administrative", "Administrativo");
+        es.put("Economic", "Económico");
+        es.put("Functional", "Funcional");
+        es.put("Program", "Programa");
+        translations.put("es", es);
+
+        Map<String, String> fr = new HashMap<>();
+        fr.put("Administrative", "Administratif");
+        fr.put("Economic", "Économique");
+        fr.put("Functional", "Fonctionnel");
+        fr.put("Program", "Programme");
+        translations.put("fr", fr);
+    }
+
+    public void registerTranslation(String language, String term, String translated) {
+        translations.computeIfAbsent(language.toLowerCase(), l -> new HashMap<>()).put(term, translated);
+    }
+
+    public String translate(String term, String language) {
+        Map<String, String> langMap = translations.get(language.toLowerCase());
+        if (langMap != null && langMap.containsKey(term)) {
+            return langMap.get(term);
+        }
+        return term; // default fallback
+    }
+}
+
+// File: BlogPost.java
+import java.time.LocalDate;
+
+public record BlogPost(String id, String title, String author, String excerpt, String url, LocalDate publishDate) {}
+
+// File: CommunityBlogService.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+public class CommunityBlogService {
+    private final List<BlogPost> posts = new ArrayList<>();
+
+    public CommunityBlogService() {
+        initDefaultPosts();
+    }
+
+    private void initDefaultPosts() {
+        posts.add(new BlogPost(
+                "blog-1",
+                "Fiscal Openness in Sub-Saharan Africa: New Data Released",
+                "Elena Rossi",
+                "Highlights from recent open spending initiatives across five regional governments.",
+                "https://openspending.org/blog/sub-saharan-africa-2024",
+                LocalDate.now().minusDays(10)
+        ));
+        posts.add(new BlogPost(
+                "blog-2",
+                "Standardizing Municipal Budgets using OpenSpending Packager",
+                "Alex Rivera",
+                "Step-by-step guide on how cities are transforming legacy Excel ledgers into Fiscal Data Packages.",
+                "https://openspending.org/blog/municipal-budgets-packager",
+                LocalDate.now().minusDays(3)
+        ));
+    }
+
+    public List<BlogPost> getAllPosts() {
+        return new ArrayList<>(posts);
+    }
+
+    public void publishPost(BlogPost post) {
+        posts.add(post);
+    }
+}
+
+// File: DatasetRepository.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+public class DatasetRepository {
+    private final Map<String, Dataset> storage = new HashMap<>();
+
+    public void save(Dataset dataset) {
+        storage.put(dataset.getId(), dataset);
+    }
+
+    public Optional<Dataset> findById(String id) {
+        return Optional.ofNullable(storage.get(id));
+    }
+
+    public boolean delete(String id) {
+        return storage.remove(id) != null;
+    }
+
+    public List<Dataset> findAll() {
+        return new ArrayList<>(storage.values());
+    }
+
+    public List<Dataset> findByOwner(String ownerUserId) {
+        return storage.values().stream()
+                .filter(d -> d.getOwnerUserId().equals(ownerUserId))
+                .collect(Collectors.toList());
+    }
+
+    public List<Dataset> findPublicDatasets() {
+        return storage.values().stream()
+                .filter(d -> d.getVisibility() == DatasetVisibility.PUBLIC)
+                .collect(Collectors.toList());
+    }
+
+    public List<Dataset> searchPublic(String query) {
+        String lowerQuery = query.toLowerCase();
+        return findPublicDatasets().stream()
+                .filter(d -> d.getTitle().toLowerCase().contains(lowerQuery) ||
+                        d.getDescription().toLowerCase().contains(lowerQuery) ||
+                        d.getMetadata().values().stream().anyMatch(val -> val.toLowerCase().contains(lowerQuery)))
+                .collect(Collectors.toList());
+    }
+}
+
+// File: OpenSpendingApi.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+
+public class OpenSpendingApi {
+    private final DatasetRepository datasetRepository;
+    private final GeoSpatialService geoSpatialService;
+    private final CubeEngine cubeEngine;
+    private final CurrencyConverter currencyConverter;
+    private final VisualStateRepository visualStateRepository;
+    private final SharingService sharingService;
+    private final BrandConfig brandConfig;
+    private final ViewerTranslationService translationService;
+    private final CommunityBlogService blogService;
+    private final VisualGalleryApp galleryApp;
+
+    public OpenSpendingApi(DatasetRepository datasetRepository,
+                           GeoSpatialService geoSpatialService,
+                           CubeEngine cubeEngine,
+                           CurrencyConverter currencyConverter,
+                           VisualStateRepository visualStateRepository,
+                           SharingService sharingService,
+                           BrandConfig brandConfig,
+                           ViewerTranslationService translationService,
+                           CommunityBlogService blogService,
+                           VisualGalleryApp galleryApp) {
+        this.datasetRepository = datasetRepository;
+        this.geoSpatialService = geoSpatialService;
+        this.cubeEngine = cubeEngine;
+        this.currencyConverter = currencyConverter;
+        this.visualStateRepository = visualStateRepository;
+        this.sharingService = sharingService;
+        this.brandConfig = brandConfig;
+        this.translationService = translationService;
+        this.blogService = blogService;
+        this.galleryApp = galleryApp;
+    }
+
+    // Role verification
+    public boolean isPublisher(User user) {
+        return user != null && user.isPublisher();
+    }
+
+    public boolean isAdministrator(User user) {
+        return user != null && user.isAdministrator();
+    }
+
+    // Dataset Management
+    public Dataset publishDataset(User user, Dataset dataset) {
+        if (!isPublisher(user)) {
+            throw new SecurityException("User does not have Publisher permissions.");
+        }
+        datasetRepository.save(dataset);
+        return dataset;
+    }
+
+    public void editDataset(User user, String datasetId, String newTitle, String newDescription, Map<String, String> metadata) {
+        Dataset ds = datasetRepository.findById(datasetId)
+                .orElseThrow(() -> new IllegalArgumentException("Dataset not found: " + datasetId));
+        if (!ds.getOwnerUserId().equals(user.getId()) && !isAdministrator(user)) {
+            throw new SecurityException("Cannot edit dataset owned by another user.");
+        }
+        if (newTitle != null) ds.setTitle(newTitle);
+        if (newDescription != null) ds.setDescription(newDescription);
+        if (metadata != null) {
+            metadata.forEach(ds::addMetadata);
+        }
+    }
+
+    public void editModel(User user, String datasetId, DataModel newModel) {
+        Dataset ds = datasetRepository.findById(datasetId)
+                .orElseThrow(() -> new IllegalArgumentException("Dataset not found: " + datasetId));
+        if (!ds.getOwnerUserId().equals(user.getId()) && !isAdministrator(user)) {
+            throw new SecurityException("Cannot edit model for dataset owned by another user.");
+        }
+        ds.setModel(newModel);
+        // re-apply records with any constants
+        ds.setRecords(new ArrayList<>(ds.getRecords()));
+    }
+
+    public void editDataSource(User user, String datasetId, DataSource newDataSource) {
+        Dataset ds = datasetRepository.findById(datasetId)
+                .orElseThrow(() -> new IllegalArgumentException("Dataset not found: " + datasetId));
+        if (!ds.getOwnerUserId().equals(user.getId()) && !isAdministrator(user)) {
+            throw new SecurityException("Cannot edit data source for dataset owned by another user.");
+        }
+        ds.setDataSource(newDataSource);
+    }
+
+    public void setDatasetVisibility(User user, String datasetId, DatasetVisibility visibility) {
+        Dataset ds = datasetRepository.findById(datasetId)
+                .orElseThrow(() -> new IllegalArgumentException("Dataset not found: " + datasetId));
+        if (!ds.getOwnerUserId().equals(user.getId()) && !isAdministrator(user)) {
+            throw new SecurityException("Cannot change visibility for dataset owned by another user.");
+        }
+        ds.setVisibility(visibility);
+    }
+
+    public boolean deleteDataset(User user, String datasetId) {
+        Dataset ds = datasetRepository.findById(datasetId)
+                .orElseThrow(() -> new IllegalArgumentException("Dataset not found: " + datasetId));
+        if (!ds.getOwnerUserId().equals(user.getId()) && !isAdministrator(user)) {
+            throw new SecurityException("Cannot delete dataset owned by another user.");
+        }
+        return datasetRepository.delete(datasetId);
+    }
+
+    public List<Dataset> listDatasetsForUser(User user) {
+        if (isAdministrator(user)) {
+            return datasetRepository.findAll();
+        }
+        return datasetRepository.findByOwner(user.getId());
+    }
+
+    public List<Dataset> searchPublicDatasets(String query) {
+        return datasetRepository.searchPublic(query);
+    }
+
+    // Auto update trigger
+    public void triggerDataSourceAutoUpdate(String datasetId, List<DataRow> updatedRows) {
+        Dataset ds = datasetRepository.findById(datasetId)
+                .orElseThrow(() -> new IllegalArgumentException("Dataset not found: " + datasetId));
+        if (ds.getDataSource().isAutoUpdate()) {
+            ds.setRecords(updatedRows);
+            ds.getDataSource().refreshTimestamp();
+        }
+    }
+
+    // Cross-Dataset queries
+    public List<Dataset> queryDatasetsByMetadata(String metaKey, String metaValue) {
+        return datasetRepository.findPublicDatasets().stream()
+                .filter(d -> metaValue.equalsIgnoreCase(d.getMetadata().get(metaKey)))
+                .toList();
+    }
+
+    public List<DataRow> queryAcrossDatasetsByData(String column, Object value) {
+        List<DataRow> combined = new ArrayList<>();
+        for (Dataset d : datasetRepository.findPublicDatasets()) {
+            for (DataRow r : d.getRecords()) {
+                if (Objects.equals(String.valueOf(r.get(column)), String.valueOf(value))) {
+                    combined.add(r);
+                }
+            }
+        }
+        return combined;
+    }
+
+    // Geospatial API methods
+    public List<GeoLocation> getBorderingRegions(String hascCode) {
+        return geoSpatialService.getBorderingRegions(hascCode);
+    }
+
+    public String getPolygonForQuery(String hascCode) {
+        return geoSpatialService.getPolygonForQuery(hascCode);
+    }
+
+    public Optional<GeoLocation> getGeoLocationByHasc(String hascCode) {
+        return geoSpatialService.findByHasc(hascCode);
+    }
+
+    public void addGeoJsonSource(Dataset dataset, String geoJsonUrl) {
+        dataset.addGeoJsonSourceUrl(geoJsonUrl);
+    }
+
+    // Default visualization initializer (selects most recent year)
+    public ViewState createDefaultVisualization(Dataset dataset, VisualizationType type) {
+        ViewState state = new ViewState(dataset.getId(), type);
+        Integer mostRecentYear = cubeEngine.detectMostRecentYear(dataset);
+        if (mostRecentYear != null) {
+            state.setSelectedYear(mostRecentYear);
+            state.addFilter("year", mostRecentYear);
+        }
+        visualStateRepository.save(state);
+        return state;
+    }
+
+    // Getters for subsystems
+    public DatasetRepository getDatasetRepository() {
+        return datasetRepository;
+    }
+
+    public GeoSpatialService getGeoSpatialService() {
+        return geoSpatialService;
+    }
+
+    public CubeEngine getCubeEngine() {
+        return cubeEngine;
+    }
+
+    public CurrencyConverter getCurrencyConverter() {
+        return currencyConverter;
+    }
+
+    public VisualStateRepository getVisualStateRepository() {
+        return visualStateRepository;
+    }
+
+    public SharingService getSharingService() {
+        return sharingService;
+    }
+
+    public BrandConfig getBrandConfig() {
+        return brandConfig;
+    }
+
+    public ViewerTranslationService getTranslationService() {
+        return translationService;
+    }
+
+    public CommunityBlogService getBlogService() {
+        return blogService;
+    }
+
+    public VisualGalleryApp getGalleryApp() {
+        return galleryApp;
+    }
+}
+
+// File: PythonClientSimulator.java
+import java.util.List;
+
+/**
+ * Simulates the OpenSpending Python client (e.g., 'os-client')
+ * allows command line / programmatic bulk upload and management.
+ */
+public class PythonClientSimulator {
+    private final OpenSpendingApi api;
+    private final User authenticatedUser;
+
+    public PythonClientSimulator(OpenSpendingApi api, User authenticatedUser) {
+        this.api = api;
+        this.authenticatedUser = authenticatedUser;
+    }
+
+    public Dataset bulkAddDataset(String datasetId, String title, String description,
+                                  DataModel model, DataSourceType sourceType,
+                                  String sourcePath, List<DataRow> rows, boolean isHidden) {
+        DataSource ds = new DataSource(sourceType, sourcePath, true);
+        DatasetVisibility vis = isHidden ? DatasetVisibility.HIDDEN : DatasetVisibility.PUBLIC;
+        Dataset dataset = new Dataset(datasetId, title, description, authenticatedUser.getId(), vis, model, ds);
+        dataset.setRecords(rows);
+        api.publishDataset(authenticatedUser, dataset);
+        return dataset;
+    }
+
+    public String dumpCubeCsv(String datasetId, CubeQuery query) {
+        Dataset ds = api.getDatasetRepository().findById(datasetId)
+                .orElseThrow(() -> new IllegalArgumentException("Dataset not found"));
+        CubeQueryResult res = api.getCubeEngine().executeQuery(ds, query);
+        return res.toCsv();
+    }
+}
+
+// File: Main.java
+import java.util.List;
+import java.util.Map;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=== OpenSpending Platform System Demo ===\n");
+
+        // 1. Setup platform core services
+        DatasetRepository datasetRepo = new DatasetRepository();
+        GeoSpatialService geoService = new GeoSpatialService();
+        CurrencyConverter currencyConverter = new CurrencyConverter();
+        CubeEngine cubeEngine = new CubeEngine(currencyConverter, geoService);
+        VisualStateRepository visualStateRepo = new VisualStateRepository();
+        SharingService sharingService = new SharingService("https://openspending.org");
+        BrandConfig brandConfig = new BrandConfig("OpenSpending NextGen", "/assets/icon.png", "#1a73e8");
+        ViewerTranslationService translationService = new ViewerTranslationService();
+        CommunityBlogService blogService = new CommunityBlogService();
+        VisualGalleryApp galleryApp = new VisualGalleryApp();
+
+        OpenSpendingApi api = new OpenSpendingApi(
+                datasetRepo, geoService, cubeEngine, currencyConverter,
+                visualStateRepo, sharingService, brandConfig, translationService,
+                blogService, galleryApp
+        );
+
+        // 2. Users, roles and username setting
+        User publisherUser = new User("usr-pub-1", "temp_username", "publisher@openspending.org", Role.PUBLISHER);
+        publisherUser.setUsername("alice_publisher"); // Story: User sets own username
+
+        User adminUser = new User("usr-adm-1", "admin_bob", "admin@openspending.org", Role.ADMINISTRATOR);
+        User consumerUser = new User("usr-con-1", "clara_viewer", "clara@example.org", Role.CONSUMER);
+
+        System.out.println("Role check for alice_publisher: Publisher=" + api.isPublisher(publisherUser) + ", Admin=" + api.isAdministrator(publisherUser));
+        System.out.println("Role check for admin_bob: Publisher=" + api.isPublisher(adminUser) + ", Admin=" + api.isAdministrator(adminUser));
+
+        // 3. CSV Validation
+        String sampleCsv = "year,hasc,functional_area,amount\n" +
+                "2022,DE.NW,Education,1200000\n" +
+                "2022,DE.HE,Education,800000\n" +
+                "2023,DE.NW,Education,1300000\n" +
+                "2023,DE.HE,Education,900000\n" +
+                "2023,DE.RP,Health,750000";
+
+        CsvValidationResult validationResult = CsvValidator.validateCsv(sampleCsv);
+        System.out.println("\nCSV Validation passed: " + validationResult.isValid());
+
+        // 4. Packager with Constants and Model creation
+        DataModel model = new DataModel();
+        model.addDimension(new Dimension("year", DimensionType.YEAR));
+        model.addDimension(new Dimension("hasc", DimensionType.GEO_HASC));
+        model.addDimension(new Dimension("functional_area", DimensionType.CATEGORY));
+        // Packager constant dimension: currency constant = EUR
+        model.addDimension(new Dimension("dataset_scope", DimensionType.STRING, true, "National"));
+        model.addMeasure(new Measure("amount", "EUR"));
+
+        // Packager imports
+        List<DataRow> rowsFromCsv = DataPackager.importCsv(sampleCsv);
+
+        // 5. Publish dataset in HIDDEN state first
+        DataSource dataSource = new DataSource(DataSourceType.CSV, "https://data.source/budget.csv", true);
+        Dataset dataset = new Dataset(
+                "budget-de-2023",
+                "German Regional Budgets",
+                "Federal state educational and health expenses",
+                publisherUser.getId(),
+                DatasetVisibility.HIDDEN,
+                model,
+                dataSource
+        );
+        dataset.setRecords(rowsFromCsv);
+        dataset.addMetadata("country", "Germany");
+        dataset.addMetadata("topic", "fiscal-transparency");
+
+        api.publishDataset(publisherUser, dataset);
+        System.out.println("\nPublished dataset initial visibility: " + dataset.getVisibility());
+
+        // Publisher views self datasets
+        List<Dataset> myDatasets = api.listDatasetsForUser(publisherUser);
+        System.out.println("Datasets owned by " + publisherUser.getUsername() + ": " + myDatasets.size());
+
+        // Publisher edits dataset and switches to PUBLIC
+        api.editDataset(publisherUser, dataset.getId(), "German Regional Budgets (Enhanced)", "Updated with notes", Map.of("version", "1.1"));
+        api.setDatasetVisibility(publisherUser, dataset.getId(), DatasetVisibility.PUBLIC);
+        System.out.println("Dataset after publisher update: '" + dataset.getTitle() + "', Visibility: " + dataset.getVisibility());
+
+        // 6. Map Requirements Check & GeoJSON source provision
+        GeoMapRequirements mapReq = GeoRequirementChecker.checkMapRequirements(dataset);
+        System.out.println("\nGeo visualization eligible: " + mapReq.isEligibleForMapVisualization() + " - " + mapReq.getDescription());
+        api.addGeoJsonSource(dataset, "https://geo.openspending.org/germany-states.geojson");
+
+        // 7. Spatial API: HASC codes, bordering regions, and polygons
+        System.out.println("\nQuerying bordering regions for DE.NW (North Rhine-Westphalia):");
+        List<GeoLocation> borders = api.getBorderingRegions("DE.NW");
+        for (GeoLocation loc : borders) {
+            System.out.println(" - Bordering: " + loc.getName() + " (" + loc.getHascCode() + ")");
+        }
+        System.out.println("Polygon for DE.NW: " + api.getPolygonForQuery("DE.NW"));
+
+        // 8. Visualizing default to the most recent year
+        ViewState viewState = api.createDefaultVisualization(dataset, VisualizationType.MAP);
+        System.out.println("\nDefault visualization created. Selected year (most recent): " + viewState.getSelectedYear());
+
+        // 9. Consuming User operations: Stepped Zoom, Map Palette, Descriptions, Sharing
+        viewState.zoomIn();
+        viewState.zoomIn();
+        viewState.setColorPalette(new MapColorPalette("#f7fbff", "#6baed6", "#08519c"));
+        viewState.setTextualDescription("Distribution of 2023 Fiscal Spending across German States");
+
+        System.out.println("Stepped zoom level: " + viewState.getSteppedZoomLevel());
+        System.out.println("Color palette: " + viewState.getColorPalette());
+
+        String shareUrl = sharingService.generateShareableUrl(viewState);
+        String twitterShare = sharingService.generateSocialShareLink("twitter", viewState);
+        System.out.println("Shareable URL: " + shareUrl);
+        System.out.println("Social network URL: " + twitterShare);
+
+        byte[] img = sharingService.downloadImageOfViewState(viewState);
+        System.out.println("Downloaded image size: " + img.length + " bytes");
+        System.out.println(sharingService.shareImageToSocialNetwork("LinkedIn", viewState));
+
+        // 10. Cube Engine: Filter, Sort, Aggregate, Currency Conversion, and Normalization
+        System.out.println("\n--- Cube Engine Query: Group by HASC, Aggregated SUM, Converted to USD ---");
+        CubeQuery queryUsd = new CubeQuery()
+                .filter("year", 2023)
+                .groupBy("hasc")
+                .measure("amount")
+                .aggregate(AggregationType.SUM)
+                .targetCurrency("USD")
+                .sort("amount", SortDirection.DESC);
+
+        CubeQueryResult resUsd = cubeEngine.executeQuery(dataset, queryUsd);
+        for (CubeQueryResultRow r : resUsd.getRows()) {
+            System.out.println("  " + r);
+        }
+        System.out.println("CSV Output of Cube query:\n" + resUsd.toCsv());
+
+        // Normalization by Population
+        System.out.println("--- Cube Query Normalized by Population (EUR per capita) ---");
+        CubeQuery normQuery = new CubeQuery()
+                .filter("year", 2023)
+                .groupBy("hasc")
+                .measure("amount")
+                .aggregate(AggregationType.SUM)
+                .targetCurrency("EUR")
+                .normalize(NormalizationType.POPULATION);
+        CubeQueryResult normRes = cubeEngine.executeQuery(dataset, normQuery);
+        for (CubeQueryResultRow r : normRes.getRows()) {
+            System.out.printf("  HASC: %s => Per capita spending: %.4f %s%n",
+                    r.getDimensions().get("hasc"), r.getValue(), r.getCurrency());
+        }
+
+        // Relative percentage of measure to dataset total
+        System.out.println("--- Cube Query Relative Percentage of Total ---");
+        CubeQuery pctQuery = new CubeQuery()
+                .filter("year", 2023)
+                .groupBy("hasc")
+                .measure("amount")
+                .normalize(NormalizationType.PERCENTAGE_OF_TOTAL);
+        CubeQueryResult pctRes = cubeEngine.executeQuery(dataset, pctQuery);
+        for (CubeQueryResultRow r : pctRes.getRows()) {
+            System.out.printf("  HASC: %s => %.2f%% of 2023 total%n", r.getDimensions().get("hasc"), r.getValue());
+        }
+
+        // 11. Search public datasets by title and metadata
+        System.out.println("\nSearching public datasets with term 'Germany':");
+        List<Dataset> searchResults = api.searchPublicDatasets("Germany");
+        searchResults.forEach(ds -> System.out.println("  Found: " + ds.getTitle() + " (ID: " + ds.getId() + ")"));
+
+        // 12. Python Client Simulation: Bulk upload
+        PythonClientSimulator pythonClient = new PythonClientSimulator(api, publisherUser);
+        DataModel cityModel = new DataModel(
+                List.of(new Dimension("city", DimensionType.STRING), new Dimension("year", DimensionType.YEAR)),
+                List.of(new Measure("budget", "USD"))
+        );
+        DataRow r1 = new DataRow(Map.of("city", "Munich", "year", 2023, "budget", 5000000));
+        DataRow r2 = new DataRow(Map.of("city", "Berlin", "year", 2023, "budget", 8000000));
+        Dataset cityDs = pythonClient.bulkAddDataset(
+                "city-budgets", "German City Budgets", "Bulk uploaded from Python",
+                cityModel, DataSourceType.JSON, "s3://bulk/cities.json", List.of(r1, r2), false
+        );
+        System.out.println("\nDataset added via Python client: " + cityDs.getTitle());
+
+        // 13. Auto update trigger demo
+        System.out.println("\nSimulating auto-update from changed remote source...");
+        DataRow r3 = new DataRow(Map.of("city", "Hamburg", "year", 2023, "budget", 6000000));
+        api.triggerDataSourceAutoUpdate(cityDs.getId(), List.of(r1, r2, r3));
+        System.out.println("Updated record count: " + cityDs.getRecords().size() + " at " + cityDs.getDataSource().getLastUpdated());
+
+        // 14. Embedding, Styling customization, and Viewer Translations
+        BrandConfig brand = api.getBrandConfig();
+        brand.setBrandName("MyOrg Fiscal Portal");
+        brand.setPrimaryColor("#008080");
+        brand.setStyleProperty("font-family", "Inter, sans-serif");
+        System.out.println("\nBrand configuration updated: " + brand);
+
+        String translatedHierarchy = translationService.translate("Administrative", "es");
+        System.out.println("Translated 'Administrative' to Spanish: " + translatedHierarchy);
+
+        // 15. Community Blog and Visual Gallery
+        System.out.println("\nCommunity Blog highlights:");
+        for (BlogPost post : blogService.getAllPosts()) {
+            System.out.println(" - " + post.title() + " (by " + post.author() + ")");
+        }
+
+        System.out.println("\nVisual Gallery showcase examples:");
+        for (VisualGalleryApp.GalleryExample ex : galleryApp.getExamples()) {
+            System.out.println(" - [" + ex.type() + "] " + ex.title() + " -> " + ex.viewStateUrl());
+        }
+
+        // 16. Administrator actions: View all, Hide any dataset, Delete any dataset
+        System.out.println("\n--- Administrator Actions ---");
+        List<Dataset> allForAdmin = api.listDatasetsForUser(adminUser);
+        System.out.println("Admin sees total datasets: " + allForAdmin.size());
+
+        // Admin hides public dataset
+        api.setDatasetVisibility(adminUser, dataset.getId(), DatasetVisibility.HIDDEN);
+        System.out.println("Admin hid dataset '" + dataset.getId() + "'. New status: " + dataset.getVisibility());
+
+        // Admin deletes bulk test dataset
+        boolean deleted = api.deleteDataset(adminUser, cityDs.getId());
+        System.out.println("Admin deleted test dataset: " + deleted);
+        System.out.println("Remaining total datasets: " + api.listDatasetsForUser(adminUser).size());
+
+        System.out.println("\nDemo completed successfully.");
+    }
+}

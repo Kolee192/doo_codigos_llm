@@ -1,0 +1,1865 @@
+// File: UserRole.java
+public enum UserRole {
+    ADMINISTRATOR,
+    ARCHIVIST,
+    ASSISTANT_ARCHIVIST,
+    DONOR_REPRESENTATIVE,
+    RESEARCHER,
+    RAC_STAFF
+}
+
+// File: Permission.java
+public enum Permission {
+    READ_PUBLIC,
+    READ_RESTRICTED,
+    READ_UNPROCESSED,
+    UPLOAD_FILE,
+    BATCH_EDIT,
+    APPLY_RESTRICTION,
+    APPLY_RIGHTS,
+    PROCESS_IMAGES,
+    CREATE_COLLECTION,
+    ACCRUAL_SUBMISSION,
+    MANAGE_USERS,
+    VIEW_NON_PUBLIC_AIDS,
+    DOWNLOAD_FILES,
+    MANAGE_LICENSES
+}
+
+// File: UserGroup.java
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+public class UserGroup {
+    private final String id;
+    private String name;
+    private final Set<Permission> permissions = new HashSet<>();
+    private final Set<String> visibleMetadataFields = new HashSet<>();
+
+    public UserGroup(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void addPermission(Permission permission) {
+        permissions.add(permission);
+    }
+
+    public void removePermission(Permission permission) {
+        permissions.remove(permission);
+    }
+
+    public boolean hasPermission(Permission permission) {
+        return permissions.contains(permission);
+    }
+
+    public Set<Permission> getPermissions() {
+        return Collections.unmodifiableSet(permissions);
+    }
+
+    public void addVisibleMetadataField(String fieldName) {
+        visibleMetadataFields.add(fieldName);
+    }
+
+    public boolean canSeeMetadataField(String fieldName) {
+        return visibleMetadataFields.isEmpty() || visibleMetadataFields.contains(fieldName);
+    }
+
+    public Set<String> getVisibleMetadataFields() {
+        return Collections.unmodifiableSet(visibleMetadataFields);
+    }
+}
+
+// File: User.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class User {
+    private final String id;
+    private String username;
+    private String password;
+    private String email;
+    private UserRole role;
+    private UserGroup group;
+    private boolean activeDirectoryUser;
+    private String institutionId;
+    private final List<String> downloadHistory = new ArrayList<>();
+
+    public User(String id, String username, String password, String email, UserRole role, UserGroup group, boolean activeDirectoryUser) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.email = email;
+        this.role = role;
+        this.group = group;
+        this.activeDirectoryUser = activeDirectoryUser;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+
+    public UserGroup getGroup() {
+        return group;
+    }
+
+    public void setGroup(UserGroup group) {
+        this.group = group;
+    }
+
+    public boolean isActiveDirectoryUser() {
+        return activeDirectoryUser;
+    }
+
+    public void setActiveDirectoryUser(boolean activeDirectoryUser) {
+        this.activeDirectoryUser = activeDirectoryUser;
+    }
+
+    public String getInstitutionId() {
+        return institutionId;
+    }
+
+    public void setInstitutionId(String institutionId) {
+        this.institutionId = institutionId;
+    }
+
+    public boolean checkPassword(String candidate) {
+        return candidate != null && candidate.equals(this.password);
+    }
+
+    public void setPassword(String newPassword) {
+        this.password = newPassword;
+    }
+
+    public boolean hasPermission(Permission permission) {
+        return group != null && group.hasPermission(permission);
+    }
+
+    public void recordDownload(String fileId) {
+        downloadHistory.add(fileId);
+    }
+
+    public List<String> getDownloadHistory() {
+        return Collections.unmodifiableList(downloadHistory);
+    }
+}
+
+// File: AuthenticationService.java
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public class AuthenticationService {
+    private final Map<String, User> usersByUsername = new HashMap<>();
+    private final Map<String, String> resetTokens = new HashMap<>();
+
+    public void registerUser(User user) {
+        usersByUsername.put(user.getUsername(), user);
+    }
+
+    public User login(String username, String password, boolean isAdLogin) {
+        User user = usersByUsername.get(username);
+        if (user == null) {
+            return null;
+        }
+        if (isAdLogin) {
+            if (user.isActiveDirectoryUser()) {
+                return user;
+            }
+            return null;
+        }
+        if (user.checkPassword(password)) {
+            return user;
+        }
+        return null;
+    }
+
+    public String initiatePasswordReset(String username) {
+        User user = usersByUsername.get(username);
+        if (user == null) {
+            return null;
+        }
+        String token = UUID.randomUUID().toString();
+        resetTokens.put(token, username);
+        return token;
+    }
+
+    public boolean completePasswordReset(String token, String newPassword) {
+        String username = resetTokens.remove(token);
+        if (username == null) {
+            return false;
+        }
+        User user = usersByUsername.get(username);
+        if (user != null) {
+            user.setPassword(newPassword);
+            return true;
+        }
+        return false;
+    }
+}
+
+// File: RightsStatus.java
+public enum RightsStatus {
+    IN_COPYRIGHT("In Copyright", "http://rightsstatements.org/vocab/InC/1.0/"),
+    NO_COPYRIGHT_US("No Copyright - United States", "http://rightsstatements.org/vocab/NoC-US/1.0/"),
+    COPYRIGHT_UNDETERMINED("Copyright Undetermined", "http://rightsstatements.org/vocab/UND/1.0/"),
+    CC_BY("Creative Commons Attribution (CC-BY 4.0)", "https://creativecommons.org/licenses/by/4.0/"),
+    CC_BY_NC("Creative Commons Attribution-NonCommercial (CC-BY-NC 4.0)", "https://creativecommons.org/licenses/by-nc/4.0/");
+
+    private final String displayName;
+    private final String uri;
+
+    RightsStatus(String displayName, String uri) {
+        this.displayName = displayName;
+        this.uri = uri;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public String getUri() {
+        return uri;
+    }
+}
+
+// File: RightsStatement.java
+public class RightsStatement {
+    private final RightsStatus status;
+    private final String description;
+    private final boolean publicWebAllowed;
+    private final boolean socialMediaAllowed;
+
+    public RightsStatement(RightsStatus status, String description, boolean publicWebAllowed, boolean socialMediaAllowed) {
+        this.status = status;
+        this.description = description;
+        this.publicWebAllowed = publicWebAllowed;
+        this.socialMediaAllowed = socialMediaAllowed;
+    }
+
+    public RightsStatus getStatus() {
+        return status;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public boolean isPublicWebAllowed() {
+        return publicWebAllowed;
+    }
+
+    public boolean isSocialMediaAllowed() {
+        return socialMediaAllowed;
+    }
+
+    @Override
+    public String toString() {
+        return status.getDisplayName() + ": " + description + " (" + status.getUri() + ")";
+    }
+}
+
+// File: Restriction.java
+import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
+
+public class Restriction {
+    private boolean restricted;
+    private boolean restrictedFromView;
+    private LocalDate endDate;
+    private String restrictionDetails;
+    private final Set<String> allowedIps = new HashSet<>();
+    private final Set<String> allowedUserIds = new HashSet<>();
+
+    public Restriction() {
+        this.restricted = false;
+        this.restrictedFromView = false;
+    }
+
+    public boolean isRestricted() {
+        if (!restricted) {
+            return false;
+        }
+        if (endDate != null && LocalDate.now().isAfter(endDate)) {
+            restricted = false;
+            restrictedFromView = false;
+            return false;
+        }
+        return true;
+    }
+
+    public void setRestricted(boolean restricted) {
+        this.restricted = restricted;
+    }
+
+    public boolean isRestrictedFromView() {
+        return isRestricted() && restrictedFromView;
+    }
+
+    public void setRestrictedFromView(boolean restrictedFromView) {
+        this.restrictedFromView = restrictedFromView;
+        if (restrictedFromView) {
+            this.restricted = true;
+        }
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public String getRestrictionDetails() {
+        return restrictionDetails;
+    }
+
+    public void setRestrictionDetails(String restrictionDetails) {
+        this.restrictionDetails = restrictionDetails;
+    }
+
+    public void addAllowedIp(String ipAddress) {
+        allowedIps.add(ipAddress);
+    }
+
+    public void addAllowedUser(String userId) {
+        allowedUserIds.add(userId);
+    }
+
+    public boolean isIpAllowed(String ipAddress) {
+        return allowedIps.isEmpty() || allowedIps.contains(ipAddress);
+    }
+
+    public boolean isUserAllowed(String userId) {
+        return allowedUserIds.isEmpty() || allowedUserIds.contains(userId);
+    }
+
+    public boolean allowsAccess(User user, String ipAddress) {
+        if (!isRestricted()) {
+            return true;
+        }
+        if (user != null && user.hasPermission(Permission.READ_RESTRICTED)) {
+            return true;
+        }
+        if (user != null && isUserAllowed(user.getId())) {
+            return true;
+        }
+        if (ipAddress != null && isIpAllowed(ipAddress)) {
+            return true;
+        }
+        return false;
+    }
+}
+
+// File: Redaction.java
+import java.time.LocalDate;
+
+public class Redaction {
+    private final String id;
+    private final String description;
+    private final String redactedPortionIdentifier;
+    private final LocalDate expirationDate;
+
+    public Redaction(String id, String description, String redactedPortionIdentifier, LocalDate expirationDate) {
+        this.id = id;
+        this.description = description;
+        this.redactedPortionIdentifier = redactedPortionIdentifier;
+        this.expirationDate = expirationDate;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getRedactedPortionIdentifier() {
+        return redactedPortionIdentifier;
+    }
+
+    public LocalDate getExpirationDate() {
+        return expirationDate;
+    }
+
+    public boolean isCurrentlyRedacted() {
+        return expirationDate == null || LocalDate.now().isBefore(expirationDate) || LocalDate.now().isEqual(expirationDate);
+    }
+}
+
+// File: TechnicalMetadata.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class TechnicalMetadata {
+    private long fileSizeInBytes;
+    private String mimeType;
+    private int width;
+    private int height;
+    private int dpi;
+    private final Map<String, String> embeddedHeaders = new HashMap<>();
+
+    public TechnicalMetadata(long fileSizeInBytes, String mimeType, int width, int height, int dpi) {
+        this.fileSizeInBytes = fileSizeInBytes;
+        this.mimeType = mimeType;
+        this.width = width;
+        this.height = height;
+        this.dpi = dpi;
+    }
+
+    public long getFileSizeInBytes() {
+        return fileSizeInBytes;
+    }
+
+    public void setFileSizeInBytes(long fileSizeInBytes) {
+        this.fileSizeInBytes = fileSizeInBytes;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public void setMimeType(String mimeType) {
+        this.mimeType = mimeType;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public int getDpi() {
+        return dpi;
+    }
+
+    public void setDpi(int dpi) {
+        this.dpi = dpi;
+    }
+
+    public void embedHeader(String key, String value) {
+        embeddedHeaders.put(key, value);
+    }
+
+    public Map<String, String> getEmbeddedHeaders() {
+        return embeddedHeaders;
+    }
+}
+
+// File: MaterialType.java
+public enum MaterialType {
+    PHOTOGRAPH,
+    TEXT_DOCUMENT,
+    AUDIO,
+    VIDEO,
+    WORKING_PAPER,
+    LOAN_DOCUMENT,
+    INVENTORY,
+    INDEX_CARD,
+    RESEARCHER_REPORT,
+    DIARY,
+    FORM
+}
+
+// File: ColorMode.java
+public enum ColorMode {
+    COLOR,
+    BLACK_AND_WHITE,
+    GRAYSCALE
+}
+
+// File: DigitizationStandard.java
+public enum DigitizationStandard {
+    PRESERVATION_STANDARD,
+    ACCESS_ONLY
+}
+
+// File: AccessDerivative.java
+public class AccessDerivative {
+    public enum DerivativeType {
+        THUMBNAIL,
+        WEB_PREVIEW,
+        STREAMING_CLIP,
+        TEXT_OCR_SNIPPET
+    }
+
+    private final String id;
+    private final DerivativeType type;
+    private final String locationOrUrl;
+    private final String description;
+
+    public AccessDerivative(String id, DerivativeType type, String locationOrUrl, String description) {
+        this.id = id;
+        this.type = type;
+        this.locationOrUrl = locationOrUrl;
+        this.description = description;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public DerivativeType getType() {
+        return type;
+    }
+
+    public String getLocationOrUrl() {
+        return locationOrUrl;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+}
+
+// File: ArchivalFile.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class ArchivalFile {
+    private final String id;
+    private String title;
+    private String description;
+    private String collectionId;
+    private MaterialType materialType;
+    private ColorMode colorMode;
+    private DigitizationStandard digitizationStandard;
+    private LocalDate creationDate;
+    private LocalDate digitizationDate;
+    private boolean scanned;
+    private String photographer;
+    private final Set<String> peopleRepresented = new HashSet<>();
+    private String placeTaken;
+    private final Set<String> tags = new HashSet<>();
+    private String ocrText;
+    private String physicalLocation;
+    private String xDrivePath;
+    private boolean partialFolderDigitization;
+    private String partialFolderNote;
+    private byte[] rawContent;
+    private int perceptualHash;
+
+    private RightsStatement rightsStatement;
+    private Restriction restriction = new Restriction();
+    private TechnicalMetadata technicalMetadata;
+    private final List<AccessDerivative> derivatives = new ArrayList<>();
+    private final List<Redaction> redactions = new ArrayList<>();
+    private final List<String> usageHistory = new ArrayList<>();
+
+    public ArchivalFile(String id, String title, MaterialType materialType) {
+        this.id = id;
+        this.title = title;
+        this.materialType = materialType;
+        this.scanned = true;
+        this.digitizationDate = LocalDate.now();
+        this.digitizationStandard = DigitizationStandard.ACCESS_ONLY;
+        this.colorMode = ColorMode.COLOR;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getCollectionId() {
+        return collectionId;
+    }
+
+    public void setCollectionId(String collectionId) {
+        this.collectionId = collectionId;
+    }
+
+    public MaterialType getMaterialType() {
+        return materialType;
+    }
+
+    public void setMaterialType(MaterialType materialType) {
+        this.materialType = materialType;
+    }
+
+    public ColorMode getColorMode() {
+        return colorMode;
+    }
+
+    public void setColorMode(ColorMode colorMode) {
+        this.colorMode = colorMode;
+    }
+
+    public DigitizationStandard getDigitizationStandard() {
+        return digitizationStandard;
+    }
+
+    public void setDigitizationStandard(DigitizationStandard digitizationStandard) {
+        this.digitizationStandard = digitizationStandard;
+    }
+
+    public LocalDate getCreationDate() {
+        return creationDate;
+    }
+
+    public void setCreationDate(LocalDate creationDate) {
+        this.creationDate = creationDate;
+    }
+
+    public LocalDate getDigitizationDate() {
+        return digitizationDate;
+    }
+
+    public void setDigitizationDate(LocalDate digitizationDate) {
+        this.digitizationDate = digitizationDate;
+    }
+
+    public boolean isScanned() {
+        return scanned;
+    }
+
+    public void setScanned(boolean scanned) {
+        this.scanned = scanned;
+    }
+
+    public String getPhotographer() {
+        return photographer;
+    }
+
+    public void setPhotographer(String photographer) {
+        this.photographer = photographer;
+    }
+
+    public void addPersonRepresented(String person) {
+        peopleRepresented.add(person);
+    }
+
+    public Set<String> getPeopleRepresented() {
+        return Collections.unmodifiableSet(peopleRepresented);
+    }
+
+    public String getPlaceTaken() {
+        return placeTaken;
+    }
+
+    public void setPlaceTaken(String placeTaken) {
+        this.placeTaken = placeTaken;
+    }
+
+    public void addTag(String tag) {
+        tags.add(tag);
+    }
+
+    public Set<String> getTags() {
+        return Collections.unmodifiableSet(tags);
+    }
+
+    public String getOcrText() {
+        return ocrText;
+    }
+
+    public void setOcrText(String ocrText) {
+        this.ocrText = ocrText;
+    }
+
+    public String getPhysicalLocation() {
+        return physicalLocation;
+    }
+
+    public void setPhysicalLocation(String physicalLocation) {
+        this.physicalLocation = physicalLocation;
+    }
+
+    public String getXDrivePath() {
+        return xDrivePath;
+    }
+
+    public void setXDrivePath(String xDrivePath) {
+        this.xDrivePath = xDrivePath;
+    }
+
+    public boolean isPartialFolderDigitization() {
+        return partialFolderDigitization;
+    }
+
+    public void setPartialFolderDigitization(boolean partialFolderDigitization, String partialFolderNote) {
+        this.partialFolderDigitization = partialFolderDigitization;
+        this.partialFolderNote = partialFolderNote;
+    }
+
+    public String getPartialFolderNote() {
+        return partialFolderNote;
+    }
+
+    public byte[] getRawContent() {
+        return rawContent;
+    }
+
+    public void setRawContent(byte[] rawContent) {
+        this.rawContent = rawContent;
+        if (rawContent != null) {
+            int hash = 1;
+            for (byte b : rawContent) {
+                hash = 31 * hash + b;
+            }
+            this.perceptualHash = hash;
+        }
+    }
+
+    public int getPerceptualHash() {
+        return perceptualHash;
+    }
+
+    public RightsStatement getRightsStatement() {
+        return rightsStatement;
+    }
+
+    public void setRightsStatement(RightsStatement rightsStatement) {
+        this.rightsStatement = rightsStatement;
+    }
+
+    public Restriction getRestriction() {
+        return restriction;
+    }
+
+    public void setRestriction(Restriction restriction) {
+        this.restriction = restriction;
+    }
+
+    public TechnicalMetadata getTechnicalMetadata() {
+        return technicalMetadata;
+    }
+
+    public void setTechnicalMetadata(TechnicalMetadata technicalMetadata) {
+        this.technicalMetadata = technicalMetadata;
+    }
+
+    public void addDerivative(AccessDerivative derivative) {
+        derivatives.add(derivative);
+    }
+
+    public List<AccessDerivative> getDerivatives() {
+        return Collections.unmodifiableList(derivatives);
+    }
+
+    public AccessDerivative getThumbnail() {
+        for (AccessDerivative derivative : derivatives) {
+            if (derivative.getType() == AccessDerivative.DerivativeType.THUMBNAIL) {
+                return derivative;
+            }
+        }
+        return null;
+    }
+
+    public List<AccessDerivative> getFilmClips() {
+        List<AccessDerivative> clips = new ArrayList<>();
+        for (AccessDerivative d : derivatives) {
+            if (d.getType() == AccessDerivative.DerivativeType.STREAMING_CLIP) {
+                clips.add(d);
+            }
+        }
+        return clips;
+    }
+
+    public void addRedaction(Redaction redaction) {
+        redactions.add(redaction);
+    }
+
+    public List<Redaction> getRedactions() {
+        return Collections.unmodifiableList(redactions);
+    }
+
+    public void recordUsage(String notes) {
+        usageHistory.add(notes);
+    }
+
+    public List<String> getUsageHistory() {
+        return Collections.unmodifiableList(usageHistory);
+    }
+}
+
+// File: FileGroup.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class FileGroup {
+    private final String id;
+    private String name;
+    private final List<ArchivalFile> files = new ArrayList<>();
+    private final Restriction restriction = new Restriction();
+
+    public FileGroup(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void addFile(ArchivalFile file) {
+        files.add(file);
+    }
+
+    public List<ArchivalFile> getFiles() {
+        return Collections.unmodifiableList(files);
+    }
+
+    public Restriction getRestriction() {
+        return restriction;
+    }
+
+    public void cascadeRestriction() {
+        for (ArchivalFile file : files) {
+            Restriction r = file.getRestriction();
+            r.setRestricted(restriction.isRestricted());
+            r.setRestrictedFromView(restriction.isRestrictedFromView());
+            r.setEndDate(restriction.getEndDate());
+            r.setRestrictionDetails(restriction.getRestrictionDetails());
+        }
+    }
+}
+
+// File: Accrual.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Accrual {
+    private final String id;
+    private final String donorId;
+    private final LocalDate accrualDate;
+    private final String description;
+    private final List<ArchivalFile> files = new ArrayList<>();
+
+    public Accrual(String id, String donorId, String description) {
+        this.id = id;
+        this.donorId = donorId;
+        this.description = description;
+        this.accrualDate = LocalDate.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getDonorId() {
+        return donorId;
+    }
+
+    public LocalDate getAccrualDate() {
+        return accrualDate;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void addFile(ArchivalFile file) {
+        files.add(file);
+    }
+
+    public List<ArchivalFile> getFiles() {
+        return Collections.unmodifiableList(files);
+    }
+}
+
+// File: Collection.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Collection {
+    private final String id;
+    private String name;
+    private String donorId;
+    private boolean processed;
+    private String inventoryText;
+    private final List<ArchivalFile> files = new ArrayList<>();
+    private final List<Accrual> accruals = new ArrayList<>();
+
+    public Collection(String id, String name, String donorId, boolean processed) {
+        this.id = id;
+        this.name = name;
+        this.donorId = donorId;
+        this.processed = processed;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDonorId() {
+        return donorId;
+    }
+
+    public void setDonorId(String donorId) {
+        this.donorId = donorId;
+    }
+
+    public boolean isProcessed() {
+        return processed;
+    }
+
+    public void setProcessed(boolean processed) {
+        this.processed = processed;
+    }
+
+    public String getInventoryText() {
+        return inventoryText;
+    }
+
+    public void setInventoryText(String inventoryText) {
+        this.inventoryText = inventoryText;
+    }
+
+    public void addFile(ArchivalFile file) {
+        file.setCollectionId(this.id);
+        files.add(file);
+    }
+
+    public List<ArchivalFile> getFiles() {
+        return Collections.unmodifiableList(files);
+    }
+
+    public void addAccrual(Accrual accrual) {
+        accruals.add(accrual);
+        for (ArchivalFile file : accrual.getFiles()) {
+            addFile(file);
+        }
+    }
+
+    public List<Accrual> getAccruals() {
+        return Collections.unmodifiableList(accruals);
+    }
+}
+
+// File: ImageProcessor.java
+import java.util.UUID;
+
+public class ImageProcessor {
+
+    public static void rotate(ArchivalFile file, int degrees) {
+        TechnicalMetadata meta = file.getTechnicalMetadata();
+        if (meta != null && (degrees == 90 || degrees == 270)) {
+            int w = meta.getWidth();
+            meta.setWidth(meta.getHeight());
+            meta.setHeight(w);
+        }
+        if (meta != null) {
+            meta.embedHeader("OrientationDegrees", String.valueOf(degrees));
+        }
+    }
+
+    public static void applyAutoContrastAndLevels(ArchivalFile file) {
+        TechnicalMetadata meta = file.getTechnicalMetadata();
+        if (meta != null) {
+            meta.embedHeader("AutoContrastApplied", "true");
+            meta.embedHeader("AutoLevelsApplied", "true");
+        }
+    }
+
+    public static void applyManualAdjustments(ArchivalFile file, double contrast, double brightness, double gamma) {
+        TechnicalMetadata meta = file.getTechnicalMetadata();
+        if (meta != null) {
+            meta.embedHeader("ManualContrast", String.valueOf(contrast));
+            meta.embedHeader("ManualBrightness", String.valueOf(brightness));
+            meta.embedHeader("ManualGamma", String.valueOf(gamma));
+        }
+    }
+
+    public static void generateAccessDerivatives(ArchivalFile file) {
+        String thumbId = "deriv-" + UUID.randomUUID();
+        AccessDerivative thumb = new AccessDerivative(
+                thumbId,
+                AccessDerivative.DerivativeType.THUMBNAIL,
+                "/derivatives/thumbnails/" + file.getId() + "_thumb.jpg",
+                "150x150 thumbnail for fast browsing"
+        );
+        file.addDerivative(thumb);
+
+        String previewId = "deriv-" + UUID.randomUUID();
+        AccessDerivative preview = new AccessDerivative(
+                previewId,
+                AccessDerivative.DerivativeType.WEB_PREVIEW,
+                "/derivatives/previews/" + file.getId() + "_preview.jpg",
+                "Medium-res access derivative for web viewing"
+        );
+        file.addDerivative(preview);
+
+        if (file.getMaterialType() == MaterialType.VIDEO || file.getMaterialType() == MaterialType.AUDIO) {
+            String streamId = "deriv-" + UUID.randomUUID();
+            AccessDerivative clip = new AccessDerivative(
+                    streamId,
+                    AccessDerivative.DerivativeType.STREAMING_CLIP,
+                    "/streaming/" + file.getId() + ".mp4",
+                    "Browser-compatible HLS/MP4 stream"
+            );
+            file.addDerivative(clip);
+        }
+    }
+}
+
+// File: CitationGenerator.java
+public class CitationGenerator {
+
+    public static String generateCitation(ArchivalFile file, Collection collection) {
+        String collName = collection != null ? collection.getName() : "General Collections";
+        String creator = file.getPhotographer() != null ? file.getPhotographer() + ", " : "";
+        String dateStr = file.getCreationDate() != null ? file.getCreationDate().toString() : "Undated";
+        return String.format("%s\"%s\" (%s). %s, RAC Identifier: %s. Rockefeller Archive Center.",
+                creator, file.getTitle(), dateStr, collName, file.getId());
+    }
+
+    public static String generateSocialMediaShareLink(ArchivalFile file, String baseUrl) {
+        if (file.getRightsStatement() != null && !file.getRightsStatement().isSocialMediaAllowed()) {
+            return null;
+        }
+        if (file.getRestriction().isRestricted()) {
+            return null;
+        }
+        return baseUrl + "/share/" + file.getId();
+    }
+}
+
+// File: LicensingRequest.java
+import java.time.LocalDate;
+
+public class LicensingRequest {
+    private final String id;
+    private final String requesterName;
+    private final String requesterEmail;
+    private final String fileId;
+    private final String intendedPublication;
+    private final String intendedUseDescription;
+    private final LocalDate requestDate;
+    private boolean approved;
+
+    public LicensingRequest(String id, String requesterName, String requesterEmail, String fileId, String intendedPublication, String intendedUseDescription) {
+        this.id = id;
+        this.requesterName = requesterName;
+        this.requesterEmail = requesterEmail;
+        this.fileId = fileId;
+        this.intendedPublication = intendedPublication;
+        this.intendedUseDescription = intendedUseDescription;
+        this.requestDate = LocalDate.now();
+        this.approved = false;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getRequesterName() {
+        return requesterName;
+    }
+
+    public String getRequesterEmail() {
+        return requesterEmail;
+    }
+
+    public String getFileId() {
+        return fileId;
+    }
+
+    public String getIntendedPublication() {
+        return intendedPublication;
+    }
+
+    public String getIntendedUseDescription() {
+        return intendedUseDescription;
+    }
+
+    public LocalDate getRequestDate() {
+        return requestDate;
+    }
+
+    public boolean isApproved() {
+        return approved;
+    }
+
+    public void setApproved(boolean approved) {
+        this.approved = approved;
+    }
+}
+
+// File: MaterialRequest.java
+import java.time.LocalDate;
+
+public class MaterialRequest {
+    public enum RequestType {
+        ANALOG_READING_ROOM,
+        PHOTO_DUPLICATION_ORDER
+    }
+
+    private final String id;
+    private final String requesterId;
+    private final String targetFileOrTitle;
+    private final RequestType requestType;
+    private final LocalDate requestDate;
+    private boolean existingDigitalObjectNotificationSent;
+
+    public MaterialRequest(String id, String requesterId, String targetFileOrTitle, RequestType requestType) {
+        this.id = id;
+        this.requesterId = requesterId;
+        this.targetFileOrTitle = targetFileOrTitle;
+        this.requestType = requestType;
+        this.requestDate = LocalDate.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getRequesterId() {
+        return requesterId;
+    }
+
+    public String getTargetFileOrTitle() {
+        return targetFileOrTitle;
+    }
+
+    public RequestType getRequestType() {
+        return requestType;
+    }
+
+    public LocalDate getRequestDate() {
+        return requestDate;
+    }
+
+    public boolean isExistingDigitalObjectNotificationSent() {
+        return existingDigitalObjectNotificationSent;
+    }
+
+    public void setExistingDigitalObjectNotificationSent(boolean notificationSent) {
+        this.existingDigitalObjectNotificationSent = notificationSent;
+    }
+}
+
+// File: UserInquiry.java
+import java.time.LocalDate;
+
+public class UserInquiry {
+    private final String id;
+    private final String userEmail;
+    private final String fileId;
+    private final String questionText;
+    private final LocalDate inquiryDate;
+    private String archivistResponse;
+
+    public UserInquiry(String id, String userEmail, String fileId, String questionText) {
+        this.id = id;
+        this.userEmail = userEmail;
+        this.fileId = fileId;
+        this.questionText = questionText;
+        this.inquiryDate = LocalDate.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public String getFileId() {
+        return fileId;
+    }
+
+    public String getQuestionText() {
+        return questionText;
+    }
+
+    public LocalDate getInquiryDate() {
+        return inquiryDate;
+    }
+
+    public String getArchivistResponse() {
+        return archivistResponse;
+    }
+
+    public void setArchivistResponse(String archivistResponse) {
+        this.archivistResponse = archivistResponse;
+    }
+}
+
+// File: ResearcherReport.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class ResearcherReport {
+    private final String id;
+    private final String title;
+    private final String authorName;
+    private final String content;
+    private final LocalDate dateSubmitted;
+    private final List<String> linkedCitations = new ArrayList<>();
+
+    public ResearcherReport(String id, String title, String authorName, String content) {
+        this.id = id;
+        this.title = title;
+        this.authorName = authorName;
+        this.content = content;
+        this.dateSubmitted = LocalDate.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getAuthorName() {
+        return authorName;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public LocalDate getDateSubmitted() {
+        return dateSubmitted;
+    }
+
+    public void addLinkedCitation(String citation) {
+        linkedCitations.add(citation);
+    }
+
+    public List<String> getLinkedCitations() {
+        return Collections.unmodifiableList(linkedCitations);
+    }
+}
+
+// File: SearchCriteria.java
+public class SearchCriteria {
+    private String keyword;
+    private String photographer;
+    private String personRepresented;
+    private String placeTaken;
+    private String tag;
+    private MaterialType materialType;
+    private RightsStatus rightsStatus;
+    private Boolean isDiary;
+    private Boolean isSharableOnSocial;
+
+    public String getKeyword() {
+        return keyword;
+    }
+
+    public void setKeyword(String keyword) {
+        this.keyword = keyword;
+    }
+
+    public String getPhotographer() {
+        return photographer;
+    }
+
+    public void setPhotographer(String photographer) {
+        this.photographer = photographer;
+    }
+
+    public String getPersonRepresented() {
+        return personRepresented;
+    }
+
+    public void setPersonRepresented(String personRepresented) {
+        this.personRepresented = personRepresented;
+    }
+
+    public String getPlaceTaken() {
+        return placeTaken;
+    }
+
+    public void setPlaceTaken(String placeTaken) {
+        this.placeTaken = placeTaken;
+    }
+
+    public String getTag() {
+        return tag;
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
+    }
+
+    public MaterialType getMaterialType() {
+        return materialType;
+    }
+
+    public void setMaterialType(MaterialType materialType) {
+        this.materialType = materialType;
+    }
+
+    public RightsStatus getRightsStatus() {
+        return rightsStatus;
+    }
+
+    public void setRightsStatus(RightsStatus rightsStatus) {
+        this.rightsStatus = rightsStatus;
+    }
+
+    public Boolean getIsDiary() {
+        return isDiary;
+    }
+
+    public void setIsDiary(Boolean isDiary) {
+        this.isDiary = isDiary;
+    }
+
+    public Boolean getIsSharableOnSocial() {
+        return isSharableOnSocial;
+    }
+
+    public void setIsSharableOnSocial(Boolean sharableOnSocial) {
+        isSharableOnSocial = sharableOnSocial;
+    }
+}
+
+// File: RepositoryService.java
+import java.time.LocalDate;
+import java.util.*;
+
+public class RepositoryService {
+    private final Map<String, ArchivalFile> files = new HashMap<>();
+    private final Map<String, Collection> collections = new HashMap<>();
+    private final Map<String, FileGroup> fileGroups = new HashMap<>();
+    private final List<LicensingRequest> licensingRequests = new ArrayList<>();
+    private final List<ResearcherReport> researcherReports = new ArrayList<>();
+    private final List<UserInquiry> userInquiries = new ArrayList<>();
+    private final List<MaterialRequest> materialRequests = new ArrayList<>();
+    private final AuthenticationService authService = new AuthenticationService();
+
+    public AuthenticationService getAuthService() {
+        return authService;
+    }
+
+    public String generateUniqueFileId() {
+        return "RAC-DIG-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    public ArchivalFile uploadSingleFile(String title, MaterialType type, byte[] rawBytes, String mimeType, int width, int height) {
+        String id = generateUniqueFileId();
+        ArchivalFile file = new ArchivalFile(id, title, type);
+        file.setRawContent(rawBytes);
+
+        TechnicalMetadata tech = new TechnicalMetadata(rawBytes != null ? rawBytes.length : 0, mimeType, width, height, 300);
+        tech.embedHeader("Source", "Rockefeller Archive Center Digital Asset Pipeline");
+        tech.embedHeader("RACIdentifier", id);
+        tech.embedHeader("UploadDate", LocalDate.now().toString());
+        file.setTechnicalMetadata(tech);
+
+        ImageProcessor.generateAccessDerivatives(file);
+        files.put(id, file);
+        return file;
+    }
+
+    public List<ArchivalFile> uploadGroup(List<ArchivalFile> uploadedFiles, String groupName) {
+        String groupId = "GRP-" + UUID.randomUUID().toString().substring(0, 6);
+        FileGroup group = new FileGroup(groupId, groupName);
+        for (ArchivalFile f : uploadedFiles) {
+            files.put(f.getId(), f);
+            group.addFile(f);
+        }
+        fileGroups.put(groupId, group);
+        return uploadedFiles;
+    }
+
+    public void addCollection(Collection collection) {
+        collections.put(collection.getId(), collection);
+    }
+
+    public Collection getCollection(String id) {
+        return collections.get(id);
+    }
+
+    public ArchivalFile getFile(String id) {
+        return files.get(id);
+    }
+
+    public FileGroup getFileGroup(String id) {
+        return fileGroups.get(id);
+    }
+
+    public boolean isPhotoAlreadyScanned(String titleOrKeyword) {
+        for (ArchivalFile file : files.values()) {
+            if (file.getMaterialType() == MaterialType.PHOTOGRAPH && file.isScanned()) {
+                if (file.getTitle().toLowerCase().contains(titleOrKeyword.toLowerCase())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public void batchEditMetadata(List<String> fileIds, String photographer, String placeTaken, RightsStatement rights) {
+        for (String id : fileIds) {
+            ArchivalFile file = files.get(id);
+            if (file != null) {
+                if (photographer != null) {
+                    file.setPhotographer(photographer);
+                }
+                if (placeTaken != null) {
+                    file.setPlaceTaken(placeTaken);
+                }
+                if (rights != null) {
+                    file.setRightsStatement(rights);
+                }
+            }
+        }
+    }
+
+    public byte[] downloadFile(User user, String fileId, String ipAddress) {
+        ArchivalFile file = files.get(fileId);
+        if (file == null) {
+            return null;
+        }
+        if (file.getRestriction().isRestrictedFromView() && !file.getRestriction().allowsAccess(user, ipAddress)) {
+            return null;
+        }
+        if (!file.getRestriction().allowsAccess(user, ipAddress)) {
+            return null;
+        }
+        if (user != null) {
+            user.recordDownload(fileId);
+            file.recordUsage("Downloaded by user: " + user.getUsername());
+        } else {
+            file.recordUsage("Downloaded anonymously from IP: " + ipAddress);
+        }
+        return file.getRawContent();
+    }
+
+    public List<ArchivalFile> search(SearchCriteria criteria, User user, String ipAddress) {
+        List<ArchivalFile> results = new ArrayList<>();
+        for (ArchivalFile file : files.values()) {
+            if (file.getRestriction().isRestrictedFromView()) {
+                if (!file.getRestriction().allowsAccess(user, ipAddress)) {
+                    continue;
+                }
+            }
+
+            if (criteria.getKeyword() != null && !criteria.getKeyword().isEmpty()) {
+                String kw = criteria.getKeyword().toLowerCase();
+                boolean matchesTitle = file.getTitle() != null && file.getTitle().toLowerCase().contains(kw);
+                boolean matchesDesc = file.getDescription() != null && file.getDescription().toLowerCase().contains(kw);
+                boolean matchesOcr = file.getOcrText() != null && file.getOcrText().toLowerCase().contains(kw);
+                if (!matchesTitle && !matchesDesc && !matchesOcr) {
+                    continue;
+                }
+            }
+
+            if (criteria.getPhotographer() != null && !criteria.getPhotographer().isEmpty()) {
+                if (file.getPhotographer() == null || !file.getPhotographer().equalsIgnoreCase(criteria.getPhotographer())) {
+                    continue;
+                }
+            }
+
+            if (criteria.getPersonRepresented() != null && !criteria.getPersonRepresented().isEmpty()) {
+                if (!file.getPeopleRepresented().contains(criteria.getPersonRepresented())) {
+                    continue;
+                }
+            }
+
+            if (criteria.getPlaceTaken() != null && !criteria.getPlaceTaken().isEmpty()) {
+                if (file.getPlaceTaken() == null || !file.getPlaceTaken().equalsIgnoreCase(criteria.getPlaceTaken())) {
+                    continue;
+                }
+            }
+
+            if (criteria.getTag() != null && !criteria.getTag().isEmpty()) {
+                if (!file.getTags().contains(criteria.getTag())) {
+                    continue;
+                }
+            }
+
+            if (criteria.getMaterialType() != null) {
+                if (file.getMaterialType() != criteria.getMaterialType()) {
+                    continue;
+                }
+            }
+
+            if (criteria.getRightsStatus() != null) {
+                if (file.getRightsStatement() == null || file.getRightsStatement().getStatus() != criteria.getRightsStatus()) {
+                    continue;
+                }
+            }
+
+            if (criteria.getIsDiary() != null && criteria.getIsDiary()) {
+                if (file.getMaterialType() != MaterialType.DIARY) {
+                    continue;
+                }
+            }
+
+            if (criteria.getIsSharableOnSocial() != null && criteria.getIsSharableOnSocial()) {
+                if (file.getRightsStatement() == null || !file.getRightsStatement().isSocialMediaAllowed() || file.getRestriction().isRestricted()) {
+                    continue;
+                }
+            }
+
+            results.add(file);
+        }
+        return results;
+    }
+
+    public List<ArchivalFile> searchByImageHash(int queryHash) {
+        List<ArchivalFile> matches = new ArrayList<>();
+        for (ArchivalFile f : files.values()) {
+            if (f.getPerceptualHash() == queryHash) {
+                matches.add(f);
+            }
+        }
+        return matches;
+    }
+
+    public List<ArchivalFile> browseCollection(String collectionId) {
+        Collection c = collections.get(collectionId);
+        return c != null ? c.getFiles() : Collections.emptyList();
+    }
+
+    public MaterialRequest submitMaterialRequest(String requesterId, String titleOrKeywords, MaterialRequest.RequestType type) {
+        String reqId = "REQ-" + UUID.randomUUID().toString().substring(0, 6);
+        MaterialRequest req = new MaterialRequest(reqId, requesterId, titleOrKeywords, type);
+        if (isPhotoAlreadyScanned(titleOrKeywords)) {
+            req.setExistingDigitalObjectNotificationSent(true);
+        }
+        materialRequests.add(req);
+        return req;
+    }
+
+    public LicensingRequest submitLicensingRequest(String name, String email, String fileId, String publication, String intendedUse) {
+        String id = "LIC-" + UUID.randomUUID().toString().substring(0, 6);
+        LicensingRequest request = new LicensingRequest(id, name, email, fileId, publication, intendedUse);
+        licensingRequests.add(request);
+        return request;
+    }
+
+    public void addResearcherReport(ResearcherReport report) {
+        researcherReports.add(report);
+    }
+
+    public List<ResearcherReport> getResearcherReports() {
+        return Collections.unmodifiableList(researcherReports);
+    }
+
+    public void submitInquiry(UserInquiry inquiry) {
+        userInquiries.add(inquiry);
+    }
+
+    public List<UserInquiry> getUserInquiries() {
+        return Collections.unmodifiableList(userInquiries);
+    }
+
+    public String exportDescriptiveDataJson() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[\n");
+        int count = 0;
+        for (ArchivalFile f : files.values()) {
+            if (count > 0) sb.append(",\n");
+            sb.append("  {\n");
+            sb.append("    \"id\": \"").append(f.getId()).append("\",\n");
+            sb.append("    \"title\": \"").append(f.getTitle()).append("\",\n");
+            sb.append("    \"materialType\": \"").append(f.getMaterialType()).append("\",\n");
+            sb.append("    \"ocrText\": \"").append(f.getOcrText() != null ? f.getOcrText().replace("\"", "\\\"") : "").append("\"\n");
+            sb.append("  }");
+            count++;
+        }
+        sb.append("\n]");
+        return sb.toString();
+    }
+
+    public String formatEmailWithCitation(ArchivalFile file, String messageBody) {
+        Collection coll = file.getCollectionId() != null ? collections.get(file.getCollectionId()) : null;
+        String citation = CitationGenerator.generateCitation(file, coll);
+        return "Subject: In reference to archival asset: " + file.getTitle() + "\n\n"
+                + messageBody + "\n\n"
+                + "--- Accurate Citation ---\n"
+                + citation + "\n"
+                + "RAC Identifier: " + file.getId() + "\n";
+    }
+
+    public List<ArchivalFile> getRestrictedFilesForStaff() {
+        List<ArchivalFile> restricted = new ArrayList<>();
+        for (ArchivalFile f : files.values()) {
+            if (f.getRestriction().isRestricted()) {
+                restricted.add(f);
+            }
+        }
+        return restricted;
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("==================================================================");
+        System.out.println("  ROCKEFELLER ARCHIVE CENTER (RAC) DIGITAL REPOSITORY DEMO");
+        System.out.println("==================================================================");
+
+        RepositoryService repo = new RepositoryService();
+
+        // 1. Roles, Groups, and Users Setup
+        UserGroup adminGroup = new UserGroup("GRP-ADMIN", "Administrators");
+        adminGroup.addPermission(Permission.MANAGE_USERS);
+        adminGroup.addPermission(Permission.READ_RESTRICTED);
+        adminGroup.addPermission(Permission.APPLY_RESTRICTION);
+        adminGroup.addPermission(Permission.APPLY_RIGHTS);
+        adminGroup.addPermission(Permission.BATCH_EDIT);
+        adminGroup.addPermission(Permission.DOWNLOAD_FILES);
+
+        UserGroup archivistGroup = new UserGroup("GRP-ARCH", "Archivists");
+        archivistGroup.addPermission(Permission.READ_PUBLIC);
+        archivistGroup.addPermission(Permission.READ_RESTRICTED);
+        archivistGroup.addPermission(Permission.UPLOAD_FILE);
+        archivistGroup.addPermission(Permission.BATCH_EDIT);
+        archivistGroup.addPermission(Permission.APPLY_RESTRICTION);
+        archivistGroup.addPermission(Permission.APPLY_RIGHTS);
+        archivistGroup.addPermission(Permission.PROCESS_IMAGES);
+        archivistGroup.addPermission(Permission.DOWNLOAD_FILES);
+        archivistGroup.addPermission(Permission.VIEW_NON_PUBLIC_AIDS);
+
+        UserGroup researcherGroup = new UserGroup("GRP-RES", "Researchers");
+        researcherGroup.addPermission(Permission.READ_PUBLIC);
+        researcherGroup.addPermission(Permission.DOWNLOAD_FILES);
+
+        UserGroup donorGroup = new UserGroup("GRP-DONOR", "Donor Representatives");
+        donorGroup.addPermission(Permission.READ_PUBLIC);
+        donorGroup.addPermission(Permission.READ_UNPROCESSED);
+        donorGroup.addPermission(Permission.ACCRUAL_SUBMISSION);
+
+        User archivist = new User("USR-1", "archivist_mary", "pwd123", "mary@rockarch.org",
+                UserRole.ARCHIVIST, archivistGroup, true);
+        User researcher = new User("USR-2", "dr_jones", "secret456", "jones@univ.edu",
+                UserRole.RESEARCHER, researcherGroup, false);
+        User donorRep = new User("USR-3", "rep_ford_fdn", "donorPass", "rep@fordfound.org",
+                UserRole.DONOR_REPRESENTATIVE, donorGroup, false);
+        donorRep.setInstitutionId("INST-FORD");
+
+        repo.getAuthService().registerUser(archivist);
+        repo.getAuthService().registerUser(researcher);
+        repo.getAuthService().registerUser(donorRep);
+
+        System.out.println("[+] Active Directory Authentication:");
+        User loggedInAd = repo.getAuthService().login("archivist_mary", null, true);
+        System.out.println("    Archivist AD Login successful: " + (loggedInAd != null));
+
+        System.out.println("[+] Researcher Self-Service Password Reset:");
+        String token = repo.getAuthService().initiatePasswordReset("dr_jones");
+        boolean resetSuccess = repo.getAuthService().completePasswordReset(token, "brandNewPassword123");
+        System.out.println("    Password reset completed: " + resetSuccess);
+
+        // 2. Collection Creation & Accrual
+        Collection rfDiariesCollection = new Collection("COLL-RF-DIARIES", "Rockefeller Foundation Program Officers Scanned Diaries", "RF", true);
+        repo.addCollection(rfDiariesCollection);
+
+        Collection fordUnprocessed = new Collection("COLL-FORD-UNPROC", "Ford Foundation Records (Unprocessed)", "INST-FORD", false);
+        fordUnprocessed.setInventoryText("Box 1: Early Grant Letters 1952. Box 2: Field Reports 1953.");
+        repo.addCollection(fordUnprocessed);
+
+        // Incremental Accrual by Donor
+        Accrual accrual = new Accrual("ACCR-001", "INST-FORD", "2023 Grant Files Transfer");
+        ArchivalFile accrualFile = new ArchivalFile("RAC-DIG-FORD-01", "1955 Africa Program Report", MaterialType.TEXT_DOCUMENT);
+        accrual.addFile(accrualFile);
+        fordUnprocessed.addAccrual(accrual);
+        System.out.println("[+] Incremental donor accrual registered for: " + fordUnprocessed.getName());
+
+        // 3. Uploading Files & Automatic Derivative and Technical Metadata Generation
+        byte[] dummyBytes = new byte[]{10, 20, 30, 40, 50, 60, 70, 80};
+        ArchivalFile photo1 = repo.uploadSingleFile("Nelson Rockefeller at Press Conference 1968",
+                MaterialType.PHOTOGRAPH, dummyBytes, "image/tiff", 4000, 3000);
+        photo1.setPhotographer("Arthur Browne");
+        photo1.addPersonRepresented("Nelson Rockefeller");
+        photo1.setPlaceTaken("Albany, NY");
+        photo1.setColorMode(ColorMode.BLACK_AND_WHITE);
+        photo1.setDigitizationStandard(DigitizationStandard.PRESERVATION_STANDARD);
+        photo1.setXDrivePath("X:\\Collections\\Photographs\\RockefellerNelson\\1968_001.tif");
+        rfDiariesCollection.addFile(photo1);
+
+        System.out.println("[+] Uploaded photo: " + photo1.getTitle() + " | ID: " + photo1.getId());
+        System.out.println("    Auto-generated file size: " + photo1.getTechnicalMetadata().getFileSizeInBytes() + " bytes");
+        System.out.println("    Thumbnail derivative generated: " + (photo1.getThumbnail() != null));
+
+        // 4. Image Processing Operations: Rotate, Auto-contrast, Manual Levels
+        ImageProcessor.rotate(photo1, 90);
+        ImageProcessor.applyAutoContrastAndLevels(photo1);
+        ImageProcessor.applyManualAdjustments(photo1, 1.15, 0.05, 1.0);
+        System.out.println("    Image adjustments applied. Orientation embedded: "
+                + photo1.getTechnicalMetadata().getEmbeddedHeaders().get("OrientationDegrees"));
+
+        // 5. Rights Assignment and Restrictions
+        RightsStatement publicDomain = new RightsStatement(RightsStatus.NO_COPYRIGHT_US,
+                "No copyright known in the United States. Free public use.", true, true);
+        RightsStatement inCopyright = new RightsStatement(RightsStatus.IN_COPYRIGHT,
+                "Under copyright. Permission required for publication.", false, false);
+        photo1.setRightsStatement(publicDomain);
+
+        ArchivalFile sensitiveFile = repo.uploadSingleFile("Confidential Trustee Memo",
+                MaterialType.TEXT_DOCUMENT, dummyBytes, "application/pdf", 0, 0);
+        sensitiveFile.getRestriction().setRestricted(true);
+        sensitiveFile.getRestriction().setRestrictedFromView(true);
+        sensitiveFile.getRestriction().setEndDate(LocalDate.now().plusYears(5));
+        sensitiveFile.getRestriction().setRestrictionDetails("Donor restriction: closed for 5 years");
+        sensitiveFile.getRestriction().addAllowedIp("192.168.1.100"); // Reading Room IP
+
+        System.out.println("[+] Restricted file: " + sensitiveFile.getTitle());
+        System.out.println("    Is currently restricted: " + sensitiveFile.getRestriction().isRestricted());
+        System.out.println("    Accessible from reading room IP (192.168.1.100): "
+                + sensitiveFile.getRestriction().allowsAccess(researcher, "192.168.1.100"));
+        System.out.println("    Accessible from home IP (203.0.113.4): "
+                + sensitiveFile.getRestriction().allowsAccess(researcher, "203.0.113.4"));
+
+        // 6. Time-based Redaction
+        Redaction redaction = new Redaction("RED-1", "Redact SSN and personal addresses",
+                "Paragraph 4, Page 2", LocalDate.now().plusYears(2));
+        sensitiveFile.addRedaction(redaction);
+        System.out.println("    Redaction active: " + redaction.isCurrentlyRedacted() + " (expires " + redaction.getExpirationDate() + ")");
+
+        // 7. Staff Working Papers & Interdepartmental Forms
+        ArchivalFile workingPaper = repo.uploadSingleFile("Preservation Strategy Working Paper",
+                MaterialType.WORKING_PAPER, dummyBytes, "application/pdf", 0, 0);
+        workingPaper.addTag("working-paper");
+        workingPaper.addTag("preservation");
+
+        ArchivalFile form = repo.uploadSingleFile("Interdepartmental Deaccession Form 2024",
+                MaterialType.FORM, dummyBytes, "application/pdf", 0, 0);
+        form.addTag("internal-form");
+        System.out.println("[+] Staff documents uploaded: Working papers & Forms.");
+
+        // 8. Scanned Diary Entry and OCR Search
+        ArchivalFile diaryFile = repo.uploadSingleFile("Willits Diary - 1939 European Tour",
+                MaterialType.DIARY, dummyBytes, "application/pdf", 0, 0);
+        diaryFile.setOcrText("Met with European economic officers in Geneva regarding social science grants.");
+        rfDiariesCollection.addFile(diaryFile);
+
+        SearchCriteria diarySearch = new SearchCriteria();
+        diarySearch.setIsDiary(true);
+        diarySearch.setKeyword("Geneva");
+        List<ArchivalFile> diaryResults = repo.search(diarySearch, researcher, "203.0.113.4");
+        System.out.println("[+] OCR Keyword Search across diaries for 'Geneva': found " + diaryResults.size() + " matches.");
+
+        // 9. Structured Citations and Social Sharing
+        String citation = CitationGenerator.generateCitation(photo1, rfDiariesCollection);
+        System.out.println("[+] Structured Citation:\n    " + citation);
+
+        String socialLink = CitationGenerator.generateSocialMediaShareLink(photo1, "https://rockarch.org");
+        System.out.println("[+] Social Media Share Link: " + socialLink);
+
+        // 10. Email formatting with verified citation
+        String emailText = repo.formatEmailWithCitation(photo1, "Dear Researcher, here is the reference to the photo you requested.");
+        System.out.println("[+] Automated Citation Email Output:\n" + emailText.substring(0, Math.min(emailText.length(), 180)) + "...");
+
+        // 11. Duplication / Analog Request Notification Check
+        System.out.println("[+] Duplicate scanning prevention check:");
+        boolean alreadyScanned = repo.isPhotoAlreadyScanned("Nelson Rockefeller");
+        System.out.println("    Is 'Nelson Rockefeller' photo already scanned? " + alreadyScanned);
+        MaterialRequest matReq = repo.submitMaterialRequest("dr_jones", "Nelson Rockefeller at Press Conference",
+                MaterialRequest.RequestType.PHOTO_DUPLICATION_ORDER);
+        System.out.println("    Notification sent to researcher that digital copy already exists: "
+                + matReq.isExistingDigitalObjectNotificationSent());
+
+        // 12. Online Licensing Form
+        LicensingRequest licenseReq = repo.submitLicensingRequest("Dr. Jones", "jones@univ.edu",
+                photo1.getId(), "Academic Book: 20th Century Politics", "Full page chapter frontispiece");
+        licenseReq.setApproved(true);
+        System.out.println("[+] Online Licensing Request submitted & approved for file: " + licenseReq.getFileId());
+
+        // 13. Download Tracking
+        repo.downloadFile(researcher, photo1.getId(), "203.0.113.4");
+        System.out.println("[+] Download history for " + researcher.getUsername() + ": " + researcher.getDownloadHistory());
+        System.out.println("    File usage tracking: " + photo1.getUsageHistory());
+
+        // 14. Batch Metadata Editing
+        repo.batchEditMetadata(List.of(photo1.getId()), "Arthur Browne (Chief RAC Photographer)", "Albany, New York State", null);
+        System.out.println("[+] Batch metadata edited photographer: " + photo1.getPhotographer());
+
+        // 15. Export Descriptive Data for Text Mining (JSON)
+        String jsonExport = repo.exportDescriptiveDataJson();
+        System.out.println("[+] Exported descriptive data for text mining (snippet):\n"
+                + jsonExport.substring(0, Math.min(jsonExport.length(), 250)) + "\n    ...");
+
+        System.out.println("==================================================================");
+        System.out.println("  ALL ARCHIVAL WORKFLOW DEMONSTRATIONS COMPLETED SUCCESSFULLY");
+        System.out.println("==================================================================");
+    }
+}

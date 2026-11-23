@@ -1,0 +1,845 @@
+// File: EstimateScale.java
+import java.util.List;
+
+public enum EstimateScale {
+    MODIFIED_FIBONACCI(List.of("0", "0.5", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?")),
+    POWERS_OF_TWO(List.of("0", "1", "2", "4", "8", "16", "32", "64", "128", "?"));
+
+    private final List<String> cards;
+
+    EstimateScale(List<String> cards) {
+        this.cards = List.copyOf(cards);
+    }
+
+    public List<String> cards() {
+        return cards;
+    }
+
+    public boolean contains(String card) {
+        return cards.contains(card);
+    }
+}
+
+// File: Account.java
+import java.time.Instant;
+import java.util.UUID;
+
+public final class Account {
+    private final String id;
+    private String name;
+    private String email;
+    private String username;
+    private String passwordHash;
+    private final Instant createdAt;
+
+    Account(String name, String email, String username, String passwordHash) {
+        this.id = UUID.randomUUID().toString();
+        this.name = name;
+        this.email = email;
+        this.username = username;
+        this.passwordHash = passwordHash;
+        this.createdAt = Instant.now();
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+    public String getUsername() { return username; }
+    public Instant getCreatedAt() { return createdAt; }
+
+    void update(String name, String email, String username) {
+        this.name = name;
+        this.email = email;
+        this.username = username;
+    }
+
+    String getPasswordHash() { return passwordHash; }
+    void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+}
+
+// File: StoryItem.java
+import java.time.Instant;
+import java.util.UUID;
+
+public final class StoryItem {
+    private final String id;
+    private String text;
+    private String agreedEstimate;
+    private final Instant createdAt;
+    private Instant updatedAt;
+
+    StoryItem(String text) {
+        this.id = UUID.randomUUID().toString();
+        this.text = text;
+        this.createdAt = Instant.now();
+        this.updatedAt = createdAt;
+    }
+
+    public String getId() { return id; }
+    public String getText() { return text; }
+    public String getAgreedEstimate() { return agreedEstimate; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
+
+    void setText(String text) {
+        this.text = text;
+        this.updatedAt = Instant.now();
+    }
+
+    void setAgreedEstimate(String estimate) {
+        this.agreedEstimate = estimate;
+        this.updatedAt = Instant.now();
+    }
+}
+
+// File: Participant.java
+import java.time.Instant;
+import java.util.UUID;
+
+public final class Participant {
+    private final String id;
+    private final String name;
+    private final String photoUrl;
+    private final Instant joinedAt;
+
+    Participant(String name, String photoUrl) {
+        this.id = UUID.randomUUID().toString();
+        this.name = name;
+        this.photoUrl = photoUrl;
+        this.joinedAt = Instant.now();
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getPhotoUrl() { return photoUrl; }
+    public Instant getJoinedAt() { return joinedAt; }
+}
+
+// File: EstimateRound.java
+import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public final class EstimateRound {
+    private final String id;
+    private final String itemId;
+    private final Instant startedAt;
+    private final Map<String, String> votes = new LinkedHashMap<>();
+    private boolean revealed;
+    private String agreedEstimate;
+    private Instant completedAt;
+
+    EstimateRound(String itemId) {
+        this.id = UUID.randomUUID().toString();
+        this.itemId = itemId;
+        this.startedAt = Instant.now();
+    }
+
+    public String getId() { return id; }
+    public String getItemId() { return itemId; }
+    public Instant getStartedAt() { return startedAt; }
+    public Instant getCompletedAt() { return completedAt; }
+    public boolean isRevealed() { return revealed; }
+    public String getAgreedEstimate() { return agreedEstimate; }
+    public Map<String, String> getVotes() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(votes));
+    }
+
+    void putVote(String participantId, String card) {
+        votes.put(participantId, card);
+    }
+
+    String voteFor(String participantId) {
+        return votes.get(participantId);
+    }
+
+    int voteCount() {
+        return votes.size();
+    }
+
+    void reveal() {
+        revealed = true;
+        if (completedAt == null) {
+            completedAt = Instant.now();
+        }
+    }
+
+    void setAgreedEstimate(String agreedEstimate) {
+        this.agreedEstimate = agreedEstimate;
+    }
+}
+
+// File: Game.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+public final class Game {
+    private final String id;
+    private final String ownerAccountId;
+    private final String inviteToken;
+    private final Instant createdAt;
+    private String name;
+    private String description;
+    private EstimateScale scale;
+    private final List<StoryItem> items = new ArrayList<>();
+    private final List<Participant> participants = new ArrayList<>();
+    private final List<EstimateRound> rounds = new ArrayList<>();
+    private String currentRoundId;
+    private Instant timerEndsAt;
+    private boolean deleted;
+
+    Game(String ownerAccountId, String name, String description, EstimateScale scale) {
+        this.id = UUID.randomUUID().toString();
+        this.ownerAccountId = ownerAccountId;
+        this.inviteToken = UUID.randomUUID().toString();
+        this.name = name;
+        this.description = description == null ? "" : description;
+        this.scale = scale;
+        this.createdAt = Instant.now();
+    }
+
+    public String getId() { return id; }
+    public String getOwnerAccountId() { return ownerAccountId; }
+    public String getName() { return name; }
+    public String getDescription() { return description; }
+    public EstimateScale getScale() { return scale; }
+    public String getInviteToken() { return inviteToken; }
+    public Instant getCreatedAt() { return createdAt; }
+    public List<StoryItem> getItems() { return Collections.unmodifiableList(items); }
+    public List<Participant> getParticipants() { return Collections.unmodifiableList(participants); }
+    public List<EstimateRound> getRounds() { return Collections.unmodifiableList(rounds); }
+    public String getCurrentRoundId() { return currentRoundId; }
+    public Instant getTimerEndsAt() { return timerEndsAt; }
+    public boolean isDeleted() { return deleted; }
+
+    void update(String name, String description, EstimateScale scale) {
+        this.name = name;
+        this.description = description == null ? "" : description;
+        this.scale = scale;
+    }
+
+    List<StoryItem> mutableItems() { return items; }
+    List<Participant> mutableParticipants() { return participants; }
+    List<EstimateRound> mutableRounds() { return rounds; }
+
+    EstimateRound findRound(String roundId) {
+        return rounds.stream().filter(r -> r.getId().equals(roundId)).findFirst().orElse(null);
+    }
+
+    StoryItem findItem(String itemId) {
+        return items.stream().filter(i -> i.getId().equals(itemId)).findFirst().orElse(null);
+    }
+
+    EstimateRound currentRound() {
+        return currentRoundId == null ? null : findRound(currentRoundId);
+    }
+
+    void setCurrentRound(EstimateRound round) {
+        rounds.add(round);
+        currentRoundId = round.getId();
+        timerEndsAt = null;
+    }
+
+    void setTimerEndsAt(Instant timerEndsAt) { this.timerEndsAt = timerEndsAt; }
+    void markDeleted() { deleted = true; }
+}
+
+// File: PlanningPokerService.java
+import java.io.IOException;
+import java.io.Writer;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+
+public final class PlanningPokerService {
+    private static final int MAX_ESTIMATORS = 15;
+    private static final int PBKDF2_ITERATIONS = 120_000;
+    private static final int PBKDF2_BITS = 256;
+
+    private final Map<String, Account> accountsById = new LinkedHashMap<>();
+    private final Map<String, Account> accountsByUsername = new HashMap<>();
+    private final Map<String, Game> gamesById = new LinkedHashMap<>();
+    private final Map<String, String> passwordReminderTokens = new HashMap<>();
+    private final SecureRandom random = new SecureRandom();
+
+    public synchronized Account createAccount(String name, String email, String password, String username) {
+        requireText(name, "Name");
+        requireText(email, "Email");
+        requireText(password, "Password");
+        requireText(username, "Username");
+        if (accountsByUsername.containsKey(normalize(username))) {
+            throw new IllegalArgumentException("Username is already in use.");
+        }
+        Account account = new Account(name.trim(), email.trim(), username.trim(), hashPassword(password));
+        accountsById.put(account.getId(), account);
+        accountsByUsername.put(normalize(username), account);
+        return account;
+    }
+
+    public synchronized Account login(String username, String password) {
+        Account account = accountsByUsername.get(normalize(username));
+        if (account == null || !passwordMatches(password, account.getPasswordHash())) {
+            throw new IllegalArgumentException("Invalid username or password.");
+        }
+        return account;
+    }
+
+    public synchronized void updateAccount(String accountId, String name, String email,
+                                           String username, String newPassword) {
+        Account account = requireAccount(accountId);
+        requireText(name, "Name");
+        requireText(email, "Email");
+        requireText(username, "Username");
+        Account existing = accountsByUsername.get(normalize(username));
+        if (existing != null && !existing.getId().equals(accountId)) {
+            throw new IllegalArgumentException("Username is already in use.");
+        }
+        accountsByUsername.remove(normalize(account.getUsername()));
+        account.update(name.trim(), email.trim(), username.trim());
+        accountsByUsername.put(normalize(username), account);
+        if (newPassword != null && !newPassword.isBlank()) {
+            account.setPasswordHash(hashPassword(newPassword));
+        }
+    }
+
+    public synchronized void deleteAccount(String accountId) {
+        Account account = requireAccount(accountId);
+        for (Game game : gamesById.values()) {
+            if (game.getOwnerAccountId().equals(accountId)) {
+                game.markDeleted();
+            }
+        }
+        gamesById.values().removeIf(Game::isDeleted);
+        accountsByUsername.remove(normalize(account.getUsername()));
+        accountsById.remove(accountId);
+    }
+
+    /**
+     * Produces a single-use password reset token. An application adapter can deliver it by email.
+     * No password or token is sent to the caller's email implicitly.
+     */
+    public synchronized String requestPasswordReminder(String email) {
+        Optional<Account> account = accountsById.values().stream()
+                .filter(a -> a.getEmail().equalsIgnoreCase(email == null ? "" : email.trim()))
+                .findFirst();
+        if (account.isEmpty()) {
+            return null;
+        }
+        byte[] bytes = new byte[32];
+        random.nextBytes(bytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        passwordReminderTokens.put(token, account.get().getId());
+        return token;
+    }
+
+    public synchronized void resetPassword(String token, String newPassword) {
+        requireText(newPassword, "Password");
+        String accountId = passwordReminderTokens.remove(token);
+        if (accountId == null) {
+            throw new IllegalArgumentException("Invalid or expired password reset token.");
+        }
+        requireAccount(accountId).setPasswordHash(hashPassword(newPassword));
+    }
+
+    public synchronized Game createGame(String ownerAccountId, String name, String description,
+                                        EstimateScale scale) {
+        requireAccount(ownerAccountId);
+        requireText(name, "Game name");
+        Objects.requireNonNull(scale, "Estimate scale is required.");
+        Game game = new Game(ownerAccountId, name.trim(), description, scale);
+        gamesById.put(game.getId(), game);
+        return game;
+    }
+
+    public synchronized void updateGame(String ownerAccountId, String gameId, String name,
+                                        String description, EstimateScale scale) {
+        Game game = requireOwnedGame(ownerAccountId, gameId);
+        requireText(name, "Game name");
+        game.update(name.trim(), description, Objects.requireNonNull(scale));
+    }
+
+    public synchronized String getInviteUrl(String gameId, String baseUrl) {
+        Game game = requireGame(gameId);
+        String base = requireText(baseUrl, "Base URL").trim().replaceAll("/+$", "");
+        return base + "/games/" + game.getId() + "/join?token="
+                + URLEncoder.encode(game.getInviteToken(), StandardCharsets.UTF_8);
+    }
+
+    public synchronized Participant joinGame(String gameId, String inviteToken, String name, String photoUrl) {
+        Game game = requireGame(gameId);
+        if (!game.getInviteToken().equals(inviteToken)) {
+            throw new IllegalArgumentException("Invalid game invitation.");
+        }
+        requireText(name, "Participant name");
+        if (game.mutableParticipants().size() >= MAX_ESTIMATORS) {
+            throw new IllegalStateException("A game can have at most 15 estimators.");
+        }
+        Participant participant = new Participant(name.trim(), photoUrl == null ? "" : photoUrl.trim());
+        game.mutableParticipants().add(participant);
+        return participant;
+    }
+
+    public synchronized StoryItem addItem(String ownerAccountId, String gameId, String text) {
+        Game game = requireOwnedGame(ownerAccountId, gameId);
+        requireText(text, "Item text");
+        StoryItem item = new StoryItem(text.trim());
+        game.mutableItems().add(item);
+        return item;
+    }
+
+    public synchronized List<StoryItem> importItems(String ownerAccountId, String gameId, String pastedText) {
+        Game game = requireOwnedGame(ownerAccountId, gameId);
+        Objects.requireNonNull(pastedText, "Pasted text is required.");
+        List<StoryItem> imported = new ArrayList<>();
+        for (String line : pastedText.split("\\R")) {
+            String value = line.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            // Spreadsheet paste is usually tab-separated. Treat each non-empty row as one story,
+            // combining columns so that story text is not silently discarded.
+            String normalized = value.replace('\t', ' ').replaceAll(" +", " ");
+            StoryItem item = new StoryItem(normalized);
+            game.mutableItems().add(item);
+            imported.add(item);
+        }
+        return List.copyOf(imported);
+    }
+
+    public synchronized void editItem(String ownerAccountId, String gameId, String itemId, String text) {
+        StoryItem item = requireItem(requireOwnedGame(ownerAccountId, gameId), itemId);
+        requireText(text, "Item text");
+        item.setText(text.trim());
+    }
+
+    public synchronized void deleteItem(String ownerAccountId, String gameId, String itemId) {
+        Game game = requireOwnedGame(ownerAccountId, gameId);
+        requireItem(game, itemId);
+        if (game.getRounds().stream().anyMatch(r -> r.getItemId().equals(itemId))) {
+            throw new IllegalStateException("An item with estimation history cannot be deleted.");
+        }
+        game.mutableItems().removeIf(i -> i.getId().equals(itemId));
+    }
+
+    public synchronized EstimateRound startRound(String ownerAccountId, String gameId, String itemId) {
+        Game game = requireOwnedGame(ownerAccountId, gameId);
+        requireItem(game, itemId);
+        EstimateRound round = new EstimateRound(itemId);
+        game.setCurrentRound(round);
+        return round;
+    }
+
+    public synchronized EstimateRound startRoundWithText(String ownerAccountId, String gameId, String text) {
+        StoryItem item = addItem(ownerAccountId, gameId, text);
+        return startRound(ownerAccountId, gameId, item.getId());
+    }
+
+    public synchronized void submitEstimate(String gameId, String roundId, String participantId, String card) {
+        Game game = requireGame(gameId);
+        EstimateRound round = requireRound(game, roundId);
+        requireParticipant(game, participantId);
+        if (round.isRevealed()) {
+            throw new IllegalStateException("Estimates cannot be changed after the draw is revealed.");
+        }
+        if (!game.getScale().contains(card)) {
+            throw new IllegalArgumentException("Card is not part of this game's estimate scale.");
+        }
+        round.putVote(participantId, card);
+        if (allParticipantsVoted(game, round)) {
+            round.reveal();
+            // A fresh discussion countdown is ready whenever a draw completes.
+            game.setTimerEndsAt(Instant.now().plus(Duration.ofMinutes(2)));
+            fillEstimateIfUnanimous(game, round);
+        }
+    }
+
+    public synchronized void showEstimates(String ownerAccountId, String gameId, String roundId) {
+        Game game = requireOwnedGame(ownerAccountId, gameId);
+        EstimateRound round = requireRound(game, roundId);
+        round.reveal();
+        fillEstimateIfUnanimous(game, round);
+    }
+
+    public synchronized boolean hasParticipantVoted(String gameId, String roundId, String participantId) {
+        Game game = requireGame(gameId);
+        requireParticipant(game, participantId);
+        return requireRound(game, roundId).getVotes().containsKey(participantId);
+    }
+
+    public synchronized Map<String, String> visibleEstimates(String gameId, String roundId) {
+        EstimateRound round = requireRound(requireGame(gameId), roundId);
+        return round.isRevealed() ? round.getVotes() : Map.of();
+    }
+
+    public synchronized List<String> missingVoterNames(String gameId, String roundId) {
+        Game game = requireGame(gameId);
+        EstimateRound round = requireRound(game, roundId);
+        List<String> missing = new ArrayList<>();
+        for (Participant participant : game.getParticipants()) {
+            if (!round.getVotes().containsKey(participant.getId())) {
+                missing.add(participant.getName());
+            }
+        }
+        return List.copyOf(missing);
+    }
+
+    public synchronized String acceptAverage(String ownerAccountId, String gameId, String roundId) {
+        Game game = requireOwnedGame(ownerAccountId, gameId);
+        EstimateRound round = requireRound(game, roundId);
+        if (round.getVotes().isEmpty()) {
+            throw new IllegalStateException("There are no estimates to average.");
+        }
+        double sum = 0;
+        int count = 0;
+        for (String vote : round.getVotes().values()) {
+            try {
+                sum += Double.parseDouble(vote);
+                count++;
+            } catch (NumberFormatException ignored) {
+                // Non-numeric cards (such as "?") do not contribute to an arithmetic average.
+            }
+        }
+        if (count == 0) {
+            throw new IllegalStateException("No numeric estimates are available to average.");
+        }
+        String average = formatNumber(sum / count);
+        setAgreedEstimate(game, round, average);
+        return average;
+    }
+
+    public synchronized void setAgreedEstimate(String ownerAccountId, String gameId, String roundId,
+                                               String estimate) {
+        Game game = requireOwnedGame(ownerAccountId, gameId);
+        requireText(estimate, "Agreed estimate");
+        setAgreedEstimate(game, requireRound(game, roundId), estimate.trim());
+    }
+
+    public synchronized List<EstimateRound> priorEstimates(String gameId, String itemId,
+                                                            String participantId) {
+        Game game = requireGame(gameId);
+        requireItem(game, itemId);
+        requireParticipant(game, participantId);
+        return game.getRounds().stream()
+                .filter(r -> r.getItemId().equals(itemId) && r.getVotes().containsKey(participantId))
+                .toList();
+    }
+
+    public synchronized void startTwoMinuteTimer(String gameId) {
+        Game game = requireGame(gameId);
+        game.setTimerEndsAt(Instant.now().plus(Duration.ofMinutes(2)));
+    }
+
+    public synchronized Duration timerRemaining(String gameId) {
+        Instant end = requireGame(gameId).getTimerEndsAt();
+        if (end == null || !end.isAfter(Instant.now())) {
+            return Duration.ZERO;
+        }
+        return Duration.between(Instant.now(), end);
+    }
+
+    public synchronized List<Game> browseGames(String ownerAccountId) {
+        requireAccount(ownerAccountId);
+        return gamesById.values().stream()
+                .filter(g -> g.getOwnerAccountId().equals(ownerAccountId))
+                .sorted(Comparator.comparing(Game::getCreatedAt).reversed())
+                .toList();
+    }
+
+    public synchronized void deleteGame(String ownerAccountId, String gameId) {
+        Game game = requireOwnedGame(ownerAccountId, gameId);
+        gamesById.remove(game.getId());
+    }
+
+    public synchronized String exportTranscriptHtml(String ownerAccountId, String gameId, ZoneId zone) {
+        Game game = requireOwnedGame(ownerAccountId, gameId);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z")
+                .withLocale(Locale.ROOT).withZone(zone);
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html>\n<html lang=\"en\"><head><meta charset=\"UTF-8\">")
+                .append("<title>").append(escapeHtml(game.getName()))
+                .append(" transcript</title></head><body><h1>")
+                .append(escapeHtml(game.getName())).append("</h1><p>")
+                .append(escapeHtml(game.getDescription())).append("</p><ol>");
+        for (EstimateRound round : game.getRounds()) {
+            StoryItem item = game.findItem(round.getItemId());
+            if (item == null) continue;
+            html.append("<li><h2>").append(escapeHtml(item.getText())).append("</h2><p>")
+                    .append(escapeHtml(formatter.format(round.getStartedAt())))
+                    .append("</p><ul>");
+            for (Map.Entry<String, String> vote : round.getVotes().entrySet()) {
+                Participant participant = findParticipant(game, vote.getKey());
+                html.append("<li>")
+                        .append(escapeHtml(participant == null ? "Former participant" : participant.getName()))
+                        .append(": ").append(escapeHtml(vote.getValue())).append("</li>");
+            }
+            html.append("</ul><p>Agreed estimate: ")
+                    .append(escapeHtml(round.getAgreedEstimate() == null ? "" : round.getAgreedEstimate()))
+                    .append("</p></li>");
+        }
+        return html.append("</ol></body></html>").toString();
+    }
+
+    public synchronized String exportTranscriptCsv(String ownerAccountId, String gameId, ZoneId zone) {
+        Game game = requireOwnedGame(ownerAccountId, gameId);
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(zone);
+        StringBuilder csv = new StringBuilder("game,item,round_started,participant,estimate,agreed_estimate\n");
+        for (EstimateRound round : game.getRounds()) {
+            StoryItem item = game.findItem(round.getItemId());
+            if (item == null) continue;
+            if (round.getVotes().isEmpty()) {
+                csv.append(csvField(game.getName())).append(',')
+                        .append(csvField(item.getText())).append(',')
+                        .append(csvField(formatter.format(round.getStartedAt())))
+                        .append(",,,").append(csvField(nullToEmpty(round.getAgreedEstimate()))).append('\n');
+            } else {
+                for (Map.Entry<String, String> vote : round.getVotes().entrySet()) {
+                    Participant participant = findParticipant(game, vote.getKey());
+                    csv.append(csvField(game.getName())).append(',')
+                            .append(csvField(item.getText())).append(',')
+                            .append(csvField(formatter.format(round.getStartedAt()))).append(',')
+                            .append(csvField(participant == null ? "Former participant" : participant.getName()))
+                            .append(',').append(csvField(vote.getValue())).append(',')
+                            .append(csvField(nullToEmpty(round.getAgreedEstimate()))).append('\n');
+                }
+            }
+        }
+        return csv.toString();
+    }
+
+    /**
+     * Writes only pseudonymous participant identifiers; names, emails, and account identifiers
+     * are intentionally omitted from research data.
+     */
+    public synchronized String exportAnonymizedResearchCsv(String gameId) {
+        Game game = requireGame(gameId);
+        Map<String, String> aliases = new LinkedHashMap<>();
+        int next = 1;
+        StringBuilder csv = new StringBuilder("game_id,item_id,round_id,participant_alias,estimate,agreed_estimate\n");
+        for (EstimateRound round : game.getRounds()) {
+            for (Map.Entry<String, String> vote : round.getVotes().entrySet()) {
+                String alias = aliases.computeIfAbsent(vote.getKey(), ignored -> "estimator-" + aliases.size() + 1);
+                csv.append(csvField(game.getId())).append(',')
+                        .append(csvField(round.getItemId())).append(',')
+                        .append(csvField(round.getId())).append(',')
+                        .append(csvField(alias)).append(',')
+                        .append(csvField(vote.getValue())).append(',')
+                        .append(csvField(nullToEmpty(round.getAgreedEstimate()))).append('\n');
+            }
+        }
+        return csv.toString();
+    }
+
+    public synchronized Map<String, Long> usageMetrics() {
+        long activeGames = gamesById.size();
+        long totalParticipants = gamesById.values().stream().mapToLong(g -> g.getParticipants().size()).sum();
+        long totalRounds = gamesById.values().stream().mapToLong(g -> g.getRounds().size()).sum();
+        Map<String, Long> metrics = new LinkedHashMap<>();
+        metrics.put("accounts", (long) accountsById.size());
+        metrics.put("games", activeGames);
+        metrics.put("participants", totalParticipants);
+        metrics.put("rounds", totalRounds);
+        return Map.copyOf(metrics);
+    }
+
+    public String formatTime(Instant instant, ZoneId localZone) {
+        return DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z")
+                .withZone(localZone).format(instant);
+    }
+
+    private void fillEstimateIfUnanimous(Game game, EstimateRound round) {
+        Collection<String> votes = round.getVotes().values();
+        if (!votes.isEmpty() && votes.stream().distinct().count() == 1) {
+            setAgreedEstimate(game, round, votes.iterator().next());
+        }
+    }
+
+    private void setAgreedEstimate(Game game, EstimateRound round, String estimate) {
+        round.setAgreedEstimate(estimate);
+        StoryItem item = game.findItem(round.getItemId());
+        if (item != null) {
+            item.setAgreedEstimate(estimate);
+        }
+    }
+
+    private boolean allParticipantsVoted(Game game, EstimateRound round) {
+        return !game.getParticipants().isEmpty()
+                && round.voteCount() >= game.getParticipants().size();
+    }
+
+    private Account requireAccount(String accountId) {
+        Account account = accountsById.get(accountId);
+        if (account == null) throw new IllegalArgumentException("Account not found.");
+        return account;
+    }
+
+    private Game requireGame(String gameId) {
+        Game game = gamesById.get(gameId);
+        if (game == null) throw new IllegalArgumentException("Game not found.");
+        return game;
+    }
+
+    private Game requireOwnedGame(String ownerAccountId, String gameId) {
+        Game game = requireGame(gameId);
+        if (!game.getOwnerAccountId().equals(ownerAccountId)) {
+            throw new IllegalArgumentException("You do not own this game.");
+        }
+        return game;
+    }
+
+    private StoryItem requireItem(Game game, String itemId) {
+        StoryItem item = game.findItem(itemId);
+        if (item == null) throw new IllegalArgumentException("Item not found.");
+        return item;
+    }
+
+    private EstimateRound requireRound(Game game, String roundId) {
+        EstimateRound round = game.findRound(roundId);
+        if (round == null) throw new IllegalArgumentException("Round not found.");
+        return round;
+    }
+
+    private Participant requireParticipant(Game game, String participantId) {
+        return game.getParticipants().stream()
+                .filter(p -> p.getId().equals(participantId))
+                .findFirst().orElseThrow(() -> new IllegalArgumentException("Participant not found."));
+    }
+
+    private Participant findParticipant(Game game, String participantId) {
+        return game.getParticipants().stream()
+                .filter(p -> p.getId().equals(participantId))
+                .findFirst().orElse(null);
+    }
+
+    private static String requireText(String value, String label) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(label + " is required.");
+        }
+        return value;
+    }
+
+    private static String normalize(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String formatNumber(double value) {
+        if (value == Math.rint(value)) {
+            return Long.toString((long) value);
+        }
+        return String.format(Locale.ROOT, "%.2f", value).replaceAll("0+$", "").replaceAll("\\.$", "");
+    }
+
+    private static String csvField(String value) {
+        String safe = value == null ? "" : value;
+        return "\"" + safe.replace("\"", "\"\"") + "\"";
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static String escapeHtml(String value) {
+        if (value == null) return "";
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
+    }
+
+    private static String hashPassword(String password) {
+        try {
+            byte[] salt = new byte[16];
+            new SecureRandom().nextBytes(salt);
+            PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt,
+                    PBKDF2_ITERATIONS, PBKDF2_BITS);
+            byte[] hash = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+                    .generateSecret(spec).getEncoded();
+            spec.clearPassword();
+            return PBKDF2_ITERATIONS + ":" + Base64.getEncoder().encodeToString(salt)
+                    + ":" + Base64.getEncoder().encodeToString(hash);
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to securely process password.", e);
+        }
+    }
+
+    private static boolean passwordMatches(String password, String encoded) {
+        if (password == null || encoded == null) return false;
+        try {
+            String[] parts = encoded.split(":");
+            int iterations = Integer.parseInt(parts[0]);
+            byte[] salt = Base64.getDecoder().decode(parts[1]);
+            byte[] expected = Base64.getDecoder().decode(parts[2]);
+            PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, iterations, expected.length * 8);
+            byte[] actual = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+                    .generateSecret(spec).getEncoded();
+            spec.clearPassword();
+            return MessageDigest.isEqual(expected, actual);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+}
+
+// File: Main.java
+import java.time.ZoneId;
+import java.util.Map;
+
+public final class Main {
+    private Main() { }
+
+    public static void main(String[] args) {
+        PlanningPokerService service = new PlanningPokerService();
+        Account moderator = service.createAccount(
+                "Morgan Moderator", "morgan@example.com", "demo-password", "morgan");
+
+        Game game = service.createGame(
+                moderator.getId(),
+                "Demo Planning Poker",
+                "A short in-memory demonstration.",
+                EstimateScale.MODIFIED_FIBONACCI);
+
+        Participant alex = service.joinGame(game.getId(), game.getInviteToken(), "Alex", "");
+        Participant sam = service.joinGame(game.getId(), game.getInviteToken(), "Sam", "");
+
+        StoryItem item = service.addItem(
+                moderator.getId(), game.getId(), "As a user, I want a helpful welcome screen.");
+        EstimateRound round = service.startRound(moderator.getId(), game.getId(), item.getId());
+
+        service.submitEstimate(game.getId(), round.getId(), alex.getId(), "3");
+        service.submitEstimate(game.getId(), round.getId(), sam.getId(), "5");
+
+        System.out.println("Game: " + game.getName());
+        System.out.println("Invite URL: " + service.getInviteUrl(game.getId(), "https://example.test"));
+        System.out.println("Revealed estimates: "
+                + service.visibleEstimates(game.getId(), round.getId()));
+        System.out.println("Accepted average: "
+                + service.acceptAverage(moderator.getId(), game.getId(), round.getId()));
+        System.out.println("Metrics: " + service.usageMetrics());
+        System.out.println("Transcript CSV:\n"
+                + service.exportTranscriptCsv(moderator.getId(), game.getId(), ZoneId.systemDefault()));
+    }
+}

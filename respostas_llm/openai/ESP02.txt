@@ -1,0 +1,960 @@
+// File: WasteType.java
+public enum WasteType {
+    PAPER,
+    CARDBOARD,
+    GLASS,
+    PLASTIC,
+    METAL,
+    ELECTRONICS,
+    BATTERIES,
+    HAZARDOUS_WASTE,
+    TEXTILES,
+    ORGANIC
+}
+
+// File: UserRole.java
+public enum UserRole {
+    USER,
+    ADMIN,
+    SUPERUSER,
+    EXECUTIVE,
+    EMPLOYEE,
+    HR,
+    DEVELOPER,
+    ACCOUNTANT,
+    FACILITY_REPRESENTATIVE
+}
+
+// File: GeoPoint.java
+public record GeoPoint(double latitude, double longitude) {
+    public GeoPoint {
+        if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            throw new IllegalArgumentException("Invalid geographic coordinates.");
+        }
+    }
+
+    public double distanceKilometersTo(GeoPoint other) {
+        final double earthRadiusKm = 6371.0;
+        double lat1 = Math.toRadians(latitude);
+        double lat2 = Math.toRadians(other.latitude);
+        double deltaLat = Math.toRadians(other.latitude - latitude);
+        double deltaLon = Math.toRadians(other.longitude - longitude);
+
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+                + Math.cos(lat1) * Math.cos(lat2)
+                * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+        return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+}
+
+// File: TimeWindow.java
+import java.time.LocalTime;
+
+public record TimeWindow(LocalTime start, LocalTime end) {
+    public TimeWindow {
+        if (start == null || end == null || !start.isBefore(end)) {
+            throw new IllegalArgumentException("A time window must have a start before its end.");
+        }
+    }
+
+    public boolean contains(TimeWindow other) {
+        return !other.start().isBefore(start) && !other.end().isAfter(end);
+    }
+
+    public boolean overlaps(TimeWindow other) {
+        return start.isBefore(other.end()) && other.start().isBefore(end);
+    }
+
+    public TimeWindow intersection(TimeWindow other) {
+        LocalTime intersectionStart = start.isAfter(other.start()) ? start : other.start();
+        LocalTime intersectionEnd = end.isBefore(other.end()) ? end : other.end();
+        return intersectionStart.isBefore(intersectionEnd)
+                ? new TimeWindow(intersectionStart, intersectionEnd)
+                : null;
+    }
+}
+
+// File: RecyclingFacility.java
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.DayOfWeek;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class RecyclingFacility {
+    private final String id;
+    private String name;
+    private String address;
+    private String zipCode;
+    private GeoPoint location;
+    private final Map<DayOfWeek, List<TimeWindow>> openingHours;
+    private Set<WasteType> acceptedWaste;
+    private boolean environmentallyFriendly;
+    private boolean active;
+    private long views;
+
+    public RecyclingFacility(
+            String id,
+            String name,
+            String address,
+            String zipCode,
+            GeoPoint location,
+            Map<DayOfWeek, List<TimeWindow>> openingHours,
+            Set<WasteType> acceptedWaste,
+            boolean environmentallyFriendly) {
+        if (id == null || id.isBlank() || name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Facility ID and name are required.");
+        }
+        this.id = id;
+        this.name = name;
+        this.address = address;
+        this.zipCode = zipCode;
+        this.location = location;
+        this.openingHours = new EnumMap<>(DayOfWeek.class);
+        if (openingHours != null) {
+            openingHours.forEach((day, windows) ->
+                    this.openingHours.put(day, new ArrayList<>(windows)));
+        }
+        this.acceptedWaste = acceptedWaste == null || acceptedWaste.isEmpty()
+                ? EnumSet.noneOf(WasteType.class)
+                : EnumSet.copyOf(acceptedWaste);
+        this.environmentallyFriendly = environmentallyFriendly;
+        this.active = true;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public String getZipCode() {
+        return zipCode;
+    }
+
+    public GeoPoint getLocation() {
+        return location;
+    }
+
+    public boolean isEnvironmentallyFriendly() {
+        return environmentallyFriendly;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public Set<WasteType> getAcceptedWaste() {
+        return Collections.unmodifiableSet(acceptedWaste);
+    }
+
+    public Map<DayOfWeek, List<TimeWindow>> getOpeningHours() {
+        Map<DayOfWeek, List<TimeWindow>> copy = new EnumMap<>(DayOfWeek.class);
+        openingHours.forEach((day, windows) -> copy.put(day, List.copyOf(windows)));
+        return Collections.unmodifiableMap(copy);
+    }
+
+    public List<TimeWindow> getOpeningHours(DayOfWeek day) {
+        return List.copyOf(openingHours.getOrDefault(day, List.of()));
+    }
+
+    public String getGoogleMapsUrl() {
+        return "https://www.google.com/maps/search/?api=1&query="
+                + URLEncoder.encode(address == null ? "" : address, StandardCharsets.UTF_8);
+    }
+
+    public long getViews() {
+        return views;
+    }
+
+    public void recordView() {
+        views++;
+    }
+
+    public void updateInformation(
+            String name,
+            String address,
+            String zipCode,
+            GeoPoint location,
+            Map<DayOfWeek, List<TimeWindow>> openingHours,
+            Set<WasteType> acceptedWaste,
+            boolean environmentallyFriendly) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Facility name is required.");
+        }
+        this.name = name;
+        this.address = address;
+        this.zipCode = zipCode;
+        this.location = location;
+        this.openingHours.clear();
+        if (openingHours != null) {
+            openingHours.forEach((day, windows) ->
+                    this.openingHours.put(day, new ArrayList<>(windows)));
+        }
+        this.acceptedWaste = acceptedWaste == null || acceptedWaste.isEmpty()
+                ? EnumSet.noneOf(WasteType.class)
+                : EnumSet.copyOf(acceptedWaste);
+        this.environmentallyFriendly = environmentallyFriendly;
+        this.active = true;
+    }
+
+    public void deactivate() {
+        active = false;
+    }
+}
+
+// File: RecyclingBin.java
+public record RecyclingBin(
+        String id,
+        String address,
+        String zipCode,
+        GeoPoint location,
+        WasteType wasteType) {
+}
+
+// File: SafeDisposalEvent.java
+import java.time.LocalDateTime;
+
+public record SafeDisposalEvent(
+        String id,
+        String title,
+        String address,
+        String zipCode,
+        GeoPoint location,
+        LocalDateTime startsAt,
+        LocalDateTime endsAt) {
+    public boolean isUpcomingOrActive(LocalDateTime now) {
+        return endsAt == null || !endsAt.isBefore(now);
+    }
+}
+
+// File: UserAccount.java
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.time.DayOfWeek;
+
+public class UserAccount {
+    private final String id;
+    private final String username;
+    private final String passwordHash;
+    private final UserRole role;
+    private final String encryptedEmail;
+    private final String ipAddress;
+    private final Set<String> favoriteFacilityIds = new HashSet<>();
+    private final List<String> transactionIds = new ArrayList<>();
+    private final List<String> notifications = new ArrayList<>();
+    private Map<DayOfWeek, List<TimeWindow>> weeklyAvailability;
+
+    public UserAccount(
+            String id,
+            String username,
+            String passwordHash,
+            UserRole role,
+            String encryptedEmail,
+            String ipAddress) {
+        this.id = id;
+        this.username = username;
+        this.passwordHash = passwordHash;
+        this.role = role;
+        this.encryptedEmail = encryptedEmail;
+        this.ipAddress = ipAddress;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public String getEncryptedEmail() {
+        return encryptedEmail;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public Set<String> getFavoriteFacilityIds() {
+        return Set.copyOf(favoriteFacilityIds);
+    }
+
+    public List<String> getTransactionIds() {
+        return List.copyOf(transactionIds);
+    }
+
+    public List<String> getNotifications() {
+        return List.copyOf(notifications);
+    }
+
+    public Map<DayOfWeek, List<TimeWindow>> getWeeklyAvailability() {
+        return weeklyAvailability == null ? Map.of() : Map.copyOf(weeklyAvailability);
+    }
+
+    void addFavorite(String facilityId) {
+        favoriteFacilityIds.add(facilityId);
+    }
+
+    void removeFavorite(String facilityId) {
+        favoriteFacilityIds.remove(facilityId);
+    }
+
+    void addTransaction(String transactionId) {
+        transactionIds.add(transactionId);
+    }
+
+    void addNotification(String notification) {
+        notifications.add(notification);
+    }
+
+    void setWeeklyAvailability(Map<DayOfWeek, List<TimeWindow>> availability) {
+        if (availability == null) {
+            weeklyAvailability = Map.of();
+            return;
+        }
+        Map<DayOfWeek, List<TimeWindow>> copy = new java.util.EnumMap<>(DayOfWeek.class);
+        availability.forEach((day, windows) -> copy.put(day, List.copyOf(windows)));
+        weeklyAvailability = Map.copyOf(copy);
+    }
+}
+
+// File: TransactionRecord.java
+import java.math.BigDecimal;
+import java.time.Instant;
+
+public record TransactionRecord(
+        String id,
+        String userId,
+        String description,
+        BigDecimal amount,
+        Instant createdAt) {
+}
+
+// File: Feedback.java
+import java.time.Instant;
+
+public record Feedback(
+        String id,
+        String userId,
+        String message,
+        Instant createdAt) {
+}
+
+// File: PickupRequest.java
+import java.time.LocalDateTime;
+
+public record PickupRequest(
+        String id,
+        String userId,
+        String facilityId,
+        WasteType wasteType,
+        LocalDateTime requestedAt,
+        TimeWindow flexibleWindow) {
+}
+
+// File: DataProtector.java
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
+import java.util.Base64;
+
+public class DataProtector {
+    private static final int NONCE_LENGTH = 12;
+    private static final int TAG_LENGTH_BITS = 128;
+    private final SecretKey key;
+    private final SecureRandom random = new SecureRandom();
+
+    public DataProtector(byte[] keyBytes) {
+        if (keyBytes == null || (keyBytes.length != 16 && keyBytes.length != 24 && keyBytes.length != 32)) {
+            throw new IllegalArgumentException("AES key must be 16, 24, or 32 bytes.");
+        }
+        key = new SecretKeySpec(keyBytes.clone(), "AES");
+    }
+
+    public static DataProtector create() {
+        byte[] key = new byte[32];
+        new SecureRandom().nextBytes(key);
+        return new DataProtector(key);
+    }
+
+    public String encrypt(String plaintext) {
+        try {
+            byte[] nonce = new byte[NONCE_LENGTH];
+            random.nextBytes(nonce);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(TAG_LENGTH_BITS, nonce));
+            byte[] encrypted = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
+            ByteBuffer output = ByteBuffer.allocate(nonce.length + encrypted.length);
+            output.put(nonce).put(encrypted);
+            return Base64.getEncoder().encodeToString(output.array());
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("Unable to encrypt data.", e);
+        }
+    }
+
+    public String decrypt(String ciphertext) {
+        try {
+            byte[] input = Base64.getDecoder().decode(ciphertext);
+            if (input.length <= NONCE_LENGTH) {
+                throw new IllegalArgumentException("Invalid encrypted value.");
+            }
+            ByteBuffer buffer = ByteBuffer.wrap(input);
+            byte[] nonce = new byte[NONCE_LENGTH];
+            buffer.get(nonce);
+            byte[] encrypted = new byte[buffer.remaining()];
+            buffer.get(encrypted);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_LENGTH_BITS, nonce));
+            return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
+        } catch (GeneralSecurityException | IllegalArgumentException e) {
+            throw new IllegalArgumentException("Unable to decrypt data.", e);
+        }
+    }
+}
+
+// File: RecyclingPlatform.java
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import java.math.BigDecimal;
+import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class RecyclingPlatform {
+    private final Map<String, RecyclingFacility> facilities = new ConcurrentHashMap<>();
+    private final Map<String, RecyclingBin> bins = new ConcurrentHashMap<>();
+    private final Map<String, SafeDisposalEvent> events = new ConcurrentHashMap<>();
+    private final Map<String, UserAccount> users = new ConcurrentHashMap<>();
+    private final Map<String, TransactionRecord> transactions = new ConcurrentHashMap<>();
+    private final List<Feedback> feedback = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final List<String> errorLogs = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final List<PickupRequest> pickupRequests = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final Set<String> blockedIpAddresses = ConcurrentHashMap.newKeySet();
+    private final Map<String, BigDecimal> activityFees = new ConcurrentHashMap<>();
+    private final DataProtector dataProtector;
+    private volatile long siteVisits;
+
+    public RecyclingPlatform(DataProtector dataProtector) {
+        this.dataProtector = dataProtector;
+    }
+
+    public boolean isValidZipCode(String zipCode) {
+        return zipCode != null && zipCode.matches("\\d{5}");
+    }
+
+    private void validateZipCode(String zipCode) {
+        if (!isValidZipCode(zipCode)) {
+            throw new IllegalArgumentException("Invalid ZIP code. Enter a five-digit ZIP code.");
+        }
+    }
+
+    private String newId() {
+        return UUID.randomUUID().toString();
+    }
+
+    private void requireRole(UserAccount user, UserRole... roles) {
+        if (user == null) {
+            throw new SecurityException("Authentication required.");
+        }
+        for (UserRole role : roles) {
+            if (user.getRole() == role) {
+                return;
+            }
+        }
+        throw new SecurityException("You do not have permission to perform this action.");
+    }
+
+    private String hashPassword(String password) {
+        if (password == null || password.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least eight characters.");
+        }
+        try {
+            byte[] salt = new byte[16];
+            new SecureRandom().nextBytes(salt);
+            PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 120_000, 256);
+            byte[] hash = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+                    .generateSecret(spec).getEncoded();
+            spec.clearPassword();
+            return Base64.getEncoder().encodeToString(salt) + ":"
+                    + Base64.getEncoder().encodeToString(hash);
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("Unable to hash password.", e);
+        }
+    }
+
+    public UserAccount createAccount(String username, String email, String password, String ipAddress) {
+        if (username == null || username.isBlank() || email == null || !email.matches("^.+@.+\\..+$")) {
+            throw new IllegalArgumentException("A username and valid email address are required.");
+        }
+        if (blockedIpAddresses.contains(ipAddress)) {
+            throw new SecurityException("Requests from this IP address are blocked.");
+        }
+        boolean duplicate = users.values().stream()
+                .anyMatch(user -> user.getUsername().equalsIgnoreCase(username));
+        if (duplicate) {
+            throw new IllegalArgumentException("Username is already in use.");
+        }
+        UserAccount account = new UserAccount(
+                newId(), username, hashPassword(password), UserRole.USER,
+                dataProtector.encrypt(email), ipAddress);
+        users.put(account.getId(), account);
+        return account;
+    }
+
+    public UserAccount addStaffAccount(
+            UserAccount administrator,
+            String username,
+            String email,
+            String password,
+            String ipAddress,
+            UserRole role) {
+        requireRole(administrator, UserRole.ADMIN, UserRole.SUPERUSER);
+        if (role == null || role == UserRole.USER) {
+            throw new IllegalArgumentException("A staff role is required.");
+        }
+        UserAccount account = new UserAccount(
+                newId(), username, hashPassword(password), role,
+                dataProtector.encrypt(email), ipAddress);
+        users.put(account.getId(), account);
+        return account;
+    }
+
+    public String getDecryptedEmail(UserAccount user) {
+        if (user == null) {
+            throw new IllegalArgumentException("User is required.");
+        }
+        return dataProtector.decrypt(user.getEncryptedEmail());
+    }
+
+    public List<RecyclingFacility> findFacilities(String zipCode, double radiusKm, Set<WasteType> wasteTypes) {
+        validateZipCode(zipCode);
+        if (radiusKm < 0) {
+            throw new IllegalArgumentException("Radius cannot be negative.");
+        }
+        GeoPoint origin = approximateZipLocation(zipCode);
+        Set<WasteType> requested = wasteTypes == null ? Set.of() : Set.copyOf(wasteTypes);
+
+        List<RecyclingFacility> results = facilities.values().stream()
+                .filter(RecyclingFacility::isActive)
+                .filter(facility -> requested.isEmpty() || facility.getAcceptedWaste().containsAll(requested))
+                .filter(facility -> facility.getLocation() != null
+                        && facility.getLocation().distanceKilometersTo(origin) <= radiusKm)
+                .sorted(Comparator.comparingDouble(facility ->
+                        facility.getLocation().distanceKilometersTo(origin)))
+                .toList();
+        results.forEach(RecyclingFacility::recordView);
+        siteVisits++;
+        return results;
+    }
+
+    private GeoPoint approximateZipLocation(String zipCode) {
+        int value = Integer.parseInt(zipCode);
+        double latitude = 24.0 + (value % 5000) / 100.0;
+        double longitude = -125.0 + (value % 6000) / 100.0;
+        return new GeoPoint(Math.min(latitude, 49.0), Math.min(longitude, -67.0));
+    }
+
+    public List<RecyclingFacility> findFacilitiesByZip(String zipCode, Set<WasteType> wasteTypes) {
+        validateZipCode(zipCode);
+        List<RecyclingFacility> matches = facilities.values().stream()
+                .filter(RecyclingFacility::isActive)
+                .filter(facility -> zipCode.equals(facility.getZipCode()))
+                .filter(facility -> wasteTypes == null || wasteTypes.isEmpty()
+                        || facility.getAcceptedWaste().containsAll(wasteTypes))
+                .sorted(Comparator.comparing(RecyclingFacility::getName))
+                .toList();
+        matches.forEach(RecyclingFacility::recordView);
+        siteVisits++;
+        return matches;
+    }
+
+    public String getFacilityMapLink(String facilityId) {
+        return getFacility(facilityId).getGoogleMapsUrl();
+    }
+
+    public RecyclingFacility getFacility(String facilityId) {
+        RecyclingFacility facility = facilities.get(facilityId);
+        if (facility == null || !facility.isActive()) {
+            throw new IllegalArgumentException("Facility not found.");
+        }
+        return facility;
+    }
+
+    public List<RecyclingBin> getBinsNear(String zipCode) {
+        validateZipCode(zipCode);
+        siteVisits++;
+        return bins.values().stream().filter(bin -> zipCode.equals(bin.zipCode())).toList();
+    }
+
+    public List<SafeDisposalEvent> getEventsNear(String zipCode) {
+        validateZipCode(zipCode);
+        LocalDateTime now = LocalDateTime.now();
+        siteVisits++;
+        return events.values().stream()
+                .filter(event -> zipCode.equals(event.zipCode()))
+                .filter(event -> event.isUpcomingOrActive(now))
+                .sorted(Comparator.comparing(SafeDisposalEvent::startsAt))
+                .toList();
+    }
+
+    public void addBin(UserAccount administrator, RecyclingBin bin) {
+        requireRole(administrator, UserRole.ADMIN, UserRole.SUPERUSER);
+        validateZipCode(bin.zipCode());
+        bins.put(bin.id(), bin);
+    }
+
+    public void addEvent(UserAccount administrator, SafeDisposalEvent event) {
+        requireRole(administrator, UserRole.ADMIN, UserRole.SUPERUSER);
+        validateZipCode(event.zipCode());
+        events.put(event.id(), event);
+        String message = "New safe-disposal event: " + event.title();
+        users.values().forEach(user -> user.addNotification(message));
+    }
+
+    public void addFacility(UserAccount administrator, RecyclingFacility facility) {
+        requireRole(administrator, UserRole.ADMIN, UserRole.SUPERUSER);
+        validateZipCode(facility.getZipCode());
+        facilities.put(facility.getId(), facility);
+    }
+
+    public void removeFacility(UserAccount administrator, String facilityId) {
+        requireRole(administrator, UserRole.ADMIN, UserRole.SUPERUSER);
+        RecyclingFacility facility = facilities.get(facilityId);
+        if (facility == null) {
+            throw new IllegalArgumentException("Facility not found.");
+        }
+        facility.deactivate();
+    }
+
+    public void updateFacility(
+            UserAccount editor,
+            String facilityId,
+            String name,
+            String address,
+            String zipCode,
+            GeoPoint location,
+            Map<DayOfWeek, List<TimeWindow>> openingHours,
+            Set<WasteType> acceptedWaste,
+            boolean environmentallyFriendly) {
+        requireRole(editor, UserRole.ADMIN, UserRole.SUPERUSER, UserRole.FACILITY_REPRESENTATIVE);
+        validateZipCode(zipCode);
+        getFacility(facilityId).updateInformation(
+                name, address, zipCode, location, openingHours, acceptedWaste, environmentallyFriendly);
+    }
+
+    public void addFavorite(UserAccount user, String facilityId) {
+        getFacility(facilityId);
+        user.addFavorite(facilityId);
+    }
+
+    public void removeFavorite(UserAccount user, String facilityId) {
+        user.removeFavorite(facilityId);
+    }
+
+    public List<RecyclingFacility> getFavorites(UserAccount user) {
+        return user.getFavoriteFacilityIds().stream()
+                .map(facilities::get)
+                .filter(facility -> facility != null && facility.isActive())
+                .toList();
+    }
+
+    public void uploadWeeklyAvailability(
+            UserAccount user,
+            Map<DayOfWeek, List<TimeWindow>> availability) {
+        user.setWeeklyAvailability(availability);
+    }
+
+    public List<RecyclingFacility> recommendFacilities(UserAccount user, Set<WasteType> wasteTypes) {
+        Set<WasteType> requested = wasteTypes == null ? Set.of() : Set.copyOf(wasteTypes);
+        Map<DayOfWeek, List<TimeWindow>> availability = user.getWeeklyAvailability();
+        return facilities.values().stream()
+                .filter(RecyclingFacility::isActive)
+                .filter(facility -> facility.getAcceptedWaste().containsAll(requested))
+                .filter(facility -> availability.entrySet().stream().anyMatch(entry ->
+                        facility.getOpeningHours(entry.getKey()).stream()
+                                .anyMatch(open -> entry.getValue().stream().anyMatch(open::overlaps))))
+                .sorted(Comparator.comparing(RecyclingFacility::getName))
+                .toList();
+    }
+
+    public PickupRequest requestFlexiblePickup(
+            UserAccount user,
+            String facilityId,
+            WasteType wasteType,
+            LocalDateTime requestedAt,
+            TimeWindow flexibleWindow) {
+        RecyclingFacility facility = getFacility(facilityId);
+        if (!facility.getAcceptedWaste().contains(wasteType)) {
+            throw new IllegalArgumentException("The facility does not accept this waste type.");
+        }
+        PickupRequest request = new PickupRequest(
+                newId(), user.getId(), facilityId, wasteType, requestedAt, flexibleWindow);
+        pickupRequests.add(request);
+        return request;
+    }
+
+    public TransactionRecord recordTransaction(
+            UserAccount user,
+            String description,
+            BigDecimal amount) {
+        if (amount == null || amount.signum() < 0) {
+            throw new IllegalArgumentException("Transaction amount must be non-negative.");
+        }
+        TransactionRecord transaction = new TransactionRecord(
+                newId(), user.getId(), description, amount, Instant.now());
+        transactions.put(transaction.id(), transaction);
+        user.addTransaction(transaction.id());
+        return transaction;
+    }
+
+    public List<TransactionRecord> getTransactionHistory(UserAccount user) {
+        return user.getTransactionIds().stream()
+                .map(transactions::get)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
+
+    public void submitFeedback(UserAccount user, String message) {
+        if (message == null || message.isBlank()) {
+            throw new IllegalArgumentException("Feedback cannot be empty.");
+        }
+        feedback.add(new Feedback(newId(), user == null ? null : user.getId(), message, Instant.now()));
+    }
+
+    public List<Feedback> getFeedback(UserAccount administrator) {
+        requireRole(administrator, UserRole.ADMIN, UserRole.SUPERUSER);
+        return List.copyOf(feedback);
+    }
+
+    public void logUserError(String message) {
+        if (message != null && !message.isBlank()) {
+            errorLogs.add(Instant.now() + " " + message);
+        }
+    }
+
+    public List<String> getErrorLogs(UserAccount administrator) {
+        requireRole(administrator, UserRole.ADMIN, UserRole.SUPERUSER);
+        return List.copyOf(errorLogs);
+    }
+
+    public void blockIpAddress(UserAccount administrator, String ipAddress) {
+        requireRole(administrator, UserRole.ADMIN, UserRole.SUPERUSER);
+        if (ipAddress == null || ipAddress.isBlank()) {
+            throw new IllegalArgumentException("IP address is required.");
+        }
+        blockedIpAddresses.add(ipAddress);
+    }
+
+    public void manageUserActivity(UserAccount administrator, String userId, String notification) {
+        requireRole(administrator, UserRole.ADMIN, UserRole.SUPERUSER);
+        UserAccount target = users.get(userId);
+        if (target == null) {
+            throw new IllegalArgumentException("User not found.");
+        }
+        target.addNotification(notification);
+    }
+
+    public List<UserAccount> getAllEmployees(UserAccount requester) {
+        requireRole(requester, UserRole.HR, UserRole.ADMIN, UserRole.SUPERUSER);
+        return users.values().stream()
+                .filter(user -> user.getRole() != UserRole.USER)
+                .toList();
+    }
+
+    public Map<String, Object> getAdminDashboard(UserAccount administrator) {
+        requireRole(administrator, UserRole.ADMIN, UserRole.SUPERUSER);
+        Map<String, Object> result = new HashMap<>();
+        result.put("activeFacilities", facilities.values().stream().filter(RecyclingFacility::isActive).count());
+        result.put("users", users.size());
+        result.put("siteVisits", siteVisits);
+        result.put("feedbackCount", feedback.size());
+        result.put("pickupRequests", pickupRequests.size());
+        Map<String, Long> visitsByZip = new HashMap<>();
+        facilities.values().stream().filter(RecyclingFacility::isActive)
+                .forEach(facility -> visitsByZip.merge(facility.getZipCode(), facility.getViews(), Long::sum));
+        result.put("facilityViewsByZip", Map.copyOf(visitsByZip));
+        result.put("serviceStatus", "OPERATIONAL");
+        return Map.copyOf(result);
+    }
+
+    public Map<String, Long> getFacilityUsageStats(UserAccount requester, String facilityId) {
+        requireRole(requester, UserRole.SUPERUSER, UserRole.FACILITY_REPRESENTATIVE, UserRole.ADMIN);
+        RecyclingFacility facility = getFacility(facilityId);
+        return Map.of("views", facility.getViews(),
+                "relatedPickupRequests", pickupRequests.stream()
+                        .filter(request -> request.facilityId().equals(facilityId)).count());
+    }
+
+    public Collection<RecyclingFacility> getPublicFacilities() {
+        siteVisits++;
+        return facilities.values().stream()
+                .filter(RecyclingFacility::isActive)
+                .toList();
+    }
+
+    public void setActivityFee(UserAccount accountant, String activity, BigDecimal fee) {
+        requireRole(accountant, UserRole.ACCOUNTANT, UserRole.ADMIN, UserRole.SUPERUSER);
+        if (fee == null || fee.signum() < 0) {
+            throw new IllegalArgumentException("Fee must be non-negative.");
+        }
+        activityFees.put(activity, fee);
+    }
+
+    public Map<String, BigDecimal> getActivityFees(UserAccount requester) {
+        requireRole(requester, UserRole.ACCOUNTANT, UserRole.ADMIN, UserRole.SUPERUSER);
+        return Map.copyOf(activityFees);
+    }
+
+    public List<RecyclingFacility> getApiFacilities(String zipCode) {
+        return findFacilitiesByZip(zipCode, Set.of());
+    }
+
+    public String getUserDocumentation() {
+        return """
+                Recycling Platform Guide
+                1. Search with a five-digit ZIP code to find nearby facilities.
+                2. Filter facilities by the recyclable materials they accept.
+                3. Select a facility address to open its location in Google Maps.
+                4. Create an account to save favorites, availability, and transactions.
+                5. Check the map layers for public bins and special disposal sites.
+                6. Contact the administrators through the feedback form for help.
+                """;
+    }
+
+    public String getTemporaryPasswordResetToken(String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email address is required.");
+        }
+        String token = UUID.randomUUID().toString();
+        users.values().stream()
+                .filter(user -> {
+                    try {
+                        return getDecryptedEmail(user).equalsIgnoreCase(email);
+                    } catch (RuntimeException ignored) {
+                        return false;
+                    }
+                })
+                .forEach(user -> user.addNotification("Password reset requested. Reset token: " + token));
+        return token;
+    }
+
+    public List<String> getRewards(UserAccount user) {
+        long completedTransactions = user.getTransactionIds().size();
+        List<String> rewards = new ArrayList<>();
+        if (completedTransactions >= 1) {
+            rewards.add("Eco Starter reward unlocked");
+        }
+        if (completedTransactions >= 5) {
+            rewards.add("Green Champion reward unlocked");
+        }
+        if (completedTransactions >= 10) {
+            rewards.add("Planet Protector reward unlocked");
+        }
+        return List.copyOf(rewards);
+    }
+}
+
+// File: Main.java
+import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Main {
+    public static void main(String[] args) {
+        RecyclingPlatform platform = new RecyclingPlatform(DataProtector.create());
+
+        UserAccount admin = platform.addStaffAccount(
+                createBootstrapAdmin(platform),
+                "admin",
+                "admin@example.com",
+                "StrongAdminPassword1",
+                "127.0.0.1",
+                UserRole.ADMIN);
+
+        Map<DayOfWeek, List<TimeWindow>> hours = new EnumMap<>(DayOfWeek.class);
+        hours.put(DayOfWeek.SATURDAY, List.of(
+                new TimeWindow(LocalTime.of(9, 0), LocalTime.of(16, 0))));
+
+        RecyclingFacility facility = new RecyclingFacility(
+                "facility-1",
+                "Community Recycling Center",
+                "100 Green Street, Example City",
+                "10001",
+                new GeoPoint(40.7500, -73.9900),
+                hours,
+                EnumSet.of(WasteType.PAPER, WasteType.GLASS, WasteType.PLASTIC),
+                true);
+        platform.addFacility(admin, facility);
+
+        UserAccount user = platform.createAccount(
+                "eco_user",
+                "user@example.com",
+                "SecurePassword123",
+                "192.0.2.20");
+
+        System.out.println("Nearby facilities: "
+                + platform.findFacilitiesByZip("10001", Set.of(WasteType.GLASS)).size());
+        System.out.println("Map link: " + platform.getFacilityMapLink("facility-1"));
+        System.out.println("Documentation: " + platform.getUserDocumentation().lines().findFirst().orElse(""));
+        System.out.println("Rewards: " + platform.getRewards(user));
+        platform.recordTransaction(user, "Recycling drop-off", new BigDecimal("0.00"));
+    }
+
+    private static UserAccount createBootstrapAdmin(RecyclingPlatform platform) {
+        // A bootstrap superuser is used only to demonstrate staff provisioning.
+        return new UserAccount(
+                "bootstrap",
+                "bootstrap",
+                "not-used",
+                UserRole.SUPERUSER,
+                new DataProtector(new byte[32]).encrypt("bootstrap@example.com"),
+                "127.0.0.1");
+    }
+}

@@ -1,0 +1,2410 @@
+// File: Address.java
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
+public class Address {
+    private final String street;
+    private final String city;
+    private final String state;
+    private final String zipCode;
+
+    public Address(String street, String city, String state, String zipCode) {
+        this.street = street;
+        this.city = city;
+        this.state = state;
+        this.zipCode = zipCode;
+    }
+
+    public String getStreet() {
+        return street;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public String getZipCode() {
+        return zipCode;
+    }
+
+    public boolean hasValidZipCode() {
+        return zipCode != null && zipCode.matches("\\d{5}");
+    }
+
+    public String getDisplayText() {
+        return street + ", " + city + ", " + state + " " + zipCode;
+    }
+
+    public String getGoogleMapsUrl() {
+        String query = getDisplayText();
+        return "https://www.google.com/maps/search/?api=1&query="
+                + URLEncoder.encode(query, StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public String toString() {
+        return getDisplayText();
+    }
+}
+
+// File: GeoLocation.java
+public record GeoLocation(double latitude, double longitude) {
+    public double distanceTo(GeoLocation other) {
+        double earthRadiusKm = 6371.0;
+        double lat1 = Math.toRadians(this.latitude);
+        double lat2 = Math.toRadians(other.latitude);
+        double dLat = Math.toRadians(other.latitude - this.latitude);
+        double dLon = Math.toRadians(other.longitude - this.longitude);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(lat1) * Math.cos(lat2)
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadiusKm * c;
+    }
+}
+
+// File: TimeRange.java
+import java.time.LocalTime;
+
+public class TimeRange {
+    private final LocalTime start;
+    private final LocalTime end;
+
+    public TimeRange(LocalTime start, LocalTime end) {
+        this.start = start;
+        this.end = end;
+    }
+
+    public LocalTime getStart() {
+        return start;
+    }
+
+    public LocalTime getEnd() {
+        return end;
+    }
+
+    public boolean contains(LocalTime time) {
+        return !time.isBefore(start) && time.isBefore(end);
+    }
+
+    public boolean overlaps(TimeRange other) {
+        return start.isBefore(other.end) && other.start.isBefore(end);
+    }
+
+    @Override
+    public String toString() {
+        return start + "-" + end;
+    }
+}
+
+// File: OperatingHours.java
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+
+public class OperatingHours {
+    private final Map<DayOfWeek, List<TimeRange>> hours = new EnumMap<>(DayOfWeek.class);
+
+    public void addHours(DayOfWeek day, TimeRange range) {
+        hours.computeIfAbsent(day, d -> new ArrayList<>()).add(range);
+    }
+
+    public List<TimeRange> getHoursForDay(DayOfWeek day) {
+        return List.copyOf(hours.getOrDefault(day, List.of()));
+    }
+
+    public boolean isOpen(DayOfWeek day, LocalTime time) {
+        for (TimeRange range : hours.getOrDefault(day, List.of())) {
+            if (range.contains(time)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public Map<DayOfWeek, List<TimeRange>> getWeeklyHours() {
+        return hours;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (DayOfWeek day : DayOfWeek.values()) {
+            List<TimeRange> ranges = hours.get(day);
+            if (ranges != null && !ranges.isEmpty()) {
+                sb.append(day).append(": ").append(ranges).append("; ");
+            }
+        }
+        return sb.toString().trim();
+    }
+}
+
+// File: WasteType.java
+public enum WasteType {
+    PAPER,
+    PLASTIC,
+    GLASS,
+    METAL,
+    ELECTRONICS,
+    BATTERIES,
+    YARD_WASTE,
+    TEXTILES,
+    HAZARDOUS
+}
+
+// File: FacilityType.java
+public enum FacilityType {
+    RECYCLING_CENTER,
+    DONATION_CENTER,
+    PUBLIC_RECYCLING_BIN,
+    SPECIAL_WASTE_DROP_OFF
+}
+
+// File: Role.java
+public enum Role {
+    ANONYMOUS,
+    USER,
+    ADMIN,
+    SUPERUSER,
+    EXECUTIVE,
+    EMPLOYEE,
+    HR_EMPLOYEE,
+    DEVELOPER,
+    FACILITY_REPRESENTATIVE,
+    ACCOUNTANT
+}
+
+// File: SiteStatus.java
+public enum SiteStatus {
+    ONLINE,
+    MAINTENANCE,
+    OFFLINE
+}
+
+// File: Facility.java
+import java.time.DayOfWeek;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Facility {
+    private final String id;
+    private String name;
+    private Address address;
+    private FacilityType type;
+    private OperatingHours operatingHours;
+    private final Set<WasteType> acceptedWaste;
+    private boolean environmentallyFriendly;
+    private String contactEmail;
+    private GeoLocation location;
+    private int visitCount;
+    private final Map<WasteType, Integer> wasteVisitCounts;
+
+    public Facility(String id, String name, Address address, FacilityType type,
+                    OperatingHours operatingHours, String contactEmail, GeoLocation location) {
+        this.id = id;
+        this.name = name;
+        this.address = address;
+        this.type = type;
+        this.operatingHours = operatingHours == null ? new OperatingHours() : operatingHours;
+        this.contactEmail = contactEmail;
+        this.location = location;
+        this.acceptedWaste = EnumSet.noneOf(WasteType.class);
+        this.wasteVisitCounts = new EnumMap<>(WasteType.class);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
+    }
+
+    public FacilityType getType() {
+        return type;
+    }
+
+    public void setType(FacilityType type) {
+        this.type = type;
+    }
+
+    public OperatingHours getOperatingHours() {
+        return operatingHours;
+    }
+
+    public void setOperatingHours(OperatingHours operatingHours) {
+        this.operatingHours = operatingHours;
+    }
+
+    public Set<WasteType> getAcceptedWaste() {
+        return Set.copyOf(acceptedWaste);
+    }
+
+    public void addAcceptedWaste(WasteType wasteType) {
+        acceptedWaste.add(wasteType);
+    }
+
+    public void setAcceptedWaste(Set<WasteType> wasteTypes) {
+        acceptedWaste.clear();
+        acceptedWaste.addAll(wasteTypes);
+    }
+
+    public boolean accepts(WasteType wasteType) {
+        return acceptedWaste.contains(wasteType);
+    }
+
+    public boolean isEnvironmentallyFriendly() {
+        return environmentallyFriendly;
+    }
+
+    public void setEnvironmentallyFriendly(boolean environmentallyFriendly) {
+        this.environmentallyFriendly = environmentallyFriendly;
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public void setContactEmail(String contactEmail) {
+        this.contactEmail = contactEmail;
+    }
+
+    public GeoLocation getLocation() {
+        return location;
+    }
+
+    public void setLocation(GeoLocation location) {
+        this.location = location;
+    }
+
+    public List<TimeRange> getHoursForDay(DayOfWeek day) {
+        return operatingHours.getHoursForDay(day);
+    }
+
+    public String getGoogleMapsUrl() {
+        return address.getGoogleMapsUrl();
+    }
+
+    public void recordVisit(WasteType wasteType) {
+        visitCount++;
+        if (wasteType != null) {
+            wasteVisitCounts.merge(wasteType, 1, Integer::sum);
+        }
+    }
+
+    public int getVisitCount() {
+        return visitCount;
+    }
+
+    public Map<WasteType, Integer> getWasteVisitCounts() {
+        return Map.copyOf(wasteVisitCounts);
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + type + ") " + address.getDisplayText()
+                + " | Waste: " + acceptedWaste
+                + " | Eco-friendly: " + environmentallyFriendly
+                + " | Hours: " + operatingHours;
+    }
+}
+
+// File: SafeDisposalEvent.java
+import java.time.LocalDateTime;
+import java.util.Set;
+
+public class SafeDisposalEvent {
+    private final String id;
+    private final String title;
+    private final Address address;
+    private final LocalDateTime start;
+    private final Set<WasteType> acceptedWaste;
+    private final String description;
+
+    public SafeDisposalEvent(String id, String title, Address address, LocalDateTime start,
+                             Set<WasteType> acceptedWaste, String description) {
+        this.id = id;
+        this.title = title;
+        this.address = address;
+        this.start = start;
+        this.acceptedWaste = Set.copyOf(acceptedWaste);
+        this.description = description;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public LocalDateTime getStart() {
+        return start;
+    }
+
+    public Set<WasteType> getAcceptedWaste() {
+        return acceptedWaste;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return title + " at " + address.getDisplayText() + " on " + start
+                + " accepting " + acceptedWaste;
+    }
+}
+
+// File: MapDisplay.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class MapDisplay {
+    private final List<Facility> facilities = new ArrayList<>();
+    private final List<SafeDisposalEvent> events = new ArrayList<>();
+
+    public void addFacility(Facility facility) {
+        facilities.add(facility);
+    }
+
+    public void addEvent(SafeDisposalEvent event) {
+        events.add(event);
+    }
+
+    public List<Facility> getPublicBins() {
+        return facilities.stream()
+                .filter(f -> f.getType() == FacilityType.PUBLIC_RECYCLING_BIN)
+                .toList();
+    }
+
+    public List<Facility> getSpecialWasteDropOffs() {
+        return facilities.stream()
+                .filter(f -> f.getType() == FacilityType.SPECIAL_WASTE_DROP_OFF)
+                .toList();
+    }
+
+    public String renderTextMap() {
+        StringBuilder sb = new StringBuilder("Map Display:\n");
+        for (Facility facility : facilities) {
+            sb.append("- ").append(facility.getType()).append(": ")
+              .append(facility.getName()).append(" | ")
+              .append(facility.getAddress().getDisplayText()).append(" | ")
+              .append(facility.getGoogleMapsUrl()).append("\n");
+        }
+        for (SafeDisposalEvent event : events) {
+            sb.append("- Event: ").append(event.getTitle()).append(" | ")
+              .append(event.getAddress().getDisplayText()).append(" | ")
+              .append(event.getAddress().getGoogleMapsUrl()).append("\n");
+        }
+        return sb.toString();
+    }
+}
+
+// File: WeeklySchedule.java
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+
+public class WeeklySchedule {
+    private final Map<DayOfWeek, List<TimeRange>> availability = new EnumMap<>(DayOfWeek.class);
+
+    public void addAvailability(DayOfWeek day, TimeRange range) {
+        availability.computeIfAbsent(day, d -> new ArrayList<>()).add(range);
+    }
+
+    public List<TimeRange> getAvailability(DayOfWeek day) {
+        return List.copyOf(availability.getOrDefault(day, List.of()));
+    }
+
+    public Map<DayOfWeek, List<TimeRange>> getAvailabilityMap() {
+        return availability;
+    }
+
+    public boolean isAvailable(DayOfWeek day, LocalTime time) {
+        for (TimeRange range : availability.getOrDefault(day, List.of())) {
+            if (range.contains(time)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean hasOverlap(DayOfWeek day, TimeRange facilityRange) {
+        for (TimeRange range : availability.getOrDefault(day, List.of())) {
+            if (range.overlaps(facilityRange)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return availability.toString();
+    }
+}
+
+// File: Transaction.java
+import java.time.LocalDateTime;
+
+public class Transaction {
+    private final String id;
+    private final String description;
+    private final double amount;
+    private final LocalDateTime timestamp;
+
+    public Transaction(String id, String description, double amount, LocalDateTime timestamp) {
+        this.id = id;
+        this.description = description;
+        this.amount = amount;
+        this.timestamp = timestamp;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return timestamp + " | " + description + " | $" + amount;
+    }
+}
+
+// File: Reward.java
+public class Reward {
+    private final String id;
+    private final String name;
+    private final int pointsRequired;
+    private final String description;
+
+    public Reward(String id, String name, int pointsRequired, String description) {
+        this.id = id;
+        this.name = name;
+        this.pointsRequired = pointsRequired;
+        this.description = description;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getPointsRequired() {
+        return pointsRequired;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + pointsRequired + " points) - " + description;
+    }
+}
+
+// File: Feedback.java
+import java.time.LocalDateTime;
+
+public class Feedback {
+    private final String id;
+    private final String username;
+    private final String subject;
+    private final String message;
+    private final String type;
+    private final LocalDateTime timestamp;
+    private boolean resolved;
+    private String reply;
+
+    public Feedback(String id, String username, String subject, String message, String type) {
+        this(id, username, subject, message, type, LocalDateTime.now(), false, null);
+    }
+
+    public Feedback(String id, String username, String subject, String message, String type,
+                    LocalDateTime timestamp, boolean resolved, String reply) {
+        this.id = id;
+        this.username = username;
+        this.subject = subject;
+        this.message = message;
+        this.type = type;
+        this.timestamp = timestamp;
+        this.resolved = resolved;
+        this.reply = reply;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public boolean isResolved() {
+        return resolved;
+    }
+
+    public void setResolved(boolean resolved) {
+        this.resolved = resolved;
+    }
+
+    public String getReply() {
+        return reply;
+    }
+
+    public void setReply(String reply) {
+        this.reply = reply;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + type + "] " + subject + " from " + username + ": " + message
+                + " | Reply: " + reply;
+    }
+}
+
+// File: ErrorLog.java
+import java.time.LocalDateTime;
+
+public class ErrorLog {
+    private final String id;
+    private final String message;
+    private final LocalDateTime timestamp;
+
+    public ErrorLog(String id, String message, LocalDateTime timestamp) {
+        this.id = id;
+        this.message = message;
+        this.timestamp = timestamp;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return timestamp + " | " + message;
+    }
+}
+
+// File: ActivityLog.java
+import java.time.LocalDateTime;
+
+public class ActivityLog {
+    private final String id;
+    private final String userId;
+    private final String action;
+    private final LocalDateTime timestamp;
+    private final String ipAddress;
+
+    public ActivityLog(String id, String userId, String action, LocalDateTime timestamp, String ipAddress) {
+        this.id = id;
+        this.userId = userId;
+        this.action = action;
+        this.timestamp = timestamp;
+        this.ipAddress = ipAddress;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    @Override
+    public String toString() {
+        return timestamp + " | User " + userId + " | " + action + " | IP " + ipAddress;
+    }
+}
+
+// File: Message.java
+import java.time.LocalDateTime;
+
+public class Message {
+    private final String id;
+    private final String from;
+    private final String to;
+    private final String body;
+    private final LocalDateTime timestamp;
+
+    public Message(String id, String from, String to, String body, LocalDateTime timestamp) {
+        this.id = id;
+        this.from = from;
+        this.to = to;
+        this.body = body;
+        this.timestamp = timestamp;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getFrom() {
+        return from;
+    }
+
+    public String getTo() {
+        return to;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return timestamp + " | " + from + " -> " + to + ": " + body;
+    }
+}
+
+// File: Employee.java
+public class Employee {
+    private final String id;
+    private final String name;
+    private final String email;
+    private final String phone;
+    private final Address address;
+    private final String department;
+    private final Role role;
+
+    public Employee(String id, String name, String email, String phone, Address address,
+                    String department, Role role) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.phone = phone;
+        this.address = address;
+        this.department = department;
+        this.role = role;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    @Override
+    public String toString() {
+        return name + " | " + department + " | " + role + " | " + email
+                + " | " + phone + " | " + address.getDisplayText();
+    }
+}
+
+// File: UserAccount.java
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+public class UserAccount {
+    private final String id;
+    private final String username;
+    private String passwordHash;
+    private String encryptedEmail;
+    private String encryptedPhone;
+    private Address address;
+    private String encryptedLinkedEmail;
+    private final Set<String> favoriteFacilityIds;
+    private boolean blocked;
+    private String ipAddress;
+    private WeeklySchedule weeklySchedule;
+    private final List<Transaction> transactions;
+    private final List<Reward> rewards;
+    private final Set<Role> roles;
+    private int rewardPoints;
+
+    public UserAccount(String id, String username, String passwordHash, String encryptedEmail,
+                       String encryptedPhone, Address address, String ipAddress,
+                       Set<Role> initialRoles) {
+        this.id = id;
+        this.username = username;
+        this.passwordHash = passwordHash;
+        this.encryptedEmail = encryptedEmail;
+        this.encryptedPhone = encryptedPhone;
+        this.address = address;
+        this.ipAddress = ipAddress;
+        this.favoriteFacilityIds = new LinkedHashSet<>();
+        this.transactions = new ArrayList<>();
+        this.rewards = new ArrayList<>();
+        this.roles = EnumSet.noneOf(Role.class);
+        this.roles.addAll(initialRoles);
+        this.rewardPoints = 0;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public String getEncryptedEmail() {
+        return encryptedEmail;
+    }
+
+    public void setEncryptedEmail(String encryptedEmail) {
+        this.encryptedEmail = encryptedEmail;
+    }
+
+    public String getEncryptedPhone() {
+        return encryptedPhone;
+    }
+
+    public void setEncryptedPhone(String encryptedPhone) {
+        this.encryptedPhone = encryptedPhone;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
+    }
+
+    public String getEncryptedLinkedEmail() {
+        return encryptedLinkedEmail;
+    }
+
+    public void setEncryptedLinkedEmail(String encryptedLinkedEmail) {
+        this.encryptedLinkedEmail = encryptedLinkedEmail;
+    }
+
+    public void addFavoriteFacilityId(String facilityId) {
+        favoriteFacilityIds.add(facilityId);
+    }
+
+    public void removeFavoriteFacilityId(String facilityId) {
+        favoriteFacilityIds.remove(facilityId);
+    }
+
+    public Set<String> getFavoriteFacilityIds() {
+        return Set.copyOf(favoriteFacilityIds);
+    }
+
+    public boolean isBlocked() {
+        return blocked;
+    }
+
+    public void setBlocked(boolean blocked) {
+        this.blocked = blocked;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public void setIpAddress(String ipAddress) {
+        this.ipAddress = ipAddress;
+    }
+
+    public WeeklySchedule getWeeklySchedule() {
+        return weeklySchedule;
+    }
+
+    public void setWeeklySchedule(WeeklySchedule weeklySchedule) {
+        this.weeklySchedule = weeklySchedule;
+    }
+
+    public void addTransaction(Transaction transaction) {
+        transactions.add(transaction);
+    }
+
+    public List<Transaction> getTransactionHistory() {
+        return List.copyOf(transactions);
+    }
+
+    public void addReward(Reward reward) {
+        rewards.add(reward);
+    }
+
+    public List<Reward> getRewards() {
+        return List.copyOf(rewards);
+    }
+
+    public void addRole(Role role) {
+        roles.add(role);
+    }
+
+    public boolean hasRole(Role role) {
+        return roles.contains(role);
+    }
+
+    public Set<Role> getRoles() {
+        return Set.copyOf(roles);
+    }
+
+    public int getRewardPoints() {
+        return rewardPoints;
+    }
+
+    public void addPoints(int points) {
+        rewardPoints += points;
+    }
+
+    public void deductPoints(int points) {
+        if (points > rewardPoints) {
+            throw new IllegalArgumentException("Insufficient reward points");
+        }
+        rewardPoints -= points;
+    }
+
+    @Override
+    public String toString() {
+        return username + " | roles=" + roles + " | blocked=" + blocked
+                + " | favorites=" + favoriteFacilityIds;
+    }
+}
+
+// File: DashboardStats.java
+import java.util.Map;
+
+public class DashboardStats {
+    private final int totalUsers;
+    private final int totalFacilities;
+    private final int totalEvents;
+    private final int totalFeedback;
+    private final Map<String, Integer> dropOffsByZip;
+    private final Map<String, SiteStatus> siteStatuses;
+
+    public DashboardStats(int totalUsers, int totalFacilities, int totalEvents, int totalFeedback,
+                          Map<String, Integer> dropOffsByZip,
+                          Map<String, SiteStatus> siteStatuses) {
+        this.totalUsers = totalUsers;
+        this.totalFacilities = totalFacilities;
+        this.totalEvents = totalEvents;
+        this.totalFeedback = totalFeedback;
+        this.dropOffsByZip = Map.copyOf(dropOffsByZip);
+        this.siteStatuses = Map.copyOf(siteStatuses);
+    }
+
+    public int getTotalUsers() {
+        return totalUsers;
+    }
+
+    public int getTotalFacilities() {
+        return totalFacilities;
+    }
+
+    public int getTotalEvents() {
+        return totalEvents;
+    }
+
+    public int getTotalFeedback() {
+        return totalFeedback;
+    }
+
+    public Map<String, Integer> getDropOffsByZip() {
+        return dropOffsByZip;
+    }
+
+    public Map<String, SiteStatus> getSiteStatuses() {
+        return siteStatuses;
+    }
+
+    @Override
+    public String toString() {
+        return "DashboardStats{users=" + totalUsers
+                + ", facilities=" + totalFacilities
+                + ", events=" + totalEvents
+                + ", feedback=" + totalFeedback
+                + ", dropOffsByZip=" + dropOffsByZip
+                + ", siteStatuses=" + siteStatuses + "}";
+    }
+}
+
+// File: BillStatement.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class BillStatement {
+    private final List<Transaction> transactions;
+
+    public BillStatement(List<Transaction> transactions) {
+        this.transactions = new ArrayList<>(transactions);
+    }
+
+    public List<Transaction> getTransactions() {
+        return List.copyOf(transactions);
+    }
+
+    public double getTotalAmount() {
+        return transactions.stream().mapToDouble(Transaction::getAmount).sum();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("Bill Statement\n");
+        for (Transaction transaction : transactions) {
+            sb.append("- ").append(transaction).append("\n");
+        }
+        sb.append("Total: $").append(getTotalAmount());
+        return sb.toString();
+    }
+}
+
+// File: Documentation.java
+public class Documentation {
+    private Documentation() {
+    }
+
+    public static String getContent() {
+        return "Recycling Platform User Documentation: "
+                + "Enter a valid ZIP code to find nearby recycling facilities. "
+                + "Click an address to open it in Google Maps. "
+                + "Filter facilities by recyclable waste type and opening hours. "
+                + "Create an account to save donation centers as favorites, upload schedules, "
+                + "view transaction history, receive rewards, and get event notifications. "
+                + "Use the map display for public bins, special waste drop-off sites, and safe disposal events.";
+    }
+}
+
+// File: EncryptionService.java
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.Base64;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+
+public class EncryptionService {
+    private static final String ALGORITHM = "AES/GCM/NoPadding";
+    private static final int IV_LENGTH = 12;
+    private static final int TAG_LENGTH = 128;
+    private final SecretKey key;
+    private final SecureRandom secureRandom;
+
+    public EncryptionService() {
+        byte[] keyBytes = "1234567890abcdef".getBytes(StandardCharsets.UTF_8);
+        this.key = new SecretKeySpec(keyBytes, "AES");
+        this.secureRandom = new SecureRandom();
+    }
+
+    public String encrypt(String plainText) {
+        if (plainText == null) {
+            return null;
+        }
+        try {
+            byte[] iv = new byte[IV_LENGTH];
+            secureRandom.nextBytes(iv);
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
+            cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(TAG_LENGTH, iv));
+            byte[] cipherText = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
+            ByteBuffer buffer = ByteBuffer.allocate(iv.length + cipherText.length);
+            buffer.put(iv);
+            buffer.put(cipherText);
+            return Base64.getEncoder().encodeToString(buffer.array());
+        } catch (Exception e) {
+            throw new IllegalStateException("Encryption failed", e);
+        }
+    }
+
+    public String decrypt(String encryptedText) {
+        if (encryptedText == null) {
+            return null;
+        }
+        try {
+            byte[] decoded = Base64.getDecoder().decode(encryptedText);
+            ByteBuffer buffer = ByteBuffer.wrap(decoded);
+            byte[] iv = new byte[IV_LENGTH];
+            buffer.get(iv);
+            byte[] cipherText = new byte[buffer.remaining()];
+            buffer.get(cipherText);
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
+            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_LENGTH, iv));
+            return new String(cipher.doFinal(cipherText), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new IllegalStateException("Decryption failed", e);
+        }
+    }
+}
+
+// File: AuthorizationService.java
+public class AuthorizationService {
+    public void requireRole(UserAccount account, Role role) {
+        if (account == null || !account.hasRole(role)) {
+            throw new SecurityException("Requires role: " + role);
+        }
+    }
+
+    public void requireAnyRole(UserAccount account, Role... roles) {
+        if (account == null) {
+            throw new SecurityException("Authentication required");
+        }
+        for (Role role : roles) {
+            if (account.hasRole(role)) {
+                return;
+            }
+        }
+        throw new SecurityException("Requires one of roles: " + java.util.Arrays.toString(roles));
+    }
+
+    public boolean isAnonymous(UserAccount account) {
+        return account == null;
+    }
+}
+
+// File: InvalidZipCodeException.java
+public class InvalidZipCodeException extends RuntimeException {
+    public InvalidZipCodeException(String message) {
+        super(message);
+    }
+}
+
+// File: DataStore.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+public class DataStore {
+    private static final DataStore INSTANCE = new DataStore();
+
+    private DataStore() {
+    }
+
+    public static DataStore getInstance() {
+        return INSTANCE;
+    }
+
+    private final List<Facility> facilities = new ArrayList<>();
+    private final List<SafeDisposalEvent> events = new ArrayList<>();
+    private final List<UserAccount> users = new ArrayList<>();
+    private final List<Feedback> feedbacks = new ArrayList<>();
+    private final List<ErrorLog> errorLogs = new ArrayList<>();
+    private final List<ActivityLog> activityLogs = new ArrayList<>();
+    private final List<Message> messages = new ArrayList<>();
+    private final List<Transaction> transactions = new ArrayList<>();
+    private final List<Employee> employees = new ArrayList<>();
+    private final List<Reward> rewardCatalog = new ArrayList<>();
+    private final Map<String, SiteStatus> siteStatuses = new HashMap<>();
+
+    public List<Facility> getFacilities() {
+        return facilities;
+    }
+
+    public List<SafeDisposalEvent> getEvents() {
+        return events;
+    }
+
+    public List<UserAccount> getUsers() {
+        return users;
+    }
+
+    public List<Feedback> getFeedbacks() {
+        return feedbacks;
+    }
+
+    public List<ErrorLog> getErrorLogs() {
+        return errorLogs;
+    }
+
+    public List<ActivityLog> getActivityLogs() {
+        return activityLogs;
+    }
+
+    public List<Message> getMessages() {
+        return messages;
+    }
+
+    public List<Transaction> getTransactions() {
+        return transactions;
+    }
+
+    public List<Employee> getEmployees() {
+        return employees;
+    }
+
+    public List<Reward> getRewardCatalog() {
+        return rewardCatalog;
+    }
+
+    public Map<String, SiteStatus> getSiteStatuses() {
+        return siteStatuses;
+    }
+
+    public void addFacility(Facility facility) {
+        facilities.add(facility);
+    }
+
+    public void updateFacility(Facility facility) {
+        for (int i = 0; i < facilities.size(); i++) {
+            if (facilities.get(i).getId().equals(facility.getId())) {
+                facilities.set(i, facility);
+                return;
+            }
+        }
+        facilities.add(facility);
+    }
+
+    public void removeFacility(String facilityId) {
+        facilities.removeIf(facility -> facility.getId().equals(facilityId));
+    }
+
+    public Optional<Facility> findFacilityById(String facilityId) {
+        return facilities.stream()
+                .filter(facility -> facility.getId().equals(facilityId))
+                .findFirst();
+    }
+
+    public void addUser(UserAccount user) {
+        users.add(user);
+    }
+
+    public Optional<UserAccount> findUserByUsername(String username) {
+        return users.stream()
+                .filter(user -> user.getUsername().equals(username))
+                .findFirst();
+    }
+
+    public Optional<UserAccount> findUserById(String id) {
+        return users.stream()
+                .filter(user -> user.getId().equals(id))
+                .findFirst();
+    }
+
+    public void addTransaction(Transaction transaction) {
+        transactions.add(transaction);
+    }
+
+    public void logActivity(String userId, String action, String ipAddress) {
+        activityLogs.add(new ActivityLog(
+                UUID.randomUUID().toString(),
+                userId,
+                action,
+                LocalDateTime.now(),
+                ipAddress
+        ));
+    }
+
+    public void logError(String message) {
+        errorLogs.add(new ErrorLog(UUID.randomUUID().toString(), message, LocalDateTime.now()));
+    }
+}
+
+// File: FacilityService.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class FacilityService {
+    private final DataStore store;
+    private final AuthorizationService authorizationService;
+
+    public FacilityService(DataStore store, AuthorizationService authorizationService) {
+        this.store = store;
+        this.authorizationService = authorizationService;
+    }
+
+    private void validateZip(String zipCode) {
+        if (zipCode == null || !zipCode.matches("\\d{5}")) {
+            throw new InvalidZipCodeException("Invalid ZIP code: " + zipCode
+                    + ". Please enter a 5-digit ZIP code.");
+        }
+    }
+
+    public List<Facility> searchByZip(String zipCode) {
+        validateZip(zipCode);
+        return store.getFacilities().stream()
+                .filter(facility -> facility.getAddress().getZipCode().equals(zipCode))
+                .toList();
+    }
+
+    public List<Facility> searchByZipAndWaste(String zipCode, Set<WasteType> wasteTypes) {
+        validateZip(zipCode);
+        if (wasteTypes == null || wasteTypes.isEmpty()) {
+            return searchByZip(zipCode);
+        }
+        return store.getFacilities().stream()
+                .filter(facility -> facility.getAddress().getZipCode().equals(zipCode))
+                .filter(facility -> wasteTypes.stream().anyMatch(facility::accepts))
+                .toList();
+    }
+
+    public List<Facility> getFacilitiesAccepting(WasteType wasteType, String zipCode) {
+        validateZip(zipCode);
+        return store.getFacilities().stream()
+                .filter(facility -> facility.getAddress().getZipCode().equals(zipCode))
+                .filter(facility -> facility.accepts(wasteType))
+                .toList();
+    }
+
+    public List<Facility> listPublicBins(String zipCode) {
+        validateZip(zipCode);
+        return store.getFacilities().stream()
+                .filter(facility -> facility.getAddress().getZipCode().equals(zipCode))
+                .filter(facility -> facility.getType() == FacilityType.PUBLIC_RECYCLING_BIN)
+                .toList();
+    }
+
+    public List<Facility> listSpecialWasteDropOffs(String zipCode) {
+        validateZip(zipCode);
+        return store.getFacilities().stream()
+                .filter(facility -> facility.getAddress().getZipCode().equals(zipCode))
+                .filter(facility -> facility.getType() == FacilityType.SPECIAL_WASTE_DROP_OFF)
+                .toList();
+    }
+
+    public Facility addFacility(UserAccount actor, Facility facility) {
+        authorizationService.requireAnyRole(actor, Role.ADMIN, Role.SUPERUSER);
+        store.addFacility(facility);
+        store.logActivity(actor.getId(), "Added facility " + facility.getName(), actor.getIpAddress());
+        return facility;
+    }
+
+    public void onboardFacility(UserAccount actor, Facility facility) {
+        authorizationService.requireRole(actor, Role.ADMIN);
+        addFacility(actor, facility);
+    }
+
+    public void removeFacility(UserAccount actor, String facilityId) {
+        authorizationService.requireAnyRole(actor, Role.ADMIN, Role.SUPERUSER);
+        store.removeFacility(facilityId);
+        store.logActivity(actor.getId(), "Removed facility " + facilityId, actor.getIpAddress());
+    }
+
+    public void updateFacility(UserAccount actor, Facility facility) {
+        authorizationService.requireAnyRole(actor,
+                Role.ADMIN, Role.SUPERUSER, Role.FACILITY_REPRESENTATIVE);
+        store.updateFacility(facility);
+        store.logActivity(actor.getId(), "Updated facility " + facility.getName(), actor.getIpAddress());
+    }
+
+    public List<Facility> getAllFacilities() {
+        return List.copyOf(store.getFacilities());
+    }
+
+    public void recordFacilityVisit(String facilityId, WasteType wasteType) {
+        store.findFacilityById(facilityId).ifPresent(facility -> facility.recordVisit(wasteType));
+    }
+
+    public int getFacilityVisitCount(String facilityId) {
+        return store.findFacilityById(facilityId)
+                .map(Facility::getVisitCount)
+                .orElse(0);
+    }
+
+    public Map<WasteType, Integer> getFacilityWasteStats(String facilityId) {
+        return store.findFacilityById(facilityId)
+                .map(Facility::getWasteVisitCounts)
+                .orElse(Map.of());
+    }
+}
+
+// File: NotificationService.java
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+public class NotificationService {
+    private final Set<String> subscribers = new LinkedHashSet<>();
+    private final List<String> sentNotifications = new ArrayList<>();
+
+    public void subscribe(String email) {
+        if (email != null && email.contains("@")) {
+            subscribers.add(email);
+        }
+    }
+
+    public void notifyEvent(SafeDisposalEvent event) {
+        for (String email : subscribers) {
+            sentNotifications.add("To " + email + ": New safe disposal event - "
+                    + event.getTitle() + " at " + event.getAddress().getDisplayText()
+                    + " on " + event.getStart());
+        }
+    }
+
+    public List<String> getSentNotifications() {
+        return List.copyOf(sentNotifications);
+    }
+}
+
+// File: EventService.java
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class EventService {
+    private final DataStore store;
+    private final AuthorizationService authorizationService;
+    private final NotificationService notificationService;
+
+    public EventService(DataStore store, AuthorizationService authorizationService,
+                        NotificationService notificationService) {
+        this.store = store;
+        this.authorizationService = authorizationService;
+        this.notificationService = notificationService;
+    }
+
+    public SafeDisposalEvent addEvent(UserAccount actor, SafeDisposalEvent event) {
+        authorizationService.requireAnyRole(actor, Role.ADMIN, Role.SUPERUSER);
+        store.getEvents().add(event);
+        notificationService.notifyEvent(event);
+        store.logActivity(actor.getId(), "Added event " + event.getTitle(), actor.getIpAddress());
+        return event;
+    }
+
+    public List<SafeDisposalEvent> listEventsByZip(String zipCode) {
+        if (zipCode == null || !zipCode.matches("\\d{5}")) {
+            throw new InvalidZipCodeException("Invalid ZIP code: " + zipCode);
+        }
+        return store.getEvents().stream()
+                .filter(event -> event.getAddress().getZipCode().equals(zipCode))
+                .toList();
+    }
+
+    public SafeDisposalEvent createEvent(String id, String title, Address address,
+                                         LocalDateTime start, java.util.Set<WasteType> acceptedWaste,
+                                         String description) {
+        return new SafeDisposalEvent(id, title, address, start, acceptedWaste, description);
+    }
+}
+
+// File: UserService.java
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+public class UserService {
+    private final DataStore store;
+    private final EncryptionService encryptionService;
+    private final AuthorizationService authorizationService;
+
+    public UserService(DataStore store, EncryptionService encryptionService,
+                       AuthorizationService authorizationService) {
+        this.store = store;
+        this.encryptionService = encryptionService;
+        this.authorizationService = authorizationService;
+    }
+
+    private String hashPassword(String password) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    private boolean passwordMatches(String password, String passwordHash) {
+        return hashPassword(password).equals(passwordHash);
+    }
+
+    public UserAccount createAccount(String username, String password, String email, String phone,
+                                     Address address, String ipAddress) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username is required");
+        }
+        if (password == null || password.length() < 4) {
+            throw new IllegalArgumentException("Password must be at least 4 characters");
+        }
+        if (store.findUserByUsername(username).isPresent()) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+        String encryptedEmail = encryptionService.encrypt(email);
+        String encryptedPhone = encryptionService.encrypt(phone);
+        UserAccount user = new UserAccount(
+                UUID.randomUUID().toString(),
+                username,
+                hashPassword(password),
+                encryptedEmail,
+                encryptedPhone,
+                address,
+                ipAddress,
+                Set.of(Role.USER)
+        );
+        store.addUser(user);
+        store.logActivity(user.getId(), "Created account", ipAddress);
+        return user;
+    }
+
+    public UserAccount login(String username, String password) {
+        UserAccount user = store.findUserByUsername(username)
+                .orElseThrow(() -> new SecurityException("Invalid username or password"));
+        if (user.isBlocked()) {
+            throw new SecurityException("This account is blocked");
+        }
+        if (!passwordMatches(password, user.getPasswordHash())) {
+            throw new SecurityException("Invalid username or password");
+        }
+        store.logActivity(user.getId(), "Logged in", user.getIpAddress());
+        return user;
+    }
+
+    public String getEmail(UserAccount user) {
+        return encryptionService.decrypt(user.getEncryptedEmail());
+    }
+
+    public String getPhone(UserAccount user) {
+        return encryptionService.decrypt(user.getEncryptedPhone());
+    }
+
+    public String getLinkedEmail(UserAccount user) {
+        return encryptionService.decrypt(user.getEncryptedLinkedEmail());
+    }
+
+    public void linkEmail(UserAccount user, String email) {
+        user.setEncryptedLinkedEmail(encryptionService.encrypt(email));
+        store.logActivity(user.getId(), "Linked email account", user.getIpAddress());
+    }
+
+    public String requestTemporaryPassword(UserAccount user) {
+        String temporaryPassword = UUID.randomUUID().toString().substring(0, 8);
+        user.setPasswordHash(hashPassword(temporaryPassword));
+        store.logActivity(user.getId(), "Requested temporary password", user.getIpAddress());
+        return temporaryPassword;
+    }
+
+    public void addFavoriteDonationCenter(UserAccount user, Facility facility) {
+        if (facility.getType() != FacilityType.DONATION_CENTER) {
+            throw new IllegalArgumentException("Only donation centers can be added as favorites");
+        }
+        user.addFavoriteFacilityId(facility.getId());
+        store.logActivity(user.getId(), "Favorited " + facility.getName(), user.getIpAddress());
+    }
+
+    public List<Facility> getFavoriteFacilities(UserAccount user) {
+        Set<String> favoriteIds = user.getFavoriteFacilityIds();
+        return store.getFacilities().stream()
+                .filter(facility -> favoriteIds.contains(facility.getId()))
+                .toList();
+    }
+
+    public void contactAdministrators(UserAccount user, String subject, String message) {
+        store.getFeedbacks().add(new Feedback(
+                UUID.randomUUID().toString(),
+                user.getUsername(),
+                subject,
+                message,
+                "CONTACT"
+        ));
+        store.logActivity(user.getId(), "Contacted administrators", user.getIpAddress());
+    }
+
+    public void submitComplaint(UserAccount user, String subject, String message) {
+        store.getFeedbacks().add(new Feedback(
+                UUID.randomUUID().toString(),
+                user.getUsername(),
+                subject,
+                message,
+                "COMPLAINT"
+        ));
+        store.logActivity(user.getId(), "Submitted complaint", user.getIpAddress());
+    }
+
+    public void logActivity(UserAccount user, String action) {
+        store.logActivity(user.getId(), action, user.getIpAddress());
+    }
+
+    public List<UserAccount> getUsers(UserAccount actor) {
+        authorizationService.requireAnyRole(actor, Role.ADMIN, Role.EXECUTIVE);
+        return List.copyOf(store.getUsers());
+    }
+}
+
+// File: AdminService.java
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+public class AdminService {
+    private final DataStore store;
+    private final AuthorizationService authorizationService;
+    private final FacilityService facilityService;
+
+    public AdminService(DataStore store, AuthorizationService authorizationService,
+                        FacilityService facilityService) {
+        this.store = store;
+        this.authorizationService = authorizationService;
+        this.facilityService = facilityService;
+    }
+
+    public List<Feedback> readFeedback(UserAccount admin) {
+        authorizationService.requireAnyRole(admin, Role.ADMIN, Role.SUPERUSER);
+        return List.copyOf(store.getFeedbacks());
+    }
+
+    public void replyToFeedback(UserAccount admin, String feedbackId, String reply) {
+        authorizationService.requireAnyRole(admin, Role.ADMIN, Role.SUPERUSER);
+        Feedback feedback = store.getFeedbacks().stream()
+                .filter(item -> item.getId().equals(feedbackId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Feedback not found"));
+        feedback.setReply(reply);
+        feedback.setResolved(true);
+        store.logActivity(admin.getId(), "Replied to feedback " + feedbackId, admin.getIpAddress());
+    }
+
+    public int blockUserByIp(UserAccount admin, String ipAddress) {
+        authorizationService.requireRole(admin, Role.ADMIN);
+        int blocked = 0;
+        for (UserAccount user : store.getUsers()) {
+            if (ipAddress.equals(user.getIpAddress())) {
+                user.setBlocked(true);
+                blocked++;
+            }
+        }
+        store.logActivity(admin.getId(), "Blocked IP " + ipAddress, admin.getIpAddress());
+        return blocked;
+    }
+
+    public int unblockUserByIp(UserAccount admin, String ipAddress) {
+        authorizationService.requireRole(admin, Role.ADMIN);
+        int unblocked = 0;
+        for (UserAccount user : store.getUsers()) {
+            if (ipAddress.equals(user.getIpAddress())) {
+                user.setBlocked(false);
+                unblocked++;
+            }
+        }
+        store.logActivity(admin.getId(), "Unblocked IP " + ipAddress, admin.getIpAddress());
+        return unblocked;
+    }
+
+    public List<ErrorLog> viewErrorLogs(UserAccount admin) {
+        authorizationService.requireRole(admin, Role.ADMIN);
+        return List.copyOf(store.getErrorLogs());
+    }
+
+    public DashboardStats generateDashboard(UserAccount admin) {
+        authorizationService.requireRole(admin, Role.ADMIN);
+        Map<String, Integer> dropOffsByZip = new HashMap<>();
+        for (Facility facility : store.getFacilities()) {
+            dropOffsByZip.merge(
+                    facility.getAddress().getZipCode(),
+                    facility.getVisitCount(),
+                    Integer::sum
+            );
+        }
+        return new DashboardStats(
+                store.getUsers().size(),
+                store.getFacilities().size(),
+                store.getEvents().size(),
+                store.getFeedbacks().size(),
+                dropOffsByZip,
+                store.getSiteStatuses()
+        );
+    }
+
+    public void communicateWithFacility(UserAccount admin, Facility facility, String message) {
+        authorizationService.requireRole(admin, Role.ADMIN);
+        store.getMessages().add(new Message(
+                UUID.randomUUID().toString(),
+                admin.getUsername(),
+                facility.getContactEmail(),
+                message,
+                java.time.LocalDateTime.now()
+        ));
+        store.logActivity(admin.getId(), "Messaged facility " + facility.getName(), admin.getIpAddress());
+    }
+
+    public List<ActivityLog> viewActivityLogs(UserAccount admin) {
+        authorizationService.requireRole(admin, Role.ADMIN);
+        return List.copyOf(store.getActivityLogs());
+    }
+
+    public void onboardFacility(UserAccount admin, Facility facility) {
+        authorizationService.requireRole(admin, Role.ADMIN);
+        facilityService.addFacility(admin, facility);
+    }
+
+    public List<UserAccount> getAllUsers(UserAccount admin) {
+        authorizationService.requireRole(admin, Role.ADMIN);
+        return List.copyOf(store.getUsers());
+    }
+
+    public void setSiteStatus(UserAccount admin, String siteName, SiteStatus status) {
+        authorizationService.requireRole(admin, Role.ADMIN);
+        store.getSiteStatuses().put(siteName, status);
+        store.logActivity(admin.getId(), "Set site status " + siteName + " to " + status,
+                admin.getIpAddress());
+    }
+}
+
+// File: SuperUserService.java
+public class SuperUserService {
+    private final DataStore store;
+    private final AuthorizationService authorizationService;
+    private final FacilityService facilityService;
+
+    public SuperUserService(DataStore store, AuthorizationService authorizationService,
+                            FacilityService facilityService) {
+        this.store = store;
+        this.authorizationService = authorizationService;
+        this.facilityService = facilityService;
+    }
+
+    public void updateFacilityInfo(UserAccount superuser, Facility facility) {
+        authorizationService.requireRole(superuser, Role.SUPERUSER);
+        facilityService.updateFacility(superuser, facility);
+    }
+
+    public String viewUserStats(UserAccount superuser, String facilityId) {
+        authorizationService.requireRole(superuser, Role.SUPERUSER);
+        Facility facility = store.findFacilityById(facilityId)
+                .orElseThrow(() -> new IllegalArgumentException("Facility not found"));
+        return "Facility " + facility.getName()
+                + " visits=" + facility.getVisitCount()
+                + " wasteStats=" + facility.getWasteVisitCounts();
+    }
+
+    public void replyToUserQuestion(UserAccount superuser, String feedbackId, String reply) {
+        authorizationService.requireRole(superuser, Role.SUPERUSER);
+        Feedback feedback = store.getFeedbacks().stream()
+                .filter(item -> item.getId().equals(feedbackId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Question not found"));
+        feedback.setReply(reply);
+        feedback.setResolved(true);
+        store.logActivity(superuser.getId(), "Replied to user question " + feedbackId,
+                superuser.getIpAddress());
+    }
+}
+
+// File: FacilityRepresentativeService.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+public class FacilityRepresentativeService {
+    private final DataStore store;
+    private final AuthorizationService authorizationService;
+
+    public FacilityRepresentativeService(DataStore store, AuthorizationService authorizationService) {
+        this.store = store;
+        this.authorizationService = authorizationService;
+    }
+
+    public void updateFacilityInfo(UserAccount representative, Facility facility) {
+        authorizationService.requireRole(representative, Role.FACILITY_REPRESENTATIVE);
+        store.updateFacility(facility);
+        store.logActivity(representative.getId(), "Updated facility info " + facility.getName(),
+                representative.getIpAddress());
+    }
+
+    public void updateAcceptedMaterials(UserAccount representative, Facility facility,
+                                        Set<WasteType> materials) {
+        authorizationService.requireRole(representative, Role.FACILITY_REPRESENTATIVE);
+        facility.setAcceptedWaste(materials);
+        store.updateFacility(facility);
+        store.logActivity(representative.getId(),
+                "Updated accepted materials for " + facility.getName(),
+                representative.getIpAddress());
+    }
+
+    public String viewUserStats(UserAccount representative, Facility facility) {
+        authorizationService.requireRole(representative, Role.FACILITY_REPRESENTATIVE);
+        return "Visits=" + facility.getVisitCount()
+                + " Waste stats=" + facility.getWasteVisitCounts();
+    }
+
+    public List<WeeklySchedule> viewUserSchedules(UserAccount representative) {
+        authorizationService.requireRole(representative, Role.FACILITY_REPRESENTATIVE);
+        List<WeeklySchedule> schedules = new ArrayList<>();
+        for (UserAccount user : store.getUsers()) {
+            if (user.getWeeklySchedule() != null) {
+                schedules.add(user.getWeeklySchedule());
+            }
+        }
+        return schedules;
+    }
+
+    public void communicateWithAdmin(UserAccount representative, String message) {
+        authorizationService.requireRole(representative, Role.FACILITY_REPRESENTATIVE);
+        store.getMessages().add(new Message(
+                UUID.randomUUID().toString(),
+                representative.getUsername(),
+                "admin",
+                message,
+                java.time.LocalDateTime.now()
+        ));
+        store.logActivity(representative.getId(), "Communicated with admin",
+                representative.getIpAddress());
+    }
+}
+
+// File: ExecutiveService.java
+public class ExecutiveService {
+    private final DataStore store;
+    private final AuthorizationService authorizationService;
+
+    public ExecutiveService(DataStore store, AuthorizationService authorizationService) {
+        this.store = store;
+        this.authorizationService = authorizationService;
+    }
+
+    public String generateCompanyPerformanceReport(UserAccount executive) {
+        authorizationService.requireRole(executive, Role.EXECUTIVE);
+        return "Company Performance Report: users=" + store.getUsers().size()
+                + ", facilities=" + store.getFacilities().size()
+                + ", events=" + store.getEvents().size()
+                + ", feedback=" + store.getFeedbacks().size()
+                + ", transactions=" + store.getTransactions().size();
+    }
+
+    public DataStore fullDataAccess(UserAccount executive) {
+        authorizationService.requireRole(executive, Role.EXECUTIVE);
+        return store;
+    }
+}
+
+// File: EmployeeService.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class EmployeeService {
+    private final DataStore store;
+    private final AuthorizationService authorizationService;
+
+    public EmployeeService(DataStore store, AuthorizationService authorizationService) {
+        this.store = store;
+        this.authorizationService = authorizationService;
+    }
+
+    public String planRoute(UserAccount employee, Address start, List<Facility> facilities) {
+        authorizationService.requireRole(employee, Role.EMPLOYEE);
+        StringBuilder sb = new StringBuilder("Route planning from ")
+                .append(start.getDisplayText()).append("\n");
+        for (Facility facility : facilities) {
+            sb.append("- ").append(facility.getName())
+              .append(" | ").append(facility.getAddress().getDisplayText())
+              .append(" | ").append(facility.getGoogleMapsUrl())
+              .append("\n");
+        }
+        return sb.toString();
+    }
+
+    public List<String> getQuickNotifications(UserAccount employee) {
+        authorizationService.requireRole(employee, Role.EMPLOYEE);
+        List<String> notifications = new ArrayList<>();
+        for (Message message : store.getMessages()) {
+            if (message.getTo().equals(employee.getUsername())
+                    || message.getFrom().equals(employee.getUsername())) {
+                notifications.add(message.toString());
+            }
+        }
+        return notifications;
+    }
+}
+
+// File: HRService.java
+import java.util.List;
+
+public class HRService {
+    private final DataStore store;
+    private final AuthorizationService authorizationService;
+
+    public HRService(DataStore store, AuthorizationService authorizationService) {
+        this.store = store;
+        this.authorizationService = authorizationService;
+    }
+
+    public void addEmployee(UserAccount hrUser, Employee employee) {
+        authorizationService.requireRole(hrUser, Role.HR_EMPLOYEE);
+        store.getEmployees().add(employee);
+        store.logActivity(hrUser.getId(), "Added employee " + employee.getName(),
+                hrUser.getIpAddress());
+    }
+
+    public List<Employee> viewAllEmployees(UserAccount hrUser) {
+        authorizationService.requireRole(hrUser, Role.HR_EMPLOYEE);
+        return List.copyOf(store.getEmployees());
+    }
+}
+
+// File: AccountantService.java
+import java.util.List;
+
+public class AccountantService {
+    private final DataStore store;
+    private final AuthorizationService authorizationService;
+
+    public AccountantService(DataStore store, AuthorizationService authorizationService) {
+        this.store = store;
+        this.authorizationService = authorizationService;
+    }
+
+    public List<Transaction> viewAvailableActivityFees(UserAccount accountant) {
+        authorizationService.requireRole(accountant, Role.ACCOUNTANT);
+        return List.copyOf(store.getTransactions());
+    }
+
+    public BillStatement generateBillStatement(UserAccount accountant,
+                                               List<Transaction> transactions) {
+        authorizationService.requireRole(accountant, Role.ACCOUNTANT);
+        return new BillStatement(transactions);
+    }
+}
+
+// File: DeveloperApi.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class DeveloperApi {
+    private final FacilityService facilityService;
+    private final EventService eventService;
+    private final AuthorizationService authorizationService;
+
+    public DeveloperApi(FacilityService facilityService, EventService eventService,
+                        AuthorizationService authorizationService) {
+        this.facilityService = facilityService;
+        this.eventService = eventService;
+        this.authorizationService = authorizationService;
+    }
+
+    public List<String> getFacilitySummaries(UserAccount developer, String zipCode) {
+        authorizationService.requireRole(developer, Role.DEVELOPER);
+        List<String> summaries = new ArrayList<>();
+        for (Facility facility : facilityService.searchByZip(zipCode)) {
+            summaries.add(facility.getName()
+                    + " | " + facility.getType()
+                    + " | " + facility.getAddress().getDisplayText()
+                    + " | " + facility.getGoogleMapsUrl()
+                    + " | hours=" + facility.getOperatingHours());
+        }
+        return summaries;
+    }
+
+    public List<SafeDisposalEvent> getEvents(UserAccount developer, String zipCode) {
+        authorizationService.requireRole(developer, Role.DEVELOPER);
+        return eventService.listEventsByZip(zipCode);
+    }
+}
+
+// File: RewardService.java
+public class RewardService {
+    private final DataStore store;
+
+    public RewardService(DataStore store) {
+        this.store = store;
+    }
+
+    public void addRewardToCatalog(Reward reward) {
+        store.getRewardCatalog().add(reward);
+    }
+
+    public void awardPoints(UserAccount user, int points) {
+        user.addPoints(points);
+    }
+
+    public boolean redeemReward(UserAccount user, Reward reward) {
+        if (user.getRewardPoints() < reward.getPointsRequired()) {
+            return false;
+        }
+        user.deductPoints(reward.getPointsRequired());
+        user.addReward(reward);
+        return true;
+    }
+}
+
+// File: TransactionService.java
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+public class TransactionService {
+    private final DataStore store;
+
+    public TransactionService(DataStore store) {
+        this.store = store;
+    }
+
+    public Transaction recordTransaction(UserAccount user, String description, double amount) {
+        Transaction transaction = new Transaction(
+                UUID.randomUUID().toString(),
+                description,
+                amount,
+                LocalDateTime.now()
+        );
+        user.addTransaction(transaction);
+        store.addTransaction(transaction);
+        return transaction;
+    }
+
+    public List<Transaction> getTransactionHistory(UserAccount user) {
+        return user.getTransactionHistory();
+    }
+}
+
+// File: ScheduleService.java
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+public class ScheduleService {
+    public void uploadSchedule(UserAccount user, WeeklySchedule schedule) {
+        user.setWeeklySchedule(schedule);
+    }
+
+    public List<Facility> recommendFacilities(UserAccount user, String zipCode,
+                                              Set<WasteType> wasteTypes,
+                                              FacilityService facilityService) {
+        List<Facility> candidates = facilityService.searchByZipAndWaste(zipCode, wasteTypes);
+        if (user.getWeeklySchedule() == null) {
+            return candidates;
+        }
+        List<Facility> recommendations = new ArrayList<>();
+        for (Facility facility : candidates) {
+            if (hasOverlap(user.getWeeklySchedule(), facility.getOperatingHours())) {
+                recommendations.add(facility);
+            }
+        }
+        return recommendations;
+    }
+
+    public List<String> findFlexiblePickupWindows(UserAccount user, Facility facility) {
+        if (user.getWeeklySchedule() == null) {
+            return List.of();
+        }
+        WeeklySchedule schedule = user.getWeeklySchedule();
+        OperatingHours hours = facility.getOperatingHours();
+        List<String> windows = new ArrayList<>();
+        for (DayOfWeek day : DayOfWeek.values()) {
+            for (TimeRange availability : schedule.getAvailability(day)) {
+                for (TimeRange openHours : hours.getHoursForDay(day)) {
+                    if (availability.overlaps(openHours)) {
+                        LocalTime start = availability.getStart().isAfter(openHours.getStart())
+                                ? availability.getStart() : openHours.getStart();
+                        LocalTime end = availability.getEnd().isBefore(openHours.getEnd())
+                                ? availability.getEnd() : openHours.getEnd();
+                        windows.add(day + " " + start + "-" + end);
+                    }
+                }
+            }
+        }
+        return windows;
+    }
+
+    private boolean hasOverlap(WeeklySchedule schedule, OperatingHours hours) {
+        for (DayOfWeek day : DayOfWeek.values()) {
+            for (TimeRange availability : schedule.getAvailability(day)) {
+                for (TimeRange openHours : hours.getHoursForDay(day)) {
+                    if (availability.overlaps(openHours)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+}
+
+// File: Main.java
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Set;
+
+public class Main {
+    public static void main(String[] args) {
+        DataStore store = DataStore.getInstance();
+        AuthorizationService auth = new AuthorizationService();
+        EncryptionService encryptionService = new EncryptionService();
+        NotificationService notificationService = new NotificationService();
+        FacilityService facilityService = new FacilityService(store, auth);
+        EventService eventService = new EventService(store, auth, notificationService);
+        UserService userService = new UserService(store, encryptionService, auth);
+        ScheduleService scheduleService = new ScheduleService();
+        TransactionService transactionService = new TransactionService(store);
+        RewardService rewardService = new RewardService(store);
+        AdminService adminService = new AdminService(store, auth, facilityService);
+        SuperUserService superUserService = new SuperUserService(store, auth, facilityService);
+        FacilityRepresentativeService representativeService =
+                new FacilityRepresentativeService(store, auth);
+        ExecutiveService executiveService = new ExecutiveService(store, auth);
+        EmployeeService employeeService = new EmployeeService(store, auth);
+        HRService hrService = new HRService(store, auth);
+        AccountantService accountantService = new AccountantService(store, auth);
+        DeveloperApi developerApi = new DeveloperApi(facilityService, eventService, auth);
+
+        UserAccount admin = userService.createAccount(
+                "admin",
+                "adminpass",
+                "admin@example.com",
+                "555-1000",
+                new Address("1 Admin St", "City", "ST", "12345"),
+                "10.0.0.1"
+        );
+        admin.addRole(Role.ADMIN);
+        admin.addRole(Role.SUPERUSER);
+
+        UserAccount alice = userService.createAccount(
+                "alice",
+                "secret",
+                "alice@example.com",
+                "555-1234",
+                new Address("10 Main St", "City", "ST", "12345"),
+                "192.168.1.10"
+        );
+        userService.linkEmail(alice, "alice.linked@example.com");
+
+        OperatingHours weekdayHours = new OperatingHours();
+        for (DayOfWeek day : List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+                DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)) {
+            weekdayHours.addHours(day, new TimeRange(LocalTime.of(9, 0), LocalTime.of(17, 0)));
+        }
+        weekdayHours.addHours(DayOfWeek.SATURDAY,
+                new TimeRange(LocalTime.of(10, 0), LocalTime.of(14, 0)));
+
+        Facility recyclingCenter = new Facility(
+                "f1",
+                "Green Recycling Center",
+                new Address("100 Green Rd", "City", "ST", "12345"),
+                FacilityType.RECYCLING_CENTER,
+                weekdayHours,
+                "center@example.com",
+                new GeoLocation(40.0, -73.0)
+        );
+        recyclingCenter.setEnvironmentallyFriendly(true);
+        recyclingCenter.addAcceptedWaste(WasteType.PAPER);
+        recyclingCenter.addAcceptedWaste(WasteType.PLASTIC);
+        recyclingCenter.addAcceptedWaste(WasteType.GLASS);
+        facilityService.addFacility(admin, recyclingCenter);
+
+        Facility donationCenter = new Facility(
+                "f2",
+                "Helping Hands Donation",
+                new Address("200 Help Ave", "City", "ST", "12345"),
+                FacilityType.DONATION_CENTER,
+                weekdayHours,
+                "donate@example.com",
+                new GeoLocation(40.1, -73.1)
+        );
+        donationCenter.setEnvironmentallyFriendly(true);
+        donationCenter.addAcceptedWaste(WasteType.TEXTILES);
+        facilityService.addFacility(admin, donationCenter);
+
+        Facility publicBin = new Facility(
+                "f3",
+                "Downtown Public Recycling Bin",
+                new Address("300 Main St", "City", "ST", "12345"),
+                FacilityType.PUBLIC_RECYCLING_BIN,
+                weekdayHours,
+                "bin@example.com",
+                new GeoLocation(40.2, -73.2)
+        );
+        publicBin.addAcceptedWaste(WasteType.PLASTIC);
+        publicBin.addAcceptedWaste(WasteType.METAL);
+        facilityService.addFacility(admin, publicBin);
+
+        Facility specialDropOff = new Facility(
+                "f4",
+                "Special Waste Drop-Off Site",
+                new Address("400 Safe Way", "City", "ST", "12345"),
+                FacilityType.SPECIAL_WASTE_DROP_OFF,
+                weekdayHours,
+                "special@example.com",
+                new GeoLocation(40.3, -73.3)
+        );
+        specialDropOff.addAcceptedWaste(WasteType.BATTERIES);
+        specialDropOff.addAcceptedWaste(WasteType.ELECTRONICS);
+        specialDropOff.addAcceptedWaste(WasteType.HAZARDOUS);
+        facilityService.addFacility(admin, specialDropOff);
+
+        System.out.println("Anonymous ZIP search for 12345:");
+        for (Facility facility : facilityService.searchByZip("12345")) {
+            System.out.println("- " + facility.getName()
+                    + " | " + facility.getAddress().getDisplayText()
+                    + " | Maps: " + facility.getGoogleMapsUrl()
+                    + " | Hours: " + facility.getOperatingHours());
+        }
+
+        try {
+            facilityService.searchByZip("12");
+        } catch (InvalidZipCodeException e) {
+            System.out.println("Invalid ZIP feedback: " + e.getMessage());
+        }
+
+        System.out.println("Facilities accepting PLASTIC:");
+        for (Facility facility : facilityService.getFacilitiesAccepting(WasteType.PLASTIC, "12345")) {
+            System.out.println("- " + facility.getName() + " | " + facility.getHoursForDay(DayOfWeek.MONDAY));
+        }
+
+        userService.addFavoriteDonationCenter(alice, donationCenter);
+        System.out.println("Alice favorite facilities: " + userService.getFavoriteFacilities(alice));
+
+        notificationService.subscribe(userService.getEmail(alice));
+        SafeDisposalEvent event = new SafeDisposalEvent(
+                "e1",
+                "Safe Battery Disposal Event",
+                new Address("500 Event Plaza", "City", "ST", "12345"),
+                LocalDateTime.now().plusDays(3),
+                Set.of(WasteType.BATTERIES, WasteType.HAZARDOUS),
+                "Bring old batteries and household hazardous waste."
+        );
+        eventService.addEvent(admin, event);
+        System.out.println("Event notifications: " + notificationService.getSentNotifications());
+
+        WeeklySchedule schedule = new WeeklySchedule();
+        schedule.addAvailability(DayOfWeek.SATURDAY,
+                new TimeRange(LocalTime.of(11, 0), LocalTime.of(13, 0)));
+        scheduleService.uploadSchedule(alice, schedule);
+        List<Facility> recommended = scheduleService.recommendFacilities(
+                alice, "12345", Set.of(WasteType.PAPER), facilityService);
+        System.out.println("Recommended facilities based on schedule:");
+        for (Facility facility : recommended) {
+            System.out.println("- " + facility.getName()
+                    + " | Windows: " + scheduleService.findFlexiblePickupWindows(alice, facility));
+        }
+
+        MapDisplay mapDisplay = new MapDisplay();
+        mapDisplay.addFacility(publicBin);
+        mapDisplay.addFacility(specialDropOff);
+        mapDisplay.addEvent(event);
+        System.out.println(mapDisplay.renderTextMap());
+
+        userService.contactAdministrators(alice, "Battery question", "Where can I recycle batteries?");
+        Feedback feedback = adminService.readFeedback(admin).get(0);
+        adminService.replyToFeedback(admin, feedback.getId(), "Use the Safe Battery Disposal Event.");
+        System.out.println("Feedback handled: " + feedback);
+
+        store.logError("Demo error log entry");
+        adminService.setSiteStatus(admin, "Main Website", SiteStatus.ONLINE);
+        System.out.println(adminService.generateDashboard(admin));
+        System.out.println("Blocked users by IP: " + adminService.blockUserByIp(admin, "192.168.1.10"));
+        adminService.unblockUserByIp(admin, "192.168.1.10");
+
+        facilityService.recordFacilityVisit("f1", WasteType.PAPER);
+        facilityService.recordFacilityVisit("f1", WasteType.PLASTIC);
+        System.out.println(superUserService.viewUserStats(admin, "f1"));
+
+        UserAccount representative = userService.createAccount(
+                "rep1",
+                "reppass",
+                "rep@green.com",
+                "555-5555",
+                new Address("1 Green Rd", "City", "ST", "12345"),
+                "10.0.0.2"
+        );
+        representative.addRole(Role.FACILITY_REPRESENTATIVE);
+        representativeService.updateAcceptedMaterials(representative, recyclingCenter,
+                Set.of(WasteType.PAPER, WasteType.PLASTIC, WasteType.GLASS, WasteType.METAL));
+        representativeService.communicateWithAdmin(representative, "We need additional bins.");
+        System.out.println("Schedules visible to representative: "
+                + representativeService.viewUserSchedules(representative).size());
+
+        UserAccount employee = userService.createAccount(
+                "employee1",
+                "emppass",
+                "employee@example.com",
+                "555-2000",
+                new Address("20 Work St", "City", "ST", "12345"),
+                "10.0.0.3"
+        );
+        employee.addRole(Role.EMPLOYEE);
+        System.out.println(employeeService.planRoute(employee,
+                new Address("20 Work St", "City", "ST", "12345"),
+                List.of(recyclingCenter, specialDropOff)));
+
+        UserAccount hr = userService.createAccount(
+                "hr1",
+                "hrpass",
+                "hr@example.com",
+                "555-3000",
+                new Address("30 HR St", "City", "ST", "12345"),
+                "10.0.0.4"
+        );
+        hr.addRole(Role.HR_EMPLOYEE);
+        hrService.addEmployee(hr, new Employee(
+                "emp1",
+                "Bob Employee",
+                "bob@example.com",
+                "555-4444",
+                new Address("40 Bob St", "City", "ST", "12345"),
+                "Operations",
+                Role.EMPLOYEE
+        ));
+        System.out.println("HR employee records: " + hrService.viewAllEmployees(hr));
+
+        UserAccount executive = userService.createAccount(
+                "exec1",
+                "execpass",
+                "exec@example.com",
+                "555-4000",
+                new Address("50 Exec St", "City", "ST", "12345"),
+                "10.0.0.5"
+        );
+        executive.addRole(Role.EXECUTIVE);
+        System.out.println(executiveService.generateCompanyPerformanceReport(executive));
+
+        UserAccount accountant = userService.createAccount(
+                "accountant1",
+                "acctpass",
+                "acct@example.com",
+                "555-5000",
+                new Address("60 Acct St", "City", "ST", "12345"),
+                "10.0.0.6"
+        );
+        accountant.addRole(Role.ACCOUNTANT);
+        Transaction transaction = transactionService.recordTransaction(alice, "Drop-off fee", 5.0);
+        rewardService.awardPoints(alice, 50);
+        Reward reward = new Reward("r1", "Eco Tote", 30, "Reusable tote bag");
+        rewardService.addRewardToCatalog(reward);
+        System.out.println("Reward redeemed: " + rewardService.redeemReward(alice, reward));
+        System.out.println(accountantService.generateBillStatement(
+                accountant, transactionService.getTransactionHistory(alice)));
+        System.out.println("Available activity fees: "
+                + accountantService.viewAvailableActivityFees(accountant));
+
+        UserAccount developer = userService.createAccount(
+                "dev1",
+                "devpass",
+                "dev@example.com",
+                "555-6000",
+                new Address("70 Dev St", "City", "ST", "12345"),
+                "10.0.0.7"
+        );
+        developer.addRole(Role.DEVELOPER);
+        System.out.println("Developer API facilities: "
+                + developerApi.getFacilitySummaries(developer, "12345"));
+        System.out.println("Developer API events: "
+                + developerApi.getEvents(developer, "12345"));
+
+        System.out.println(Documentation.getContent());
+        String encryptedEmail = encryptionService.encrypt("secure@example.com");
+        System.out.println("Encrypted personal data: " + encryptedEmail);
+        System.out.println("Decrypted personal data: " + encryptionService.decrypt(encryptedEmail));
+        System.out.println("Transaction recorded: " + transaction);
+    }
+}

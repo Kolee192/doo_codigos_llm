@@ -1,0 +1,2177 @@
+// File: Permission.java
+public enum Permission {
+    READ, WRITE, DOWNLOAD, UPLOAD, MANAGE_USERS, MANAGE_RIGHTS, VIEW_RESTRICTED, SHARE,
+    REDACT, EDIT_METADATA, CREATE_REPORT, VIEW_AUDIT, ACCESS_READING_ROOM, STREAM
+}
+// File: Role.java
+import java.util.EnumSet;
+import java.util.Set;
+
+public class Role {
+    private final String name;
+    private final Set<Permission> permissions = EnumSet.noneOf(Permission.class);
+
+    public Role(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Set<Permission> getPermissions() {
+        return permissions;
+    }
+
+    public void addPermission(Permission permission) {
+        permissions.add(permission);
+    }
+
+    public boolean hasPermission(Permission permission) {
+        return permissions.contains(permission);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Role)) return false;
+        Role role = (Role) o;
+        return name.equals(role.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return name.hashCode();
+    }
+}
+// File: UserGroup.java
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Set;
+
+public class UserGroup {
+    private final String name;
+    private final Set<Permission> permissions = EnumSet.noneOf(Permission.class);
+    private final Set<User> members = new HashSet<>();
+
+    public UserGroup(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Set<Permission> getPermissions() {
+        return permissions;
+    }
+
+    public void addPermission(Permission permission) {
+        permissions.add(permission);
+    }
+
+    public boolean hasPermission(Permission permission) {
+        return permissions.contains(permission);
+    }
+
+    public void addMember(User user) {
+        members.add(user);
+    }
+
+    public Set<User> getMembers() {
+        return members;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof UserGroup)) return false;
+        UserGroup userGroup = (UserGroup) o;
+        return name.equals(userGroup.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return name.hashCode();
+    }
+}
+// File: User.java
+import java.util.HashSet;
+import java.util.Set;
+
+public class User {
+    private final String username;
+    private String activeDirectoryId;
+    private final Set<Role> roles = new HashSet<>();
+    private final Set<UserGroup> groups = new HashSet<>();
+    private boolean passwordResetRequired;
+
+    public User(String username, String activeDirectoryId) {
+        this.username = username;
+        this.activeDirectoryId = activeDirectoryId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getActiveDirectoryId() {
+        return activeDirectoryId;
+    }
+
+    public void setActiveDirectoryId(String activeDirectoryId) {
+        this.activeDirectoryId = activeDirectoryId;
+    }
+
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    public Set<UserGroup> getGroups() {
+        return groups;
+    }
+
+    public void addRole(Role role) {
+        roles.add(role);
+    }
+
+    public void addGroup(UserGroup group) {
+        groups.add(group);
+    }
+
+    public boolean hasPermission(Permission permission) {
+        for (Role role : roles) {
+            if (role.hasPermission(permission)) return true;
+        }
+        for (UserGroup group : groups) {
+            if (group.hasPermission(permission)) return true;
+        }
+        return false;
+    }
+
+    public void resetPassword(String newPassword) {
+        this.passwordResetRequired = true;
+    }
+
+    public boolean isPasswordResetRequired() {
+        return passwordResetRequired;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User)) return false;
+        User user = (User) o;
+        return username.equals(user.username);
+    }
+
+    @Override
+    public int hashCode() {
+        return username.hashCode();
+    }
+}
+// File: UserManager.java
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class UserManager {
+    private final Map<String, User> users = new LinkedHashMap<>();
+    private final Map<String, Role> roles = new LinkedHashMap<>();
+    private final Map<String, UserGroup> groups = new LinkedHashMap<>();
+
+    public User createUser(String username, String activeDirectoryId) {
+        User user = new User(username, activeDirectoryId);
+        users.put(username, user);
+        return user;
+    }
+
+    public Role createRole(String name, Permission... permissions) {
+        Role role = roles.get(name);
+        if (role == null) {
+            role = new Role(name);
+            roles.put(name, role);
+        }
+        for (Permission permission : permissions) {
+            role.addPermission(permission);
+        }
+        return role;
+    }
+
+    public UserGroup createUserGroup(String name, Permission... permissions) {
+        UserGroup group = groups.get(name);
+        if (group == null) {
+            group = new UserGroup(name);
+            groups.put(name, group);
+        }
+        for (Permission permission : permissions) {
+            group.addPermission(permission);
+        }
+        return group;
+    }
+
+    public void assignRoleToUser(String username, String roleName) {
+        User user = users.get(username);
+        Role role = roles.get(roleName);
+        if (user == null || role == null) {
+            throw new IllegalArgumentException("Unknown user or role");
+        }
+        user.addRole(role);
+    }
+
+    public void assignUserToGroup(String username, String groupName) {
+        User user = users.get(username);
+        UserGroup group = groups.get(groupName);
+        if (user == null || group == null) {
+            throw new IllegalArgumentException("Unknown user or group");
+        }
+        user.addGroup(group);
+        group.addMember(user);
+    }
+
+    public void assignPermissionToGroup(String groupName, Permission permission) {
+        UserGroup group = groups.get(groupName);
+        if (group == null) {
+            throw new IllegalArgumentException("Unknown group");
+        }
+        group.addPermission(permission);
+    }
+
+    public void assignPermissionToRole(String roleName, Permission permission) {
+        Role role = roles.get(roleName);
+        if (role == null) {
+            throw new IllegalArgumentException("Unknown role");
+        }
+        role.addPermission(permission);
+    }
+
+    public boolean authenticateActiveDirectory(String username, String adCredential) {
+        User user = users.get(username);
+        if (user == null || user.getActiveDirectoryId() == null) return false;
+        return adCredential.equals("AD-" + user.getActiveDirectoryId());
+    }
+
+    public boolean resetPassword(String username, String newPassword) {
+        User user = users.get(username);
+        if (user == null) return false;
+        user.resetPassword(newPassword);
+        return true;
+    }
+
+    public User getUser(String username) {
+        return users.get(username);
+    }
+
+    public Role getRole(String name) {
+        return roles.get(name);
+    }
+
+    public UserGroup getUserGroup(String name) {
+        return groups.get(name);
+    }
+
+    public Map<String, User> getUsers() {
+        return users;
+    }
+
+    public Map<String, Role> getRoles() {
+        return roles;
+    }
+
+    public Map<String, UserGroup> getGroups() {
+        return groups;
+    }
+}
+// File: IpRange.java
+public class IpRange {
+    private final long start;
+    private final long end;
+
+    public IpRange(String startIp, String endIp) {
+        this.start = parse(startIp);
+        this.end = parse(endIp);
+    }
+
+    public boolean allows(String ip) {
+        long value = parse(ip);
+        return value >= start && value <= end;
+    }
+
+    private static long parse(String ip) {
+        if (ip == null) {
+            throw new IllegalArgumentException("IP address is null");
+        }
+        String[] parts = ip.split("\\.");
+        if (parts.length != 4) {
+            throw new IllegalArgumentException("Invalid IPv4 address: " + ip);
+        }
+        long result = 0;
+        for (String part : parts) {
+            int value = Integer.parseInt(part);
+            if (value < 0 || value > 255) {
+                throw new IllegalArgumentException("Invalid IPv4 address: " + ip);
+            }
+            result = (result << 8) | value;
+        }
+        return result;
+    }
+}
+// File: Restriction.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class Restriction {
+    private boolean viewRestricted;
+    private boolean shareRestricted;
+    private boolean accessRestricted;
+    private LocalDate endDate;
+    private String detailedRestrictions = "";
+    private final Set<String> allowedUsers = new HashSet<>();
+    private final List<IpRange> allowedIpRanges = new ArrayList<>();
+    private LocalDate redactionUntil;
+
+    public static Restriction open() {
+        return new Restriction();
+    }
+
+    public boolean isViewRestricted() {
+        return viewRestricted;
+    }
+
+    public Restriction setViewRestricted(boolean viewRestricted) {
+        this.viewRestricted = viewRestricted;
+        return this;
+    }
+
+    public boolean isShareRestricted() {
+        return shareRestricted;
+    }
+
+    public Restriction setShareRestricted(boolean shareRestricted) {
+        this.shareRestricted = shareRestricted;
+        return this;
+    }
+
+    public boolean isAccessRestricted() {
+        return accessRestricted;
+    }
+
+    public Restriction setAccessRestricted(boolean accessRestricted) {
+        this.accessRestricted = accessRestricted;
+        return this;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public Restriction setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+        return this;
+    }
+
+    public String getDetailedRestrictions() {
+        return detailedRestrictions;
+    }
+
+    public Restriction setDetailedRestrictions(String detailedRestrictions) {
+        this.detailedRestrictions = detailedRestrictions == null ? "" : detailedRestrictions;
+        return this;
+    }
+
+    public Set<String> getAllowedUsers() {
+        return allowedUsers;
+    }
+
+    public Restriction addAllowedUser(String username) {
+        if (username != null) {
+            allowedUsers.add(username);
+        }
+        return this;
+    }
+
+    public List<IpRange> getAllowedIpRanges() {
+        return allowedIpRanges;
+    }
+
+    public Restriction addIpRange(IpRange range) {
+        if (range != null) {
+            allowedIpRanges.add(range);
+        }
+        return this;
+    }
+
+    public LocalDate getRedactionUntil() {
+        return redactionUntil;
+    }
+
+    public Restriction setRedactionUntil(LocalDate redactionUntil) {
+        this.redactionUntil = redactionUntil;
+        return this;
+    }
+
+    public boolean isActiveOn(LocalDate date) {
+        return endDate == null || date.isBefore(endDate);
+    }
+
+    public boolean isActive() {
+        return isActiveOn(LocalDate.now());
+    }
+
+    public boolean allowsUser(String username) {
+        return username != null && allowedUsers.contains(username);
+    }
+
+    public boolean isIpAllowed(String ip) {
+        if (ip == null) return false;
+        for (IpRange range : allowedIpRanges) {
+            try {
+                if (range.allows(ip)) return true;
+            } catch (IllegalArgumentException ignored) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    public Restriction copy() {
+        Restriction copy = new Restriction();
+        copy.viewRestricted = this.viewRestricted;
+        copy.shareRestricted = this.shareRestricted;
+        copy.accessRestricted = this.accessRestricted;
+        copy.endDate = this.endDate;
+        copy.detailedRestrictions = this.detailedRestrictions;
+        copy.allowedUsers.addAll(this.allowedUsers);
+        copy.allowedIpRanges.addAll(this.allowedIpRanges);
+        copy.redactionUntil = this.redactionUntil;
+        return copy;
+    }
+}
+// File: RightsStatus.java
+public enum RightsStatus {
+    PUBLIC_DOMAIN,
+    IN_COPYRIGHT,
+    UNKNOWN,
+    CREATIVE_COMMONS,
+    LICENSED,
+    ORPHAN_WORK,
+    UNDER_REVIEW
+}
+// File: RightsStatement.java
+public class RightsStatement {
+    private final String id;
+    private final RightsStatus status;
+    private final String statement;
+    private final String licenseName;
+    private final String rightsUri;
+    private final String copyrightHolder;
+
+    public RightsStatement(String id, RightsStatus status, String statement, String licenseName, String rightsUri, String copyrightHolder) {
+        this.id = id;
+        this.status = status;
+        this.statement = statement;
+        this.licenseName = licenseName;
+        this.rightsUri = rightsUri;
+        this.copyrightHolder = copyrightHolder;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public RightsStatus getStatus() {
+        return status;
+    }
+
+    public String getStatement() {
+        return statement;
+    }
+
+    public String getLicenseName() {
+        return licenseName;
+    }
+
+    public String getRightsUri() {
+        return rightsUri;
+    }
+
+    public String getCopyrightHolder() {
+        return copyrightHolder;
+    }
+
+    @Override
+    public String toString() {
+        return status + ": " + statement + " (" + licenseName + ")";
+    }
+}
+// File: RightsService.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+public class RightsService {
+    private final Map<String, RightsStatement> statements = new LinkedHashMap<>();
+
+    public RightsService() {
+        statements.put("RS-PUBLIC-DOMAIN", new RightsStatement(
+                "RS-PUBLIC-DOMAIN",
+                RightsStatus.PUBLIC_DOMAIN,
+                "Public domain",
+                "Public Domain Mark",
+                "https://creativecommons.org/publicdomain/mark/1.0/",
+                "Unknown"
+        ));
+        statements.put("RS-IN-COPYRIGHT", new RightsStatement(
+                "RS-IN-COPYRIGHT",
+                RightsStatus.IN_COPYRIGHT,
+                "In copyright",
+                "All rights reserved",
+                "",
+                "Rights holder unknown"
+        ));
+        statements.put("RS-UNKNOWN", new RightsStatement(
+                "RS-UNKNOWN",
+                RightsStatus.UNKNOWN,
+                "Copyright unknown",
+                "Unknown",
+                "",
+                "Unknown"
+        ));
+    }
+
+    public List<RightsStatement> all() {
+        return new ArrayList<>(statements.values());
+    }
+
+    public RightsStatement selectExisting(String id) {
+        return statements.get(id);
+    }
+
+    public RightsStatement createStatement(RightsStatus status, String statement, String licenseName, String rightsUri, String copyrightHolder) {
+        String id = "RS-" + UUID.randomUUID().toString().substring(0, 8);
+        RightsStatement rightsStatement = new RightsStatement(id, status, statement, licenseName, rightsUri, copyrightHolder);
+        statements.put(id, rightsStatement);
+        return rightsStatement;
+    }
+
+    public void applyRights(DigitalFile file, String statementId) {
+        RightsStatement rightsStatement = selectExisting(statementId);
+        if (rightsStatement == null) {
+            throw new IllegalArgumentException("Unknown rights statement: " + statementId);
+        }
+        file.setRightsStatement(rightsStatement);
+    }
+
+    public void applyRights(DigitalFile file, RightsStatement rightsStatement) {
+        file.setRightsStatement(rightsStatement);
+    }
+
+    public List<DigitalFile> searchFilesByRights(List<DigitalFile> files, RightsStatus status) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : files) {
+            if (file.getRightsStatement() != null && file.getRightsStatement().getStatus() == status) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    public String rightsInformation(DigitalFile file) {
+        if (file.getRightsStatement() == null) {
+            return "No rights statement";
+        }
+        RightsStatement rights = file.getRightsStatement();
+        return rights.getStatus() + ": " + rights.getStatement() + " (" + rights.getLicenseName() + ")";
+    }
+}
+// File: ColorMode.java
+public enum ColorMode {
+    COLOR,
+    BLACK_AND_WHITE,
+    GRAYSCALE
+}
+// File: DigitalObjectType.java
+public enum DigitalObjectType {
+    IMAGE,
+    AUDIO,
+    VIDEO,
+    TEXT,
+    REPORT,
+    WORKING_PAPER,
+    EDUCATIONAL_MATERIAL,
+    INDEX_CARD,
+    PUBLICATION,
+    OTHER
+}
+// File: TechnicalMetadata.java
+import java.time.LocalDate;
+
+public class TechnicalMetadata {
+    private long fileSizeBytes;
+    private String mimeType;
+    private int width;
+    private int height;
+    private ColorMode colorMode;
+    private String format;
+    private LocalDate digitizedDate;
+
+    public TechnicalMetadata() {
+        this(0, "application/octet-stream", 0, 0, ColorMode.COLOR, "unknown", null);
+    }
+
+    public TechnicalMetadata(long fileSizeBytes, String mimeType, int width, int height, ColorMode colorMode, String format, LocalDate digitizedDate) {
+        this.fileSizeBytes = fileSizeBytes;
+        this.mimeType = mimeType;
+        this.width = width;
+        this.height = height;
+        this.colorMode = colorMode;
+        this.format = format;
+        this.digitizedDate = digitizedDate;
+    }
+
+    public long getFileSizeBytes() {
+        return fileSizeBytes;
+    }
+
+    public void setFileSizeBytes(long fileSizeBytes) {
+        this.fileSizeBytes = fileSizeBytes;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public void setMimeType(String mimeType) {
+        this.mimeType = mimeType;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+    public ColorMode getColorMode() {
+        return colorMode;
+    }
+
+    public void setColorMode(ColorMode colorMode) {
+        this.colorMode = colorMode;
+    }
+
+    public String getFormat() {
+        return format;
+    }
+
+    public void setFormat(String format) {
+        this.format = format;
+    }
+
+    public LocalDate getDigitizedDate() {
+        return digitizedDate;
+    }
+
+    public void setDigitizedDate(LocalDate digitizedDate) {
+        this.digitizedDate = digitizedDate;
+    }
+
+    public TechnicalMetadata copy() {
+        return new TechnicalMetadata(fileSizeBytes, mimeType, width, height, colorMode, format, digitizedDate);
+    }
+}
+// File: DigitalFile.java
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+public class DigitalFile {
+    private String id;
+    private String title;
+    private String collectionName;
+    private DigitalObjectType type;
+    private String filePath;
+    private String content;
+    private TechnicalMetadata technicalMetadata;
+    private RightsStatement rightsStatement;
+    private Restriction restriction = Restriction.open();
+    private final Set<String> tags = new HashSet<>();
+    private final Map<String, String> metadata = new HashMap<>();
+    private String ocrText = "";
+    private String thumbnailPath;
+    private String photographer;
+    private final Set<String> people = new HashSet<>();
+    private String place;
+    private boolean scanned;
+    private LocalDate digitizedDate;
+    private boolean preservationStandard;
+    private boolean accessCopy;
+    private String uniqueIdentifier;
+    private String embeddedMetadataHeader;
+
+    public DigitalFile(String id, String title, String collectionName, DigitalObjectType type, String filePath, String content) {
+        this.id = id;
+        this.title = title;
+        this.collectionName = collectionName;
+        this.type = type;
+        this.filePath = filePath;
+        this.content = content == null ? "" : content;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getCollectionName() {
+        return collectionName;
+    }
+
+    public void setCollectionName(String collectionName) {
+        this.collectionName = collectionName;
+    }
+
+    public DigitalObjectType getType() {
+        return type;
+    }
+
+    public void setType(DigitalObjectType type) {
+        this.type = type;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content == null ? "" : content;
+    }
+
+    public TechnicalMetadata getTechnicalMetadata() {
+        return technicalMetadata;
+    }
+
+    public void setTechnicalMetadata(TechnicalMetadata technicalMetadata) {
+        this.technicalMetadata = technicalMetadata;
+    }
+
+    public RightsStatement getRightsStatement() {
+        return rightsStatement;
+    }
+
+    public void setRightsStatement(RightsStatement rightsStatement) {
+        this.rightsStatement = rightsStatement;
+    }
+
+    public Restriction getRestriction() {
+        return restriction;
+    }
+
+    public void setRestriction(Restriction restriction) {
+        this.restriction = restriction == null ? Restriction.open() : restriction;
+    }
+
+    public Set<String> getTags() {
+        return tags;
+    }
+
+    public void addTag(String tag) {
+        if (tag != null) {
+            tags.add(tag);
+        }
+    }
+
+    public boolean hasTag(String tag) {
+        return tags.contains(tag);
+    }
+
+    public Map<String, String> getMetadata() {
+        return metadata;
+    }
+
+    public String getMetadataValue(String key) {
+        return metadata.get(key);
+    }
+
+    public void putMetadata(String key, String value) {
+        if (key != null && value != null) {
+            metadata.put(key, value);
+        }
+    }
+
+    public String getOcrText() {
+        return ocrText;
+    }
+
+    public void setOcrText(String ocrText) {
+        this.ocrText = ocrText == null ? "" : ocrText;
+    }
+
+    public String getThumbnailPath() {
+        return thumbnailPath;
+    }
+
+    public void setThumbnailPath(String thumbnailPath) {
+        this.thumbnailPath = thumbnailPath;
+    }
+
+    public String getPhotographer() {
+        return photographer;
+    }
+
+    public void setPhotographer(String photographer) {
+        this.photographer = photographer;
+    }
+
+    public Set<String> getPeople() {
+        return people;
+    }
+
+    public void addPerson(String person) {
+        if (person != null) {
+            people.add(person);
+        }
+    }
+
+    public String getPlace() {
+        return place;
+    }
+
+    public void setPlace(String place) {
+        this.place = place;
+    }
+
+    public boolean isScanned() {
+        return scanned;
+    }
+
+    public void setScanned(boolean scanned) {
+        this.scanned = scanned;
+    }
+
+    public LocalDate getDigitizedDate() {
+        return digitizedDate;
+    }
+
+    public void setDigitizedDate(LocalDate digitizedDate) {
+        this.digitizedDate = digitizedDate;
+    }
+
+    public boolean isPreservationStandard() {
+        return preservationStandard;
+    }
+
+    public void setPreservationStandard(boolean preservationStandard) {
+        this.preservationStandard = preservationStandard;
+    }
+
+    public boolean isAccessCopy() {
+        return accessCopy;
+    }
+
+    public void setAccessCopy(boolean accessCopy) {
+        this.accessCopy = accessCopy;
+    }
+
+    public String getUniqueIdentifier() {
+        return uniqueIdentifier;
+    }
+
+    public void setUniqueIdentifier(String uniqueIdentifier) {
+        this.uniqueIdentifier = uniqueIdentifier;
+    }
+
+    public String getEmbeddedMetadataHeader() {
+        return embeddedMetadataHeader;
+    }
+
+    public void setEmbeddedMetadataHeader(String embeddedMetadataHeader) {
+        this.embeddedMetadataHeader = embeddedMetadataHeader;
+    }
+}
+// File: FileGroup.java
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+public class FileGroup {
+    private final String name;
+    private final Set<DigitalFile> files = new LinkedHashSet<>();
+
+    public FileGroup(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void addFile(DigitalFile file) {
+        if (file != null) {
+            files.add(file);
+        }
+    }
+
+    public void addFiles(Collection<DigitalFile> newFiles) {
+        files.addAll(newFiles);
+    }
+
+    public Set<DigitalFile> getFiles() {
+        return Collections.unmodifiableSet(files);
+    }
+}
+// File: ArchiveCollection.java
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+
+public class ArchiveCollection {
+    private final String name;
+    private String description;
+    private final Set<DigitalFile> files = new LinkedHashSet<>();
+    private String inventory;
+    private boolean unprocessed;
+    private final Map<String, String> physicalLocations = new HashMap<>();
+
+    public ArchiveCollection(String name, String description) {
+        this.name = name;
+        this.description = description;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void addFile(DigitalFile file) {
+        if (file != null) {
+            files.add(file);
+        }
+    }
+
+    public Set<DigitalFile> getFiles() {
+        return Collections.unmodifiableSet(files);
+    }
+
+    public String getInventory() {
+        return inventory;
+    }
+
+    public void setInventory(String inventory) {
+        this.inventory = inventory;
+    }
+
+    public boolean isUnprocessed() {
+        return unprocessed;
+    }
+
+    public void setUnprocessed(boolean unprocessed) {
+        this.unprocessed = unprocessed;
+    }
+
+    public void addPhysicalLocation(String item, String location) {
+        physicalLocations.put(item, location);
+    }
+
+    public Map<String, String> getPhysicalLocations() {
+        return physicalLocations;
+    }
+}
+// File: AccessDecision.java
+public class AccessDecision {
+    private final boolean allowed;
+    private final String reason;
+
+    public AccessDecision(boolean allowed, String reason) {
+        this.allowed = allowed;
+        this.reason = reason;
+    }
+
+    public static AccessDecision allow(String reason) {
+        return new AccessDecision(true, reason);
+    }
+
+    public static AccessDecision deny(String reason) {
+        return new AccessDecision(false, reason);
+    }
+
+    public boolean isAllowed() {
+        return allowed;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+}
+// File: AccessControlService.java
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+
+public class AccessControlService {
+    public AccessDecision canView(DigitalFile file, User user, String ip) {
+        if (file == null) {
+            return AccessDecision.deny("No file");
+        }
+        if (user != null && user.hasPermission(Permission.MANAGE_RIGHTS)) {
+            return AccessDecision.allow("Administrator rights");
+        }
+        Restriction restriction = file.getRestriction();
+        if (restriction == null || !restriction.isViewRestricted()) {
+            return AccessDecision.allow("Not view restricted");
+        }
+        LocalDate now = LocalDate.now();
+        if (!restriction.isActiveOn(now)) {
+            return AccessDecision.allow("Restriction expired");
+        }
+        if (user != null && (restriction.allowsUser(user.getUsername()) || user.hasPermission(Permission.VIEW_RESTRICTED))) {
+            return AccessDecision.allow("User allowed");
+        }
+        if (ip != null && restriction.isIpAllowed(ip)) {
+            return AccessDecision.allow("IP allowed");
+        }
+        return AccessDecision.deny("View restricted");
+    }
+
+    public AccessDecision canDownload(DigitalFile file, User user, String ip) {
+        AccessDecision viewDecision = canView(file, user, ip);
+        if (!viewDecision.isAllowed()) {
+            return viewDecision;
+        }
+        Restriction restriction = file.getRestriction();
+        if (restriction == null) {
+            return AccessDecision.allow("No restriction");
+        }
+        LocalDate now = LocalDate.now();
+        if (restriction.isAccessRestricted() && restriction.isActiveOn(now)) {
+            if (user != null && (restriction.allowsUser(user.getUsername()) || user.hasPermission(Permission.VIEW_RESTRICTED))) {
+                return AccessDecision.allow("Access allowed by user");
+            }
+            if (ip != null && restriction.isIpAllowed(ip)) {
+                return AccessDecision.allow("Access allowed by IP");
+            }
+            return AccessDecision.deny("Access restricted");
+        }
+        if (restriction.isShareRestricted() && restriction.isActiveOn(now)) {
+            if (user != null && (restriction.allowsUser(user.getUsername()) || user.hasPermission(Permission.SHARE) || user.hasPermission(Permission.VIEW_RESTRICTED))) {
+                return AccessDecision.allow("Sharing allowed by user");
+            }
+            if (ip != null && restriction.isIpAllowed(ip)) {
+                return AccessDecision.allow("Sharing allowed by IP");
+            }
+            return AccessDecision.deny("Sharing restricted");
+        }
+        return AccessDecision.allow("Download allowed");
+    }
+
+    public AccessDecision canShare(DigitalFile file, User user, String ip) {
+        AccessDecision viewDecision = canView(file, user, ip);
+        if (!viewDecision.isAllowed()) {
+            return viewDecision;
+        }
+        Restriction restriction = file.getRestriction();
+        if (restriction != null && restriction.isShareRestricted() && restriction.isActiveOn(LocalDate.now())) {
+            if (user != null && (restriction.allowsUser(user.getUsername()) || user.hasPermission(Permission.SHARE) || user.hasPermission(Permission.VIEW_RESTRICTED))) {
+                return AccessDecision.allow("Sharing allowed by user");
+            }
+            if (ip != null && restriction.isIpAllowed(ip)) {
+                return AccessDecision.allow("Sharing allowed by IP");
+            }
+            return AccessDecision.deny("Sharing restricted");
+        }
+        return AccessDecision.allow("Sharing allowed");
+    }
+
+    public AccessDecision canRedact(User user) {
+        if (user != null && (user.hasPermission(Permission.REDACT) || user.hasPermission(Permission.MANAGE_RIGHTS))) {
+            return AccessDecision.allow("Redaction allowed");
+        }
+        return AccessDecision.deny("Redaction not allowed");
+    }
+
+    public AccessDecision canEditMetadata(User user) {
+        if (user != null && (user.hasPermission(Permission.EDIT_METADATA) || user.hasPermission(Permission.WRITE) || user.hasPermission(Permission.MANAGE_RIGHTS))) {
+            return AccessDecision.allow("Metadata edit allowed");
+        }
+        return AccessDecision.deny("Metadata edit not allowed");
+    }
+
+    public Map<String, String> filterMetadata(DigitalFile file, User user) {
+        Map<String, String> visible = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : file.getMetadata().entrySet()) {
+            if (isSensitiveField(entry.getKey()) && (user == null || !user.hasPermission(Permission.VIEW_RESTRICTED))) {
+                continue;
+            }
+            visible.put(entry.getKey(), entry.getValue());
+        }
+        return visible;
+    }
+
+    private boolean isSensitiveField(String field) {
+        String lower = field.toLowerCase(Locale.ROOT);
+        return lower.contains("donor") || lower.contains("internal") || lower.contains("sensitive");
+    }
+}
+// File: RestrictionService.java
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Set;
+
+public class RestrictionService {
+    public void applyToFile(DigitalFile file, Restriction restriction) {
+        file.setRestriction(restriction == null ? Restriction.open() : restriction.copy());
+    }
+
+    public void applyToGroup(FileGroup group, Restriction restriction) {
+        for (DigitalFile file : group.getFiles()) {
+            applyToFile(file, restriction);
+        }
+    }
+
+    public void restrictFromView(DigitalFile file) {
+        file.getRestriction().setViewRestricted(true);
+    }
+
+    public void restrictGroupFromView(FileGroup group) {
+        for (DigitalFile file : group.getFiles()) {
+            restrictFromView(file);
+        }
+    }
+
+    public void setEndDate(DigitalFile file, LocalDate date) {
+        file.getRestriction().setEndDate(date);
+    }
+
+    public void addRestrictionEndDateInformation(DigitalFile file, LocalDate date) {
+        setEndDate(file, date);
+    }
+
+    public void restrictByIp(DigitalFile file, List<IpRange> ranges) {
+        Restriction restriction = file.getRestriction();
+        restriction.setAccessRestricted(true);
+        for (IpRange range : ranges) {
+            restriction.addIpRange(range);
+        }
+    }
+
+    public void restrictByUser(DigitalFile file, Set<String> users) {
+        Restriction restriction = file.getRestriction();
+        restriction.setViewRestricted(true);
+        restriction.setAccessRestricted(true);
+        for (String user : users) {
+            restriction.addAllowedUser(user);
+        }
+    }
+
+    public void addDetailedRestrictions(DigitalFile file, String details) {
+        file.getRestriction().setDetailedRestrictions(details);
+    }
+}
+// File: FileService.java
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicLong;
+
+public class FileService {
+    private final AtomicLong idSequence = new AtomicLong(1000);
+
+    public DigitalFile uploadSingle(String title, String content, DigitalObjectType type, String collectionName, String filePath) {
+        String id = "RAC-" + idSequence.incrementAndGet();
+        DigitalFile file = new DigitalFile(id, title, collectionName, type, filePath, content);
+        file.setUniqueIdentifier(id);
+        file.setScanned(true);
+        file.setDigitizedDate(LocalDate.now());
+        generateTechnicalMetadata(file);
+        return file;
+    }
+
+    public List<DigitalFile> uploadGroup(String collectionName, List<String> titles, DigitalObjectType type) {
+        List<DigitalFile> uploaded = new ArrayList<>();
+        for (String title : titles) {
+            uploaded.add(uploadSingle(title, "content-of-" + title, type, collectionName, "/bulk/" + title));
+        }
+        return uploaded;
+    }
+
+    public DigitalFile createAccessCopy(DigitalFile original) {
+        String id = original.getId() + "-ACCESS-" + idSequence.incrementAndGet();
+        DigitalFile copy = new DigitalFile(id, original.getTitle() + " (access copy)", original.getCollectionName(), original.getType(), original.getFilePath(), original.getContent());
+        copy.setTechnicalMetadata(original.getTechnicalMetadata() == null ? generateTechnicalMetadata(copy) : original.getTechnicalMetadata().copy());
+        copy.setRightsStatement(original.getRightsStatement());
+        copy.setRestriction(original.getRestriction().copy());
+        copy.setAccessCopy(true);
+        copy.setPreservationStandard(false);
+        copy.setScanned(true);
+        copy.setDigitizedDate(original.getDigitizedDate());
+        copy.setUniqueIdentifier(id);
+        copy.putMetadata("derivativeOf", original.getId());
+        return copy;
+    }
+
+    public DigitalFile createAccessDerivative(DigitalFile original) {
+        return createAccessCopy(original);
+    }
+
+    public TechnicalMetadata generateTechnicalMetadata(DigitalFile file) {
+        byte[] bytes = file.getContent().getBytes(StandardCharsets.UTF_8);
+        String mime = switch (file.getType()) {
+            case IMAGE -> "image/jpeg";
+            case AUDIO -> "audio/mpeg";
+            case VIDEO -> "video/mp4";
+            case TEXT -> "text/plain";
+            case REPORT -> "application/pdf";
+            case WORKING_PAPER -> "application/pdf";
+            case EDUCATIONAL_MATERIAL -> "application/pdf";
+            case INDEX_CARD -> "image/jpeg";
+            case PUBLICATION -> "application/pdf";
+            default -> "application/octet-stream";
+        };
+        String colorSetting = file.getMetadata().getOrDefault("colorMode", "").toLowerCase(Locale.ROOT);
+        ColorMode colorMode = colorSetting.contains("black") || colorSetting.contains("b&w") ? ColorMode.BLACK_AND_WHITE : ColorMode.COLOR;
+        TechnicalMetadata technicalMetadata = new TechnicalMetadata(
+                bytes.length,
+                mime,
+                0,
+                0,
+                colorMode,
+                file.getType().name().toLowerCase(Locale.ROOT),
+                LocalDate.now()
+        );
+        file.setTechnicalMetadata(technicalMetadata);
+        return technicalMetadata;
+    }
+
+    public void embedMetadataInFileHeader(DigitalFile file) {
+        file.setEmbeddedMetadataHeader("ID=" + file.getId() + ";TITLE=" + file.getTitle() + ";RIGHTS=" + file.getRightsStatement());
+    }
+
+    public void rotateImage(DigitalFile file, int degrees) {
+        file.putMetadata("rotation", String.valueOf(degrees));
+    }
+
+    public void applyAutomaticContrastAndLevels(DigitalFile file) {
+        file.putMetadata("autoContrast", "true");
+    }
+
+    public void manipulateContrastLevels(DigitalFile file, double contrast, double levels) {
+        file.putMetadata("manualContrast", String.valueOf(contrast));
+        file.putMetadata("manualLevels", String.valueOf(levels));
+    }
+
+    public void batchEditMetadata(Collection<DigitalFile> files, String key, String value) {
+        for (DigitalFile file : files) {
+            file.putMetadata(key, value);
+        }
+    }
+
+    public void markPreservationStandard(DigitalFile file, boolean standard) {
+        file.setPreservationStandard(standard);
+        file.setAccessCopy(!standard);
+    }
+
+    public void linkElectronicVersionToCitation(DigitalFile file, Citation citation) {
+        file.putMetadata("citation", citation.format());
+    }
+}
+// File: SearchService.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
+public class SearchService {
+    public List<DigitalFile> keywordSearch(List<DigitalFile> files, String keyword) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : files) {
+            String haystack = (file.getTitle() + " " +
+                    file.getContent() + " " +
+                    file.getOcrText() + " " +
+                    file.getTags() + " " +
+                    file.getMetadata().values() + " " +
+                    file.getPhotographer() + " " +
+                    file.getPeople() + " " +
+                    file.getPlace() + " " +
+                    (file.getRightsStatement() == null ? "" : file.getRightsStatement().getStatement())).toLowerCase(Locale.ROOT);
+            if (haystack.contains(keyword.toLowerCase(Locale.ROOT))) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    public List<DigitalFile> searchByTag(List<DigitalFile> files, String tag) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : files) {
+            if (file.getTags().stream().anyMatch(t -> t.equalsIgnoreCase(tag))) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    public List<DigitalFile> searchByPhotographer(List<DigitalFile> files, String photographer) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : files) {
+            if (contains(file.getPhotographer(), photographer)) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    public List<DigitalFile> searchByPerson(List<DigitalFile> files, String person) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : files) {
+            if (file.getPeople().stream().anyMatch(p -> contains(p, person))) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    public List<DigitalFile> searchByPlace(List<DigitalFile> files, String place) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : files) {
+            if (contains(file.getPlace(), place)) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    public List<DigitalFile> searchByRightsStatus(List<DigitalFile> files, RightsStatus status) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : files) {
+            if (file.getRightsStatement() != null && file.getRightsStatement().getStatus() == status) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    public List<DigitalFile> searchByMaterialType(List<DigitalFile> files, DigitalObjectType type) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : files) {
+            if (file.getType() == type) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    public List<DigitalFile> structuredSearch(List<DigitalFile> files, Map<String, String> criteria) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : files) {
+            boolean matches = true;
+            for (Map.Entry<String, String> criterion : criteria.entrySet()) {
+                String key = criterion.getKey().toLowerCase(Locale.ROOT);
+                String value = criterion.getValue();
+                boolean fieldMatch;
+                switch (key) {
+                    case "title" -> fieldMatch = contains(file.getTitle(), value);
+                    case "collection" -> fieldMatch = contains(file.getCollectionName(), value);
+                    case "tag" -> fieldMatch = file.getTags().stream().anyMatch(t -> contains(t, value));
+                    case "photographer" -> fieldMatch = contains(file.getPhotographer(), value);
+                    case "person" -> fieldMatch = file.getPeople().stream().anyMatch(p -> contains(p, value));
+                    case "place" -> fieldMatch = contains(file.getPlace(), value);
+                    default -> fieldMatch = contains(file.getMetadataValue(criterion.getKey()), value);
+                }
+                if (!fieldMatch) {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    public List<DigitalFile> searchOcrText(List<DigitalFile> files, String keyword) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : files) {
+            if (contains(file.getOcrText(), keyword)) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    public List<DigitalFile> searchByUploadedImage(List<DigitalFile> files, String uploadedContent) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : files) {
+            if (file.getType() == DigitalObjectType.IMAGE && file.getContent().equals(uploadedContent)) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    public List<DigitalFile> commonMaterialAcrossCollections(List<ArchiveCollection> collections, String keyword) {
+        Map<String, Set<String>> titleToCollections = new HashMap<>();
+        Map<String, DigitalFile> titleToFile = new HashMap<>();
+        for (ArchiveCollection collection : collections) {
+            for (DigitalFile file : collection.getFiles()) {
+                if (!keywordSearch(List.of(file), keyword).isEmpty()) {
+                    titleToCollections.computeIfAbsent(file.getTitle(), k -> new HashSet<>()).add(collection.getName());
+                    titleToFile.put(file.getTitle(), file);
+                }
+            }
+        }
+        List<DigitalFile> result = new ArrayList<>();
+        for (Map.Entry<String, Set<String>> entry : titleToCollections.entrySet()) {
+            if (entry.getValue().size() > 1) {
+                result.add(titleToFile.get(entry.getKey()));
+            }
+        }
+        return result;
+    }
+
+    public List<DigitalFile> browseCollection(ArchiveCollection collection) {
+        return new ArrayList<>(collection.getFiles());
+    }
+
+    public List<DigitalFile> searchAcrossPhotoCollectionImages(List<DigitalFile> files, String keyword) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : keywordSearch(files, keyword)) {
+            if (file.getType() == DigitalObjectType.IMAGE) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    public List<DigitalFile> findFilesThatCannotBeMadePublic(List<DigitalFile> files, AccessControlService accessControl) {
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : files) {
+            if (!accessControl.canView(file, null, "0.0.0.0").isAllowed()) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+
+    private boolean contains(String source, String value) {
+        return source != null && value != null && source.toLowerCase(Locale.ROOT).contains(value.toLowerCase(Locale.ROOT));
+    }
+}
+// File: Citation.java
+public class Citation {
+    private final String archiveName;
+    private final String collectionName;
+    private final String fileTitle;
+    private final String identifier;
+    private final String date;
+    private final String uri;
+
+    public Citation(String archiveName, String collectionName, String fileTitle, String identifier, String date, String uri) {
+        this.archiveName = archiveName;
+        this.collectionName = collectionName;
+        this.fileTitle = fileTitle;
+        this.identifier = identifier;
+        this.date = date;
+        this.uri = uri;
+    }
+
+    public String format() {
+        return archiveName + ", " + collectionName + ", " + fileTitle + ", " + identifier + ", " + date + ", " + uri;
+    }
+
+    public String toStructuredJson() {
+        return "{\"archive\":\"" + escape(archiveName) + "\",\"collection\":\"" + escape(collectionName) +
+                "\",\"title\":\"" + escape(fileTitle) + "\",\"identifier\":\"" + escape(identifier) +
+                "\",\"date\":\"" + escape(date) + "\",\"uri\":\"" + escape(uri) + "\"}";
+    }
+
+    private String escape(String value) {
+        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+}
+// File: CitationService.java
+public class CitationService {
+    public Citation generateCitation(DigitalFile file, String archiveName) {
+        String date = file.getDigitizedDate() == null ? "n.d." : file.getDigitizedDate().toString();
+        return new Citation(
+                archiveName,
+                file.getCollectionName(),
+                file.getTitle(),
+                file.getId(),
+                date,
+                "https://archive.example/files/" + file.getId()
+        );
+    }
+
+    public String generateStructuredCitationData(DigitalFile file) {
+        return generateCitation(file, "RAC").toStructuredJson();
+    }
+
+    public String citationForEmail(DigitalFile file) {
+        return "Citation: " + generateCitation(file, "RAC").format();
+    }
+
+    public String citationOnDocument(DigitalFile file) {
+        return citationForEmail(file);
+    }
+}
+// File: UsageTracker.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class UsageTracker {
+    private final Map<String, Map<String, Integer>> downloads = new HashMap<>();
+
+    public void trackDownload(User user, DigitalFile file) {
+        String username = user == null ? "anonymous" : user.getUsername();
+        downloads.computeIfAbsent(username, k -> new HashMap<>()).merge(file.getId(), 1, Integer::sum);
+    }
+
+    public void trackUse(DigitalFile file, User user) {
+        trackDownload(user, file);
+    }
+
+    public int getDownloadCount(User user, DigitalFile file) {
+        String username = user == null ? "anonymous" : user.getUsername();
+        Map<String, Integer> userDownloads = downloads.get(username);
+        if (userDownloads == null) return 0;
+        return userDownloads.getOrDefault(file.getId(), 0);
+    }
+
+    public Map<String, Integer> getDownloadsForUser(User user) {
+        return new HashMap<>(downloads.getOrDefault(user.getUsername(), new HashMap<>()));
+    }
+
+    public boolean hasBeenSentTo(DigitalFile file, User user) {
+        return getDownloadCount(user, file) > 0;
+    }
+}
+// File: DownloadService.java
+public class DownloadService {
+    private final AccessControlService accessControl;
+    private final UsageTracker usageTracker;
+
+    public DownloadService(AccessControlService accessControl, UsageTracker usageTracker) {
+        this.accessControl = accessControl;
+        this.usageTracker = usageTracker;
+    }
+
+    public String download(DigitalFile file, User user, String ip) {
+        AccessDecision decision = accessControl.canDownload(file, user, ip);
+        if (!decision.isAllowed()) {
+            throw new SecurityException(decision.getReason());
+        }
+        usageTracker.trackDownload(user, file);
+        return file.getContent();
+    }
+
+    public String stream(DigitalFile file, User user, String ip) {
+        AccessDecision decision = accessControl.canView(file, user, ip);
+        if (!decision.isAllowed()) {
+            throw new SecurityException(decision.getReason());
+        }
+        if (file.getType() != DigitalObjectType.AUDIO && file.getType() != DigitalObjectType.VIDEO) {
+            throw new IllegalArgumentException("Not an audio or video file");
+        }
+        usageTracker.trackUse(file, user);
+        return "STREAM[" + file.getId() + "] " + file.getContent();
+    }
+
+    public String thumbnail(DigitalFile file, User user, String ip) {
+        AccessDecision decision = accessControl.canView(file, user, ip);
+        if (!decision.isAllowed()) {
+            throw new SecurityException(decision.getReason());
+        }
+        if (file.getType() != DigitalObjectType.IMAGE) {
+            throw new IllegalArgumentException("Not an image file");
+        }
+        return file.getThumbnailPath() != null ? file.getThumbnailPath() : "thumb-" + file.getId() + ".png";
+    }
+
+    public String filmClip(DigitalFile file, User user, String ip) {
+        AccessDecision decision = accessControl.canView(file, user, ip);
+        if (!decision.isAllowed()) {
+            throw new SecurityException(decision.getReason());
+        }
+        if (file.getType() != DigitalObjectType.VIDEO) {
+            throw new IllegalArgumentException("Not a video file");
+        }
+        String content = file.getContent();
+        return "CLIP[" + file.getId() + "] " + (content.length() > 20 ? content.substring(0, 20) : content);
+    }
+}
+// File: NotificationService.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class NotificationService {
+    private final List<String> notifications = new ArrayList<>();
+
+    public String notifyIfDigitized(DigitalFile file, String requester) {
+        if (file.isScanned() || file.getDigitizedDate() != null) {
+            String message = "Already digitized: " + file.getTitle() + " (" + file.getId() + ") for " + requester;
+            notifications.add(message);
+            return message;
+        }
+        return "Not digitized yet: " + file.getTitle();
+    }
+
+    public void askQuestion(DigitalFile file, String question, String from) {
+        notifications.add("Question from " + from + " about " + file.getId() + ": " + question);
+    }
+
+    public void shareReport(DigitalFile report, String with) {
+        notifications.add("Share report " + report.getTitle() + " with " + with);
+    }
+
+    public String emailAboutFile(DigitalFile file, String body, CitationService citationService) {
+        String message = body + "\n" + citationService.citationForEmail(file);
+        notifications.add(message);
+        return message;
+    }
+
+    public List<String> getNotifications() {
+        return new ArrayList<>(notifications);
+    }
+}
+// File: DuplicationRequestService.java
+public class DuplicationRequestService {
+    private final NotificationService notifications;
+
+    public DuplicationRequestService(NotificationService notifications) {
+        this.notifications = notifications;
+    }
+
+    public String requestAnalog(DigitalFile file, User requester) {
+        if (file.isScanned() || file.getDigitizedDate() != null) {
+            return notifications.notifyIfDigitized(file, requester.getUsername());
+        }
+        String message = "Analog viewing request submitted by " + requester.getUsername() + " for " + file.getId();
+        notifications.askQuestion(file, message, requester.getUsername());
+        return message;
+    }
+
+    public String requestDuplicate(DigitalFile file, User requester) {
+        if (file.isScanned() || file.getDigitizedDate() != null) {
+            return notifications.notifyIfDigitized(file, requester.getUsername());
+        }
+        String message = "Duplication request submitted by " + requester.getUsername() + " for " + file.getId();
+        notifications.askQuestion(file, message, requester.getUsername());
+        return message;
+    }
+}
+// File: InventoryService.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class InventoryService {
+    public void uploadInventory(ArchiveCollection collection, String inventory) {
+        collection.setInventory(inventory);
+    }
+
+    public String getInventory(ArchiveCollection collection) {
+        return collection.getInventory();
+    }
+
+    public List<ArchiveCollection> getUnprocessedWithInventories(List<ArchiveCollection> collections) {
+        List<ArchiveCollection> result = new ArrayList<>();
+        for (ArchiveCollection collection : collections) {
+            if (collection.isUnprocessed() && collection.getInventory() != null && !collection.getInventory().isEmpty()) {
+                result.add(collection);
+            }
+        }
+        return result;
+    }
+}
+// File: SocialMediaService.java
+public class SocialMediaService {
+    private final AccessControlService accessControl;
+
+    public SocialMediaService(AccessControlService accessControl) {
+        this.accessControl = accessControl;
+    }
+
+    public String shareLink(DigitalFile file, User user, String ip, String platform) {
+        AccessDecision decision = accessControl.canShare(file, user, ip);
+        if (!decision.isAllowed()) {
+            throw new SecurityException(decision.getReason());
+        }
+        return "https://archive.example/files/" + file.getId() + "?platform=" + platform;
+    }
+}
+// File: RedactionService.java
+import java.time.LocalDate;
+
+public class RedactionService {
+    public DigitalFile redactForPeriod(DigitalFile original, String sensitiveText, LocalDate until) {
+        String originalContent = original.getContent();
+        String redactedContent = originalContent.replace(sensitiveText, "[REDACTED UNTIL " + until + "]");
+        DigitalFile copy = new DigitalFile(
+                original.getId() + "-REDACTED",
+                original.getTitle() + " (redacted)",
+                original.getCollectionName(),
+                original.getType(),
+                original.getFilePath(),
+                redactedContent
+        );
+        copy.setTechnicalMetadata(original.getTechnicalMetadata() == null ? null : original.getTechnicalMetadata().copy());
+        copy.setRightsStatement(original.getRightsStatement());
+        copy.setRestriction(original.getRestriction().copy().setRedactionUntil(until));
+        copy.putMetadata("redactedFrom", original.getId());
+        copy.putMetadata("redactionUntil", until.toString());
+        copy.putMetadata("originalContent", originalContent);
+        copy.setScanned(true);
+        copy.setDigitizedDate(original.getDigitizedDate());
+        copy.setUniqueIdentifier(copy.getId());
+        return copy;
+    }
+
+    public String revealIfExpired(DigitalFile redacted) {
+        String untilValue = redacted.getMetadataValue("redactionUntil");
+        if (untilValue == null) {
+            return redacted.getContent();
+        }
+        LocalDate until = LocalDate.parse(untilValue);
+        if (!LocalDate.now().isBefore(until)) {
+            return redacted.getMetadataValue("originalContent");
+        }
+        return redacted.getContent();
+    }
+}
+// File: ArchiveSystem.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class ArchiveSystem {
+    private final UserManager userManager = new UserManager();
+    private final AccessControlService accessControl = new AccessControlService();
+    private final RestrictionService restrictionService = new RestrictionService();
+    private final RightsService rightsService = new RightsService();
+    private final FileService fileService = new FileService();
+    private final SearchService searchService = new SearchService();
+    private final UsageTracker usageTracker = new UsageTracker();
+    private final DownloadService downloadService = new DownloadService(accessControl, usageTracker);
+    private final CitationService citationService = new CitationService();
+    private final NotificationService notificationService = new NotificationService();
+    private final DuplicationRequestService duplicationRequestService = new DuplicationRequestService(notificationService);
+    private final InventoryService inventoryService = new InventoryService();
+    private final SocialMediaService socialMediaService = new SocialMediaService(accessControl);
+    private final RedactionService redactionService = new RedactionService();
+    private final List<ArchiveCollection> collections = new ArrayList<>();
+    private final List<DigitalFile> allFiles = new ArrayList<>();
+
+    public UserManager getUserManager() {
+        return userManager;
+    }
+
+    public AccessControlService getAccessControl() {
+        return accessControl;
+    }
+
+    public RestrictionService getRestrictionService() {
+        return restrictionService;
+    }
+
+    public RightsService getRightsService() {
+        return rightsService;
+    }
+
+    public FileService getFileService() {
+        return fileService;
+    }
+
+    public SearchService getSearchService() {
+        return searchService;
+    }
+
+    public UsageTracker getUsageTracker() {
+        return usageTracker;
+    }
+
+    public DownloadService getDownloadService() {
+        return downloadService;
+    }
+
+    public CitationService getCitationService() {
+        return citationService;
+    }
+
+    public NotificationService getNotificationService() {
+        return notificationService;
+    }
+
+    public DuplicationRequestService getDuplicationRequestService() {
+        return duplicationRequestService;
+    }
+
+    public InventoryService getInventoryService() {
+        return inventoryService;
+    }
+
+    public SocialMediaService getSocialMediaService() {
+        return socialMediaService;
+    }
+
+    public RedactionService getRedactionService() {
+        return redactionService;
+    }
+
+    public ArchiveCollection createCollection(String name, String description) {
+        ArchiveCollection collection = new ArchiveCollection(name, description);
+        collections.add(collection);
+        return collection;
+    }
+
+    public DigitalFile uploadFile(String title, String content, DigitalObjectType type, ArchiveCollection collection, String filePath) {
+        DigitalFile file = fileService.uploadSingle(title, content, type, collection.getName(), filePath);
+        collection.addFile(file);
+        allFiles.add(file);
+        return file;
+    }
+
+    public List<DigitalFile> uploadGroup(ArchiveCollection collection, List<String> titles, DigitalObjectType type) {
+        List<DigitalFile> uploaded = new ArrayList<>();
+        for (String title : titles) {
+            DigitalFile file = fileService.uploadSingle(title, "content-of-" + title, type, collection.getName(), "/bulk/" + title);
+            collection.addFile(file);
+            allFiles.add(file);
+            uploaded.add(file);
+        }
+        return uploaded;
+    }
+
+    public List<DigitalFile> getAllFiles() {
+        return new ArrayList<>(allFiles);
+    }
+
+    public List<ArchiveCollection> getCollections() {
+        return new ArrayList<>(collections);
+    }
+
+    public AccessDecision canView(DigitalFile file, User user, String ip) {
+        return accessControl.canView(file, user, ip);
+    }
+
+    public AccessDecision canDownload(DigitalFile file, User user, String ip) {
+        return accessControl.canDownload(file, user, ip);
+    }
+
+    public AccessDecision canShare(DigitalFile file, User user, String ip) {
+        return accessControl.canShare(file, user, ip);
+    }
+
+    public String download(DigitalFile file, User user, String ip) {
+        return downloadService.download(file, user, ip);
+    }
+
+    public String stream(DigitalFile file, User user, String ip) {
+        return downloadService.stream(file, user, ip);
+    }
+
+    public String thumbnail(DigitalFile file, User user, String ip) {
+        return downloadService.thumbnail(file, user, ip);
+    }
+
+    public String filmClip(DigitalFile file, User user, String ip) {
+        return downloadService.filmClip(file, user, ip);
+    }
+
+    public List<DigitalFile> search(String keyword) {
+        return searchService.keywordSearch(allFiles, keyword);
+    }
+
+    public List<DigitalFile> searchByTag(String tag) {
+        return searchService.searchByTag(allFiles, tag);
+    }
+
+    public List<DigitalFile> searchOcr(String keyword) {
+        return searchService.searchOcrText(allFiles, keyword);
+    }
+
+    public List<DigitalFile> searchByPhotographer(String photographer) {
+        return searchService.searchByPhotographer(allFiles, photographer);
+    }
+
+    public List<DigitalFile> searchByPerson(String person) {
+        return searchService.searchByPerson(allFiles, person);
+    }
+
+    public List<DigitalFile> searchByPlace(String place) {
+        return searchService.searchByPlace(allFiles, place);
+    }
+
+    public List<DigitalFile> searchByRights(RightsStatus status) {
+        return searchService.searchByRightsStatus(allFiles, status);
+    }
+
+    public List<DigitalFile> searchByType(DigitalObjectType type) {
+        return searchService.searchByMaterialType(allFiles, type);
+    }
+
+    public List<DigitalFile> commonMaterial(String keyword) {
+        return searchService.commonMaterialAcrossCollections(collections, keyword);
+    }
+
+    public void applyRights(DigitalFile file, String statementId) {
+        rightsService.applyRights(file, statementId);
+    }
+
+    public String rightsInformation(DigitalFile file) {
+        return rightsService.rightsInformation(file);
+    }
+
+    public void restrictFileFromView(DigitalFile file) {
+        restrictionService.restrictFromView(file);
+    }
+
+    public void restrictGroupFromView(FileGroup group) {
+        restrictionService.restrictGroupFromView(group);
+    }
+
+    public void applyRestrictionToFile(DigitalFile file, Restriction restriction) {
+        restrictionService.applyToFile(file, restriction);
+    }
+
+    public void applyRestrictionToGroup(FileGroup group, Restriction restriction) {
+        restrictionService.applyToGroup(group, restriction);
+    }
+
+    public void setRestrictionEndDate(DigitalFile file, LocalDate date) {
+        restrictionService.setEndDate(file, date);
+    }
+
+    public void restrictByIp(DigitalFile file, List<IpRange> ranges) {
+        restrictionService.restrictByIp(file, ranges);
+    }
+
+    public void restrictByUser(DigitalFile file, Set<String> users) {
+        restrictionService.restrictByUser(file, users);
+    }
+
+    public String generateCitation(DigitalFile file) {
+        return citationService.generateCitation(file, "RAC").format();
+    }
+
+    public String structuredCitation(DigitalFile file) {
+        return citationService.generateStructuredCitationData(file);
+    }
+
+    public String emailAboutFile(DigitalFile file, String body) {
+        return notificationService.emailAboutFile(file, body, citationService);
+    }
+
+    public DigitalFile createAccessCopy(DigitalFile file) {
+        DigitalFile copy = fileService.createAccessCopy(file);
+        allFiles.add(copy);
+        return copy;
+    }
+
+    public void embedMetadata(DigitalFile file) {
+        fileService.embedMetadataInFileHeader(file);
+    }
+
+    public void batchEditMetadata(List<DigitalFile> files, String key, String value) {
+        fileService.batchEditMetadata(files, key, value);
+    }
+
+    public DigitalFile redactForPeriod(DigitalFile file, String sensitiveText, LocalDate until) {
+        DigitalFile redacted = redactionService.redactForPeriod(file, sensitiveText, until);
+        allFiles.add(redacted);
+        return redacted;
+    }
+
+    public String requestAnalog(DigitalFile file, User user) {
+        return duplicationRequestService.requestAnalog(file, user);
+    }
+
+    public String requestDuplicate(DigitalFile file, User user) {
+        return duplicationRequestService.requestDuplicate(file, user);
+    }
+
+    public void uploadInventory(ArchiveCollection collection, String inventory) {
+        inventoryService.uploadInventory(collection, inventory);
+    }
+
+    public String getInventory(ArchiveCollection collection) {
+        return inventoryService.getInventory(collection);
+    }
+
+    public String shareLink(DigitalFile file, User user, String ip, String platform) {
+        return socialMediaService.shareLink(file, user, ip, platform);
+    }
+
+    public FileGroup createFileGroup(String name, List<DigitalFile> files) {
+        FileGroup group = new FileGroup(name);
+        for (DigitalFile file : files) {
+            group.addFile(file);
+        }
+        return group;
+    }
+
+    public List<DigitalFile> findFilesThatCannotBeMadePublic() {
+        return searchService.findFilesThatCannotBeMadePublic(allFiles, accessControl);
+    }
+
+    public List<DigitalFile> getDownloadsByUser(User user) {
+        Map<String, Integer> counts = usageTracker.getDownloadsForUser(user);
+        List<DigitalFile> result = new ArrayList<>();
+        for (DigitalFile file : allFiles) {
+            if (counts.containsKey(file.getId())) {
+                result.add(file);
+            }
+        }
+        return result;
+    }
+}
+// File: Main.java
+import java.time.LocalDate;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        ArchiveSystem system = new ArchiveSystem();
+        UserManager userManager = system.getUserManager();
+
+        userManager.createRole("Administrator",
+                Permission.MANAGE_USERS,
+                Permission.MANAGE_RIGHTS,
+                Permission.VIEW_RESTRICTED,
+                Permission.EDIT_METADATA,
+                Permission.SHARE,
+                Permission.REDACT);
+
+        userManager.createRole("Archivist",
+                Permission.UPLOAD,
+                Permission.WRITE,
+                Permission.EDIT_METADATA,
+                Permission.MANAGE_RIGHTS,
+                Permission.VIEW_RESTRICTED,
+                Permission.SHARE);
+
+        userManager.createRole("Researcher",
+                Permission.READ,
+                Permission.DOWNLOAD,
+                Permission.STREAM);
+
+        userManager.createUserGroup("DonorRepresentatives", Permission.VIEW_RESTRICTED);
+
+        User admin = userManager.createUser("admin", "admin");
+        userManager.assignRoleToUser("admin", "Administrator");
+
+        User archivist = userManager.createUser("archivist", "archivist");
+        userManager.assignRoleToUser("archivist", "Archivist");
+
+        User researcher = userManager.createUser("researcher", "researcher");
+        userManager.assignRoleToUser("researcher", "Researcher");
+
+        User donorRep = userManager.createUser("donorRep", "donorRep");
+        userManager.assignUserToGroup("donorRep", "DonorRepresentatives");
+
+        ArchiveCollection photos = system.createCollection("Photographs", "Digitized photographs");
+        DigitalFile photo = system.uploadFile("Bridge over River", "IMAGE-DATA", DigitalObjectType.IMAGE, photos, "/photos/bridge.jpg");
+        photo.setPhotographer("Jane Doe");
+        photo.addPerson("John Smith");
+        photo.setPlace("New York");
+        photo.addTag("bridge");
+        photo.putMetadata("colorMode", "black and white");
+        system.embedMetadata(photo);
+
+        DigitalFile diary = system.uploadFile("Diary 1945", "SECRET ENTRY: ... public text", DigitalObjectType.TEXT, photos, "/text/diary.txt");
+        diary.setOcrText("secret entry public text");
+        diary.addTag("diary");
+
+        system.applyRights(photo, "RS-PUBLIC-DOMAIN");
+        System.out.println("Rights: " + system.rightsInformation(photo));
+
+        Restriction restriction = new Restriction()
+                .setViewRestricted(true)
+                .setShareRestricted(true)
+                .setAccessRestricted(true)
+                .addAllowedUser("donorRep")
+                .addIpRange(new IpRange("127.0.0.1", "127.0.0.1"))
+                .setDetailedRestrictions("Donor representatives and reading room IP only")
+                .setEndDate(LocalDate.now().plusDays(30));
+        system.applyRestrictionToFile(photo, restriction);
+
+        System.out.println("Researcher view from remote: " + system.canView(photo, researcher, "10.0.0.1").isAllowed());
+        System.out.println("Researcher view from reading room IP: " + system.canView(photo, researcher, "127.0.0.1").isAllowed());
+        System.out.println("Donor representative download: " + system.download(photo, donorRep, "10.0.0.1"));
+
+        Restriction groupRestriction = new Restriction()
+                .setViewRestricted(true)
+                .setDetailedRestrictions("Group restricted");
+        FileGroup group = system.createFileGroup("Diary group", List.of(diary));
+        system.applyRestrictionToGroup(group, groupRestriction);
+        system.setRestrictionEndDate(diary, LocalDate.now().plusDays(10));
+
+        System.out.println("Search bridge: " + system.search("bridge").size());
+        System.out.println("Search tag diary: " + system.searchByTag("diary").size());
+        System.out.println("Citation: " + system.generateCitation(photo));
+        System.out.println("Structured citation: " + system.structuredCitation(photo));
+
+        DigitalFile accessCopy = system.createAccessCopy(photo);
+        System.out.println("Access copy: " + accessCopy.getTitle() + " access=" + accessCopy.isAccessCopy());
+
+        DigitalFile redacted = system.redactForPeriod(diary, "SECRET ENTRY", LocalDate.now().plusDays(5));
+        System.out.println("Redacted content: " + redacted.getContent());
+
+        system.uploadInventory(photos, "Box 1: Bridge; Box 2: Diary");
+        System.out.println("Inventory: " + system.getInventory(photos));
+        System.out.println("Already digitized: " + system.requestAnalog(photo, researcher));
+        System.out.println("Share link: " + system.shareLink(photo, donorRep, "10.0.0.1", "twitter"));
+    }
+}

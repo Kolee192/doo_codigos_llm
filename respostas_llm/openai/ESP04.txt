@@ -1,0 +1,1533 @@
+// File: Certification.java
+public enum Certification {
+    CSM,
+    CSPO,
+    CSP,
+    CST
+}
+
+// File: ApplicationType.java
+public enum ApplicationType {
+    PRACTITIONER,
+    TRAINER
+}
+
+// File: ApplicationStatus.java
+public enum ApplicationStatus {
+    PENDING,
+    APPROVED_AWAITING_PAYMENT,
+    APPROVED,
+    REJECTED
+}
+
+// File: ActivityType.java
+public enum ActivityType {
+    CERTIFICATION_COURSE,
+    OTHER_COURSE,
+    EVENT
+}
+
+// File: MemberRole.java
+public enum MemberRole {
+    MEMBER,
+    TRAINER,
+    ADMIN,
+    EDITOR,
+    RECRUITER
+}
+
+// File: Profile.java
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class Profile {
+    private String location = "";
+    private String biography = "";
+    private String website = "";
+    private String experience = "";
+    private String trainerDetails = "";
+    private boolean privateProfile;
+    private boolean emailPrivate = true;
+    private final Map<String, String> fields = new LinkedHashMap<>();
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = value(location);
+    }
+
+    public String getBiography() {
+        return biography;
+    }
+
+    public void setBiography(String biography) {
+        this.biography = value(biography);
+    }
+
+    public String getWebsite() {
+        return website;
+    }
+
+    public void setWebsite(String website) {
+        this.website = value(website);
+    }
+
+    public String getExperience() {
+        return experience;
+    }
+
+    public void setExperience(String experience) {
+        this.experience = value(experience);
+    }
+
+    public String getTrainerDetails() {
+        return trainerDetails;
+    }
+
+    public void setTrainerDetails(String trainerDetails) {
+        this.trainerDetails = value(trainerDetails);
+    }
+
+    public boolean isPrivateProfile() {
+        return privateProfile;
+    }
+
+    public void setPrivateProfile(boolean privateProfile) {
+        this.privateProfile = privateProfile;
+    }
+
+    public boolean isEmailPrivate() {
+        return emailPrivate;
+    }
+
+    public void setEmailPrivate(boolean emailPrivate) {
+        this.emailPrivate = emailPrivate;
+    }
+
+    public void setField(String name, String value) {
+        fields.put(name, value(value));
+    }
+
+    public Map<String, String> getFields() {
+        return Map.copyOf(fields);
+    }
+
+    private static String value(String text) {
+        return text == null ? "" : text;
+    }
+}
+
+// File: Member.java
+import java.util.EnumSet;
+import java.util.Set;
+import java.util.UUID;
+
+public class Member {
+    private final String id;
+    private String name;
+    private String email;
+    private String password;
+    private final Profile profile = new Profile();
+    private final Set<MemberRole> roles = EnumSet.of(MemberRole.MEMBER);
+    private final Set<Certification> certifications = EnumSet.noneOf(Certification.class);
+    private double accountBalance;
+    private double trainerRating;
+    private int trainerRatingCount;
+
+    public Member(String name, String email, String password) {
+        this.id = UUID.randomUUID().toString();
+        this.name = require(name, "name");
+        this.email = require(email, "email");
+        this.password = require(password, "password");
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = require(name, "name");
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = require(email, "email");
+    }
+
+    public Profile getProfile() {
+        return profile;
+    }
+
+    public Set<MemberRole> getRoles() {
+        return Set.copyOf(roles);
+    }
+
+    public boolean hasRole(MemberRole role) {
+        return roles.contains(role);
+    }
+
+    public void addRole(MemberRole role) {
+        roles.add(role);
+    }
+
+    public Set<Certification> getCertifications() {
+        return Set.copyOf(certifications);
+    }
+
+    public boolean hasCertification(Certification certification) {
+        return certifications.contains(certification);
+    }
+
+    public void addCertification(Certification certification) {
+        certifications.add(certification);
+        if (certification == Certification.CST) {
+            roles.add(MemberRole.TRAINER);
+        }
+    }
+
+    public double getAccountBalance() {
+        return accountBalance;
+    }
+
+    public void charge(double amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Amount must not be negative");
+        }
+        accountBalance += amount;
+    }
+
+    public void pay(double amount) {
+        if (amount < 0 || amount > accountBalance) {
+            throw new IllegalArgumentException("Invalid payment amount");
+        }
+        accountBalance -= amount;
+    }
+
+    public double getTrainerRating() {
+        return trainerRatingCount == 0 ? 0 : trainerRating;
+    }
+
+    public int getTrainerRatingCount() {
+        return trainerRatingCount;
+    }
+
+    public void addTrainerRating(int rating) {
+        if (rating < 1 || rating > 5) {
+            throw new IllegalArgumentException("Rating must be between 1 and 5");
+        }
+        trainerRating = ((trainerRating * trainerRatingCount) + rating) / ++trainerRatingCount;
+    }
+
+    public boolean passwordMatches(String candidate) {
+        return password.equals(candidate);
+    }
+
+    public void resetPassword(String newPassword) {
+        password = require(newPassword, "password");
+    }
+
+    private static String require(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(field + " is required");
+        }
+        return value.trim();
+    }
+}
+
+// File: Application.java
+import java.time.Instant;
+import java.util.UUID;
+
+public class Application {
+    private final String id = UUID.randomUUID().toString();
+    private final String memberId;
+    private final ApplicationType type;
+    private final String answers;
+    private final Instant submittedAt = Instant.now();
+    private ApplicationStatus status = ApplicationStatus.PENDING;
+    private String administratorNotes = "";
+
+    public Application(String memberId, ApplicationType type, String answers) {
+        this.memberId = memberId;
+        this.type = type;
+        this.answers = answers == null ? "" : answers;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getMemberId() {
+        return memberId;
+    }
+
+    public ApplicationType getType() {
+        return type;
+    }
+
+    public String getAnswers() {
+        return answers;
+    }
+
+    public Instant getSubmittedAt() {
+        return submittedAt;
+    }
+
+    public ApplicationStatus getStatus() {
+        return status;
+    }
+
+    public String getAdministratorNotes() {
+        return administratorNotes;
+    }
+
+    public void review(boolean approve, String notes) {
+        if (status != ApplicationStatus.PENDING) {
+            throw new IllegalStateException("Application has already been reviewed");
+        }
+        status = approve ? ApplicationStatus.APPROVED_AWAITING_PAYMENT : ApplicationStatus.REJECTED;
+        administratorNotes = notes == null ? "" : notes;
+    }
+
+    public void markPaid() {
+        if (status != ApplicationStatus.APPROVED_AWAITING_PAYMENT) {
+            throw new IllegalStateException("Application is not awaiting payment");
+        }
+        status = ApplicationStatus.APPROVED;
+    }
+}
+
+// File: Activity.java
+import java.time.LocalDate;
+import java.util.UUID;
+
+public class Activity {
+    private final String id = UUID.randomUUID().toString();
+    private String title;
+    private String description;
+    private String detailedUrl;
+    private String location;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private ActivityType type;
+    private final String ownerId;
+    private final String trainerId;
+    private final boolean listingFeePaid;
+    private boolean approved = true;
+
+    public Activity(String title, String description, String detailedUrl, String location,
+                    LocalDate startDate, LocalDate endDate, ActivityType type,
+                    String ownerId, String trainerId, boolean listingFeePaid) {
+        this.ownerId = ownerId;
+        this.trainerId = trainerId;
+        this.listingFeePaid = listingFeePaid;
+        update(title, description, detailedUrl, location, startDate, endDate, type);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getDetailedUrl() {
+        return detailedUrl;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public ActivityType getType() {
+        return type;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public String getTrainerId() {
+        return trainerId;
+    }
+
+    public boolean isListingFeePaid() {
+        return listingFeePaid;
+    }
+
+    public boolean isApproved() {
+        return approved;
+    }
+
+    public void setApproved(boolean approved) {
+        this.approved = approved;
+    }
+
+    public void update(String title, String description, String detailedUrl, String location,
+                       LocalDate startDate, LocalDate endDate, ActivityType type) {
+        if (title == null || title.isBlank() || startDate == null || type == null) {
+            throw new IllegalArgumentException("Title, start date, and activity type are required");
+        }
+        this.title = title.trim();
+        this.description = description == null ? "" : description;
+        this.detailedUrl = detailedUrl == null ? "" : detailedUrl;
+        this.location = location == null ? "" : location;
+        this.startDate = startDate;
+        this.endDate = endDate == null ? startDate : endDate;
+        this.type = type;
+    }
+}
+
+// File: NewsItem.java
+import java.time.LocalDate;
+import java.util.UUID;
+
+public class NewsItem {
+    private final String id = UUID.randomUUID().toString();
+    private String title;
+    private String body;
+    private final String submittedBy;
+    private LocalDate startPublishingDate;
+    private LocalDate oldNewsDate;
+    private LocalDate stopPublishingDate;
+    private int priority;
+
+    public NewsItem(String title, String body, String submittedBy, LocalDate startPublishingDate,
+                    LocalDate oldNewsDate, LocalDate stopPublishingDate, int priority) {
+        this.title = title;
+        this.body = body;
+        this.submittedBy = submittedBy;
+        updateSchedule(startPublishingDate, oldNewsDate, stopPublishingDate, priority);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public String getSubmittedBy() {
+        return submittedBy;
+    }
+
+    public LocalDate getStartPublishingDate() {
+        return startPublishingDate;
+    }
+
+    public LocalDate getOldNewsDate() {
+        return oldNewsDate;
+    }
+
+    public LocalDate getStopPublishingDate() {
+        return stopPublishingDate;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public void edit(String title, String body) {
+        this.title = title;
+        this.body = body;
+    }
+
+    public void updateSchedule(LocalDate start, LocalDate oldNews, LocalDate stop, int priority) {
+        if (start == null) {
+            throw new IllegalArgumentException("Start publishing date is required");
+        }
+        this.startPublishingDate = start;
+        this.oldNewsDate = oldNews;
+        this.stopPublishingDate = stop;
+        this.priority = priority;
+    }
+
+    public boolean isPublished(LocalDate today) {
+        return !today.isBefore(startPublishingDate)
+                && (stopPublishingDate == null || !today.isAfter(stopPublishingDate));
+    }
+
+    public boolean isOld(LocalDate today) {
+        return oldNewsDate != null && !today.isBefore(oldNewsDate);
+    }
+}
+
+// File: Article.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public class Article {
+    private final String id = UUID.randomUUID().toString();
+    private String title;
+    private String teaser;
+    private String body;
+    private final String authorId;
+    private String certificationBadge = "";
+    private LocalDate startDate;
+    private LocalDate oldArticleDate;
+    private LocalDate stopDate;
+    private boolean membersOnly;
+    private boolean featuredOnHomePage;
+    private final List<String> comments = new ArrayList<>();
+
+    public Article(String title, String teaser, String body, String authorId) {
+        this.title = title;
+        this.teaser = teaser;
+        this.body = body;
+        this.authorId = authorId;
+        this.startDate = LocalDate.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getTeaser() {
+        return teaser;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public String getAuthorId() {
+        return authorId;
+    }
+
+    public String getCertificationBadge() {
+        return certificationBadge;
+    }
+
+    public void setCertificationBadge(String certificationBadge) {
+        this.certificationBadge = certificationBadge == null ? "" : certificationBadge;
+    }
+
+    public void edit(String title, String teaser, String body) {
+        this.title = title;
+        this.teaser = teaser;
+        this.body = body;
+    }
+
+    public void setSchedule(LocalDate start, LocalDate oldDate, LocalDate stop) {
+        if (start == null) {
+            throw new IllegalArgumentException("Start date is required");
+        }
+        startDate = start;
+        oldArticleDate = oldDate;
+        stopDate = stop;
+    }
+
+    public void setMembersOnly(boolean membersOnly) {
+        this.membersOnly = membersOnly;
+    }
+
+    public boolean isMembersOnly() {
+        return membersOnly;
+    }
+
+    public void setFeaturedOnHomePage(boolean featuredOnHomePage) {
+        this.featuredOnHomePage = featuredOnHomePage;
+    }
+
+    public boolean isFeaturedOnHomePage() {
+        return featuredOnHomePage;
+    }
+
+    public boolean isPublished(LocalDate today) {
+        return !today.isBefore(startDate) && (stopDate == null || !today.isAfter(stopDate));
+    }
+
+    public boolean isOld(LocalDate today) {
+        return oldArticleDate != null && !today.isBefore(oldArticleDate);
+    }
+
+    public void addComment(String comment) {
+        if (comment == null || comment.isBlank()) {
+            throw new IllegalArgumentException("Comment cannot be empty");
+        }
+        comments.add(comment.trim());
+    }
+
+    public List<String> getComments() {
+        return List.copyOf(comments);
+    }
+}
+
+// File: FAQ.java
+import java.util.UUID;
+
+public class FAQ {
+    private final String id = UUID.randomUUID().toString();
+    private String question;
+    private String answer;
+
+    public FAQ(String question, String answer) {
+        edit(question, answer);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getQuestion() {
+        return question;
+    }
+
+    public String getAnswer() {
+        return answer;
+    }
+
+    public void edit(String question, String answer) {
+        if (question == null || question.isBlank() || answer == null || answer.isBlank()) {
+            throw new IllegalArgumentException("Question and answer are required");
+        }
+        this.question = question;
+        this.answer = answer;
+    }
+}
+
+// File: JobAd.java
+import java.time.LocalDate;
+import java.util.UUID;
+
+public class JobAd {
+    private final String id = UUID.randomUUID().toString();
+    private final String recruiterId;
+    private final String recruiterEmail;
+    private String title;
+    private String description;
+    private final LocalDate postedDate;
+    private LocalDate expiresDate;
+    private boolean approved;
+
+    public JobAd(String recruiterId, String recruiterEmail, String title, String description) {
+        this.recruiterId = recruiterId;
+        this.recruiterEmail = recruiterEmail;
+        this.title = title;
+        this.description = description;
+        postedDate = LocalDate.now();
+        expiresDate = postedDate.plusDays(30);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getRecruiterId() {
+        return recruiterId;
+    }
+
+    public String getRecruiterEmail() {
+        return recruiterEmail;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public LocalDate getPostedDate() {
+        return postedDate;
+    }
+
+    public LocalDate getExpiresDate() {
+        return expiresDate;
+    }
+
+    public boolean isApproved() {
+        return approved;
+    }
+
+    public void approve() {
+        approved = true;
+    }
+
+    public void edit(String title, String description) {
+        this.title = title;
+        this.description = description;
+    }
+
+    public void extend() {
+        expiresDate = expiresDate.plusDays(30);
+    }
+
+    public boolean isActive(LocalDate today) {
+        return approved && !today.isAfter(expiresDate);
+    }
+
+    public boolean isReminderDue(LocalDate today) {
+        return approved && today.equals(expiresDate.minusDays(7));
+    }
+}
+
+// File: RegistryEntry.java
+import java.time.Instant;
+import java.util.UUID;
+
+public class RegistryEntry {
+    private final String id = UUID.randomUUID().toString();
+    private final String name;
+    private final String email;
+    private final Certification certification;
+    private final Instant addedAt = Instant.now();
+    private boolean activated;
+
+    public RegistryEntry(String name, String email, Certification certification) {
+        this.name = name;
+        this.email = email;
+        this.certification = certification;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public Certification getCertification() {
+        return certification;
+    }
+
+    public Instant getAddedAt() {
+        return addedAt;
+    }
+
+    public boolean isActivated() {
+        return activated;
+    }
+
+    public void activate() {
+        activated = true;
+    }
+}
+
+// File: ClassRoster.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public class ClassRoster {
+    private final String id = UUID.randomUUID().toString();
+    private final String trainerId;
+    private final String courseName;
+    private final List<Participant> participants = new ArrayList<>();
+    private boolean approved;
+
+    public ClassRoster(String trainerId, String courseName) {
+        this.trainerId = trainerId;
+        this.courseName = courseName;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTrainerId() {
+        return trainerId;
+    }
+
+    public String getCourseName() {
+        return courseName;
+    }
+
+    public List<Participant> getParticipants() {
+        return List.copyOf(participants);
+    }
+
+    public boolean isApproved() {
+        return approved;
+    }
+
+    public void approve() {
+        approved = true;
+    }
+
+    public void addParticipant(String name, String email, boolean pending) {
+        participants.add(new Participant(name, email, pending));
+    }
+
+    public void registerPendingParticipants() {
+        if (!approved) {
+            throw new IllegalStateException("Roster must be approved first");
+        }
+        participants.forEach(Participant::register);
+    }
+
+    public static class Participant {
+        private final String name;
+        private final String email;
+        private boolean pending;
+
+        private Participant(String name, String email, boolean pending) {
+            this.name = name;
+            this.email = email;
+            this.pending = pending;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public boolean isPending() {
+            return pending;
+        }
+
+        private void register() {
+            pending = false;
+        }
+    }
+}
+
+// File: SitePlatform.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+public class SitePlatform {
+    private final Map<String, Member> members = new LinkedHashMap<>();
+    private final Map<String, Application> applications = new LinkedHashMap<>();
+    private final Map<String, Activity> activities = new LinkedHashMap<>();
+    private final Map<String, NewsItem> news = new LinkedHashMap<>();
+    private final Map<String, Article> articles = new LinkedHashMap<>();
+    private final Map<String, FAQ> faqs = new LinkedHashMap<>();
+    private final Map<String, JobAd> jobs = new LinkedHashMap<>();
+    private final Map<String, RegistryEntry> registry = new LinkedHashMap<>();
+    private final Map<String, ClassRoster> rosters = new LinkedHashMap<>();
+    private final Map<String, Set<String>> surveyResponses = new HashMap<>();
+    private final Map<String, List<String>> resources = new LinkedHashMap<>();
+    private final List<String> mailOutbox = new ArrayList<>();
+    private final List<String> emailSubmissions = new ArrayList<>();
+    private final Map<String, String> editorEmailTemplates = new HashMap<>();
+    private final Map<String, String> sponsorLogos = new LinkedHashMap<>();
+    private final Map<String, String> announcements = new LinkedHashMap<>();
+    private final Map<Certification, Double> annualFees = new EnumMap<>(Certification.class);
+    private double otherActivityListingFee = 25.0;
+    private double corporateMembershipFee = 500.0;
+    private String whatIsScrumContent = "";
+
+    public SitePlatform() {
+        annualFees.put(Certification.CSM, 0.0);
+        annualFees.put(Certification.CSPO, 0.0);
+        annualFees.put(Certification.CSP, 100.0);
+        annualFees.put(Certification.CST, 200.0);
+        editorEmailTemplates.put("CSM", "Welcome to the Scrum Alliance, {name}!");
+        editorEmailTemplates.put("CSPO", "Welcome as a Certified Scrum Product Owner, {name}!");
+    }
+
+    public Member registerMember(String name, String email, String password) {
+        ensureUniqueEmail(email, null);
+        Member member = new Member(name, email, password);
+        members.put(member.getId(), member);
+        return member;
+    }
+
+    public Member addAdministrator(String name, String email, String password) {
+        Member member = registerMember(name, email, password);
+        member.addRole(MemberRole.ADMIN);
+        member.addRole(MemberRole.EDITOR);
+        return member;
+    }
+
+    public Member getMember(String memberId) {
+        return requireMember(memberId);
+    }
+
+    public List<Member> getMembers() {
+        return List.copyOf(members.values());
+    }
+
+    public void editMemberProfile(String administratorId, String memberId, String name,
+                                  String email, Profile replacement) {
+        requireRole(administratorId, MemberRole.ADMIN);
+        Member target = requireMember(memberId);
+        ensureUniqueEmail(email, memberId);
+        target.setName(name);
+        target.setEmail(email);
+        copyProfile(replacement, target.getProfile());
+    }
+
+    public Map<String, String> viewProfile(String viewerId, String memberId) {
+        Member target = requireMember(memberId);
+        Map<String, String> result = new LinkedHashMap<>();
+        result.put("name", target.getName());
+        if (target.getProfile().isPrivateProfile() && !memberId.equals(viewerId)) {
+            return Map.copyOf(result);
+        }
+        Profile profile = target.getProfile();
+        result.put("location", profile.getLocation());
+        result.put("biography", profile.getBiography());
+        result.put("website", profile.getWebsite());
+        result.put("experience", profile.getExperience());
+        result.put("trainerDetails", profile.getTrainerDetails());
+        result.put("certifications", target.getCertifications().toString());
+        if (!profile.isEmailPrivate() || memberId.equals(viewerId)) {
+            result.put("email", target.getEmail());
+        }
+        if (target.hasRole(MemberRole.TRAINER)) {
+            result.put("rating", Double.toString(target.getTrainerRating()));
+        }
+        return Map.copyOf(result);
+    }
+
+    public List<Member> searchProfiles(String name, String location, Certification certification) {
+        return members.values().stream()
+                .filter(m -> !m.getProfile().isPrivateProfile())
+                .filter(m -> contains(m.getName(), name))
+                .filter(m -> contains(m.getProfile().getLocation(), location))
+                .filter(m -> certification == null || m.hasCertification(certification))
+                .toList();
+    }
+
+    public List<Member> certificationRegistry(Certification certification) {
+        return registry.values().stream()
+                .filter(entry -> entry.getCertification() == certification)
+                .map(entry -> {
+                    Member member = members.values().stream()
+                            .filter(m -> m.getEmail().equalsIgnoreCase(entry.getEmail()))
+                            .findFirst().orElse(null);
+                    return member;
+                })
+                .filter(m -> m != null)
+                .toList();
+    }
+
+    public List<RegistryEntry> registryEntries(Certification certification) {
+        return registry.values().stream()
+                .filter(entry -> certification == null || entry.getCertification() == certification)
+                .toList();
+    }
+
+    public RegistryEntry addRegistryEntry(String name, String email, Certification certification) {
+        RegistryEntry entry = new RegistryEntry(name, email, certification);
+        registry.put(entry.getId(), entry);
+        mailOutbox.add(email + ": " + emailTemplate(certification, name));
+        return entry;
+    }
+
+    public Application submitApplication(String memberId, ApplicationType type, String answers) {
+        requireMember(memberId);
+        Application application = new Application(memberId, type, answers);
+        applications.put(application.getId(), application);
+        return application;
+    }
+
+    public List<Application> pendingApplications(String administratorId) {
+        requireRole(administratorId, MemberRole.ADMIN);
+        return applications.values().stream()
+                .filter(a -> a.getStatus() == ApplicationStatus.PENDING)
+                .toList();
+    }
+
+    public void reviewApplication(String administratorId, String applicationId,
+                                  boolean approve, String notes) {
+        requireRole(administratorId, MemberRole.ADMIN);
+        Application application = require(applications, applicationId, "application");
+        application.review(approve, notes);
+        if (approve) {
+            Certification certification = application.getType() == ApplicationType.PRACTITIONER
+                    ? Certification.CSP : Certification.CST;
+            requireMember(application.getMemberId()).charge(annualFees.get(certification));
+        }
+    }
+
+    public void payForApplication(String memberId, String applicationId) {
+        Application application = require(applications, applicationId, "application");
+        if (!application.getMemberId().equals(memberId)) {
+            throw new SecurityException("This application belongs to another member");
+        }
+        if (application.getStatus() != ApplicationStatus.APPROVED_AWAITING_PAYMENT) {
+            throw new IllegalStateException("Application is not awaiting payment");
+        }
+        Member member = requireMember(memberId);
+        double fee = annualFees.get(application.getType() == ApplicationType.PRACTITIONER
+                ? Certification.CSP : Certification.CST);
+        member.pay(fee);
+        Certification certification = application.getType() == ApplicationType.PRACTITIONER
+                ? Certification.CSP : Certification.CST;
+        member.addCertification(certification);
+        application.markPaid();
+    }
+
+    public void setAnnualFee(String administratorId, Certification certification, double fee) {
+        requireRole(administratorId, MemberRole.ADMIN);
+        validateAmount(fee);
+        annualFees.put(certification, fee);
+    }
+
+    public double getAnnualFee(Certification certification) {
+        return annualFees.getOrDefault(certification, 0.0);
+    }
+
+    public void setOtherActivityListingFee(String administratorId, double fee) {
+        requireRole(administratorId, MemberRole.ADMIN);
+        validateAmount(fee);
+        otherActivityListingFee = fee;
+    }
+
+    public Activity createActivity(String creatorId, String trainerId, String title,
+                                   String description, String url, String location,
+                                   LocalDate start, LocalDate end, ActivityType type) {
+        Member creator = requireMember(creatorId);
+        requireMember(trainerId);
+        if (!creatorId.equals(trainerId) && !creator.hasRole(MemberRole.ADMIN)) {
+            throw new SecurityException("Only a trainer or administrator may create an activity");
+        }
+        boolean adminCreated = creator.hasRole(MemberRole.ADMIN);
+        boolean feeRequired = !adminCreated
+                && (type == ActivityType.OTHER_COURSE || type == ActivityType.EVENT);
+        if (feeRequired) {
+            creator.charge(otherActivityListingFee);
+        }
+        Activity activity = new Activity(title, description, url, location, start, end,
+                type, creatorId, trainerId, feeRequired);
+        activities.put(activity.getId(), activity);
+        return activity;
+    }
+
+    public void updateActivity(String actorId, String activityId, String title,
+                               String description, String url, String location,
+                               LocalDate start, LocalDate end, ActivityType type) {
+        Activity activity = require(activities, activityId, "activity");
+        requireActivityEditPermission(actorId, activity);
+        activity.update(title, description, url, location, start, end, type);
+    }
+
+    public Activity copyActivity(String trainerId, String activityId, LocalDate newStart) {
+        Activity original = require(activities, activityId, "activity");
+        if (!original.getTrainerId().equals(trainerId)) {
+            throw new SecurityException("Only the activity's trainer can copy it");
+        }
+        return createActivity(trainerId, trainerId, original.getTitle(), original.getDescription(),
+                original.getDetailedUrl(), original.getLocation(), newStart, newStart,
+                original.getType());
+    }
+
+    public void deleteActivity(String actorId, String activityId) {
+        Activity activity = require(activities, activityId, "activity");
+        if (!activity.getOwnerId().equals(actorId)
+                && !requireMember(actorId).hasRole(MemberRole.ADMIN)) {
+            throw new SecurityException("Not permitted to delete this activity");
+        }
+        activities.remove(activityId);
+    }
+
+    public List<Activity> upcomingActivities(ActivityType type, int page, int pageSize) {
+        if (page < 0 || pageSize < 1) {
+            throw new IllegalArgumentException("Invalid page settings");
+        }
+        List<Activity> result = activities.values().stream()
+                .filter(a -> a.isApproved() && !a.getStartDate().isBefore(LocalDate.now()))
+                .filter(a -> type == null || a.getType() == type)
+                .sorted(Comparator.comparing(Activity::getStartDate))
+                .toList();
+        int from = Math.min(page * pageSize, result.size());
+        return result.subList(from, Math.min(from + pageSize, result.size()));
+    }
+
+    public List<Activity> advancedActivitySearch(ActivityType type, String text,
+                                                 String location, LocalDate from,
+                                                 LocalDate through) {
+        return activities.values().stream()
+                .filter(a -> type == null || a.getType() == type)
+                .filter(a -> a.isApproved() && !a.getStartDate().isBefore(LocalDate.now()))
+                .filter(a -> contains(a.getTitle() + " " + a.getDescription(), text))
+                .filter(a -> contains(a.getLocation(), location))
+                .filter(a -> from == null || !a.getStartDate().isBefore(from))
+                .filter(a -> through == null || !a.getStartDate().isAfter(through))
+                .sorted(Comparator.comparing(Activity::getStartDate))
+                .toList();
+    }
+
+    public List<Activity> activitiesForTrainer(String trainerId) {
+        return activities.values().stream().filter(a -> a.getTrainerId().equals(trainerId))
+                .sorted(Comparator.comparing(Activity::getStartDate)).toList();
+    }
+
+    public String trainerProfileUrl(String activityId) {
+        Activity activity = require(activities, activityId, "activity");
+        return "/members/" + activity.getTrainerId();
+    }
+
+    public String activityRss() {
+        return rss("Upcoming activities", upcomingActivities(null, 0, Integer.MAX_VALUE).stream()
+                .map(a -> a.getTitle() + " - " + a.getStartDate()).toList());
+    }
+
+    public NewsItem submitNews(String title, String body, String submitterEmail) {
+        emailSubmissions.add("News suggestion from " + submitterEmail + ": " + title + "\n" + body);
+        return null;
+    }
+
+    public NewsItem addNews(String editorId, String title, String body, String submitter,
+                            LocalDate start, LocalDate oldDate, LocalDate stop, int priority) {
+        requireRole(editorId, MemberRole.EDITOR);
+        NewsItem item = new NewsItem(title, body, submitter, start, oldDate, stop, priority);
+        news.put(item.getId(), item);
+        return item;
+    }
+
+    public List<NewsItem> currentNews() {
+        return news.values().stream().filter(n -> n.isPublished(LocalDate.now()) && !n.isOld(LocalDate.now()))
+                .sorted(Comparator.comparingInt(NewsItem::getPriority).reversed()).toList();
+    }
+
+    public List<NewsItem> archivedNews() {
+        return news.values().stream().filter(n -> n.isPublished(LocalDate.now()) && n.isOld(LocalDate.now()))
+                .sorted(Comparator.comparing(NewsItem::getStartPublishingDate).reversed()).toList();
+    }
+
+    public String newsRss() {
+        return rss("News", currentNews().stream().map(NewsItem::getTitle).toList());
+    }
+
+    public Article addArticle(String editorId, String title, String teaser, String body,
+                              String authorId, boolean membersOnly) {
+        requireRole(editorId, MemberRole.EDITOR);
+        Article article = new Article(title, teaser, body, authorId);
+        article.setMembersOnly(membersOnly);
+        articles.put(article.getId(), article);
+        return article;
+    }
+
+    public void editArticle(String editorId, String articleId, String title,
+                            String teaser, String body) {
+        requireRole(editorId, MemberRole.EDITOR);
+        require(articles, articleId, "article").edit(title, teaser, body);
+    }
+
+    public List<Article> homePageArticles() {
+        return articles.values().stream()
+                .filter(a -> a.isPublished(LocalDate.now()) && !a.isOld(LocalDate.now()))
+                .filter(a -> a.isFeaturedOnHomePage() || true)
+                .toList();
+    }
+
+    public Optional<Article> readArticle(String articleId, boolean isMember) {
+        Article article = require(articles, articleId, "article");
+        if (!article.isPublished(LocalDate.now()) || (article.isMembersOnly() && !isMember)) {
+            return Optional.empty();
+        }
+        return Optional.of(article);
+    }
+
+    public List<Article> searchArticles(String query, boolean isMember) {
+        return articles.values().stream()
+                .filter(a -> a.isPublished(LocalDate.now()))
+                .filter(a -> isMember || !a.isMembersOnly())
+                .filter(a -> contains(a.getTitle() + " " + a.getTeaser() + " "
+                        + a.getBody() + " " + memberName(a.getAuthorId()), query))
+                .toList();
+    }
+
+    public void commentOnArticle(String articleId, String comment) {
+        require(articles, articleId, "article").addComment(comment);
+    }
+
+    public String articlesRss() {
+        return rss("Articles", homePageArticles().stream()
+                .map(a -> a.getTitle() + ": " + a.getTeaser()).toList());
+    }
+
+    public FAQ addFaq(String editorId, String question, String answer) {
+        requireRole(editorId, MemberRole.EDITOR);
+        FAQ faq = new FAQ(question, answer);
+        faqs.put(faq.getId(), faq);
+        return faq;
+    }
+
+    public void editFaq(String editorId, String faqId, String question, String answer) {
+        requireRole(editorId, MemberRole.EDITOR);
+        require(faqs, faqId, "FAQ").edit(question, answer);
+    }
+
+    public void deleteFaq(String editorId, String faqId) {
+        requireRole(editorId, MemberRole.EDITOR);
+        faqs.remove(faqId);
+    }
+
+    public List<FAQ> searchFaqs(String query) {
+        return faqs.values().stream()
+                .filter(f -> contains(f.getQuestion() + " " + f.getAnswer(), query)).toList();
+    }
+
+    public JobAd submitJob(String recruiterId, String title, String description) {
+        Member recruiter = requireMember(recruiterId);
+        JobAd job = new JobAd(recruiterId, recruiter.getEmail(), title, description);
+        jobs.put(job.getId(), job);
+        mailOutbox.add("admin: Job submitted: " + title);
+        return job;
+    }
+
+    public void approveJob(String administratorId, String jobId) {
+        requireRole(administratorId, MemberRole.ADMIN);
+        require(jobs, jobId, "job").approve();
+    }
+
+    public void editJob(String administratorId, String jobId, String title, String description) {
+        requireRole(administratorId, MemberRole.ADMIN);
+        require(jobs, jobId, "job").edit(title, description);
+    }
+
+    public void deleteJob(String administratorId, String jobId) {
+        requireRole(administratorId, MemberRole.ADMIN);
+        jobs.remove(jobId);
+    }
+
+    public void extendJob(String recruiterId, String jobId) {
+        JobAd job = require(jobs, jobId, "job");
+        if (!job.getRecruiterId().equals(recruiterId)) {
+            throw new SecurityException("Only the recruiter can extend this ad");
+        }
+        job.extend();
+    }
+
+    public List<JobAd> activeJobs() {
+        return jobs.values().stream().filter(j -> j.isActive(LocalDate.now()))
+                .sorted(Comparator.comparing(JobAd::getPostedDate).reversed()).toList();
+    }
+
+    public List<String> sendJobExpiryReminders(LocalDate today) {
+        List<String> sent = new ArrayList<>();
+        for (JobAd job : jobs.values()) {
+            if (job.isReminderDue(today)) {
+                String message = job.getRecruiterEmail() + ": Your ad expires on "
+                        + job.getExpiresDate() + "; visit the site to extend it.";
+                mailOutbox.add(message);
+                sent.add(message);
+            }
+        }
+        return List.copyOf(sent);
+    }
+
+    public String jobsRss() {
+        return rss("Jobs", activeJobs().stream().map(JobAd::getTitle).toList());
+    }
+
+    public void submitSurveyResponse(String trainerId, String classId, String participantKey, int rating) {
+        requireMember(trainerId);
+        if (participantKey == null || participantKey.isBlank() || rating < 1 || rating > 5) {
+            throw new IllegalArgumentException("Participant and rating are required");
+        }
+        Set<String> respondents = surveyResponses.computeIfAbsent(classId, ignored -> new java.util.HashSet<>());
+        if (!respondents.add(participantKey)) {
+            throw new IllegalStateException("A participant may submit only one response per class");
+        }
+        requireMember(trainerId).addTrainerRating(rating);
+        mailOutbox.add(trainerId + ": A new class survey response was submitted.");
+    }
+
+    public Map<String, Double> trainerRatings(String administratorId) {
+        requireRole(administratorId, MemberRole.ADMIN);
+        Map<String, Double> ratings = new LinkedHashMap<>();
+        members.values().stream().filter(m -> m.hasRole(MemberRole.TRAINER))
+                .forEach(m -> ratings.put(m.getName(), m.getTrainerRating()));
+        return Map.copyOf(ratings);
+    }
+
+    public ClassRoster importRoster(String trainerId, String courseName, String csv) {
+        Member trainer = requireMember(trainerId);
+        if (!trainer.hasRole(MemberRole.TRAINER) && !trainer.hasCertification(Certification.CST)) {
+            throw new SecurityException("Only trainers can import class rosters");
+        }
+        ClassRoster roster = new ClassRoster(trainerId, courseName);
+        if (csv != null) {
+            for (String line : csv.split("\\R")) {
+                String[] cells = line.split(",", -1);
+                if (cells.length >= 2 && !cells[0].isBlank() && !cells[1].isBlank()) {
+                    roster.addParticipant(cells[0].trim(), cells[1].trim(), true);
+                }
+            }
+        }
+        rosters.put(roster.getId(), roster);
+        return roster;
+    }
+
+    public List<ClassRoster> pendingRosters(String administratorId) {
+        requireRole(administratorId, MemberRole.ADMIN);
+        return rosters.values().stream().filter(r -> !r.isApproved()).toList();
+    }
+
+    public void approveRoster(String administratorId, String rosterId, boolean proofOfPaymentReceived) {
+        requireRole(administratorId, MemberRole.ADMIN);
+        if (!proofOfPaymentReceived) {
+            throw new IllegalStateException("Proof of payment is required");
+        }
+        ClassRoster roster = require(rosters, rosterId, "roster");
+        roster.approve();
+        roster.registerPendingParticipants();
+        roster.getParticipants().forEach(p -> {
+            RegistryEntry entry = addRegistryEntry(p.getName(), p.getEmail(), Certification.CSM);
+            entry.activate();
+        });
+    }
+
+    public void setEmailTemplate(String editorId, String certification, String template) {
+        requireRole(editorId, MemberRole.EDITOR);
+        editorEmailTemplates.put(certification.toUpperCase(Locale.ROOT), template);
+    }
+
+    public void setCorporateMembershipFee(String administratorId, double fee) {
+        requireRole(administratorId, MemberRole.ADMIN);
+        validateAmount(fee);
+        corporateMembershipFee = fee;
+    }
+
+    public double getCorporateMembershipFee() {
+        return corporateMembershipFee;
+    }
+
+    public void addCorporateSponsor(String companyName, String logoUrl, double payment) {
+        if (payment < corporateMembershipFee) {
+            throw new IllegalArgumentException("Corporate membership fee has not been paid");
+        }
+        sponsorLogos.put(companyName, logoUrl);
+    }
+
+    public Optional<String> randomSponsorLogo() {
+        if (sponsorLogos.isEmpty()) {
+            return Optional.empty();
+        }
+        List<String> logos = new ArrayList<>(sponsorLogos.values());
+        return Optional.of(logos.get(java.util.concurrent.ThreadLocalRandom.current()
+                .nextInt(logos.size())));
+    }
+
+    public void addResource(String editorId, String name, String url, boolean membersOnly) {
+        requireRole(editorId, MemberRole.EDITOR);
+        resources.computeIfAbsent(membersOnly ? "members" : "public", ignored -> new ArrayList<>())
+                .add(name + "|" + url);
+    }
+
+    public List<String> availableResources(boolean isMember) {
+        List<String> result = new ArrayList<>(resources.getOrDefault("public", List.of()));
+        if (isMember) {
+            result.addAll(resources.getOrDefault("members", List.of()));
+        }
+        return List.copyOf(result);
+    }
+
+    public void setWhatIsScrumContent(String editorId, String content) {
+        requireRole(editorId, MemberRole.EDITOR);
+        whatIsScrumContent = content == null ? "" : content;
+    }
+
+    public String getWhatIsScrumContent() {
+        return whatIsScrumContent;
+    }
+
+    public void setAnnouncement(String editorId, String slot, String content) {
+        requireRole(editorId, MemberRole.EDITOR);
+        announcements.put(slot, content);
+    }
+
+    public Map<String, String> getAnnouncements() {
+        return Map.copyOf(announcements);
+    }
+
+    public void sendMemberEmail(String senderId, String recipientId, String subject, String body) {
+        requireMember(senderId);
+        Member recipient = requireMember(recipientId);
+        mailOutbox.add(recipient.getEmail() + ": " + subject + "\n" + body);
+    }
+
+    public String requestPasswordReset(String email) {
+        Member member = members.values().stream()
+                .filter(m -> m.getEmail().equalsIgnoreCase(email)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No member with that email"));
+        String temporaryPassword = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        member.resetPassword(temporaryPassword);
+        mailOutbox.add(member.getEmail() + ": Your temporary password is " + temporaryPassword);
+        return temporaryPassword;
+    }
+
+    public List<String> getMailOutbox() {
+        return List.copyOf(mailOutbox);
+    }
+
+    public List<String> getEmailSubmissions() {
+        return List.copyOf(emailSubmissions);
+    }
+
+    private String emailTemplate(Certification certification, String name) {
+        String key = certification == Certification.CSPO ? "CSPO" : "CSM";
+        return editorEmailTemplates.getOrDefault(key, "Welcome, {name}!")
+                .replace("{name}", name);
+    }
+
+    private String memberName(String memberId) {
+        Member member = members.get(memberId);
+        return member == null ? "" : member.getName();
+    }
+
+    private void requireActivityEditPermission(String actorId, Activity activity) {
+        Member actor = requireMember(actorId);
+        if (!activity.getOwnerId().equals(actorId)
+                && !activity.getTrainerId().equals(actorId)
+                && !actor.hasRole(MemberRole.ADMIN)
+                && !actor.hasRole(MemberRole.EDITOR)) {
+            throw new SecurityException("Not permitted to edit this activity");
+        }
+    }
+
+    private void requireRole(String memberId, MemberRole role) {
+        if (!requireMember(memberId).hasRole(role)) {
+            throw new SecurityException("Required role: " + role);
+        }
+    }
+
+    private Member requireMember(String id) {
+        return require(members, id, "member");
+    }
+
+    private static <T> T require(Map<String, T> map, String id, String type) {
+        T value = map.get(id);
+        if (value == null) {
+            throw new IllegalArgumentException("Unknown " + type + ": " + id);
+        }
+        return value;
+    }
+
+    private void ensureUniqueEmail(String email, String exceptMemberId) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        boolean exists = members.values().stream()
+                .anyMatch(m -> !m.getId().equals(exceptMemberId)
+                        && m.getEmail().equalsIgnoreCase(email.trim()));
+        if (exists) {
+            throw new IllegalArgumentException("Email is already registered");
+        }
+    }
+
+    private static boolean contains(String text, String query) {
+        return query == null || query.isBlank()
+                || text.toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT));
+    }
+
+    private static void validateAmount(double amount) {
+        if (amount < 0 || Double.isNaN(amount) || Double.isInfinite(amount)) {
+            throw new IllegalArgumentException("Amount must be a valid non-negative number");
+        }
+    }
+
+    private static String rss(String title, List<String> items) {
+        StringBuilder xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+                .append("<rss version=\"2.0\"><channel><title>")
+                .append(escape(title)).append("</title>");
+        for (String item : items) {
+            xml.append("<item><title>").append(escape(item)).append("</title></item>");
+        }
+        return xml.append("</channel></rss>").toString();
+    }
+
+    private static String escape(String text) {
+        return text.replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;").replace("\"", "&quot;")
+                .replace("'", "&apos;");
+    }
+
+    private static void copyProfile(Profile from, Profile to) {
+        if (from == null) {
+            return;
+        }
+        to.setLocation(from.getLocation());
+        to.setBiography(from.getBiography());
+        to.setWebsite(from.getWebsite());
+        to.setExperience(from.getExperience());
+        to.setTrainerDetails(from.getTrainerDetails());
+        to.setPrivateProfile(from.isPrivateProfile());
+        to.setEmailPrivate(from.isEmailPrivate());
+        from.getFields().forEach(to::setField);
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+
+public class Main {
+    public static void main(String[] args) {
+        SitePlatform site = new SitePlatform();
+
+        Member admin = site.addAdministrator("Site Admin", "admin@example.org", "secret");
+        Member trainer = site.registerMember("Taylor Trainer", "taylor@example.org", "password");
+        trainer.addRole(MemberRole.TRAINER);
+        trainer.addCertification(Certification.CST);
+        trainer.getProfile().setLocation("Portland");
+        trainer.getProfile().setBiography("Agile coach and Scrum trainer.");
+        trainer.getProfile().setEmailPrivate(false);
+
+        Member visitor = site.registerMember("Alex Member", "alex@example.org", "password");
+        site.createActivity(trainer.getId(), trainer.getId(), "Scrum Foundations",
+                "A practical introduction to Scrum.", "https://example.org/course",
+                "Portland", LocalDate.now().plusDays(20), LocalDate.now().plusDays(21),
+                ActivityType.CERTIFICATION_COURSE);
+
+        Article article = site.addArticle(admin.getId(), "Working with Scrum",
+                "A short introduction to iterative delivery.",
+                "Scrum helps teams inspect and adapt their work.", trainer.getId(), false);
+        article.setFeaturedOnHomePage(true);
+        article.setCertificationBadge("CST");
+
+        System.out.println("Upcoming courses: "
+                + site.upcomingActivities(ActivityType.CERTIFICATION_COURSE, 0, 10).size());
+        System.out.println("Trainer profile: " + site.viewProfile(visitor.getId(), trainer.getId()));
+        System.out.println("Article feed: " + site.articlesRss());
+    }
+}

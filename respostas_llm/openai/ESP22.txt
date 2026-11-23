@@ -1,0 +1,1273 @@
+// File: StaffRole.java
+public enum StaffRole {
+    WAITER,
+    CHEF,
+    SUPERVISOR
+}
+
+// File: OrderStatus.java
+public enum OrderStatus {
+    PENDING,
+    PLACED,
+    ACCEPTED,
+    CANCELLED
+}
+
+// File: ItemStatus.java
+public enum ItemStatus {
+    NEW,
+    ACCEPTED,
+    REJECTED,
+    READY,
+    DELIVERED,
+    PURGED
+}
+
+// File: PaymentMethod.java
+public enum PaymentMethod {
+    CASH,
+    BANKCARD
+}
+
+// File: AlertType.java
+public enum AlertType {
+    ORDER_PLACED,
+    ITEM_REJECTED,
+    ITEM_READY,
+    WAITER_ASSISTANCE
+}
+
+// File: TouchDevice.java
+public interface TouchDevice {
+    String deviceName();
+
+    default void touch(String gesture) {
+        if (gesture == null || gesture.isBlank()) {
+            throw new IllegalArgumentException("A touch gesture is required.");
+        }
+    }
+}
+
+// File: MenuItem.java
+import java.math.BigDecimal;
+import java.util.Objects;
+
+public record MenuItem(String name, BigDecimal price) {
+    public MenuItem {
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(price, "price");
+        if (name.isBlank() || price.signum() < 0) {
+            throw new IllegalArgumentException("Invalid menu item.");
+        }
+    }
+
+    public MenuItem(String name, double price) {
+        this(name, BigDecimal.valueOf(price));
+    }
+}
+
+// File: DietaryRequirement.java
+import java.util.Objects;
+
+public record DietaryRequirement(String name, boolean wildcard) {
+    public DietaryRequirement {
+        Objects.requireNonNull(name, "name");
+        if (name.isBlank()) {
+            throw new IllegalArgumentException("Requirement name cannot be blank.");
+        }
+    }
+
+    public static DietaryRequirement wildcard(String description) {
+        return new DietaryRequirement(description, true);
+    }
+}
+
+// File: Menu.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+public final class Menu {
+    private final List<MenuItem> items = new ArrayList<>();
+    private final List<DietaryRequirement> dietaryRequirements = new ArrayList<>();
+
+    public Menu(List<MenuItem> items, List<DietaryRequirement> requirements) {
+        this.items.addAll(Objects.requireNonNull(items, "items"));
+        this.dietaryRequirements.addAll(Objects.requireNonNull(requirements, "requirements"));
+    }
+
+    public List<MenuItem> items() {
+        return List.copyOf(items);
+    }
+
+    public List<DietaryRequirement> dietaryRequirements() {
+        return List.copyOf(dietaryRequirements);
+    }
+}
+
+// File: OrderItem.java
+import java.util.Objects;
+import java.util.UUID;
+
+public final class OrderItem {
+    private final String id = UUID.randomUUID().toString();
+    private final MenuItem menuItem;
+    private ItemStatus status = ItemStatus.NEW;
+    private String rejectionReason;
+
+    OrderItem(MenuItem menuItem) {
+        this.menuItem = Objects.requireNonNull(menuItem, "menuItem");
+    }
+
+    public String id() {
+        return id;
+    }
+
+    public MenuItem menuItem() {
+        return menuItem;
+    }
+
+    public ItemStatus status() {
+        return status;
+    }
+
+    public String rejectionReason() {
+        return rejectionReason;
+    }
+
+    void setStatus(ItemStatus status) {
+        this.status = Objects.requireNonNull(status, "status");
+    }
+
+    void reject(String reason) {
+        status = ItemStatus.REJECTED;
+        rejectionReason = reason;
+    }
+}
+
+// File: CustomerOrder.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
+public final class CustomerOrder {
+    private final String id = UUID.randomUUID().toString();
+    private final TableAccount account;
+    private final List<OrderItem> items = new ArrayList<>();
+    private final List<DietaryRequirement> dietaryRequirements = new ArrayList<>();
+    private OrderStatus status = OrderStatus.PENDING;
+
+    CustomerOrder(TableAccount account) {
+        this.account = Objects.requireNonNull(account, "account");
+    }
+
+    public String id() {
+        return id;
+    }
+
+    public TableAccount account() {
+        return account;
+    }
+
+    public List<OrderItem> items() {
+        return List.copyOf(items);
+    }
+
+    public List<DietaryRequirement> dietaryRequirements() {
+        return List.copyOf(dietaryRequirements);
+    }
+
+    public OrderStatus status() {
+        return status;
+    }
+
+    public boolean isEmpty() {
+        return items.isEmpty();
+    }
+
+    void addItem(MenuItem item) {
+        requirePending();
+        items.add(new OrderItem(item));
+    }
+
+    void removeItem(OrderItem item) {
+        requirePending();
+        if (!items.remove(item)) {
+            throw new IllegalArgumentException("Item is not in this pending order.");
+        }
+    }
+
+    void addRequirement(DietaryRequirement requirement) {
+        requirePending();
+        dietaryRequirements.add(Objects.requireNonNull(requirement, "requirement"));
+    }
+
+    void setStatus(OrderStatus status) {
+        this.status = Objects.requireNonNull(status, "status");
+    }
+
+    private void requirePending() {
+        if (status != OrderStatus.PENDING) {
+            throw new IllegalStateException("The order is no longer pending.");
+        }
+    }
+}
+
+// File: Alert.java
+import java.time.Instant;
+import java.util.Objects;
+
+public record Alert(AlertType type, int tableNumber, String message, Instant createdAt) {
+    public Alert {
+        Objects.requireNonNull(type, "type");
+        Objects.requireNonNull(message, "message");
+        Objects.requireNonNull(createdAt, "createdAt");
+    }
+
+    public Alert(AlertType type, int tableNumber, String message) {
+        this(type, tableNumber, message, Instant.now());
+    }
+}
+
+// File: StaffAccount.java
+import java.util.Objects;
+
+final class StaffAccount {
+    private final String username;
+    private final String password;
+    private final StaffRole role;
+
+    StaffAccount(String username, String password, StaffRole role) {
+        this.username = Objects.requireNonNull(username, "username");
+        this.password = Objects.requireNonNull(password, "password");
+        this.role = Objects.requireNonNull(role, "role");
+    }
+
+    String username() {
+        return username;
+    }
+
+    StaffRole role() {
+        return role;
+    }
+
+    boolean authenticates(String suppliedPassword) {
+        return password.equals(suppliedPassword);
+    }
+}
+
+// File: PaymentDraft.java
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+public final class PaymentDraft {
+    private final TableAccount account;
+    private final PaymentMethod method;
+    private final String customerId;
+    private final List<OrderItem> items = new ArrayList<>();
+    private BigDecimal tip = BigDecimal.ZERO;
+
+    PaymentDraft(TableAccount account, PaymentMethod method, String customerId) {
+        this.account = Objects.requireNonNull(account, "account");
+        this.method = Objects.requireNonNull(method, "method");
+        this.customerId = customerId;
+    }
+
+    public PaymentMethod method() {
+        return method;
+    }
+
+    public String customerId() {
+        return customerId;
+    }
+
+    public List<OrderItem> items() {
+        return List.copyOf(items);
+    }
+
+    public BigDecimal tip() {
+        return tip;
+    }
+
+    public BigDecimal subtotal() {
+        return items.stream()
+                .map(item -> item.menuItem().price())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public BigDecimal total() {
+        return subtotal().add(tip);
+    }
+
+    public void addItem(OrderItem item) {
+        Objects.requireNonNull(item, "item");
+        account.validateBillable(item);
+        if (items.contains(item)) {
+            throw new IllegalStateException("Item is already in this payment.");
+        }
+        items.add(item);
+    }
+
+    public void removeItem(OrderItem item) {
+        if (!items.remove(item)) {
+            throw new IllegalArgumentException("Item is not in this payment.");
+        }
+    }
+
+    public void addTip(BigDecimal amount) {
+        Objects.requireNonNull(amount, "amount");
+        if (amount.signum() < 0) {
+            throw new IllegalArgumentException("Tip cannot be negative.");
+        }
+        tip = tip.add(amount);
+    }
+
+    public void removeTip(BigDecimal amount) {
+        Objects.requireNonNull(amount, "amount");
+        if (amount.signum() < 0 || amount.compareTo(tip) > 0) {
+            throw new IllegalArgumentException("Invalid tip amount.");
+        }
+        tip = tip.subtract(amount);
+    }
+
+    TableAccount account() {
+        return account;
+    }
+}
+
+// File: PaymentTransaction.java
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+
+public record PaymentTransaction(
+        int tableNumber,
+        PaymentMethod method,
+        String customerId,
+        List<String> itemIds,
+        BigDecimal subtotal,
+        BigDecimal tip,
+        Instant processedAt) {
+    public PaymentTransaction {
+        itemIds = List.copyOf(itemIds);
+    }
+}
+
+// File: TableAccount.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+public final class TableAccount {
+    private final int tableNumber;
+    private final List<CustomerOrder> orders = new ArrayList<>();
+    private final List<PaymentTransaction> payments = new ArrayList<>();
+    private boolean open;
+
+    TableAccount(int tableNumber) {
+        this.tableNumber = tableNumber;
+    }
+
+    public int tableNumber() {
+        return tableNumber;
+    }
+
+    public boolean isOpen() {
+        return open;
+    }
+
+    public List<CustomerOrder> orders() {
+        return List.copyOf(orders);
+    }
+
+    public List<OrderItem> allItems() {
+        return orders.stream().flatMap(order -> order.items().stream()).toList();
+    }
+
+    public List<OrderItem> unpaidItems() {
+        return allItems().stream()
+                .filter(item -> item.status() != ItemStatus.PURGED)
+                .filter(item -> payments.stream().noneMatch(p -> p.itemIds().contains(item.id())))
+                .toList();
+    }
+
+    public List<PaymentTransaction> payments() {
+        return List.copyOf(payments);
+    }
+
+    public CustomerOrder createOrder() {
+        ensureOpen();
+        CustomerOrder order = new CustomerOrder(this);
+        orders.add(order);
+        return order;
+    }
+
+    void open() {
+        if (open) {
+            throw new IllegalStateException("Table account is already open.");
+        }
+        open = true;
+    }
+
+    void close() {
+        ensureOpen();
+        open = false;
+    }
+
+    void recordPayment(PaymentTransaction transaction) {
+        ensureOpen();
+        payments.add(Objects.requireNonNull(transaction, "transaction"));
+    }
+
+    void validateBillable(OrderItem item) {
+        if (!allItems().contains(item) || item.status() == ItemStatus.PURGED) {
+            throw new IllegalArgumentException("Item does not belong to this active account.");
+        }
+        if (payments.stream().anyMatch(p -> p.itemIds().contains(item.id()))) {
+            throw new IllegalStateException("Item has already been paid.");
+        }
+    }
+
+    void purgeAll() {
+        for (OrderItem item : allItems()) {
+            item.setStatus(ItemStatus.PURGED);
+        }
+        for (CustomerOrder order : orders) {
+            if (order.status() == OrderStatus.PENDING || order.status() == OrderStatus.PLACED) {
+                order.setStatus(OrderStatus.CANCELLED);
+            }
+        }
+        open = false;
+    }
+
+    private void ensureOpen() {
+        if (!open) {
+            throw new IllegalStateException("The table account is not open.");
+        }
+    }
+}
+
+// File: SurfaceComputer.java
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Objects;
+
+public final class SurfaceComputer implements TouchDevice {
+    private final String id;
+    private final RestaurantSystem system;
+    private TableAccount account;
+    private boolean activated;
+    private boolean menuEngaged;
+    private boolean billMode;
+    private CustomerOrder pendingOrder;
+    private int menuPosition;
+
+    SurfaceComputer(String id, RestaurantSystem system) {
+        this.id = Objects.requireNonNull(id, "id");
+        this.system = Objects.requireNonNull(system, "system");
+    }
+
+    public String id() {
+        return id;
+    }
+
+    public boolean isActivated() {
+        return activated;
+    }
+
+    public boolean isMenuEngaged() {
+        return menuEngaged;
+    }
+
+    public boolean isBillMode() {
+        return billMode;
+    }
+
+    public TableAccount account() {
+        requireActivated();
+        return account;
+    }
+
+    void activate(TableAccount account) {
+        if (activated) {
+            throw new IllegalStateException("Surface computer is already activated.");
+        }
+        this.account = Objects.requireNonNull(account, "account");
+        this.activated = true;
+    }
+
+    void deactivate() {
+        requireActivated();
+        if (menuEngaged || billMode) {
+            throw new IllegalStateException("Dismiss the menu and billing mode before deactivation.");
+        }
+        activated = false;
+        account = null;
+        pendingOrder = null;
+    }
+
+    public void doubleTapToEngageMenu() {
+        requireActivated();
+        menuEngaged = true;
+    }
+
+    public void doubleTapDismiss() {
+        requireMenu();
+        if (pendingOrder != null && pendingOrder.status() == OrderStatus.PENDING && !pendingOrder.isEmpty()) {
+            throw new IllegalStateException("A menu with a non-empty pending order cannot be dismissed.");
+        }
+        menuEngaged = false;
+        pendingOrder = null;
+    }
+
+    public CustomerOrder createEmptyPendingOrder() {
+        requireMenu();
+        if (pendingOrder != null && pendingOrder.status() == OrderStatus.PENDING) {
+            throw new IllegalStateException("A pending order already exists.");
+        }
+        pendingOrder = account.createOrder();
+        return pendingOrder;
+    }
+
+    public List<MenuItem> navigateMenu(Menu menu) {
+        requireMenu();
+        Objects.requireNonNull(menu, "menu");
+        List<MenuItem> items = menu.items();
+        if (!items.isEmpty()) {
+            menuPosition = (menuPosition + 1) % items.size();
+        }
+        return items;
+    }
+
+    public void dragItemIntoOrder(MenuItem item) {
+        requirePendingOrder();
+        pendingOrder.addItem(item);
+    }
+
+    public void dragItemOffOrder(OrderItem item) {
+        requirePendingOrder();
+        pendingOrder.removeItem(item);
+    }
+
+    public void dragRequirementIntoOrder(DietaryRequirement requirement) {
+        requirePendingOrder();
+        pendingOrder.addRequirement(requirement);
+    }
+
+    public void addWildcardRequirement(String description) {
+        dragRequirementIntoOrder(DietaryRequirement.wildcard(description));
+    }
+
+    public void placeOrder() {
+        requirePendingOrder();
+        if (pendingOrder.isEmpty()) {
+            throw new IllegalStateException("An empty order cannot be placed.");
+        }
+        pendingOrder.setStatus(OrderStatus.PLACED);
+        system.orderPlaced(account, pendingOrder);
+        pendingOrder = null;
+    }
+
+    public void cancelPendingOrder() {
+        requirePendingOrder();
+        pendingOrder.setStatus(OrderStatus.CANCELLED);
+        pendingOrder = null;
+    }
+
+    public void callWaiter() {
+        requireMenu();
+        system.requestAssistance(account);
+    }
+
+    public void engageBillMode() {
+        requireMenu();
+        billMode = true;
+    }
+
+    public void disengageBillMode() {
+        requireMenu();
+        billMode = false;
+    }
+
+    public List<OrderItem> displayedMealsForPayment() {
+        requireBillMode();
+        return account.unpaidItems();
+    }
+
+    public List<BigDecimal> displayedTipDenominations() {
+        requireBillMode();
+        return List.of(new BigDecimal("1.00"), new BigDecimal("2.00"),
+                new BigDecimal("5.00"), new BigDecimal("10.00"));
+    }
+
+    public PaymentDraft createCashPayment() {
+        requireBillMode();
+        return new PaymentDraft(account, PaymentMethod.CASH, null);
+    }
+
+    public PaymentDraft createBankcardPayment(String customerId) {
+        requireBillMode();
+        if (customerId == null || customerId.isBlank()) {
+            throw new IllegalArgumentException("A customer identifier is required for a bankcard payment.");
+        }
+        return new PaymentDraft(account, PaymentMethod.BANKCARD, customerId);
+    }
+
+    public void dragMealIntoPayment(OrderItem item, PaymentDraft payment) {
+        requireBillMode();
+        payment.addItem(item);
+    }
+
+    public void dragMealOutOfPayment(OrderItem item, PaymentDraft payment) {
+        requireBillMode();
+        payment.removeItem(item);
+    }
+
+    public void dragTipIntoPayment(BigDecimal tip, PaymentDraft payment) {
+        requireBillMode();
+        payment.addTip(tip);
+    }
+
+    public void dragTipOutOfPayment(BigDecimal tip, PaymentDraft payment) {
+        requireBillMode();
+        payment.removeTip(tip);
+    }
+
+    @Override
+    public String deviceName() {
+        return "Surface computer " + id;
+    }
+
+    private void requireActivated() {
+        if (!activated) {
+            throw new IllegalStateException("Surface computer is not activated.");
+        }
+    }
+
+    private void requireMenu() {
+        requireActivated();
+        if (!menuEngaged) {
+            throw new IllegalStateException("Engage the menu first.");
+        }
+    }
+
+    private void requirePendingOrder() {
+        requireMenu();
+        if (pendingOrder == null || pendingOrder.status() != OrderStatus.PENDING) {
+            throw new IllegalStateException("There is no pending order.");
+        }
+    }
+
+    private void requireBillMode() {
+        requireMenu();
+        if (!billMode) {
+            throw new IllegalStateException("Billing mode is not active.");
+        }
+    }
+}
+
+// File: Tablet.java
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+public final class Tablet implements TouchDevice {
+    private final String id;
+    private final RestaurantSystem system;
+    private StaffAccount signedIn;
+    private final List<TableAccount> assignedTables = new ArrayList<>();
+    private final List<Alert> alerts = new ArrayList<>();
+
+    Tablet(String id, RestaurantSystem system) {
+        this.id = Objects.requireNonNull(id, "id");
+        this.system = Objects.requireNonNull(system, "system");
+    }
+
+    public String id() {
+        return id;
+    }
+
+    public boolean isLoggedIn() {
+        return signedIn != null;
+    }
+
+    public StaffRole role() {
+        requireLoggedIn();
+        return signedIn.role();
+    }
+
+    public void login(String username, String password) {
+        if (signedIn != null) {
+            throw new IllegalStateException("Tablet is already logged in.");
+        }
+        signedIn = system.authenticate(username, password);
+    }
+
+    public void logout() {
+        requireLoggedIn();
+        signedIn = null;
+        assignedTables.clear();
+        alerts.clear();
+    }
+
+    public List<TableAccount> assignedTables() {
+        requireLoggedIn();
+        return List.copyOf(assignedTables);
+    }
+
+    public List<Alert> alerts() {
+        requireLoggedIn();
+        return List.copyOf(alerts);
+    }
+
+    public void activateSurface(SurfaceComputer surface) {
+        requireWaiterOrSupervisor();
+        system.activateSurface(this, surface);
+    }
+
+    public void deactivateSurface(SurfaceComputer surface) {
+        requireWaiterOrSupervisor();
+        system.deactivateSurface(this, surface);
+    }
+
+    public void acceptOrder(CustomerOrder order) {
+        requireWaiterOrSupervisor();
+        system.acceptOrder(this, order);
+    }
+
+    public void rejectOrderItem(OrderItem item, String reason) {
+        requireWaiterOrSupervisor();
+        system.rejectItem(this, item, reason);
+    }
+
+    public void indicateItemDelivered(OrderItem item) {
+        requireWaiterOrSupervisor();
+        system.deliverItem(this, item);
+    }
+
+    public PaymentTransaction processCashPayment(PaymentDraft draft) {
+        requireWaiterOrSupervisor();
+        if (draft.method() != PaymentMethod.CASH) {
+            throw new IllegalArgumentException("This is not a cash payment.");
+        }
+        return system.processPayment(this, draft);
+    }
+
+    public PaymentTransaction processBankcardPayment(PaymentDraft draft) {
+        requireWaiterOrSupervisor();
+        if (draft.method() != PaymentMethod.BANKCARD) {
+            throw new IllegalArgumentException("This is not a bankcard payment.");
+        }
+        return system.processPayment(this, draft);
+    }
+
+    public void acceptKitchenItem(OrderItem item) {
+        requireChefOrSupervisor();
+        system.chefAcceptItem(item);
+    }
+
+    public void rejectKitchenItem(OrderItem item, String reason) {
+        requireChefOrSupervisor();
+        system.chefRejectItem(item, reason);
+    }
+
+    public void markKitchenItemReady(OrderItem item) {
+        requireChefOrSupervisor();
+        system.chefMarkReady(item);
+    }
+
+    public void purgeMeal(OrderItem item) {
+        requireSupervisor();
+        system.purgeMeal(item);
+    }
+
+    public void purgeTable(TableAccount account) {
+        requireSupervisor();
+        system.purgeTable(account);
+    }
+
+    public PaymentTransaction issueRefund(TableAccount account, List<OrderItem> items) {
+        requireSupervisor();
+        return system.issueRefund(account, items);
+    }
+
+    void assign(TableAccount account) {
+        if (!assignedTables.contains(account)) {
+            assignedTables.add(account);
+        }
+    }
+
+    void unassign(TableAccount account) {
+        assignedTables.remove(account);
+    }
+
+    void receiveAlert(Alert alert) {
+        if (signedIn != null) {
+            alerts.add(alert);
+        }
+    }
+
+    boolean isAssignedTo(TableAccount account) {
+        return assignedTables.contains(account);
+    }
+
+    private void requireLoggedIn() {
+        if (signedIn == null) {
+            throw new IllegalStateException("Log in to the tablet first.");
+        }
+    }
+
+    private void requireWaiterOrSupervisor() {
+        requireLoggedIn();
+        if (signedIn.role() != StaffRole.WAITER && signedIn.role() != StaffRole.SUPERVISOR) {
+            throw new SecurityException("Waiter or supervisor access is required.");
+        }
+    }
+
+    private void requireChefOrSupervisor() {
+        requireLoggedIn();
+        if (signedIn.role() != StaffRole.CHEF && signedIn.role() != StaffRole.SUPERVISOR) {
+            throw new SecurityException("Chef or supervisor access is required.");
+        }
+    }
+
+    private void requireSupervisor() {
+        requireLoggedIn();
+        if (signedIn.role() != StaffRole.SUPERVISOR) {
+            throw new SecurityException("Supervisor access is required.");
+        }
+    }
+
+    @Override
+    public String deviceName() {
+        return "Tablet " + id;
+    }
+}
+
+// File: ChefDisplay.java
+import java.util.List;
+import java.util.Objects;
+
+public final class ChefDisplay implements TouchDevice {
+    private final String id;
+    private final RestaurantSystem system;
+    private StaffAccount signedIn;
+
+    ChefDisplay(String id, RestaurantSystem system) {
+        this.id = Objects.requireNonNull(id, "id");
+        this.system = Objects.requireNonNull(system, "system");
+    }
+
+    public void login(String username, String password) {
+        if (signedIn != null) {
+            throw new IllegalStateException("Display is already logged in.");
+        }
+        StaffAccount account = system.authenticate(username, password);
+        if (account.role() != StaffRole.CHEF && account.role() != StaffRole.SUPERVISOR) {
+            throw new SecurityException("Chef access is required.");
+        }
+        signedIn = account;
+    }
+
+    public void logout() {
+        requireLoggedIn();
+        signedIn = null;
+    }
+
+    public List<OrderItem> kitchenQueue() {
+        requireLoggedIn();
+        return system.kitchenQueue();
+    }
+
+    public void accept(OrderItem item) {
+        requireLoggedIn();
+        system.chefAcceptItem(item);
+    }
+
+    public void reject(OrderItem item, String reason) {
+        requireLoggedIn();
+        system.chefRejectItem(item, reason);
+    }
+
+    public void markReady(OrderItem item) {
+        requireLoggedIn();
+        system.chefMarkReady(item);
+    }
+
+    private void requireLoggedIn() {
+        if (signedIn == null) {
+            throw new IllegalStateException("Log in to the chef display first.");
+        }
+    }
+
+    @Override
+    public String deviceName() {
+        return "Chef display " + id;
+    }
+}
+
+// File: RestaurantSystem.java
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public final class RestaurantSystem {
+    private final Map<String, StaffAccount> staff = new HashMap<>();
+    private final Map<Integer, TableAccount> accounts = new HashMap<>();
+    private final List<SurfaceComputer> surfaces = new ArrayList<>();
+    private final List<Tablet> tablets = new ArrayList<>();
+    private final List<ChefDisplay> displays = new ArrayList<>();
+    private final Map<Integer, Tablet> assignedWaiters = new HashMap<>();
+    private final List<PaymentTransaction> refunds = new ArrayList<>();
+    private final AtomicInteger deviceIds = new AtomicInteger(1);
+
+    public void registerStaff(String username, String password, StaffRole role) {
+        Objects.requireNonNull(username, "username");
+        Objects.requireNonNull(password, "password");
+        Objects.requireNonNull(role, "role");
+        if (username.isBlank() || password.isBlank() || staff.containsKey(username)) {
+            throw new IllegalArgumentException("Invalid or duplicate staff account.");
+        }
+        staff.put(username, new StaffAccount(username, password, role));
+    }
+
+    StaffAccount authenticate(String username, String password) {
+        StaffAccount account = staff.get(username);
+        if (account == null || !account.authenticates(password)) {
+            throw new SecurityException("Invalid username or password.");
+        }
+        return account;
+    }
+
+    public TableAccount createTable(int tableNumber) {
+        if (tableNumber <= 0 || accounts.containsKey(tableNumber)) {
+            throw new IllegalArgumentException("Invalid or duplicate table number.");
+        }
+        TableAccount account = new TableAccount(tableNumber);
+        accounts.put(tableNumber, account);
+        return account;
+    }
+
+    public TableAccount table(int tableNumber) {
+        TableAccount account = accounts.get(tableNumber);
+        if (account == null) {
+            throw new IllegalArgumentException("Unknown table.");
+        }
+        return account;
+    }
+
+    public SurfaceComputer createSurfaceComputer() {
+        SurfaceComputer surface = new SurfaceComputer("S" + deviceIds.getAndIncrement(), this);
+        surfaces.add(surface);
+        return surface;
+    }
+
+    public Tablet createTablet() {
+        Tablet tablet = new Tablet("T" + deviceIds.getAndIncrement(), this);
+        tablets.add(tablet);
+        return tablet;
+    }
+
+    public ChefDisplay createChefDisplay() {
+        ChefDisplay display = new ChefDisplay("D" + deviceIds.getAndIncrement(), this);
+        displays.add(display);
+        return display;
+    }
+
+    void activateSurface(Tablet tablet, SurfaceComputer surface) {
+        requireKnownTablet(tablet);
+        requireKnownSurface(surface);
+        if (surface.isActivated()) {
+            throw new IllegalStateException("Surface computer is already active.");
+        }
+        TableAccount account = accounts.values().stream()
+                .filter(a -> !a.isOpen())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No inactive table account is available."));
+        account.open();
+        surface.activate(account);
+        Tablet previous = assignedWaiters.put(account.tableNumber(), tablet);
+        if (previous != null && previous != tablet) {
+            previous.unassign(account);
+        }
+        tablet.assign(account);
+    }
+
+    void deactivateSurface(Tablet tablet, SurfaceComputer surface) {
+        requireKnownTablet(tablet);
+        requireKnownSurface(surface);
+        if (!surface.isActivated()) {
+            throw new IllegalStateException("Surface computer is not active.");
+        }
+        TableAccount account = surface.account();
+        if (!tablet.isAssignedTo(account)) {
+            throw new SecurityException("This waiter is not assigned to the table.");
+        }
+        surface.deactivate();
+        account.close();
+        tablet.unassign(account);
+        assignedWaiters.remove(account.tableNumber());
+    }
+
+    void orderPlaced(TableAccount account, CustomerOrder order) {
+        if (order.account() != account || order.status() != OrderStatus.PLACED) {
+            throw new IllegalArgumentException("Invalid placed order.");
+        }
+        sendAlert(account, AlertType.ORDER_PLACED, "An order was placed.");
+    }
+
+    void requestAssistance(TableAccount account) {
+        sendAlert(account, AlertType.WAITER_ASSISTANCE, "Waiter assistance requested.");
+    }
+
+    void acceptOrder(Tablet tablet, CustomerOrder order) {
+        requireAssignedToOrder(tablet, order);
+        if (order.status() != OrderStatus.PLACED) {
+            throw new IllegalStateException("Only a placed order can be accepted.");
+        }
+        order.setStatus(OrderStatus.ACCEPTED);
+        for (OrderItem item : order.items()) {
+            if (item.status() == ItemStatus.NEW) {
+                item.setStatus(ItemStatus.ACCEPTED);
+            }
+        }
+    }
+
+    void rejectItem(Tablet tablet, OrderItem item, String reason) {
+        requireAssignedToItem(tablet, item);
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("A rejection reason is required.");
+        }
+        if (item.status() == ItemStatus.PURGED || item.status() == ItemStatus.DELIVERED) {
+            throw new IllegalStateException("This item cannot be rejected.");
+        }
+        item.reject(reason);
+        sendAlert(itemOrder(item).account(), AlertType.ITEM_REJECTED,
+                "An ordered item was rejected: " + reason);
+    }
+
+    void deliverItem(Tablet tablet, OrderItem item) {
+        requireAssignedToItem(tablet, item);
+        if (item.status() != ItemStatus.READY) {
+            throw new IllegalStateException("Only a ready item can be delivered.");
+        }
+        item.setStatus(ItemStatus.DELIVERED);
+    }
+
+    PaymentTransaction processPayment(Tablet tablet, PaymentDraft draft) {
+        Objects.requireNonNull(draft, "draft");
+        TableAccount account = draft.account();
+        if (!tablet.isAssignedTo(account)) {
+            throw new SecurityException("Waiter is not assigned to this table.");
+        }
+        if (draft.items().isEmpty() && draft.tip().signum() == 0) {
+            throw new IllegalStateException("Payment cannot be empty.");
+        }
+        for (OrderItem item : draft.items()) {
+            account.validateBillable(item);
+        }
+        PaymentTransaction transaction = new PaymentTransaction(
+                account.tableNumber(), draft.method(), draft.customerId(),
+                draft.items().stream().map(OrderItem::id).toList(),
+                draft.subtotal(), draft.tip(), Instant.now());
+        account.recordPayment(transaction);
+        return transaction;
+    }
+
+    List<OrderItem> kitchenQueue() {
+        return accounts.values().stream()
+                .flatMap(account -> account.allItems().stream())
+                .filter(item -> item.status() == ItemStatus.NEW)
+                .toList();
+    }
+
+    void chefAcceptItem(OrderItem item) {
+        CustomerOrder order = itemOrder(item);
+        if (order.status() != OrderStatus.PLACED && order.status() != OrderStatus.ACCEPTED) {
+            throw new IllegalStateException("Item is not in a placed order.");
+        }
+        if (item.status() != ItemStatus.NEW) {
+            throw new IllegalStateException("Only a new item can be accepted by the kitchen.");
+        }
+        item.setStatus(ItemStatus.ACCEPTED);
+    }
+
+    void chefRejectItem(OrderItem item, String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("A rejection reason is required.");
+        }
+        CustomerOrder order = itemOrder(item);
+        if (order.status() != OrderStatus.PLACED && order.status() != OrderStatus.ACCEPTED) {
+            throw new IllegalStateException("Item is not in a placed order.");
+        }
+        if (item.status() == ItemStatus.PURGED || item.status() == ItemStatus.DELIVERED) {
+            throw new IllegalStateException("This item cannot be rejected.");
+        }
+        item.reject(reason);
+        sendAlert(order.account(), AlertType.ITEM_REJECTED, "An ordered item was rejected: " + reason);
+    }
+
+    void chefMarkReady(OrderItem item) {
+        CustomerOrder order = itemOrder(item);
+        if (item.status() != ItemStatus.ACCEPTED) {
+            throw new IllegalStateException("Only an accepted item can be marked ready.");
+        }
+        item.setStatus(ItemStatus.READY);
+        sendAlert(order.account(), AlertType.ITEM_READY, "An item is ready to be served.");
+    }
+
+    void purgeMeal(OrderItem item) {
+        itemOrder(item);
+        if (item.status() == ItemStatus.PURGED) {
+            throw new IllegalStateException("Item has already been purged.");
+        }
+        item.setStatus(ItemStatus.PURGED);
+    }
+
+    void purgeTable(TableAccount account) {
+        if (!accounts.containsValue(account)) {
+            throw new IllegalArgumentException("Unknown table account.");
+        }
+        account.purgeAll();
+        Tablet waiter = assignedWaiters.remove(account.tableNumber());
+        if (waiter != null) {
+            waiter.unassign(account);
+        }
+        for (SurfaceComputer surface : surfaces) {
+            if (surface.isActivated() && surface.account() == account) {
+                surface.forceDeactivate();
+            }
+        }
+    }
+
+    PaymentTransaction issueRefund(TableAccount account, List<OrderItem> items) {
+        if (!accounts.containsValue(account)) {
+            throw new IllegalArgumentException("Unknown table account.");
+        }
+        Objects.requireNonNull(items, "items");
+        if (items.isEmpty()) {
+            throw new IllegalArgumentException("At least one item is required for a refund.");
+        }
+        List<String> ids = new ArrayList<>();
+        BigDecimal amount = BigDecimal.ZERO;
+        for (OrderItem item : items) {
+            if (!account.allItems().contains(item)) {
+                throw new IllegalArgumentException("An item does not belong to this table.");
+            }
+            boolean wasPaid = account.payments().stream().anyMatch(p -> p.itemIds().contains(item.id()));
+            if (!wasPaid) {
+                throw new IllegalStateException("Only paid items can be refunded.");
+            }
+            ids.add(item.id());
+            amount = amount.add(item.menuItem().price());
+        }
+        PaymentTransaction refund = new PaymentTransaction(account.tableNumber(),
+                PaymentMethod.BANKCARD, "REFUND", ids, amount.negate(), BigDecimal.ZERO, Instant.now());
+        refunds.add(refund);
+        return refund;
+    }
+
+    public List<PaymentTransaction> refunds() {
+        return List.copyOf(refunds);
+    }
+
+    private void sendAlert(TableAccount account, AlertType type, String message) {
+        Tablet waiter = assignedWaiters.get(account.tableNumber());
+        if (waiter != null) {
+            waiter.receiveAlert(new Alert(type, account.tableNumber(), message));
+        }
+    }
+
+    private CustomerOrder itemOrder(OrderItem item) {
+        for (TableAccount account : accounts.values()) {
+            for (CustomerOrder order : account.orders()) {
+                if (order.items().contains(item)) {
+                    return order;
+                }
+            }
+        }
+        throw new IllegalArgumentException("Unknown order item.");
+    }
+
+    private void requireAssignedToOrder(Tablet tablet, CustomerOrder order) {
+        Objects.requireNonNull(order, "order");
+        requireKnownTablet(tablet);
+        if (!tablet.isAssignedTo(order.account())) {
+            throw new SecurityException("Waiter is not assigned to this table.");
+        }
+    }
+
+    private void requireAssignedToItem(Tablet tablet, OrderItem item) {
+        CustomerOrder order = itemOrder(item);
+        requireAssignedToOrder(tablet, order);
+    }
+
+    private void requireKnownTablet(Tablet tablet) {
+        if (!tablets.contains(tablet) || !tablet.isLoggedIn()) {
+            throw new SecurityException("A logged-in system tablet is required.");
+        }
+    }
+
+    private void requireKnownSurface(SurfaceComputer surface) {
+        if (!surfaces.contains(surface)) {
+            throw new IllegalArgumentException("Unknown surface computer.");
+        }
+    }
+}
+
+// File: Main.java
+import java.util.List;
+
+public final class Main {
+    private Main() {
+    }
+
+    public static void main(String[] args) {
+        RestaurantSystem system = new RestaurantSystem();
+        system.registerStaff("waiter1", "secret", StaffRole.WAITER);
+        system.registerStaff("chef1", "secret", StaffRole.CHEF);
+
+        TableAccount table = system.createTable(1);
+        SurfaceComputer surface = system.createSurfaceComputer();
+        Tablet tablet = system.createTablet();
+
+        Menu menu = new Menu(
+                List.of(new MenuItem("Pasta", 14.50), new MenuItem("Salad", 8.00)),
+                List.of(new DietaryRequirement("Gluten-free", false)));
+
+        tablet.login("waiter1", "secret");
+        tablet.activateSurface(surface);
+
+        surface.doubleTapToEngageMenu();
+        CustomerOrder order = surface.createEmptyPendingOrder();
+        surface.dragItemIntoOrder(menu.items().getFirst());
+        surface.dragRequirementIntoOrder(menu.dietaryRequirements().getFirst());
+        surface.placeOrder();
+
+        tablet.acceptOrder(order);
+
+        ChefDisplay display = system.createChefDisplay();
+        display.login("chef1", "secret");
+        OrderItem item = order.items().getFirst();
+        display.accept(item);
+        display.markReady(item);
+        tablet.indicateItemDelivered(item);
+
+        surface.engageBillMode();
+        PaymentDraft payment = surface.createBankcardPayment("customer-1");
+        surface.dragMealIntoPayment(item, payment);
+        tablet.processBankcardPayment(payment);
+
+        System.out.println("Table " + table.tableNumber() + " payment total: " + payment.total());
+    }
+}

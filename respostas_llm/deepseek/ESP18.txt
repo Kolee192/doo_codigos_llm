@@ -1,0 +1,1314 @@
+// File: AccessDeniedException.java
+public class AccessDeniedException extends RuntimeException {
+    public AccessDeniedException(String message) {
+        super(message);
+    }
+}
+
+// File: ProfileStatus.java
+public enum ProfileStatus {
+    PENDING_APPROVAL,
+    APPROVED,
+    REJECTED,
+    DISABLED
+}
+
+// File: RequestStatus.java
+public enum RequestStatus {
+    PENDING,
+    APPROVED,
+    REJECTED
+}
+
+// File: UserRole.java
+public enum UserRole {
+    SYSTEM_ADMIN,
+    FDP_ADMIN,
+    ENTITY_REPRESENTATIVE,
+    ENTITY_USER;
+
+    public boolean isFdpAdministrator() {
+        return this == SYSTEM_ADMIN || this == FDP_ADMIN;
+    }
+}
+
+// File: DataElement.java
+import java.time.LocalDate;
+
+public class DataElement {
+    private final String name;
+    private LocalDate date;
+    private int warningDays;
+
+    public DataElement(String name, LocalDate date, int warningDays) {
+        this.name = name;
+        this.date = date;
+        this.warningDays = Math.max(0, warningDays);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public void setDate(LocalDate date) {
+        this.date = date;
+    }
+
+    public int getWarningDays() {
+        return warningDays;
+    }
+
+    public void setWarningDays(int warningDays) {
+        this.warningDays = Math.max(0, warningDays);
+    }
+
+    public boolean requiresUpdate(LocalDate today) {
+        if (date == null) {
+            return false;
+        }
+        return !date.isAfter(today.plusDays(warningDays));
+    }
+
+    public String getDateDisplay() {
+        return date == null ? "not set" : date.toString();
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + getDateDisplay() + ")";
+    }
+}
+
+// File: ProfileChangeLog.java
+import java.time.LocalDateTime;
+
+public class ProfileChangeLog {
+    private final LocalDateTime timestamp;
+    private final String username;
+    private final String details;
+
+    public ProfileChangeLog(LocalDateTime timestamp, String username, String details) {
+        this.timestamp = timestamp;
+        this.username = username;
+        this.details = details;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getDetails() {
+        return details;
+    }
+
+    @Override
+    public String toString() {
+        return timestamp + " | " + username + " | " + details;
+    }
+}
+
+// File: EntityProfile.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+public class EntityProfile {
+    private final String id;
+    private String name;
+    private String description;
+    private String contactEmail;
+    private boolean emailHiddenFromPublic;
+    private ProfileStatus status;
+    private String primaryUserName;
+    private final List<DataElement> dataElements = new ArrayList<>();
+    private final Map<String, String> externalLinks = new LinkedHashMap<>();
+    private final List<ProfileChangeLog> changeLog = new ArrayList<>();
+
+    public EntityProfile(String id, String name, String description, String contactEmail, ProfileStatus status) {
+        this.id = Objects.requireNonNull(id);
+        this.name = Objects.requireNonNull(name);
+        this.description = description == null ? "" : description;
+        this.contactEmail = contactEmail == null ? "" : contactEmail;
+        this.status = Objects.requireNonNull(status);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = Objects.requireNonNull(name);
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description == null ? "" : description;
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public void setContactEmail(String contactEmail) {
+        this.contactEmail = contactEmail == null ? "" : contactEmail;
+    }
+
+    public boolean isEmailHiddenFromPublic() {
+        return emailHiddenFromPublic;
+    }
+
+    public void setEmailHiddenFromPublic(boolean emailHiddenFromPublic) {
+        this.emailHiddenFromPublic = emailHiddenFromPublic;
+    }
+
+    public ProfileStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ProfileStatus status) {
+        this.status = Objects.requireNonNull(status);
+    }
+
+    public String getPrimaryUserName() {
+        return primaryUserName;
+    }
+
+    public void setPrimaryUserName(String primaryUserName) {
+        this.primaryUserName = primaryUserName;
+    }
+
+    public List<DataElement> getDataElements() {
+        return Collections.unmodifiableList(dataElements);
+    }
+
+    public Map<String, String> getExternalLinks() {
+        return Collections.unmodifiableMap(externalLinks);
+    }
+
+    public List<ProfileChangeLog> getChangeLog() {
+        return Collections.unmodifiableList(changeLog);
+    }
+
+    public void addChangeLog(String username, String details, LocalDateTime timestamp) {
+        changeLog.add(new ProfileChangeLog(timestamp, username, details));
+    }
+
+    public void addOrUpdateDataElement(DataElement element) {
+        for (int i = 0; i < dataElements.size(); i++) {
+            if (dataElements.get(i).getName().equalsIgnoreCase(element.getName())) {
+                dataElements.set(i, element);
+                return;
+            }
+        }
+        dataElements.add(element);
+    }
+
+    public void addExternalLink(String label, String url) {
+        externalLinks.put(label, url);
+    }
+
+    public List<String> getOutdatedDataElementNames(LocalDate today) {
+        List<String> outdated = new ArrayList<>();
+        for (DataElement element : dataElements) {
+            if (element.requiresUpdate(today)) {
+                outdated.add(element.getName());
+            }
+        }
+        return outdated;
+    }
+
+    public Map<String, String> toPublicMap() {
+        Map<String, String> map = new LinkedHashMap<>();
+        map.put("id", id);
+        map.put("name", name);
+        map.put("description", description);
+        if (!emailHiddenFromPublic && !contactEmail.isBlank()) {
+            map.put("contactEmail", contactEmail);
+        }
+        map.put("status", status.name());
+        for (DataElement element : dataElements) {
+            map.put("dataElement." + element.getName(), element.getDateDisplay());
+        }
+        for (Map.Entry<String, String> entry : externalLinks.entrySet()) {
+            map.put("link." + entry.getKey(), entry.getValue());
+        }
+        return map;
+    }
+
+    public List<String> toPublicLines() {
+        List<String> lines = new ArrayList<>();
+        lines.add("FDP Entity Profile");
+        lines.add("ID: " + id);
+        lines.add("Name: " + name);
+        lines.add("Description: " + description);
+        if (!emailHiddenFromPublic && !contactEmail.isBlank()) {
+            lines.add("Contact Email: " + contactEmail);
+        }
+        lines.add("Status: " + status);
+        for (DataElement element : dataElements) {
+            lines.add("Data Element - " + element.getName() + ": " + element.getDateDisplay());
+        }
+        for (Map.Entry<String, String> entry : externalLinks.entrySet()) {
+            lines.add("Link - " + entry.getKey() + ": " + entry.getValue());
+        }
+        lines.add("Change log entries: " + changeLog.size());
+        return lines;
+    }
+}
+
+// File: EntityRegistrationRequest.java
+import java.time.LocalDateTime;
+
+public class EntityRegistrationRequest {
+    private final String id;
+    private final String name;
+    private final String description;
+    private final String contactEmail;
+    private final LocalDateTime submittedAt;
+    private RequestStatus status;
+    private String processedEntityId;
+
+    public EntityRegistrationRequest(String id, String name, String description, String contactEmail,
+                                     LocalDateTime submittedAt, RequestStatus status) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.contactEmail = contactEmail;
+        this.submittedAt = submittedAt;
+        this.status = status;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public LocalDateTime getSubmittedAt() {
+        return submittedAt;
+    }
+
+    public RequestStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(RequestStatus status) {
+        this.status = status;
+    }
+
+    public String getProcessedEntityId() {
+        return processedEntityId;
+    }
+
+    public void setProcessedEntityId(String processedEntityId) {
+        this.processedEntityId = processedEntityId;
+    }
+}
+
+// File: UserAccount.java
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+
+public class UserAccount {
+    private final String username;
+    private String passwordHash;
+    private String passwordSalt;
+    private String email;
+    private UserRole role;
+    private String institutionId;
+    private boolean enabled = true;
+    private final Set<String> editableEntityIds = new HashSet<>();
+    private String resetToken;
+    private LocalDateTime resetTokenExpiresAt;
+
+    public UserAccount(String username, String password, String email, UserRole role, String institutionId) {
+        this.username = Objects.requireNonNull(username);
+        this.email = email == null ? "" : email;
+        this.role = Objects.requireNonNull(role);
+        if (role != UserRole.SYSTEM_ADMIN && institutionId == null) {
+            throw new IllegalArgumentException("Only system administrators may be unaffiliated with an institution.");
+        }
+        this.institutionId = institutionId;
+        setPassword(password);
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email == null ? "" : email;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = Objects.requireNonNull(role);
+        if (role != UserRole.SYSTEM_ADMIN && institutionId == null) {
+            throw new IllegalArgumentException("Only system administrators may be unaffiliated with an institution.");
+        }
+    }
+
+    public String getInstitutionId() {
+        return institutionId;
+    }
+
+    public void setInstitutionId(String institutionId) {
+        if (role != UserRole.SYSTEM_ADMIN && institutionId == null) {
+            throw new IllegalArgumentException("Only system administrators may be unaffiliated with an institution.");
+        }
+        this.institutionId = institutionId;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public void setPassword(String password) {
+        if (password == null || password.length() < 6) {
+            throw new IllegalArgumentException("Password must be at least 6 characters long.");
+        }
+        this.passwordSalt = UUID.randomUUID().toString();
+        this.passwordHash = hash(password + passwordSalt);
+    }
+
+    public boolean verifyPassword(String password) {
+        return passwordHash.equals(hash(password + passwordSalt));
+    }
+
+    public String requestPasswordReset() {
+        this.resetToken = UUID.randomUUID().toString();
+        this.resetTokenExpiresAt = LocalDateTime.now().plusHours(1);
+        return resetToken;
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        if (resetToken == null || !resetToken.equals(token) || resetTokenExpiresAt == null
+                || LocalDateTime.now().isAfter(resetTokenExpiresAt)) {
+            throw new IllegalArgumentException("Invalid or expired password reset token.");
+        }
+        setPassword(newPassword);
+        resetToken = null;
+        resetTokenExpiresAt = null;
+    }
+
+    public boolean canEditEntity(String entityId) {
+        if (!enabled) {
+            return false;
+        }
+        if (role == UserRole.SYSTEM_ADMIN || role == UserRole.FDP_ADMIN) {
+            return true;
+        }
+        if (!Objects.equals(institutionId, entityId)) {
+            return false;
+        }
+        if (role == UserRole.ENTITY_REPRESENTATIVE) {
+            return true;
+        }
+        return editableEntityIds.contains(entityId);
+    }
+
+    public void grantEditingRight(String entityId) {
+        editableEntityIds.add(entityId);
+    }
+
+    public void revokeEditingRight(String entityId) {
+        editableEntityIds.remove(entityId);
+    }
+
+    public Set<String> getEditableEntityIds() {
+        return Collections.unmodifiableSet(editableEntityIds);
+    }
+
+    private static String hash(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(bytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return username + " (" + role + ", institution=" + institutionId + ", enabled=" + enabled + ")";
+    }
+}
+
+// File: NotificationService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class NotificationService {
+    private final List<String> outbox = new ArrayList<>();
+
+    public void sendEmail(String to, String subject, String body) {
+        outbox.add("To: " + to + "\nSubject: " + subject + "\n" + body + "\n---");
+    }
+
+    public List<String> getOutbox() {
+        return Collections.unmodifiableList(outbox);
+    }
+
+    public int getSentCount() {
+        return outbox.size();
+    }
+}
+
+// File: AuthenticationService.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class AuthenticationService {
+    private final Map<String, UserAccount> users = new LinkedHashMap<>();
+    private final NotificationService notificationService;
+
+    public AuthenticationService(NotificationService notificationService) {
+        this.notificationService = notificationService;
+    }
+
+    public void addUser(UserAccount user) {
+        if (users.containsKey(user.getUsername())) {
+            throw new IllegalArgumentException("User already exists: " + user.getUsername());
+        }
+        users.put(user.getUsername(), user);
+    }
+
+    public UserAccount getUser(String username) {
+        UserAccount user = users.get(username);
+        if (user == null) {
+            throw new IllegalArgumentException("Unknown user: " + username);
+        }
+        return user;
+    }
+
+    public UserAccount findByUsername(String username) {
+        return users.get(username);
+    }
+
+    public List<UserAccount> getAllUsers() {
+        return new ArrayList<>(users.values());
+    }
+
+    public UserAccount login(String username, String password) {
+        UserAccount user = getUser(username);
+        if (!user.isEnabled()) {
+            throw new AccessDeniedException("Account is disabled.");
+        }
+        if (!user.verifyPassword(password)) {
+            throw new AccessDeniedException("Invalid password.");
+        }
+        return user;
+    }
+
+    public String requestPasswordReminder(String username) {
+        UserAccount user = getUser(username);
+        String body = "A password reminder was requested for this account. Use the website password-reset option if needed.";
+        notificationService.sendEmail(user.getEmail(), "Password reminder", body);
+        return body;
+    }
+
+    public String requestPasswordReset(String username) {
+        UserAccount user = getUser(username);
+        String token = user.requestPasswordReset();
+        notificationService.sendEmail(user.getEmail(), "Password reset", "Password reset token: " + token);
+        return token;
+    }
+
+    public void resetPassword(String username, String token, String newPassword) {
+        getUser(username).resetPassword(token, newPassword);
+    }
+}
+
+// File: ProfileService.java
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+
+public class ProfileService {
+    private final Map<String, EntityProfile> profiles = new LinkedHashMap<>();
+    private final Map<String, EntityRegistrationRequest> requests = new LinkedHashMap<>();
+    private final Clock clock;
+    private int entityCounter = 1;
+    private int requestCounter = 1;
+
+    public ProfileService() {
+        this(Clock.systemDefaultZone());
+    }
+
+    public ProfileService(Clock clock) {
+        this.clock = clock;
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock);
+    }
+
+    private void requireAdministrator(UserAccount user) {
+        if (!user.isEnabled() || !user.getRole().isFdpAdministrator()) {
+            throw new AccessDeniedException("FDP administrator rights are required.");
+        }
+    }
+
+    public EntityProfile createEntityByAdmin(UserAccount admin, String name, String description, String contactEmail) {
+        requireAdministrator(admin);
+        String id = "ENT-" + entityCounter++;
+        EntityProfile profile = new EntityProfile(id, name, description, contactEmail, ProfileStatus.PENDING_APPROVAL);
+        profile.addChangeLog(admin.getUsername(), "Entity created by FDP administrator", now());
+        profiles.put(id, profile);
+        return profile;
+    }
+
+    public EntityRegistrationRequest submitNewProfileRequest(String name, String description, String contactEmail) {
+        String id = "REQ-" + requestCounter++;
+        EntityRegistrationRequest request = new EntityRegistrationRequest(
+                id, name, description, contactEmail, now(), RequestStatus.PENDING);
+        requests.put(id, request);
+        return request;
+    }
+
+    public EntityProfile approveRegistrationRequest(UserAccount admin, String requestId) {
+        requireAdministrator(admin);
+        EntityRegistrationRequest request = requests.get(requestId);
+        if (request == null) {
+            throw new IllegalArgumentException("Unknown registration request: " + requestId);
+        }
+        if (request.getStatus() != RequestStatus.PENDING) {
+            throw new IllegalStateException("Registration request has already been processed.");
+        }
+        String id = "ENT-" + entityCounter++;
+        EntityProfile profile = new EntityProfile(
+                id, request.getName(), request.getDescription(), request.getContactEmail(), ProfileStatus.APPROVED);
+        profile.addChangeLog(admin.getUsername(),
+                "Profile created and approved from registration request " + requestId, now());
+        profiles.put(id, profile);
+        request.setStatus(RequestStatus.APPROVED);
+        request.setProcessedEntityId(id);
+        return profile;
+    }
+
+    public void rejectRegistrationRequest(UserAccount admin, String requestId, String reason) {
+        requireAdministrator(admin);
+        EntityRegistrationRequest request = requests.get(requestId);
+        if (request == null) {
+            throw new IllegalArgumentException("Unknown registration request: " + requestId);
+        }
+        if (request.getStatus() != RequestStatus.PENDING) {
+            throw new IllegalStateException("Registration request has already been processed.");
+        }
+        request.setStatus(RequestStatus.REJECTED);
+    }
+
+    public void approveProfile(UserAccount admin, String entityId) {
+        requireAdministrator(admin);
+        EntityProfile profile = requireProfile(entityId);
+        profile.setStatus(ProfileStatus.APPROVED);
+        profile.addChangeLog(admin.getUsername(), "Profile approved for public view", now());
+    }
+
+    public void updateProfile(UserAccount user, String entityId, Map<String, String> updates, String details) {
+        EntityProfile profile = requireProfile(entityId);
+        if (!user.canEditEntity(entityId)) {
+            throw new AccessDeniedException("User may not edit entity " + entityId);
+        }
+        if (profile.getStatus() == ProfileStatus.DISABLED) {
+            throw new IllegalStateException("Disabled profiles cannot be edited.");
+        }
+        if (updates != null) {
+            for (Map.Entry<String, String> entry : updates.entrySet()) {
+                switch (entry.getKey()) {
+                    case "name" -> profile.setName(entry.getValue());
+                    case "description" -> profile.setDescription(entry.getValue());
+                    case "contactEmail" -> profile.setContactEmail(entry.getValue());
+                    case "hideEmail" -> profile.setEmailHiddenFromPublic(Boolean.parseBoolean(entry.getValue()));
+                    default -> throw new IllegalArgumentException("Unknown profile field: " + entry.getKey());
+                }
+            }
+        }
+        profile.addChangeLog(user.getUsername(), details, now());
+    }
+
+    public void updateDataElement(UserAccount user, String entityId, String elementName,
+                                  LocalDate date, int warningDays, String details) {
+        EntityProfile profile = requireProfile(entityId);
+        if (!user.canEditEntity(entityId)) {
+            throw new AccessDeniedException("User may not edit entity " + entityId);
+        }
+        profile.addOrUpdateDataElement(new DataElement(elementName, date, warningDays));
+        profile.addChangeLog(user.getUsername(), details + " (" + elementName + ")", now());
+    }
+
+    public void addExternalLink(UserAccount user, String entityId, String label, String url) {
+        EntityProfile profile = requireProfile(entityId);
+        if (!user.canEditEntity(entityId)) {
+            throw new AccessDeniedException("User may not edit entity " + entityId);
+        }
+        profile.addExternalLink(label, url);
+        profile.addChangeLog(user.getUsername(), "Added external link: " + label, now());
+    }
+
+    public void delegateEditingRights(UserAccount representative, String entityId, UserAccount targetUser) {
+        if (representative.getRole() != UserRole.ENTITY_REPRESENTATIVE
+                || !representative.canEditEntity(entityId)) {
+            throw new AccessDeniedException("Only a designated entity representative may delegate editing rights.");
+        }
+        if (!Objects.equals(entityId, targetUser.getInstitutionId())) {
+            throw new IllegalArgumentException("Target user must belong to the same institution.");
+        }
+        if (!targetUser.isEnabled()) {
+            throw new IllegalStateException("Target user is disabled.");
+        }
+        targetUser.grantEditingRight(entityId);
+        EntityProfile profile = requireProfile(entityId);
+        profile.addChangeLog(representative.getUsername(),
+                "Delegated editing rights to " + targetUser.getUsername(), now());
+    }
+
+    public void revokeEditingRights(UserAccount representative, String entityId, UserAccount targetUser) {
+        if (representative.getRole() != UserRole.ENTITY_REPRESENTATIVE
+                || !representative.canEditEntity(entityId)) {
+            throw new AccessDeniedException("Only a designated entity representative may revoke editing rights.");
+        }
+        targetUser.revokeEditingRight(entityId);
+        EntityProfile profile = requireProfile(entityId);
+        profile.addChangeLog(representative.getUsername(),
+                "Revoked editing rights from " + targetUser.getUsername(), now());
+    }
+
+    public void setPrimaryUser(UserAccount admin, String entityId, UserAccount user) {
+        requireAdministrator(admin);
+        EntityProfile profile = requireProfile(entityId);
+        if (!Objects.equals(entityId, user.getInstitutionId())) {
+            user.setInstitutionId(entityId);
+        }
+        user.setRole(UserRole.ENTITY_REPRESENTATIVE);
+        user.grantEditingRight(entityId);
+        profile.setPrimaryUserName(user.getUsername());
+        profile.addChangeLog(admin.getUsername(), "Designated primary user " + user.getUsername(), now());
+    }
+
+    public List<Map<String, String>> searchApproved(String query) {
+        String q = query == null ? "" : query.toLowerCase(Locale.ROOT);
+        List<Map<String, String>> results = new ArrayList<>();
+        for (EntityProfile profile : profiles.values()) {
+            if (profile.getStatus() == ProfileStatus.APPROVED) {
+                if (q.isBlank()
+                        || profile.getName().toLowerCase(Locale.ROOT).contains(q)
+                        || profile.getDescription().toLowerCase(Locale.ROOT).contains(q)) {
+                    results.add(profile.toPublicMap());
+                }
+            }
+        }
+        return results;
+    }
+
+    public Map<String, String> getPublicProfile(String id) {
+        return getApprovedProfile(id).toPublicMap();
+    }
+
+    public EntityProfile getApprovedProfile(String id) {
+        EntityProfile profile = requireProfile(id);
+        if (profile.getStatus() != ProfileStatus.APPROVED) {
+            throw new AccessDeniedException("Profile is not available publicly.");
+        }
+        return profile;
+    }
+
+    public EntityProfile requireProfile(String id) {
+        EntityProfile profile = profiles.get(id);
+        if (profile == null) {
+            throw new IllegalArgumentException("Unknown entity: " + id);
+        }
+        return profile;
+    }
+
+    public List<EntityProfile> getApprovedProfiles() {
+        List<EntityProfile> approved = new ArrayList<>();
+        for (EntityProfile profile : profiles.values()) {
+            if (profile.getStatus() == ProfileStatus.APPROVED) {
+                approved.add(profile);
+            }
+        }
+        return approved;
+    }
+
+    public List<EntityProfile> getProfilesForAdmin(UserAccount admin) {
+        requireAdministrator(admin);
+        return new ArrayList<>(profiles.values());
+    }
+
+    public List<EntityRegistrationRequest> getRequestsForAdmin(UserAccount admin) {
+        requireAdministrator(admin);
+        return new ArrayList<>(requests.values());
+    }
+}
+
+// File: AdminService.java
+public class AdminService {
+    private final AuthenticationService authenticationService;
+    private final ProfileService profileService;
+
+    public AdminService(AuthenticationService authenticationService, ProfileService profileService) {
+        this.authenticationService = authenticationService;
+        this.profileService = profileService;
+    }
+
+    private void requireAdmin(UserAccount admin) {
+        if (!admin.isEnabled() || !admin.getRole().isFdpAdministrator()) {
+            throw new AccessDeniedException("FDP administrator rights are required.");
+        }
+    }
+
+    public UserAccount createUser(UserAccount admin, String username, String password, String email,
+                                  UserRole role, String institutionId) {
+        requireAdmin(admin);
+        UserAccount user = new UserAccount(username, password, email, role, institutionId);
+        authenticationService.addUser(user);
+        return user;
+    }
+
+    public void editUser(UserAccount admin, String username, String newEmail, UserRole newRole,
+                         String newInstitutionId, Boolean enabled) {
+        requireAdmin(admin);
+        UserAccount user = authenticationService.getUser(username);
+        if (newEmail != null) {
+            user.setEmail(newEmail);
+        }
+        if (newInstitutionId != null) {
+            user.setInstitutionId(newInstitutionId);
+        }
+        if (newRole != null) {
+            user.setRole(newRole);
+        }
+        if (enabled != null) {
+            user.setEnabled(enabled);
+        }
+    }
+
+    public void disableUser(UserAccount admin, String username) {
+        requireAdmin(admin);
+        authenticationService.getUser(username).setEnabled(false);
+    }
+
+    public EntityProfile createEntity(UserAccount admin, String name, String description, String contactEmail) {
+        requireAdmin(admin);
+        return profileService.createEntityByAdmin(admin, name, description, contactEmail);
+    }
+
+    public EntityProfile approveRequest(UserAccount admin, String requestId) {
+        requireAdmin(admin);
+        return profileService.approveRegistrationRequest(admin, requestId);
+    }
+
+    public void approveProfile(UserAccount admin, String entityId) {
+        requireAdmin(admin);
+        profileService.approveProfile(admin, entityId);
+    }
+
+    public void designateFirstPrimaryUser(UserAccount admin, String entityId, String username) {
+        requireAdmin(admin);
+        UserAccount user = authenticationService.getUser(username);
+        profileService.setPrimaryUser(admin, entityId, user);
+    }
+
+    public void delegateEditingRights(UserAccount representative, String entityId, String targetUsername) {
+        UserAccount targetUser = authenticationService.getUser(targetUsername);
+        profileService.delegateEditingRights(representative, entityId, targetUser);
+    }
+}
+
+// File: ApiService.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+public class ApiService {
+    private final ProfileService profileService;
+    private LocalDateTime lastDataPull;
+
+    public ApiService(ProfileService profileService) {
+        this.profileService = profileService;
+    }
+
+    public List<Map<String, String>> pullAllProfiles() {
+        lastDataPull = LocalDateTime.now();
+        List<Map<String, String>> results = new ArrayList<>();
+        for (EntityProfile profile : profileService.getApprovedProfiles()) {
+            results.add(profile.toPublicMap());
+        }
+        return results;
+    }
+
+    public Map<String, String> pullProfile(String entityId) {
+        lastDataPull = LocalDateTime.now();
+        return profileService.getPublicProfile(entityId);
+    }
+
+    public LocalDateTime getLastDataPull() {
+        return lastDataPull;
+    }
+}
+
+// File: ProfileExporter.java
+public interface ProfileExporter {
+    byte[] export(EntityProfile profile);
+
+    String getFileExtension();
+
+    String getMimeType();
+}
+
+// File: ExcelProfileExporter.java
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
+public class ExcelProfileExporter implements ProfileExporter {
+    @Override
+    public byte[] export(EntityProfile profile) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("<?xml version=\"1.0\"?>\n");
+        builder.append("<?mso-application progid=\"Excel.Sheet\"?>\n");
+        builder.append("<Workbook xmlns=\"urn:schemas-microsoft-com:office:spreadsheet\" ");
+        builder.append("xmlns:ss=\"urn:schemas-microsoft-com:office:spreadsheet\">\n");
+        builder.append("<Worksheet ss:Name=\"Entity Profile\"><Table>\n");
+        appendRow(builder, "Field", "Value");
+        for (Map.Entry<String, String> entry : profile.toPublicMap().entrySet()) {
+            appendRow(builder, entry.getKey(), entry.getValue());
+        }
+        builder.append("</Table></Worksheet></Workbook>");
+        return builder.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private void appendRow(StringBuilder builder, String field, String value) {
+        builder.append("<Row><Cell><Data ss:Type=\"String\">")
+                .append(xmlEscape(field))
+                .append("</Data></Cell><Cell><Data ss:Type=\"String\">")
+                .append(xmlEscape(value))
+                .append("</Data></Cell></Row>\n");
+    }
+
+    private String xmlEscape(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
+    }
+
+    @Override
+    public String getFileExtension() {
+        return "xml";
+    }
+
+    @Override
+    public String getMimeType() {
+        return "application/vnd.ms-excel";
+    }
+}
+
+// File: PdfProfileExporter.java
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+public class PdfProfileExporter implements ProfileExporter {
+    @Override
+    public byte[] export(EntityProfile profile) {
+        StringBuilder contentBuilder = new StringBuilder();
+        contentBuilder.append("BT\n/F1 12 Tf\n50 750 Td\n14 TL\n");
+        List<String> lines = profile.toPublicLines();
+        for (String line : lines) {
+            contentBuilder.append("(").append(escapePdf(line)).append(") Tj\nT*\n");
+        }
+        contentBuilder.append("ET\n");
+
+        String content = contentBuilder.toString();
+        byte[] contentBytes = content.getBytes(StandardCharsets.ISO_8859_1);
+
+        String object1 = "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
+        String object2 = "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n";
+        String object3 = "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+                + "/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\nendobj\n";
+        String object4 = "4 0 obj\n<< /Length " + contentBytes.length + " >>\nstream\n"
+                + content + "endstream\nendobj\n";
+        String object5 = "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n";
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        write(output, "%PDF-1.4\n");
+
+        int[] offsets = new int[6];
+        offsets[1] = output.size();
+        write(output, object1);
+        offsets[2] = output.size();
+        write(output, object2);
+        offsets[3] = output.size();
+        write(output, object3);
+        offsets[4] = output.size();
+        write(output, object4);
+        offsets[5] = output.size();
+        write(output, object5);
+
+        int xrefOffset = output.size();
+        write(output, "xref\n0 6\n0000000000 65535 f \n");
+        for (int i = 1; i <= 5; i++) {
+            write(output, String.format("%010d 00000 n \n", offsets[i]));
+        }
+        write(output, "trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n"
+                + xrefOffset + "\n%%EOF\n");
+
+        return output.toByteArray();
+    }
+
+    private void write(ByteArrayOutputStream output, String value) {
+        output.writeBytes(value.getBytes(StandardCharsets.ISO_8859_1));
+    }
+
+    private String escapePdf(String text) {
+        if (text == null) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (char original : text.toCharArray()) {
+            char character = (original >= 32 && original <= 126) ? original : '?';
+            if (character == '\\' || character == '(' || character == ')') {
+                builder.append('\\');
+            }
+            builder.append(character);
+        }
+        return builder.toString();
+    }
+
+    @Override
+    public String getFileExtension() {
+        return "pdf";
+    }
+
+    @Override
+    public String getMimeType() {
+        return "application/pdf";
+    }
+}
+
+// File: DownloadFormat.java
+public enum DownloadFormat {
+    EXCEL,
+    PDF
+}
+
+// File: DownloadService.java
+public class DownloadService {
+    private final ProfileService profileService;
+
+    public DownloadService(ProfileService profileService) {
+        this.profileService = profileService;
+    }
+
+    public byte[] downloadProfile(String entityId, DownloadFormat format) {
+        EntityProfile profile = profileService.getApprovedProfile(entityId);
+        ProfileExporter exporter = switch (format) {
+            case EXCEL -> new ExcelProfileExporter();
+            case PDF -> new PdfProfileExporter();
+        };
+        return exporter.export(profile);
+    }
+
+    public String getFileName(String entityId, DownloadFormat format) {
+        ProfileExporter exporter = switch (format) {
+            case EXCEL -> new ExcelProfileExporter();
+            case PDF -> new PdfProfileExporter();
+        };
+        return entityId + "." + exporter.getFileExtension();
+    }
+
+    public String getMimeType(DownloadFormat format) {
+        ProfileExporter exporter = switch (format) {
+            case EXCEL -> new ExcelProfileExporter();
+            case PDF -> new PdfProfileExporter();
+        };
+        return exporter.getMimeType();
+    }
+}
+
+// File: PublicWebsite.java
+import java.util.List;
+import java.util.Map;
+
+public class PublicWebsite {
+    private final ProfileService profileService;
+    private final DownloadService downloadService;
+
+    public PublicWebsite(ProfileService profileService, DownloadService downloadService) {
+        this.profileService = profileService;
+        this.downloadService = downloadService;
+    }
+
+    public List<Map<String, String>> search(String query) {
+        return profileService.searchApproved(query);
+    }
+
+    public Map<String, String> viewProfile(String entityId) {
+        return profileService.getPublicProfile(entityId);
+    }
+
+    public byte[] downloadProfile(String entityId, DownloadFormat format) {
+        return downloadService.downloadProfile(entityId, format);
+    }
+}
+
+// File: ReminderService.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ReminderService {
+    private final ProfileService profileService;
+    private final NotificationService notificationService;
+    private LocalDate lastMonthlyReminder;
+
+    public ReminderService(ProfileService profileService, NotificationService notificationService) {
+        this.profileService = profileService;
+        this.notificationService = notificationService;
+    }
+
+    public int sendMonthlyRemindersIfDue(LocalDate today) {
+        if (lastMonthlyReminder != null && lastMonthlyReminder.plusDays(30).isAfter(today)) {
+            return 0;
+        }
+        int count = 0;
+        for (EntityProfile profile : profileService.getApprovedProfiles()) {
+            String email = profile.getContactEmail();
+            if (email != null && !email.isBlank()) {
+                notificationService.sendEmail(
+                        email,
+                        "Monthly entity profile update reminder",
+                        "Please review and update the entity profile for " + profile.getName() + ".");
+                count++;
+            }
+        }
+        lastMonthlyReminder = today;
+        return count;
+    }
+
+    public int sendOutdatedDataElementReminders(LocalDate today) {
+        int count = 0;
+        for (EntityProfile profile : profileService.getApprovedProfiles()) {
+            List<String> outdated = profile.getOutdatedDataElementNames(today);
+            if (!outdated.isEmpty()) {
+                String email = profile.getContactEmail();
+                if (email != null && !email.isBlank()) {
+                    notificationService.sendEmail(
+                            email,
+                            "Outdated entity profile data elements",
+                            "The following data elements require updating for " + profile.getName()
+                                    + ": " + String.join(", ", outdated));
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    public List<String> getSignInAlerts(UserAccount user) {
+        List<String> alerts = new ArrayList<>();
+        if (user.getInstitutionId() == null) {
+            return alerts;
+        }
+        try {
+            EntityProfile profile = profileService.getApprovedProfile(user.getInstitutionId());
+            List<String> outdated = profile.getOutdatedDataElementNames(LocalDate.now());
+            if (!outdated.isEmpty()) {
+                alerts.add("Profile data requires updating: " + String.join(", ", outdated));
+            }
+        } catch (RuntimeException ignored) {
+            // No approved profile is available for this institutional account.
+        }
+        return alerts;
+    }
+
+    public int sendAnnualReportUpdateReminders(int year) {
+        int count = 0;
+        for (EntityProfile profile : profileService.getApprovedProfiles()) {
+            String email = profile.getContactEmail();
+            if (email != null && !email.isBlank()) {
+                notificationService.sendEmail(
+                        email,
+                        "FDP Annual Report profile update request",
+                        "Please update the entity profile for " + profile.getName()
+                                + " in connection with the " + year + " FDP Annual Report.");
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public LocalDate getLastMonthlyReminder() {
+        return lastMonthlyReminder;
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
+public class Main {
+    public static void main(String[] args) {
+        NotificationService notifications = new NotificationService();
+        AuthenticationService authentication = new AuthenticationService(notifications);
+        ProfileService profiles = new ProfileService();
+        AdminService admin = new AdminService(authentication, profiles);
+        ReminderService reminders = new ReminderService(profiles, notifications);
+        ApiService api = new ApiService(profiles);
+        DownloadService downloads = new DownloadService(profiles);
+        PublicWebsite website = new PublicWebsite(profiles, downloads);
+
+        UserAccount systemAdmin = new UserAccount(
+                "sysadmin", "SysPass1", "sysadmin@fdp.example", UserRole.SYSTEM_ADMIN, null);
+        authentication.addUser(systemAdmin);
+
+        UserAccount fdpAdmin = admin.createUser(
+                systemAdmin, "fdpadmin", "FdpPass1", "fdpadmin@fdp.example",
+                UserRole.FDP_ADMIN, "FDP-OFFICE");
+        fdpAdmin = authentication.login("fdpadmin", "FdpPass1");
+
+        EntityProfile entity = admin.createEntity(
+                fdpAdmin,
+                "Example University",
+                "A research university participating in the clearinghouse.",
+                "profile@example.edu");
+
+        admin.createUser(
+                fdpAdmin, "rep1", "RepPass1", "rep1@example.edu",
+                UserRole.ENTITY_USER, entity.getId());
+        admin.designateFirstPrimaryUser(fdpAdmin, entity.getId(), "rep1");
+        admin.approveProfile(fdpAdmin, entity.getId());
+
+        UserAccount rep1 = authentication.login("rep1", "RepPass1");
+        profiles.updateProfile(
+                rep1,
+                entity.getId(),
+                Map.of(
+                        "description", "A research university with active sponsored programs.",
+                        "hideEmail", "true"),
+                "Completed initial profile details");
+        profiles.updateDataElement(
+                rep1, entity.getId(), "SAM expiration date",
+                LocalDate.now().plusDays(20), 30, "Updated SAM expiration date");
+        profiles.updateDataElement(
+                rep1, entity.getId(), "Last audit date",
+                LocalDate.now().minusMonths(14), 365, "Updated audit date");
+        profiles.addExternalLink(
+                rep1, entity.getId(), "SAM.gov", "https://sam.gov/entity/example");
+
+        admin.createUser(
+                fdpAdmin, "editor2", "EditPass1", "editor2@example.edu",
+                UserRole.ENTITY_USER, entity.getId());
+        admin.delegateEditingRights(rep1, entity.getId(), "editor2");
+        UserAccount editor2 = authentication.login("editor2", "EditPass1");
+        profiles.updateProfile(
+                editor2,
+                entity.getId(),
+                Map.of("contactEmail", "office@example.edu"),
+                "Updated contact email after delegation");
+
+        System.out.println("Public search results:");
+        for (Map<String, String> result : website.search("Example")) {
+            System.out.println(result);
+        }
+        System.out.println("Public profile: " + website.viewProfile(entity.getId()));
+
+        byte[] excel = website.downloadProfile(entity.getId(), DownloadFormat.EXCEL);
+        byte[] pdf = website.downloadProfile(entity.getId(), DownloadFormat.PDF);
+        System.out.println("Excel download bytes: " + excel.length + ", PDF download bytes: " + pdf.length);
+
+        List<Map<String, String>> apiPull = api.pullAllProfiles();
+        System.out.println("API pull count: " + apiPull.size() + ", last pull: " + api.getLastDataPull());
+
+        EntityRegistrationRequest request = profiles.submitNewProfileRequest(
+                "New College",
+                "A new institution requesting a profile.",
+                "info@new.example");
+        EntityProfile approvedRequestProfile = admin.approveRequest(fdpAdmin, request.getId());
+        System.out.println("Approved requested profile: " + approvedRequestProfile.getId()
+                + " status=" + approvedRequestProfile.getStatus());
+
+        int monthly = reminders.sendMonthlyRemindersIfDue(LocalDate.now());
+        int outdated = reminders.sendOutdatedDataElementReminders(LocalDate.now());
+        int annual = reminders.sendAnnualReportUpdateReminders(LocalDate.now().getYear());
+        System.out.println("Reminders sent monthly=" + monthly
+                + ", outdated=" + outdated + ", annual=" + annual);
+        System.out.println("Sign-in alerts for rep1: " + reminders.getSignInAlerts(rep1));
+
+        String resetToken = authentication.requestPasswordReset("rep1");
+        authentication.resetPassword("rep1", resetToken, "RepPass2");
+        authentication.login("rep1", "RepPass2");
+        System.out.println("Password reset successful for rep1.");
+
+        for (ProfileChangeLog log : profiles.requireProfile(entity.getId()).getChangeLog()) {
+            System.out.println("Change log: " + log);
+        }
+        System.out.println("Notification count: " + notifications.getSentCount());
+        System.out.println("Last API pull: " + api.getLastDataPull());
+    }
+}

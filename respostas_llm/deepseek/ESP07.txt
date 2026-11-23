@@ -1,0 +1,1876 @@
+// File: Role.java
+public enum Role {
+    OWNER,
+    MEMBER,
+    ADMIN
+}
+// File: Visibility.java
+public enum Visibility {
+    PUBLIC,
+    PRIVATE
+}
+// File: AuthProvider.java
+public enum AuthProvider {
+    GITHUB,
+    GOOGLE,
+    PASSWORD
+}
+// File: PackageState.java
+public enum PackageState {
+    DRAFT,
+    PUBLISHED,
+    UNPUBLISHED,
+    DELETED
+}
+// File: ValidationStatus.java
+public enum ValidationStatus {
+    VALID,
+    INVALID
+}
+// File: PlanType.java
+public enum PlanType {
+    FREE,
+    BASIC,
+    PRO,
+    ENTERPRISE
+}
+// File: User.java
+import java.util.Objects;
+
+public class User {
+    private static int counter = 1;
+
+    private final int id;
+    private String name;
+    private String email;
+    private AuthProvider provider;
+    private String password;
+    private String bio;
+    private String website;
+
+    public User(String name, String email, AuthProvider provider) {
+        this.id = counter++;
+        this.name = name;
+        this.email = email;
+        this.provider = provider;
+        this.bio = "";
+        this.website = "";
+    }
+
+    public User(String name, String email, String password) {
+        this(name, email, AuthProvider.PASSWORD);
+        this.password = password;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public AuthProvider getProvider() {
+        return provider;
+    }
+
+    public void setProvider(AuthProvider provider) {
+        this.provider = provider;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    public String getWebsite() {
+        return website;
+    }
+
+    public void setWebsite(String website) {
+        this.website = website;
+    }
+
+    public void editProfile(String name, String email, String bio, String website) {
+        this.name = name;
+        this.email = email;
+        this.bio = bio;
+        this.website = website;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User)) return false;
+        User user = (User) o;
+        return id == user.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return name + " <" + email + ">";
+    }
+}
+// File: Membership.java
+public class Membership {
+    private final User user;
+    private final Publisher publisher;
+    private final Role role;
+
+    public Membership(User user, Publisher publisher, Role role) {
+        this.user = user;
+        this.publisher = publisher;
+        this.role = role;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public Publisher getPublisher() {
+        return publisher;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    @Override
+    public String toString() {
+        return user.getName() + ":" + role;
+    }
+}
+// File: Publisher.java
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class Publisher {
+    private static int counter = 1;
+
+    private final int id;
+    private String name;
+    private String slug;
+    private String description;
+    private User owner;
+    private final Map<User, Role> members = new LinkedHashMap<>();
+    private final Map<String, Role> pendingInvites = new LinkedHashMap<>();
+    private final Map<String, DataPackage> packages = new LinkedHashMap<>();
+    private PlanType plan = PlanType.FREE;
+
+    public Publisher(String name, String slug, String description, User owner) {
+        this.id = counter++;
+        this.name = name;
+        this.slug = slug;
+        this.description = description;
+        this.owner = owner;
+        this.members.put(owner, Role.OWNER);
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getSlug() {
+        return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
+    }
+
+    public PlanType getPlan() {
+        return plan;
+    }
+
+    public void setPlan(PlanType plan) {
+        this.plan = plan;
+    }
+
+    public void addPackage(DataPackage dataPackage) {
+        packages.put(dataPackage.getName(), dataPackage);
+    }
+
+    public List<DataPackage> getPackages() {
+        return new ArrayList<>(packages.values());
+    }
+
+    public void inviteMember(User user, Role role) {
+        members.put(user, role);
+    }
+
+    public void inviteByEmail(String email, Role role) {
+        boolean alreadyMember = members.keySet().stream()
+                .anyMatch(u -> u.getEmail().equalsIgnoreCase(email));
+        if (!alreadyMember) {
+            pendingInvites.put(email.toLowerCase(), role);
+        }
+    }
+
+    public boolean hasPendingInvite(String email) {
+        return pendingInvites.containsKey(email.toLowerCase());
+    }
+
+    public Role acceptInvite(User user) {
+        Role role = pendingInvites.remove(user.getEmail().toLowerCase());
+        if (role != null) {
+            members.put(user, role);
+            return role;
+        }
+        return null;
+    }
+
+    public void removeMember(User user) {
+        members.remove(user);
+        if (user.equals(owner)) {
+            owner = null;
+        }
+    }
+
+    public void setRole(User user, Role role) {
+        if (members.containsKey(user)) {
+            members.put(user, role);
+            if (role == Role.OWNER) {
+                owner = user;
+            }
+        }
+    }
+
+    public boolean isMember(User user) {
+        return user != null && members.containsKey(user);
+    }
+
+    public Collection<User> getMembers() {
+        return Collections.unmodifiableSet(members.keySet());
+    }
+
+    public Map<User, Role> getMembersWithRoles() {
+        return Collections.unmodifiableMap(members);
+    }
+
+    public List<Membership> getMemberships() {
+        return members.entrySet().stream()
+                .map(e -> new Membership(e.getKey(), this, e.getValue()))
+                .collect(Collectors.toList());
+    }
+
+    public List<DataPackage> searchPackages(String query) {
+        String q = query.toLowerCase();
+        return packages.values().stream()
+                .filter(p -> p.getName().toLowerCase().contains(q)
+                        || p.getTitle().toLowerCase().contains(q)
+                        || p.getDescription().toLowerCase().contains(q))
+                .collect(Collectors.toList());
+    }
+
+    public String profile() {
+        return "Publisher: " + name + "\nSlug: " + slug + "\nDescription: " + description
+                + "\nMembers: " + members.size() + "\nPackages: " + packages.size()
+                + "\nPlan: " + plan;
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+}
+// File: Resource.java
+import java.util.Objects;
+
+public class Resource {
+    private String name;
+    private String url;
+    private String content;
+    private String cachedContent;
+    private String checksum;
+    private boolean originalAvailable = true;
+
+    public Resource(String name, String url) {
+        this.name = name;
+        this.url = url;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public String getContent() {
+        if (originalAvailable && content != null) {
+            return content;
+        }
+        return cachedContent != null ? cachedContent : content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public String getCachedContent() {
+        return cachedContent;
+    }
+
+    public void cache() {
+        if (content != null) {
+            cachedContent = content;
+        }
+    }
+
+    public boolean isCached() {
+        return cachedContent != null;
+    }
+
+    public void markOriginalUnavailable() {
+        originalAvailable = false;
+    }
+
+    public boolean isOriginalAvailable() {
+        return originalAvailable;
+    }
+
+    public String getChecksum() {
+        return checksum;
+    }
+
+    public void setChecksum(String checksum) {
+        this.checksum = checksum;
+    }
+
+    public void computeChecksum() {
+        checksum = Integer.toHexString(Objects.hashCode(content));
+    }
+
+    public boolean validate() {
+        return name != null && !name.isEmpty()
+                && url != null && !url.isEmpty()
+                && getContent() != null && !getContent().isEmpty();
+    }
+
+    @Override
+    public String toString() {
+        return name + " -> " + url;
+    }
+}
+// File: PackageVersion.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class PackageVersion {
+    private final String version;
+    private String descriptorJson;
+    private final Map<String, Resource> resources = new LinkedHashMap<>();
+    private ValidationStatus validationStatus = ValidationStatus.INVALID;
+    private List<String> validationMessages = new ArrayList<>();
+    private final LocalDateTime createdAt = LocalDateTime.now();
+    private String schemaJson = "{}";
+
+    public PackageVersion(String version, String descriptorJson) {
+        this.version = version;
+        this.descriptorJson = descriptorJson;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public String getDescriptorJson() {
+        return descriptorJson;
+    }
+
+    public void setDescriptorJson(String descriptorJson) {
+        this.descriptorJson = descriptorJson;
+    }
+
+    public void addResource(Resource resource) {
+        resources.put(resource.getName(), resource);
+    }
+
+    public Resource getResource(String name) {
+        return resources.get(name);
+    }
+
+    public Collection<Resource> getResources() {
+        return resources.values();
+    }
+
+    public ValidationStatus getValidationStatus() {
+        return validationStatus;
+    }
+
+    public List<String> getValidationMessages() {
+        return new ArrayList<>(validationMessages);
+    }
+
+    public void setValidation(ValidationStatus status, List<String> messages) {
+        this.validationStatus = status;
+        this.validationMessages = new ArrayList<>(messages);
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public String getSchemaJson() {
+        return schemaJson;
+    }
+
+    public void setSchemaJson(String schemaJson) {
+        this.schemaJson = schemaJson;
+    }
+
+    @Override
+    public String toString() {
+        return version;
+    }
+}
+// File: DataPackage.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+public class DataPackage {
+    private final String id;
+    private String name;
+    private String title;
+    private String description;
+    private Publisher publisher;
+    private Visibility visibility = Visibility.PUBLIC;
+    private PackageState state = PackageState.DRAFT;
+    private final Map<String, PackageVersion> versions = new LinkedHashMap<>();
+    private final Map<String, String> tags = new LinkedHashMap<>();
+    private String currentVersion;
+    private final LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime updatedAt = LocalDateTime.now();
+    private int downloads = 0;
+    private final Set<User> allowedUsers = new HashSet<>();
+    private final Set<Publisher> allowedPublishers = new HashSet<>();
+    private String viewJson = "{}";
+
+    public DataPackage(String name, String title, String description, Publisher publisher) {
+        this.id = UUID.randomUUID().toString();
+        this.name = name;
+        this.title = title != null ? title : name;
+        this.description = description != null ? description : "";
+        this.publisher = publisher;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Publisher getPublisher() {
+        return publisher;
+    }
+
+    public void setPublisher(Publisher publisher) {
+        this.publisher = publisher;
+    }
+
+    public Visibility getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(Visibility visibility) {
+        this.visibility = visibility;
+    }
+
+    public PackageState getState() {
+        return state;
+    }
+
+    public int getDownloads() {
+        return downloads;
+    }
+
+    public String getViewJson() {
+        return viewJson;
+    }
+
+    public void setViewJson(String viewJson) {
+        this.viewJson = viewJson;
+    }
+
+    public void addVersion(PackageVersion version) {
+        versions.put(version.getVersion(), version);
+        currentVersion = version.getVersion();
+        updatedAt = LocalDateTime.now();
+    }
+
+    public PackageVersion getVersion(String version) {
+        return versions.get(version);
+    }
+
+    public PackageVersion getCurrentVersion() {
+        return versions.get(currentVersion);
+    }
+
+    public Collection<PackageVersion> getVersions() {
+        return new ArrayList<>(versions.values());
+    }
+
+    public Map<String, String> getTags() {
+        return new LinkedHashMap<>(tags);
+    }
+
+    public void publish() {
+        state = PackageState.PUBLISHED;
+        updatedAt = LocalDateTime.now();
+    }
+
+    public void unpublish() {
+        state = PackageState.UNPUBLISHED;
+        updatedAt = LocalDateTime.now();
+    }
+
+    public void deletePermanently() {
+        state = PackageState.DELETED;
+        updatedAt = LocalDateTime.now();
+    }
+
+    public void restore() {
+        state = PackageState.PUBLISHED;
+        updatedAt = LocalDateTime.now();
+    }
+
+    public String tag(String tag, String version, boolean overwrite) {
+        if (!versions.containsKey(version)) {
+            return "Version not found: " + version;
+        }
+        if (tags.containsKey(tag) && !overwrite) {
+            return "Warning: tag " + tag + " already exists at version " + tags.get(tag);
+        }
+        tags.put(tag, version);
+        return "Tagged " + tag + " -> " + version;
+    }
+
+    public void shareWith(User user) {
+        allowedUsers.add(user);
+    }
+
+    public void shareWith(Publisher publisher) {
+        allowedPublishers.add(publisher);
+    }
+
+    public boolean isVisibleTo(User user) {
+        if (state != PackageState.PUBLISHED) {
+            return false;
+        }
+        if (visibility == Visibility.PUBLIC) {
+            return true;
+        }
+        if (user == null) {
+            return false;
+        }
+        if (allowedUsers.contains(user) || publisher.isMember(user)) {
+            return true;
+        }
+        for (Publisher p : allowedPublishers) {
+            if (p.isMember(user)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean searchMatches(String query) {
+        String q = query.toLowerCase();
+        return name.toLowerCase().contains(q)
+                || title.toLowerCase().contains(q)
+                || description.toLowerCase().contains(q);
+    }
+
+    public void incrementDownloads() {
+        downloads++;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + state + ")";
+    }
+}
+// File: ValidatorService.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class ValidatorService {
+    public ValidationStatus validate(PackageVersion version) {
+        List<String> messages = new ArrayList<>();
+
+        if (version.getDescriptorJson() == null || version.getDescriptorJson().trim().isEmpty()) {
+            messages.add("Descriptor is empty");
+        }
+
+        for (Resource resource : version.getResources()) {
+            if (!resource.validate()) {
+                messages.add("Invalid resource: " + resource.getName());
+            }
+            if (resource.getChecksum() == null) {
+                resource.computeChecksum();
+            }
+        }
+
+        ValidationStatus status = messages.isEmpty() ? ValidationStatus.VALID : ValidationStatus.INVALID;
+        version.setValidation(status, messages);
+        return status;
+    }
+
+    public ValidationStatus validate(DataPackage dataPackage) {
+        PackageVersion version = dataPackage.getCurrentVersion();
+        if (version == null) {
+            return ValidationStatus.INVALID;
+        }
+        return validate(version);
+    }
+}
+// File: CacheService.java
+public class CacheService {
+    public void cache(PackageVersion version) {
+        for (Resource resource : version.getResources()) {
+            resource.cache();
+        }
+    }
+
+    public String getResourceContent(PackageVersion version, String resourceName) {
+        Resource resource = version.getResource(resourceName);
+        if (resource == null) {
+            return null;
+        }
+        return resource.getContent();
+    }
+
+    public boolean hasCache(PackageVersion version) {
+        for (Resource resource : version.getResources()) {
+            if (!resource.isCached()) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+// File: SearchService.java
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class SearchService {
+    public List<DataPackage> search(List<DataPackage> packages, String query) {
+        return packages.stream()
+                .filter(p -> p.getState() == PackageState.PUBLISHED)
+                .filter(p -> p.searchMatches(query))
+                .collect(Collectors.toList());
+    }
+
+    public List<DataPackage> searchByDescription(List<DataPackage> packages, String query) {
+        String q = query.toLowerCase();
+        return packages.stream()
+                .filter(p -> p.getState() == PackageState.PUBLISHED)
+                .filter(p -> p.getDescription().toLowerCase().contains(q))
+                .collect(Collectors.toList());
+    }
+
+    public List<DataPackage> searchByPublisher(Publisher publisher, String query) {
+        return publisher.searchPackages(query);
+    }
+}
+// File: Metrics.java
+public class Metrics {
+    private int users;
+    private int packages;
+    private int publishers;
+    private int apiUsage;
+    private int downloads;
+
+    public void incrementUsers() {
+        users++;
+    }
+
+    public void incrementPackages() {
+        packages++;
+    }
+
+    public void incrementPublishers() {
+        publishers++;
+    }
+
+    public void incrementApiUsage() {
+        apiUsage++;
+    }
+
+    public void incrementDownloads() {
+        downloads++;
+    }
+
+    public int getUsers() {
+        return users;
+    }
+
+    public int getPackages() {
+        return packages;
+    }
+
+    public int getPublishers() {
+        return publishers;
+    }
+
+    public int getApiUsage() {
+        return apiUsage;
+    }
+
+    public int getDownloads() {
+        return downloads;
+    }
+
+    public String getReport() {
+        return "Users: " + users + ", Publishers: " + publishers + ", Packages: " + packages
+                + ", API usage: " + apiUsage + ", Downloads: " + downloads;
+    }
+}
+// File: SiteConfig.java
+public class SiteConfig {
+    private String siteTitle = "Data Registry";
+    private String adminEmail = "admin@example.com";
+    private boolean allowGithubAuth = true;
+    private boolean allowGoogleAuth = true;
+
+    public String getSiteTitle() {
+        return siteTitle;
+    }
+
+    public void setSiteTitle(String siteTitle) {
+        this.siteTitle = siteTitle;
+    }
+
+    public String getAdminEmail() {
+        return adminEmail;
+    }
+
+    public void setAdminEmail(String adminEmail) {
+        this.adminEmail = adminEmail;
+    }
+
+    public boolean isAllowGithubAuth() {
+        return allowGithubAuth;
+    }
+
+    public void setAllowGithubAuth(boolean allowGithubAuth) {
+        this.allowGithubAuth = allowGithubAuth;
+    }
+
+    public boolean isAllowGoogleAuth() {
+        return allowGoogleAuth;
+    }
+
+    public void setAllowGoogleAuth(boolean allowGoogleAuth) {
+        this.allowGoogleAuth = allowGoogleAuth;
+    }
+}
+// File: PricingPlan.java
+public class PricingPlan {
+    private final PlanType type;
+    private final String name;
+    private final double price;
+    private final String features;
+    private final int maxPrivatePackages;
+
+    public PricingPlan(PlanType type, String name, double price, String features, int maxPrivatePackages) {
+        this.type = type;
+        this.name = name;
+        this.price = price;
+        this.features = features;
+        this.maxPrivatePackages = maxPrivatePackages;
+    }
+
+    public PlanType getType() {
+        return type;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public String getFeatures() {
+        return features;
+    }
+
+    public int getMaxPrivatePackages() {
+        return maxPrivatePackages;
+    }
+
+    @Override
+    public String toString() {
+        return name + " ($" + price + "/month): " + features;
+    }
+}
+// File: BillingSystem.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class BillingSystem {
+    private final List<PricingPlan> plans = new ArrayList<>();
+    private final Map<Publisher, PricingPlan> subscriptions = new LinkedHashMap<>();
+
+    public BillingSystem() {
+        plans.add(new PricingPlan(PlanType.FREE, "Free", 0.0, "Public packages only", 0));
+        plans.add(new PricingPlan(PlanType.BASIC, "Basic", 10.0, "5 private packages", 5));
+        plans.add(new PricingPlan(PlanType.PRO, "Pro", 50.0, "50 private packages", 50));
+        plans.add(new PricingPlan(PlanType.ENTERPRISE, "Enterprise", 200.0, "Unlimited private packages", Integer.MAX_VALUE));
+    }
+
+    public List<PricingPlan> listPlans() {
+        return Collections.unmodifiableList(plans);
+    }
+
+    public PricingPlan subscribe(Publisher publisher, PlanType type) {
+        PricingPlan plan = plans.stream()
+                .filter(p -> p.getType() == type)
+                .findFirst()
+                .orElse(plans.get(0));
+        subscriptions.put(publisher, plan);
+        publisher.setPlan(type);
+        return plan;
+    }
+
+    public PricingPlan getSubscription(Publisher publisher) {
+        return subscriptions.getOrDefault(publisher, plans.get(0));
+    }
+}
+// File: Notification.java
+import java.time.LocalDateTime;
+
+public class Notification {
+    private final User recipient;
+    private final String message;
+    private final LocalDateTime timestamp;
+    private boolean read;
+
+    public Notification(User recipient, String message) {
+        this.recipient = recipient;
+        this.message = message;
+        this.timestamp = LocalDateTime.now();
+        this.read = false;
+    }
+
+    public User getRecipient() {
+        return recipient;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public boolean isRead() {
+        return read;
+    }
+
+    public void markRead() {
+        read = true;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + timestamp + "] " + message;
+    }
+}
+// File: NotificationService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class NotificationService {
+    private final Map<User, List<Notification>> notifications = new LinkedHashMap<>();
+    private final Map<DataPackage, Set<User>> subscriptions = new HashMap<>();
+
+    public void notify(User user, String message) {
+        notifications.computeIfAbsent(user, k -> new ArrayList<>()).add(new Notification(user, message));
+    }
+
+    public void notifyPackageChanged(DataPackage dataPackage, String message) {
+        Set<User> subscribers = subscriptions.getOrDefault(dataPackage, Collections.emptySet());
+        for (User user : subscribers) {
+            notify(user, message);
+        }
+    }
+
+    public void subscribe(User user, DataPackage dataPackage) {
+        subscriptions.computeIfAbsent(dataPackage, k -> new HashSet<>()).add(user);
+    }
+
+    public List<Notification> getNotifications(User user) {
+        return notifications.getOrDefault(user, Collections.emptyList());
+    }
+}
+// File: Registry.java
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class Registry {
+    private final Map<Integer, User> users = new LinkedHashMap<>();
+    private final Map<String, User> usersByEmail = new LinkedHashMap<>();
+    private final Map<Integer, Publisher> publishers = new LinkedHashMap<>();
+    private final Map<String, DataPackage> packages = new LinkedHashMap<>();
+    private final SiteConfig config = new SiteConfig();
+    private final Metrics metrics = new Metrics();
+    private final NotificationService notificationService = new NotificationService();
+    private final BillingSystem billingSystem = new BillingSystem();
+    private final SearchService searchService = new SearchService();
+    private final ValidatorService validatorService = new ValidatorService();
+    private final CacheService cacheService = new CacheService();
+
+    public User signup(String name, String email, AuthProvider provider) {
+        String key = email.toLowerCase();
+        if (usersByEmail.containsKey(key)) {
+            return usersByEmail.get(key);
+        }
+        User user = new User(name, email, provider);
+        users.put(user.getId(), user);
+        usersByEmail.put(key, user);
+        metrics.incrementUsers();
+        return user;
+    }
+
+    public User signupWithProvider(AuthProvider provider, String name, String email) {
+        return signup(name, email, provider);
+    }
+
+    public User signupViaGithub(String name, String email) {
+        return signup(name, email, AuthProvider.GITHUB);
+    }
+
+    public User signupViaGoogle(String name, String email) {
+        return signup(name, email, AuthProvider.GOOGLE);
+    }
+
+    public Publisher createPublisher(String name, String slug, String description, User owner) {
+        Publisher publisher = new Publisher(name, slug, description, owner);
+        publishers.put(publisher.getId(), publisher);
+        metrics.incrementPublishers();
+        return publisher;
+    }
+
+    public void inviteUser(Publisher publisher, String email, Role role) {
+        publisher.inviteByEmail(email, role);
+    }
+
+    public User acceptInvite(String email, String name, AuthProvider provider) {
+        String key = email.toLowerCase();
+        User user = usersByEmail.get(key);
+        if (user == null) {
+            user = signup(name, email, provider);
+        }
+        for (Publisher publisher : publishers.values()) {
+            if (publisher.hasPendingInvite(key)) {
+                publisher.acceptInvite(user);
+                return user;
+            }
+        }
+        return user;
+    }
+
+    public DataPackage importDataPackage(Publisher publisher, String name, String title,
+                                         String description, String version,
+                                         String descriptorJson, Map<String, Resource> resources) {
+        DataPackage dataPackage = new DataPackage(name, title, description, publisher);
+        PackageVersion packageVersion = new PackageVersion(version, descriptorJson);
+        for (Resource resource : resources.values()) {
+            packageVersion.addResource(resource);
+        }
+        dataPackage.addVersion(packageVersion);
+        publisher.addPackage(dataPackage);
+        packages.put(name, dataPackage);
+        metrics.incrementPackages();
+        return dataPackage;
+    }
+
+    public DataPackage publishPackage(DataPackage dataPackage, PackageVersion version) {
+        ValidationStatus status = validatorService.validate(version);
+        if (status == ValidationStatus.VALID) {
+            cacheService.cache(version);
+            dataPackage.publish();
+            metrics.incrementApiUsage();
+            notificationService.notifyPackageChanged(dataPackage,
+                    "Package " + dataPackage.getName() + " published version " + version.getVersion());
+        }
+        return dataPackage;
+    }
+
+    public List<DataPackage> searchPackages(String query) {
+        return searchService.search(getAllPackagesList(), query);
+    }
+
+    public List<DataPackage> searchByDescription(String query) {
+        return searchService.searchByDescription(getAllPackagesList(), query);
+    }
+
+    public List<Publisher> searchPublishers(String query) {
+        String q = query.toLowerCase();
+        return publishers.values().stream()
+                .filter(p -> p.getName().toLowerCase().contains(q)
+                        || p.getDescription().toLowerCase().contains(q))
+                .collect(Collectors.toList());
+    }
+
+    public List<DataPackage> getPublishedPackages() {
+        return packages.values().stream()
+                .filter(p -> p.getState() == PackageState.PUBLISHED)
+                .collect(Collectors.toList());
+    }
+
+    public List<DataPackage> getAllPackagesList() {
+        return packages.values().stream().collect(Collectors.toList());
+    }
+
+    public List<DataPackage> getExamples() {
+        return packages.values().stream().limit(2).collect(Collectors.toList());
+    }
+
+    public List<DataPackage> getFeaturedPackages() {
+        return getExamples();
+    }
+
+    public String nextSteps(User user) {
+        return "Next steps for " + user.getName()
+                + ": create or join a publisher, then import and publish your first data package.";
+    }
+
+    public SiteConfig getConfig() {
+        return config;
+    }
+
+    public Metrics getMetrics() {
+        return metrics;
+    }
+
+    public NotificationService getNotificationService() {
+        return notificationService;
+    }
+
+    public BillingSystem getBillingSystem() {
+        return billingSystem;
+    }
+
+    public ValidatorService getValidatorService() {
+        return validatorService;
+    }
+
+    public CacheService getCacheService() {
+        return cacheService;
+    }
+
+    public Map<String, DataPackage> getPackages() {
+        return packages;
+    }
+
+    public DataPackage getPackage(String name) {
+        return packages.get(name);
+    }
+
+    public Collection<User> getUsers() {
+        return users.values();
+    }
+
+    public Collection<Publisher> getPublishers() {
+        return publishers.values();
+    }
+}
+// File: ClientConfig.java
+public class ClientConfig {
+    private String registryUrl = "https://registry.example.com";
+    private String apiToken = "";
+    private AuthProvider preferredProvider = AuthProvider.GITHUB;
+    private boolean cacheEnabled = true;
+
+    public ClientConfig() {
+    }
+
+    public ClientConfig(String registryUrl) {
+        this.registryUrl = registryUrl;
+    }
+
+    public String getRegistryUrl() {
+        return registryUrl;
+    }
+
+    public void setRegistryUrl(String registryUrl) {
+        this.registryUrl = registryUrl;
+    }
+
+    public String getApiToken() {
+        return apiToken;
+    }
+
+    public void setApiToken(String apiToken) {
+        this.apiToken = apiToken;
+    }
+
+    public AuthProvider getPreferredProvider() {
+        return preferredProvider;
+    }
+
+    public void setPreferredProvider(AuthProvider preferredProvider) {
+        this.preferredProvider = preferredProvider;
+    }
+
+    public boolean isCacheEnabled() {
+        return cacheEnabled;
+    }
+
+    public void setCacheEnabled(boolean cacheEnabled) {
+        this.cacheEnabled = cacheEnabled;
+    }
+}
+// File: DataPackageClient.java
+import java.util.Map;
+
+public class DataPackageClient {
+    private final Registry registry;
+    private ClientConfig config;
+    private Publisher currentPublisher;
+
+    public DataPackageClient(Registry registry) {
+        this.registry = registry;
+    }
+
+    public void configure(ClientConfig config) {
+        this.config = config;
+    }
+
+    public ClientConfig getConfig() {
+        return config;
+    }
+
+    public void setCurrentPublisher(Publisher currentPublisher) {
+        this.currentPublisher = currentPublisher;
+    }
+
+    public DataPackage importPackage(String name, String title, String description,
+                                     String version, String descriptorJson,
+                                     Map<String, Resource> resources) {
+        return registry.importDataPackage(currentPublisher, name, title, description, version, descriptorJson, resources);
+    }
+
+    public String publish(DataPackage dataPackage, String version) {
+        PackageVersion packageVersion = dataPackage.getVersion(version);
+        if (packageVersion == null) {
+            return "Version not found: " + version;
+        }
+        ValidationStatus status = registry.getValidatorService().validate(packageVersion);
+        if (status == ValidationStatus.INVALID) {
+            return "Validation failed: " + packageVersion.getValidationMessages();
+        }
+        registry.getCacheService().cache(packageVersion);
+        dataPackage.publish();
+        registry.getMetrics().incrementApiUsage();
+        registry.getNotificationService().notifyPackageChanged(dataPackage,
+                "Package " + dataPackage.getName() + " published version " + version);
+        return "Published " + dataPackage.getName() + " version " + version;
+    }
+
+    public String validate(DataPackage dataPackage, String version) {
+        PackageVersion packageVersion = dataPackage.getVersion(version);
+        if (packageVersion == null) {
+            return "Version not found: " + version;
+        }
+        ValidationStatus status = registry.getValidatorService().validate(packageVersion);
+        return status + (packageVersion.getValidationMessages().isEmpty()
+                ? ""
+                : " " + packageVersion.getValidationMessages());
+    }
+
+    public String preview(DataPackage dataPackage) {
+        PackageVersion packageVersion = dataPackage.getCurrentVersion();
+        if (packageVersion == null) {
+            return "No version available";
+        }
+        return "Preview of " + dataPackage.getName()
+                + "\nView: " + dataPackage.getViewJson()
+                + "\nDescriptor: " + packageVersion.getDescriptorJson();
+    }
+
+    public String restore(DataPackage dataPackage) {
+        dataPackage.restore();
+        return "Restored " + dataPackage.getName();
+    }
+
+    public String undelete(DataPackage dataPackage) {
+        dataPackage.restore();
+        return "Undeleted " + dataPackage.getName();
+    }
+}
+// File: Cli.java
+public class Cli {
+    private final Registry registry;
+    private final DataPackageClient client;
+    private User currentUser;
+
+    public Cli(Registry registry, DataPackageClient client) {
+        this.registry = registry;
+        this.client = client;
+    }
+
+    public void setCurrentUser(User currentUser) {
+        this.currentUser = currentUser;
+    }
+
+    public String execute(String commandLine) {
+        if (commandLine == null || commandLine.trim().isEmpty()) {
+            return "";
+        }
+        String[] parts = commandLine.trim().split("\\s+");
+        String command = parts[0].toLowerCase();
+
+        switch (command) {
+            case "config":
+                if (parts.length >= 2) {
+                    client.configure(new ClientConfig(parts[1]));
+                    return "Configured client for " + parts[1];
+                }
+                return "Usage: config <registryUrl>";
+            case "import":
+                if (parts.length >= 2) {
+                    DataPackage dataPackage = registry.getPackage(parts[1]);
+                    return dataPackage != null
+                            ? "Imported package " + parts[1]
+                            : "Package not found: " + parts[1];
+                }
+                return "Usage: import <packageName>";
+            case "publish":
+                if (parts.length >= 3) {
+                    DataPackage dataPackage = registry.getPackage(parts[1]);
+                    if (dataPackage == null) {
+                        return "Package not found: " + parts[1];
+                    }
+                    return client.publish(dataPackage, parts[2]);
+                }
+                return "Usage: publish <packageName> <version>";
+            case "unpublish":
+                if (parts.length >= 2) {
+                    DataPackage dataPackage = registry.getPackage(parts[1]);
+                    if (dataPackage != null) {
+                        dataPackage.unpublish();
+                        return "Unpublished " + dataPackage.getName();
+                    }
+                }
+                return "Package not found";
+            case "delete":
+                if (parts.length >= 2) {
+                    DataPackage dataPackage = registry.getPackage(parts[1]);
+                    if (dataPackage != null) {
+                        dataPackage.deletePermanently();
+                        return "Deleted " + dataPackage.getName();
+                    }
+                }
+                return "Package not found";
+            case "restore":
+                if (parts.length >= 2) {
+                    DataPackage dataPackage = registry.getPackage(parts[1]);
+                    if (dataPackage != null) {
+                        dataPackage.restore();
+                        return "Restored " + dataPackage.getName();
+                    }
+                }
+                return "Package not found";
+            case "undelete":
+                if (parts.length >= 2) {
+                    DataPackage dataPackage = registry.getPackage(parts[1]);
+                    if (dataPackage != null) {
+                        dataPackage.restore();
+                        return "Undeleted " + dataPackage.getName();
+                    }
+                }
+                return "Package not found";
+            case "preview":
+                if (parts.length >= 2) {
+                    DataPackage dataPackage = registry.getPackage(parts[1]);
+                    if (dataPackage != null) {
+                        return client.preview(dataPackage);
+                    }
+                }
+                return "Package not found";
+            case "search":
+                if (parts.length >= 2) {
+                    StringBuilder query = new StringBuilder();
+                    for (int i = 1; i < parts.length; i++) {
+                        if (i > 1) {
+                            query.append(" ");
+                        }
+                        query.append(parts[i]);
+                    }
+                    return "Found: " + registry.searchPackages(query.toString()).size() + " packages";
+                }
+                return "Usage: search <query>";
+            case "download":
+                if (parts.length >= 3) {
+                    DataPackage dataPackage = registry.getPackage(parts[1]);
+                    if (dataPackage != null) {
+                        DownloadService downloadService = new DownloadService(registry.getMetrics());
+                        return "Downloaded zip size: " + downloadService.downloadZip(dataPackage, parts[2]).length + " bytes";
+                    }
+                }
+                return "Usage: download <packageName> <version>";
+            case "tag":
+                if (parts.length >= 4) {
+                    DataPackage dataPackage = registry.getPackage(parts[1]);
+                    if (dataPackage != null) {
+                        return dataPackage.tag(parts[2], parts[3], false);
+                    }
+                }
+                return "Usage: tag <packageName> <tag> <version>";
+            default:
+                return "Unknown command: " + command;
+        }
+    }
+}
+// File: Ui.java
+import java.util.Map;
+
+public class Ui {
+    private final Registry registry;
+
+    public Ui(Registry registry) {
+        this.registry = registry;
+    }
+
+    public DataPackage createDataPackage(Publisher publisher, String name, String title,
+                                         String description, String version,
+                                         String descriptorJson, Map<String, Resource> resources) {
+        return registry.importDataPackage(publisher, name, title, description, version, descriptorJson, resources);
+    }
+
+    public String publishDataPackage(DataPackage dataPackage, String version) {
+        PackageVersion packageVersion = dataPackage.getVersion(version);
+        if (packageVersion == null) {
+            return "Version not found: " + version;
+        }
+        registry.publishPackage(dataPackage, packageVersion);
+        return "Published from UI: " + dataPackage.getName() + " version " + version;
+    }
+
+    public String viewPackage(DataPackage dataPackage, String version, User viewer) {
+        if (!dataPackage.isVisibleTo(viewer)) {
+            return "Not visible to this user";
+        }
+        PackageVersion packageVersion = dataPackage.getVersion(version);
+        if (packageVersion == null) {
+            return "Version not found: " + version;
+        }
+        return "Title: " + dataPackage.getTitle()
+                + "\nDescription: " + dataPackage.getDescription()
+                + "\nVersion: " + version
+                + "\nDownloads: " + dataPackage.getDownloads()
+                + "\nView: " + dataPackage.getViewJson();
+    }
+
+    public String previewDataPackage(DataPackage dataPackage) {
+        return "UI Preview: " + dataPackage.getViewJson();
+    }
+}
+// File: DownloadService.java
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+public class DownloadService {
+    private final Metrics metrics;
+
+    public DownloadService(Metrics metrics) {
+        this.metrics = metrics;
+    }
+
+    public byte[] downloadZip(DataPackage dataPackage, String version) {
+        PackageVersion packageVersion = dataPackage.getVersion(version);
+        if (packageVersion == null) {
+            return new byte[0];
+        }
+        dataPackage.incrementDownloads();
+        metrics.incrementDownloads();
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ZipOutputStream zos = new ZipOutputStream(baos)) {
+            zos.putNextEntry(new ZipEntry("descriptor.json"));
+            String descriptor = packageVersion.getDescriptorJson();
+            zos.write(descriptor == null ? new byte[0] : descriptor.getBytes());
+            zos.closeEntry();
+
+            for (Resource resource : packageVersion.getResources()) {
+                zos.putNextEntry(new ZipEntry(resource.getName()));
+                String content = resource.getContent();
+                zos.write(content == null ? new byte[0] : content.getBytes());
+                zos.closeEntry();
+            }
+
+            zos.finish();
+            return baos.toByteArray();
+        } catch (IOException e) {
+            return new byte[0];
+        }
+    }
+
+    public String downloadVersion(DataPackage dataPackage, String version) {
+        PackageVersion packageVersion = dataPackage.getVersion(version);
+        if (packageVersion == null) {
+            return "Version not found: " + version;
+        }
+        dataPackage.incrementDownloads();
+        metrics.incrementDownloads();
+        return "Downloaded " + dataPackage.getName() + " version " + version;
+    }
+
+    public String updatePreviouslyDownloaded(DataPackage dataPackage, String version) {
+        dataPackage.incrementDownloads();
+        metrics.incrementDownloads();
+        return "Updated local copy of " + dataPackage.getName() + " to version " + version;
+    }
+
+    public String downloadAsSQLite(DataPackage dataPackage, String version) {
+        return new SQLiteExportService().export(dataPackage, version);
+    }
+}
+// File: SQLiteExportService.java
+public class SQLiteExportService {
+    public String export(DataPackage dataPackage, String version) {
+        PackageVersion packageVersion = dataPackage.getVersion(version);
+        if (packageVersion == null) {
+            return "Version not found: " + version;
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append("-- SQLite export for ")
+                .append(dataPackage.getName())
+                .append(" ")
+                .append(version)
+                .append("\n");
+        for (Resource resource : packageVersion.getResources()) {
+            String table = resource.getName().replaceAll("\\W", "_");
+            String content = resource.getContent() == null ? "" : resource.getContent().replace("'", "''");
+            builder.append("CREATE TABLE ").append(table).append(" (data TEXT);\n");
+            builder.append("INSERT INTO ").append(table).append(" VALUES ('").append(content).append("');\n");
+        }
+        return builder.toString();
+    }
+}
+// File: SchemaDiff.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class SchemaDiff {
+    private final List<String> added = new ArrayList<>();
+    private final List<String> removed = new ArrayList<>();
+    private final List<String> changed = new ArrayList<>();
+    private String descriptorDiff = "";
+
+    public void addAdded(String name) {
+        added.add(name);
+    }
+
+    public void addRemoved(String name) {
+        removed.add(name);
+    }
+
+    public void addChanged(String name) {
+        changed.add(name);
+    }
+
+    public void setDescriptorDiff(String descriptorDiff) {
+        this.descriptorDiff = descriptorDiff;
+    }
+
+    public List<String> getAdded() {
+        return added;
+    }
+
+    public List<String> getRemoved() {
+        return removed;
+    }
+
+    public List<String> getChanged() {
+        return changed;
+    }
+
+    public String getDescriptorDiff() {
+        return descriptorDiff;
+    }
+
+    public String report() {
+        return "Added: " + added + ", Removed: " + removed + ", Changed: " + changed
+                + ", Descriptor: " + descriptorDiff;
+    }
+}
+// File: VersionDiffService.java
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+
+public class VersionDiffService {
+    public SchemaDiff compare(PackageVersion v1, PackageVersion v2) {
+        SchemaDiff diff = new SchemaDiff();
+        Set<String> names1 = new HashSet<>();
+        for (Resource resource : v1.getResources()) {
+            names1.add(resource.getName());
+        }
+        Set<String> names2 = new HashSet<>();
+        for (Resource resource : v2.getResources()) {
+            names2.add(resource.getName());
+        }
+        for (String name : names2) {
+            if (!names1.contains(name)) {
+                diff.addAdded(name);
+            }
+        }
+        for (String name : names1) {
+            if (!names2.contains(name)) {
+                diff.addRemoved(name);
+            }
+        }
+        for (String name : names1) {
+            if (names2.contains(name)) {
+                Resource r1 = v1.getResource(name);
+                Resource r2 = v2.getResource(name);
+                if (!Objects.equals(r1.getChecksum(), r2.getChecksum())) {
+                    diff.addChanged(name);
+                }
+            }
+        }
+        diff.setDescriptorDiff("v1: " + v1.getDescriptorJson() + " -> v2: " + v2.getDescriptorJson());
+        return diff;
+    }
+}
+// File: NpmPackage.java
+public class NpmPackage {
+    private final DataPackage dataPackage;
+    private final String version;
+
+    public NpmPackage(DataPackage dataPackage, String version) {
+        this.dataPackage = dataPackage;
+        this.version = version;
+    }
+
+    public String toPackageJson() {
+        return "{\"name\":\"" + dataPackage.getName()
+                + "\",\"version\":\"" + version
+                + "\",\"description\":\"" + dataPackage.getDescription() + "\"}";
+    }
+}
+// File: RLoader.java
+public class RLoader {
+    public String loadDataPackage(DataPackage dataPackage, String version) {
+        PackageVersion packageVersion = dataPackage.getVersion(version);
+        if (packageVersion == null) {
+            return "Version not found: " + version;
+        }
+        return "library(datapackage)\n"
+                + "dp <- read_datapackage('" + dataPackage.getName() + "', version='" + version + "')\n"
+                + "# resources: " + packageVersion.getResources().size();
+    }
+}
+// File: LocalInstaller.java
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class LocalInstaller {
+    private final Map<String, Map<String, String>> installed = new LinkedHashMap<>();
+
+    public String install(DataPackage dataPackage, String version) {
+        installed.computeIfAbsent(dataPackage.getName(), k -> new LinkedHashMap<>())
+                .put(version, "/local/packages/" + dataPackage.getName() + "/" + version);
+        return installed.get(dataPackage.getName()).get(version);
+    }
+
+    public Map<String, String> getInstalledVersions(DataPackage dataPackage) {
+        return installed.getOrDefault(dataPackage.getName(), Collections.emptyMap());
+    }
+}
+// File: RequirementsFile.java
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class RequirementsFile {
+    private final Map<String, String> requirements = new LinkedHashMap<>();
+
+    public void addRequirement(String packageName, String version) {
+        requirements.put(packageName, version);
+    }
+
+    public String toFileContent() {
+        StringBuilder builder = new StringBuilder();
+        for (Map.Entry<String, String> entry : requirements.entrySet()) {
+            builder.append(entry.getKey()).append("==").append(entry.getValue()).append("\n");
+        }
+        return builder.toString();
+    }
+
+    public void parse(String content) {
+        for (String line : content.split("\n")) {
+            line = line.trim();
+            if (line.isEmpty() || line.startsWith("#")) {
+                continue;
+            }
+            String[] parts = line.split("==");
+            if (parts.length == 2) {
+                requirements.put(parts[0].trim(), parts[1].trim());
+            }
+        }
+    }
+
+    public Map<String, String> getRequirements() {
+        return new LinkedHashMap<>(requirements);
+    }
+}
+// File: AuthService.java
+public class AuthService {
+    private final Registry registry;
+
+    public AuthService(Registry registry) {
+        this.registry = registry;
+    }
+
+    public User signupViaGithub(String name, String email) {
+        return registry.signupWithProvider(AuthProvider.GITHUB, name, email);
+    }
+
+    public User signupViaGoogle(String name, String email) {
+        return registry.signupWithProvider(AuthProvider.GOOGLE, name, email);
+    }
+
+    public User signupWithPassword(String name, String email, String password) {
+        User user = registry.signup(name, email, AuthProvider.PASSWORD);
+        user.setPassword(password);
+        return user;
+    }
+}
+// File: Main.java
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class Main {
+    public static void main(String[] args) {
+        Registry registry = new Registry();
+        AuthService auth = new AuthService(registry);
+
+        User admin = auth.signupViaGithub("Admin Alice", "alice@example.com");
+        registry.getConfig().setSiteTitle("Open Data Registry");
+        registry.getConfig().setAdminEmail(admin.getEmail());
+
+        User publisherUser = auth.signupViaGoogle("Bob Publisher", "bob@example.com");
+        Publisher publisher = registry.createPublisher("Acme Data", "acme-data",
+                "Publishing useful public data", publisherUser);
+        System.out.println(registry.nextSteps(publisherUser));
+
+        registry.inviteUser(publisher, "carol@example.com", Role.MEMBER);
+        User carol = registry.acceptInvite("carol@example.com", "Carol Member", AuthProvider.GITHUB);
+        System.out.println("Members: " + publisher.getMembersWithRoles());
+
+        DataPackageClient client = new DataPackageClient(registry);
+        client.configure(new ClientConfig("https://registry.example.com"));
+        client.setCurrentPublisher(publisher);
+
+        Resource csv = new Resource("data.csv", "https://acme.example.com/data.csv");
+        csv.setContent("id,name\n1,Alice\n2,Bob");
+        csv.computeChecksum();
+
+        Map<String, Resource> resources = new LinkedHashMap<>();
+        resources.put(csv.getName(), csv);
+
+        DataPackage dataPackage = client.importPackage("sales-data", "Sales Data",
+                "Monthly sales figures for Acme", "1.0.0",
+                "{\"name\":\"sales-data\",\"resources\":[\"data.csv\"]}", resources);
+        dataPackage.setViewJson("{\"type\":\"table\",\"resource\":\"data.csv\"}");
+
+        System.out.println(client.validate(dataPackage, "1.0.0"));
+        System.out.println(client.publish(dataPackage, "1.0.0"));
+
+        System.out.println(dataPackage.tag("v1", "1.0.0", false));
+        System.out.println(dataPackage.tag("v1", "1.0.0", false));
+
+        System.out.println("Search results: " + registry.searchPackages("sales").size());
+        System.out.println("Description search: " + registry.searchByDescription("monthly").size());
+
+        DownloadService downloadService = new DownloadService(registry.getMetrics());
+        byte[] zip = downloadService.downloadZip(dataPackage, "1.0.0");
+        System.out.println("Zip bytes: " + zip.length);
+        System.out.println(downloadService.downloadAsSQLite(dataPackage, "1.0.0"));
+
+        Resource csv2 = new Resource("data.csv", "https://acme.example.com/data.csv");
+        csv2.setContent("id,name,amount\n1,Alice,100\n2,Bob,200");
+        csv2.computeChecksum();
+
+        PackageVersion v2 = new PackageVersion("1.1.0",
+                "{\"name\":\"sales-data\",\"resources\":[\"data.csv\"]}");
+        v2.addResource(csv2);
+        dataPackage.addVersion(v2);
+        System.out.println(client.publish(dataPackage, "1.1.0"));
+
+        VersionDiffService diffService = new VersionDiffService();
+        SchemaDiff diff = diffService.compare(dataPackage.getVersion("1.0.0"), dataPackage.getVersion("1.1.0"));
+        System.out.println(diff.report());
+
+        registry.getNotificationService().subscribe(carol, dataPackage);
+        registry.getNotificationService().notifyPackageChanged(dataPackage, "sales-data changed to 1.1.0");
+        System.out.println("Carol notifications: " + registry.getNotificationService().getNotifications(carol).size());
+
+        DataPackage privatePackage = registry.importDataPackage(publisher, "internal-report",
+                "Internal Report", "Private report", "0.1.0",
+                "{\"name\":\"internal-report\"}", new LinkedHashMap<>());
+        privatePackage.setVisibility(Visibility.PRIVATE);
+        privatePackage.shareWith(carol);
+        privatePackage.publish();
+        System.out.println("Private visible to Carol: " + privatePackage.isVisibleTo(carol));
+        System.out.println("Private visible to admin: " + privatePackage.isVisibleTo(admin));
+
+        Cli cli = new Cli(registry, client);
+        cli.setCurrentUser(publisherUser);
+        System.out.println(cli.execute("unpublish sales-data"));
+        System.out.println(cli.execute("delete sales-data"));
+        System.out.println(cli.execute("restore sales-data"));
+        System.out.println(cli.execute("preview sales-data"));
+
+        Ui ui = new Ui(registry);
+        System.out.println(ui.viewPackage(dataPackage, "1.1.0", carol));
+
+        PricingPlan plan = registry.getBillingSystem().subscribe(publisher, PlanType.PRO);
+        System.out.println("Plan: " + plan.getName() + " $" + plan.getPrice());
+        System.out.println("Plans: " + registry.getBillingSystem().listPlans().size());
+
+        System.out.println(registry.getMetrics().getReport());
+
+        NpmPackage npm = new NpmPackage(dataPackage, "1.1.0");
+        System.out.println(npm.toPackageJson());
+
+        RLoader rLoader = new RLoader();
+        System.out.println(rLoader.loadDataPackage(dataPackage, "1.1.0"));
+
+        LocalInstaller installer = new LocalInstaller();
+        System.out.println(installer.install(dataPackage, "1.0.0"));
+
+        RequirementsFile requirementsFile = new RequirementsFile();
+        requirementsFile.addRequirement("sales-data", "1.1.0");
+        System.out.println(requirementsFile.toFileContent());
+    }
+}

@@ -1,0 +1,2514 @@
+// File: Role.java
+public enum Role {
+    PATRON,
+    STAFF,
+    LOCAL_SYSTEM_ADMINISTRATOR,
+    LIBRARY_MANAGER,
+    LIBRARY_DIRECTOR,
+    GLOBAL_SYSTEM_ADMINISTRATOR
+}
+
+// File: Permission.java
+public enum Permission {
+    CREATE_REPORT_TEMPLATE,
+    CLONE_REPORT_TEMPLATE,
+    MODIFY_REPORT_TEMPLATE,
+    RUN_REPORT,
+    RUN_ADHOC_QUERY,
+    MANAGE_REPORT_PERMISSIONS,
+    MANAGE_REPORT_FOLDERS,
+    VIEW_FINANCIAL_DATA,
+    MANAGE_FINANCIAL_DATA,
+    PURGE_ITEMS,
+    TRANSFER_ITEMS,
+    VIEW_DEMOGRAPHICS,
+    MANAGE_TRANSACTIONS,
+    MANAGE_PATRONS,
+    MANAGE_ITEMS,
+    ADMINISTER_SYSTEM
+}
+
+// File: PatronType.java
+public enum PatronType {
+    CHILD,
+    TEEN,
+    ADULT,
+    SENIOR,
+    STAFF,
+    OTHER
+}
+
+// File: HoldType.java
+public enum HoldType {
+    ACTIVE,
+    FROZEN,
+    FROZEN_UNTIL
+}
+
+// File: HoldPlacement.java
+public enum HoldPlacement {
+    STAFF_DESK,
+    PUBLIC_COMPUTER,
+    REMOTE
+}
+
+// File: CheckoutType.java
+public enum CheckoutType {
+    STAFF_CHECKOUT,
+    SELF_CHECKOUT,
+    STAFF_RENEWAL,
+    SELF_CHECKOUT_RENEWAL,
+    ONLINE_RENEWAL,
+    OPAC_RENEWAL
+}
+
+// File: CheckinType.java
+public enum CheckinType {
+    BOOK_DROP,
+    BY_TERMINAL,
+    BY_USER,
+    SELF_SERVICE
+}
+
+// File: TransactionType.java
+public enum TransactionType {
+    CHECK_OUT,
+    CHECK_IN,
+    RENEWAL,
+    HOLD_PLACED,
+    HOLD_FILLED,
+    FINE_COLLECTED,
+    PATRON_REGISTRATION,
+    PAYMENT,
+    WAIVER,
+    DELETION,
+    TRANSFER,
+    OTHER
+}
+
+// File: PaymentMethod.java
+public enum PaymentMethod {
+    CASH,
+    CHECK,
+    CREDIT_CARD,
+    DEBIT_CARD,
+    ONLINE,
+    STAFF_DESK,
+    SELF_CHECK,
+    OPAC
+}
+
+// File: ItemStatus.java
+public enum ItemStatus {
+    AVAILABLE,
+    CHECKED_OUT,
+    IN_TRANSIT,
+    MISSING,
+    DAMAGED,
+    DISCARD_WEED,
+    LONG_OVERDUE,
+    LOST
+}
+
+// File: ReportStatus.java
+public enum ReportStatus {
+    QUEUED,
+    RUNNING,
+    COMPLETED,
+    FAILED
+}
+
+// File: QueryOperator.java
+public enum QueryOperator {
+    EQUALS,
+    NOT_EQUALS,
+    CONTAINS,
+    STARTS_WITH,
+    REGEX,
+    GREATER_THAN,
+    LESS_THAN,
+    GREATER_OR_EQUAL,
+    LESS_OR_EQUAL
+}
+
+// File: BooleanOperator.java
+public enum BooleanOperator {
+    AND,
+    OR
+}
+
+// File: PredefinedReportType.java
+public enum PredefinedReportType {
+    BIBLIOGRAPHIC_RECORDS_WITH_HOLDS,
+    ITEMS_NOT_CHECKED_OUT_IN_X_DAYS,
+    ITEM_LEVEL_HOLDS,
+    ITEMS_WITH_INVALID_ITEM_TYPE,
+    IN_TRANSIT_ITEMS_WITH_OUTSTANDING_HOLD,
+    IN_TRANSIT_ITEMS_MORE_THAN_X_DAYS,
+    LAST_COPY_IN_SYSTEM,
+    ITEMS_WITH_LONG_CALL_NUMBER,
+    MISSING_ITEMS,
+    BIBLIOGRAPHIC_RECORDS_WITH_NO_ITEM_RECORDS,
+    PATRONS_WITH_INVALID_HOME_LIBRARY
+}
+
+// File: Person.java
+public abstract class Person {
+    private final String id;
+    private String name;
+
+    public Person(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+}
+
+// File: Patron.java
+import java.time.LocalDate;
+
+public class Patron extends Person {
+    private final boolean hasLibraryCard;
+    private final String ageRange;
+    private final String zipCode;
+    private final String countyOfResidence;
+    private final LibraryBranch homeBranch;
+    private final PatronType patronType;
+    private final String preferredLanguage;
+    private boolean active;
+    private LocalDate lastActivityDate;
+
+    public Patron(String id, String name, boolean hasLibraryCard, String ageRange, String zipCode,
+                  String countyOfResidence, LibraryBranch homeBranch, PatronType patronType,
+                  String preferredLanguage) {
+        super(id, name);
+        this.hasLibraryCard = hasLibraryCard;
+        this.ageRange = ageRange;
+        this.zipCode = zipCode;
+        this.countyOfResidence = countyOfResidence;
+        this.homeBranch = homeBranch;
+        this.patronType = patronType;
+        this.preferredLanguage = preferredLanguage;
+        this.active = true;
+    }
+
+    public boolean hasLibraryCard() {
+        return hasLibraryCard;
+    }
+
+    public String getAgeRange() {
+        return ageRange;
+    }
+
+    public String getZipCode() {
+        return zipCode;
+    }
+
+    public String getCountyOfResidence() {
+        return countyOfResidence;
+    }
+
+    public LibraryBranch getHomeBranch() {
+        return homeBranch;
+    }
+
+    public PatronType getPatronType() {
+        return patronType;
+    }
+
+    public String getPreferredLanguage() {
+        return preferredLanguage;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public LocalDate getLastActivityDate() {
+        return lastActivityDate;
+    }
+
+    public void setLastActivityDate(LocalDate lastActivityDate) {
+        this.lastActivityDate = lastActivityDate;
+    }
+
+    public void recordActivity(LocalDate date) {
+        this.lastActivityDate = date;
+    }
+}
+
+// File: Staff.java
+public class Staff extends Person {
+    private final Role role;
+    private final String username;
+    private final String password;
+    private final String cardNumber;
+    private LibraryBranch assignedBranch;
+
+    public Staff(String id, String name, Role role, String username, String password,
+                 String cardNumber, LibraryBranch assignedBranch) {
+        super(id, name);
+        this.role = role;
+        this.username = username;
+        this.password = password;
+        this.cardNumber = cardNumber;
+        this.assignedBranch = assignedBranch;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getCardNumber() {
+        return cardNumber;
+    }
+
+    public LibraryBranch getAssignedBranch() {
+        return assignedBranch;
+    }
+
+    public void setAssignedBranch(LibraryBranch assignedBranch) {
+        this.assignedBranch = assignedBranch;
+    }
+}
+
+// File: LocalSystemAdministrator.java
+public class LocalSystemAdministrator extends Staff {
+    public LocalSystemAdministrator(String id, String name, String username, String password,
+                                    String cardNumber, LibraryBranch assignedBranch) {
+        super(id, name, Role.LOCAL_SYSTEM_ADMINISTRATOR, username, password, cardNumber, assignedBranch);
+    }
+}
+
+// File: LibraryManager.java
+public class LibraryManager extends Staff {
+    private final String unit;
+
+    public LibraryManager(String id, String name, String username, String password,
+                          String cardNumber, LibraryBranch assignedBranch, String unit) {
+        super(id, name, Role.LIBRARY_MANAGER, username, password, cardNumber, assignedBranch);
+        this.unit = unit;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+}
+
+// File: LibraryDirector.java
+public class LibraryDirector extends Staff {
+    private final String executiveArea;
+
+    public LibraryDirector(String id, String name, String username, String password,
+                           String cardNumber, LibraryBranch assignedBranch, String executiveArea) {
+        super(id, name, Role.LIBRARY_DIRECTOR, username, password, cardNumber, assignedBranch);
+        this.executiveArea = executiveArea;
+    }
+
+    public String getExecutiveArea() {
+        return executiveArea;
+    }
+}
+
+// File: GlobalSystemAdministrator.java
+public class GlobalSystemAdministrator extends Staff {
+    public GlobalSystemAdministrator(String id, String name, String username, String password,
+                                     String cardNumber, LibraryBranch assignedBranch) {
+        super(id, name, Role.GLOBAL_SYSTEM_ADMINISTRATOR, username, password, cardNumber, assignedBranch);
+    }
+}
+
+// File: LibraryBranch.java
+public class LibraryBranch {
+    private final String id;
+    private final String name;
+    private final String county;
+    private final String systemName;
+    private final int capacity;
+
+    public LibraryBranch(String id, String name, String county, String systemName, int capacity) {
+        this.id = id;
+        this.name = name;
+        this.county = county;
+        this.systemName = systemName;
+        this.capacity = capacity;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getCounty() {
+        return county;
+    }
+
+    public String getSystemName() {
+        return systemName;
+    }
+
+    public int getCapacity() {
+        return capacity;
+    }
+}
+
+// File: LibrarySystem.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class LibrarySystem {
+    private final String name;
+    private final List<LibraryBranch> branches;
+
+    public LibrarySystem(String name) {
+        this.name = name;
+        this.branches = new ArrayList<>();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public List<LibraryBranch> getBranches() {
+        return branches;
+    }
+
+    public void addBranch(LibraryBranch branch) {
+        branches.add(branch);
+    }
+}
+
+// File: PermissionManager.java
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
+public class PermissionManager {
+    private final Map<Role, Set<Permission>> rolePermissions;
+    private final Map<String, Set<Permission>> userPermissions;
+
+    public PermissionManager() {
+        this.rolePermissions = new EnumMap<>(Role.class);
+        for (Role role : Role.values()) {
+            rolePermissions.put(role, EnumSet.noneOf(Permission.class));
+        }
+        this.userPermissions = new HashMap<>();
+    }
+
+    public void grant(Role role, Permission permission) {
+        rolePermissions.get(role).add(permission);
+    }
+
+    public void grantAll(Role role, Permission... permissions) {
+        for (Permission permission : permissions) {
+            rolePermissions.get(role).add(permission);
+        }
+    }
+
+    public void revoke(Role role, Permission permission) {
+        rolePermissions.get(role).remove(permission);
+    }
+
+    public void grant(String userId, Permission permission) {
+        userPermissions.computeIfAbsent(userId, key -> EnumSet.noneOf(Permission.class)).add(permission);
+    }
+
+    public void revoke(String userId, Permission permission) {
+        Set<Permission> permissions = userPermissions.get(userId);
+        if (permissions != null) {
+            permissions.remove(permission);
+        }
+    }
+
+    public boolean can(Staff staff, Permission permission) {
+        Set<Permission> permissions = userPermissions.get(staff.getId());
+        if (permissions != null && permissions.contains(permission)) {
+            return true;
+        }
+        return rolePermissions.getOrDefault(staff.getRole(), Set.of()).contains(permission);
+    }
+}
+
+// File: StaffLoginService.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class StaffLoginService {
+    private final Map<String, Staff> byCardNumber;
+    private final Map<String, Staff> byUsername;
+
+    public StaffLoginService() {
+        this.byCardNumber = new HashMap<>();
+        this.byUsername = new HashMap<>();
+    }
+
+    public void register(Staff staff) {
+        byCardNumber.put(staff.getCardNumber(), staff);
+        byUsername.put(staff.getUsername(), staff);
+    }
+
+    public Staff loginByCard(String cardNumber) {
+        Staff staff = byCardNumber.get(cardNumber);
+        if (staff == null) {
+            throw new SecurityException("Unknown staff card");
+        }
+        return staff;
+    }
+
+    public Staff loginByPassword(String username, String password) {
+        Staff staff = byUsername.get(username);
+        if (staff == null || !staff.getPassword().equals(password)) {
+            throw new SecurityException("Invalid staff credentials");
+        }
+        return staff;
+    }
+}
+
+// File: ReportConfig.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ReportConfig {
+    private final List<String> displayFields;
+    private final Map<String, String> filters;
+    private final boolean includeDeleted;
+    private final String queryDescription;
+
+    public ReportConfig(List<String> displayFields, Map<String, String> filters,
+                        boolean includeDeleted, String queryDescription) {
+        this.displayFields = new ArrayList<>(displayFields);
+        this.filters = new LinkedHashMap<>(filters);
+        this.includeDeleted = includeDeleted;
+        this.queryDescription = queryDescription;
+    }
+
+    public List<String> getDisplayFields() {
+        return new ArrayList<>(displayFields);
+    }
+
+    public Map<String, String> getFilters() {
+        return new LinkedHashMap<>(filters);
+    }
+
+    public boolean isIncludeDeleted() {
+        return includeDeleted;
+    }
+
+    public String getQueryDescription() {
+        return queryDescription;
+    }
+}
+
+// File: ReportTemplate.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class ReportTemplate {
+    private final String name;
+    private final List<String> baseFields;
+    private final Map<String, String> baseFilters;
+    private final Set<String> lockedFields;
+    private final Set<String> lockedFilters;
+    private final Set<String> allowedFields;
+    private final Set<String> allowedFilters;
+    private final boolean baseIncludeDeleted;
+
+    public ReportTemplate(String name, List<String> baseFields, Map<String, String> baseFilters,
+                          Set<String> lockedFields, Set<String> lockedFilters,
+                          Set<String> allowedFields, Set<String> allowedFilters,
+                          boolean baseIncludeDeleted) {
+        this.name = name;
+        this.baseFields = new ArrayList<>(baseFields);
+        this.baseFilters = new LinkedHashMap<>(baseFilters);
+        this.lockedFields = Set.copyOf(lockedFields);
+        this.lockedFilters = Set.copyOf(lockedFilters);
+        this.allowedFields = Set.copyOf(allowedFields);
+        this.allowedFilters = Set.copyOf(allowedFilters);
+        this.baseIncludeDeleted = baseIncludeDeleted;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public ReportConfig createConfig(List<String> requestedFields, Map<String, String> requestedFilters,
+                                     boolean requestedIncludeDeleted) {
+        List<String> fields = new ArrayList<>(baseFields);
+        for (String field : requestedFields) {
+            if (allowedFields.contains(field) && !lockedFields.contains(field) && !fields.contains(field)) {
+                fields.add(field);
+            }
+        }
+
+        Map<String, String> filters = new LinkedHashMap<>(baseFilters);
+        for (Map.Entry<String, String> entry : requestedFilters.entrySet()) {
+            String key = entry.getKey();
+            if (lockedFilters.contains(key)) {
+                continue;
+            }
+            if (allowedFilters.contains(key)) {
+                filters.put(key, entry.getValue());
+            }
+        }
+
+        boolean includeDeleted = baseIncludeDeleted;
+        if (!lockedFilters.contains("deletedItems")) {
+            includeDeleted = requestedIncludeDeleted;
+        }
+
+        return new ReportConfig(fields, filters, includeDeleted, "template:" + name);
+    }
+
+    public ReportTemplate cloneAs(String newName) {
+        return new ReportTemplate(newName, baseFields, baseFilters, lockedFields, lockedFilters,
+                allowedFields, allowedFilters, baseIncludeDeleted);
+    }
+
+    public Set<String> getLockedFilters() {
+        return lockedFilters;
+    }
+
+    public Set<String> getLockedFields() {
+        return lockedFields;
+    }
+}
+
+// File: ReportTemplateManager.java
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ReportTemplateManager {
+    private final Map<String, ReportTemplate> templates;
+
+    public ReportTemplateManager() {
+        this.templates = new LinkedHashMap<>();
+    }
+
+    public void createTemplate(Staff staff, PermissionManager permissionManager, ReportTemplate template) {
+        if (!permissionManager.can(staff, Permission.CREATE_REPORT_TEMPLATE)) {
+            throw new SecurityException("Staff cannot create report templates");
+        }
+        templates.put(template.getName(), template);
+    }
+
+    public void cloneTemplate(Staff staff, PermissionManager permissionManager, String name, String newName) {
+        if (!permissionManager.can(staff, Permission.CLONE_REPORT_TEMPLATE)) {
+            throw new SecurityException("Staff cannot clone report templates");
+        }
+        ReportTemplate template = templates.get(name);
+        if (template == null) {
+            throw new IllegalArgumentException("Unknown template");
+        }
+        templates.put(newName, template.cloneAs(newName));
+    }
+
+    public ReportTemplate get(String name) {
+        return templates.get(name);
+    }
+
+    public Collection<ReportTemplate> listTemplates() {
+        return templates.values();
+    }
+
+    public ReportConfig createConfig(String templateName, List<String> requestedFields,
+                                     Map<String, String> requestedFilters, boolean requestedIncludeDeleted) {
+        ReportTemplate template = templates.get(templateName);
+        if (template == null) {
+            throw new IllegalArgumentException("Unknown template");
+        }
+        return template.createConfig(requestedFields, requestedFilters, requestedIncludeDeleted);
+    }
+}
+
+// File: ReportFolder.java
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+public class ReportFolder {
+    private final String name;
+    private final Set<String> reportNames;
+    private final Set<Role> allowedRoles;
+    private final Set<String> allowedStaffIds;
+
+    public ReportFolder(String name) {
+        this.name = name;
+        this.reportNames = new LinkedHashSet<>();
+        this.allowedRoles = EnumSet.noneOf(Role.class);
+        this.allowedStaffIds = new HashSet<>();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void addReport(String reportName) {
+        reportNames.add(reportName);
+    }
+
+    public Set<String> getReportNames() {
+        return new LinkedHashSet<>(reportNames);
+    }
+
+    public void allowRole(Role role) {
+        allowedRoles.add(role);
+    }
+
+    public void allowStaff(String staffId) {
+        allowedStaffIds.add(staffId);
+    }
+
+    public boolean canAccess(Staff staff) {
+        return allowedStaffIds.contains(staff.getId()) || allowedRoles.contains(staff.getRole());
+    }
+}
+
+// File: ReportJob.java
+import java.time.LocalDateTime;
+
+public class ReportJob {
+    private final String id;
+    private final String templateName;
+    private final ReportConfig config;
+    private final String requesterId;
+    private final LocalDateTime createdAt;
+    private ReportStatus status;
+    private LocalDateTime startedAt;
+    private LocalDateTime completedAt;
+    private ReportResult result;
+
+    public ReportJob(String id, String templateName, ReportConfig config, String requesterId) {
+        this.id = id;
+        this.templateName = templateName;
+        this.config = config;
+        this.requesterId = requesterId;
+        this.createdAt = LocalDateTime.now();
+        this.status = ReportStatus.QUEUED;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTemplateName() {
+        return templateName;
+    }
+
+    public ReportConfig getConfig() {
+        return config;
+    }
+
+    public String getRequesterId() {
+        return requesterId;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public ReportStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ReportStatus status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getStartedAt() {
+        return startedAt;
+    }
+
+    public void setStartedAt(LocalDateTime startedAt) {
+        this.startedAt = startedAt;
+    }
+
+    public LocalDateTime getCompletedAt() {
+        return completedAt;
+    }
+
+    public void setCompletedAt(LocalDateTime completedAt) {
+        this.completedAt = completedAt;
+    }
+
+    public ReportResult getResult() {
+        return result;
+    }
+
+    public void setResult(ReportResult result) {
+        this.result = result;
+    }
+}
+
+// File: ReportQueue.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ReportQueue {
+    private final List<ReportJob> jobs;
+
+    public ReportQueue() {
+        this.jobs = new ArrayList<>();
+    }
+
+    public void submit(ReportJob job) {
+        jobs.add(job);
+    }
+
+    public int getPosition(ReportJob job) {
+        int position = 1;
+        for (ReportJob current : jobs) {
+            if (current.getStatus() == ReportStatus.QUEUED) {
+                if (current == job) {
+                    return position;
+                }
+                position++;
+            }
+        }
+        return -1;
+    }
+
+    public ReportJob next() {
+        for (ReportJob job : jobs) {
+            if (job.getStatus() == ReportStatus.QUEUED) {
+                job.setStatus(ReportStatus.RUNNING);
+                job.setStartedAt(LocalDateTime.now());
+                return job;
+            }
+        }
+        return null;
+    }
+
+    public void complete(ReportJob job, ReportResult result) {
+        job.setResult(result);
+        job.setStatus(ReportStatus.COMPLETED);
+        job.setCompletedAt(LocalDateTime.now());
+    }
+
+    public List<ReportJob> getJobs() {
+        return new ArrayList<>(jobs);
+    }
+}
+
+// File: ReportResult.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ReportResult {
+    private final String title;
+    private final List<String> columns;
+    private final List<List<String>> rows;
+    private final Map<String, String> querySelections;
+
+    public ReportResult(String title, List<String> columns, Map<String, String> querySelections) {
+        this.title = title;
+        this.columns = new ArrayList<>(columns);
+        this.rows = new ArrayList<>();
+        this.querySelections = new LinkedHashMap<>(querySelections);
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public List<String> getColumns() {
+        return new ArrayList<>(columns);
+    }
+
+    public List<List<String>> getRows() {
+        return new ArrayList<>(rows);
+    }
+
+    public Map<String, String> getQuerySelections() {
+        return new LinkedHashMap<>(querySelections);
+    }
+
+    public void addRow(String... values) {
+        List<String> row = new ArrayList<>();
+        for (String value : values) {
+            row.add(value);
+        }
+        rows.add(row);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append(title).append('\n');
+        builder.append("Query selections: ").append(querySelections).append('\n');
+        builder.append(String.join(" | ", columns)).append('\n');
+        for (List<String> row : rows) {
+            builder.append(String.join(" | ", row)).append('\n');
+        }
+        return builder.toString();
+    }
+}
+
+// File: QueryCriterion.java
+public class QueryCriterion {
+    private final String field;
+    private final QueryOperator operator;
+    private final String value;
+    private final BooleanOperator booleanOperator;
+
+    public QueryCriterion(String field, QueryOperator operator, String value) {
+        this(field, operator, value, BooleanOperator.AND);
+    }
+
+    public QueryCriterion(String field, QueryOperator operator, String value, BooleanOperator booleanOperator) {
+        this.field = field;
+        this.operator = operator;
+        this.value = value;
+        this.booleanOperator = booleanOperator;
+    }
+
+    public String getField() {
+        return field;
+    }
+
+    public QueryOperator getOperator() {
+        return operator;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public BooleanOperator getBooleanOperator() {
+        return booleanOperator;
+    }
+}
+
+// File: QueryBuilder.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+public class QueryBuilder {
+    private final List<String> selectedFields;
+    private final List<QueryCriterion> criteria;
+    private final Map<String, List<String>> picklists;
+
+    public QueryBuilder() {
+        this.selectedFields = new ArrayList<>();
+        this.criteria = new ArrayList<>();
+        this.picklists = new LinkedHashMap<>();
+    }
+
+    public void selectField(String field) {
+        selectedFields.add(field);
+    }
+
+    public void addCriterion(String field, QueryOperator operator, String value) {
+        criteria.add(new QueryCriterion(field, operator, value));
+    }
+
+    public void addCriterion(String field, QueryOperator operator, String value, BooleanOperator booleanOperator) {
+        criteria.add(new QueryCriterion(field, operator, value, booleanOperator));
+    }
+
+    public void addPicklistValue(String field, String value) {
+        picklists.computeIfAbsent(field, key -> new ArrayList<>()).add(value);
+    }
+
+    public List<String> getPicklistValues(String field) {
+        return new ArrayList<>(picklists.getOrDefault(field, List.of()));
+    }
+
+    public QueryResult execute(List<Map<String, String>> records) {
+        List<Map<String, String>> results = new ArrayList<>();
+        for (Map<String, String> record : records) {
+            if (matches(record)) {
+                results.add(new LinkedHashMap<>(record));
+            }
+        }
+        return new QueryResult(selectedFields, criteria, results);
+    }
+
+    private boolean matches(Map<String, String> record) {
+        boolean overall = true;
+        boolean first = true;
+        for (QueryCriterion criterion : criteria) {
+            boolean current = matchesCriterion(record, criterion);
+            if (first) {
+                overall = current;
+                first = false;
+            } else if (criterion.getBooleanOperator() == BooleanOperator.AND) {
+                overall = overall && current;
+            } else {
+                overall = overall || current;
+            }
+        }
+        return overall;
+    }
+
+    private boolean matchesCriterion(Map<String, String> record, QueryCriterion criterion) {
+        String actual = record.getOrDefault(criterion.getField(), "");
+        String expected = criterion.getValue();
+        switch (criterion.getOperator()) {
+            case EQUALS:
+                return actual.equals(expected);
+            case NOT_EQUALS:
+                return !actual.equals(expected);
+            case CONTAINS:
+                return actual.contains(expected);
+            case STARTS_WITH:
+                return actual.startsWith(expected);
+            case REGEX:
+                return Pattern.compile(expected).matcher(actual).find();
+            case GREATER_THAN:
+                return compareValues(actual, expected) > 0;
+            case LESS_THAN:
+                return compareValues(actual, expected) < 0;
+            case GREATER_OR_EQUAL:
+                return compareValues(actual, expected) >= 0;
+            case LESS_OR_EQUAL:
+                return compareValues(actual, expected) <= 0;
+            default:
+                return false;
+        }
+    }
+
+    private int compareValues(String actual, String expected) {
+        try {
+            return Double.compare(Double.parseDouble(actual), Double.parseDouble(expected));
+        } catch (NumberFormatException exception) {
+            return actual.compareTo(expected);
+        }
+    }
+}
+
+// File: QueryResult.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class QueryResult {
+    private final List<String> selectedFields;
+    private final List<QueryCriterion> criteria;
+    private final List<Map<String, String>> results;
+
+    public QueryResult(List<String> selectedFields, List<QueryCriterion> criteria,
+                       List<Map<String, String>> results) {
+        this.selectedFields = new ArrayList<>(selectedFields);
+        this.criteria = new ArrayList<>(criteria);
+        this.results = new ArrayList<>();
+        for (Map<String, String> result : results) {
+            this.results.add(new LinkedHashMap<>(result));
+        }
+    }
+
+    public List<String> getSelectedFields() {
+        return new ArrayList<>(selectedFields);
+    }
+
+    public List<QueryCriterion> getCriteria() {
+        return new ArrayList<>(criteria);
+    }
+
+    public List<Map<String, String>> getResults() {
+        return new ArrayList<>(results);
+    }
+}
+
+// File: Transaction.java
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+public class Transaction {
+    private final String id;
+    private final TransactionType type;
+    private CheckoutType checkoutType;
+    private CheckinType checkinType;
+    private HoldType holdType;
+    private HoldPlacement holdPlacement;
+    private final String patronId;
+    private final String itemId;
+    private final String terminalId;
+    private final LibraryBranch branch;
+    private final LocalDateTime timestamp;
+    private BigDecimal amount;
+    private PaymentMethod paymentMethod;
+    private final String patronAgeRange;
+    private final PatronType patronType;
+    private final String patronLocation;
+
+    public Transaction(String id, TransactionType type, LocalDateTime timestamp, LibraryBranch branch,
+                       String terminalId, String patronId, String itemId, String patronAgeRange,
+                       PatronType patronType, String patronLocation) {
+        this.id = id;
+        this.type = type;
+        this.timestamp = timestamp;
+        this.branch = branch;
+        this.terminalId = terminalId;
+        this.patronId = patronId;
+        this.itemId = itemId;
+        this.patronAgeRange = patronAgeRange;
+        this.patronType = patronType;
+        this.patronLocation = patronLocation;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public TransactionType getType() {
+        return type;
+    }
+
+    public CheckoutType getCheckoutType() {
+        return checkoutType;
+    }
+
+    public void setCheckoutType(CheckoutType checkoutType) {
+        this.checkoutType = checkoutType;
+    }
+
+    public CheckinType getCheckinType() {
+        return checkinType;
+    }
+
+    public void setCheckinType(CheckinType checkinType) {
+        this.checkinType = checkinType;
+    }
+
+    public HoldType getHoldType() {
+        return holdType;
+    }
+
+    public void setHoldType(HoldType holdType) {
+        this.holdType = holdType;
+    }
+
+    public HoldPlacement getHoldPlacement() {
+        return holdPlacement;
+    }
+
+    public void setHoldPlacement(HoldPlacement holdPlacement) {
+        this.holdPlacement = holdPlacement;
+    }
+
+    public String getPatronId() {
+        return patronId;
+    }
+
+    public String getItemId() {
+        return itemId;
+    }
+
+    public String getTerminalId() {
+        return terminalId;
+    }
+
+    public LibraryBranch getBranch() {
+        return branch;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public PaymentMethod getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(PaymentMethod paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getPatronAgeRange() {
+        return patronAgeRange;
+    }
+
+    public PatronType getPatronType() {
+        return patronType;
+    }
+
+    public String getPatronLocation() {
+        return patronLocation;
+    }
+}
+
+// File: TransactionService.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+
+public class TransactionService {
+    private final List<Transaction> transactions;
+    private int nextId;
+
+    public TransactionService() {
+        this.transactions = new ArrayList<>();
+        this.nextId = 1;
+    }
+
+    public void record(Transaction transaction) {
+        transactions.add(transaction);
+    }
+
+    public Transaction recordCheckout(Patron patron, Item item, CheckoutType checkoutType,
+                                      LibraryBranch branch, String terminalId) {
+        String location = patron.getCountyOfResidence() != null
+                ? patron.getCountyOfResidence()
+                : (patron.getHomeBranch() != null ? patron.getHomeBranch().getName() : "Unknown");
+        Transaction transaction = new Transaction("T" + nextId++, TransactionType.CHECK_OUT,
+                LocalDateTime.now(), branch, terminalId, patron.getId(), item.getId(),
+                patron.getAgeRange(), patron.getPatronType(), location);
+        transaction.setCheckoutType(checkoutType);
+        transactions.add(transaction);
+        patron.recordActivity(LocalDate.now());
+        item.checkOut();
+        return transaction;
+    }
+
+    public Transaction recordCheckin(Item item, CheckinType checkinType,
+                                     LibraryBranch branch, String terminalId) {
+        Transaction transaction = new Transaction("T" + nextId++, TransactionType.CHECK_IN,
+                LocalDateTime.now(), branch, terminalId, null, item.getId(),
+                null, null, null);
+        transaction.setCheckinType(checkinType);
+        transactions.add(transaction);
+        item.checkIn();
+        return transaction;
+    }
+
+    public Transaction recordHoldPlaced(Patron patron, HoldPlacement holdPlacement,
+                                        LibraryBranch branch, String terminalId) {
+        String location = patron.getCountyOfResidence() != null
+                ? patron.getCountyOfResidence()
+                : (patron.getHomeBranch() != null ? patron.getHomeBranch().getName() : "Unknown");
+        Transaction transaction = new Transaction("T" + nextId++, TransactionType.HOLD_PLACED,
+                LocalDateTime.now(), branch, terminalId, patron.getId(), null,
+                patron.getAgeRange(), patron.getPatronType(), location);
+        transaction.setHoldPlacement(holdPlacement);
+        transaction.setHoldType(HoldType.ACTIVE);
+        transactions.add(transaction);
+        patron.recordActivity(LocalDate.now());
+        return transaction;
+    }
+
+    public Transaction recordHoldFilled(Patron patron, LibraryBranch branch, String terminalId) {
+        String location = patron.getCountyOfResidence() != null
+                ? patron.getCountyOfResidence()
+                : (patron.getHomeBranch() != null ? patron.getHomeBranch().getName() : "Unknown");
+        Transaction transaction = new Transaction("T" + nextId++, TransactionType.HOLD_FILLED,
+                LocalDateTime.now(), branch, terminalId, patron.getId(), null,
+                patron.getAgeRange(), patron.getPatronType(), location);
+        transactions.add(transaction);
+        patron.recordActivity(LocalDate.now());
+        return transaction;
+    }
+
+    public List<Transaction> getTransactions() {
+        return new ArrayList<>(transactions);
+    }
+
+    public long count(TransactionType type) {
+        return transactions.stream().filter(transaction -> transaction.getType() == type).count();
+    }
+
+    public long countCheckouts(CheckoutType checkoutType) {
+        return transactions.stream()
+                .filter(transaction -> transaction.getType() == TransactionType.CHECK_OUT)
+                .filter(transaction -> transaction.getCheckoutType() == checkoutType)
+                .count();
+    }
+
+    public long countCheckins(CheckinType checkinType) {
+        return transactions.stream()
+                .filter(transaction -> transaction.getType() == TransactionType.CHECK_IN)
+                .filter(transaction -> transaction.getCheckinType() == checkinType)
+                .count();
+    }
+
+    public long countHolds(HoldPlacement placement) {
+        return transactions.stream()
+                .filter(transaction -> transaction.getType() == TransactionType.HOLD_PLACED)
+                .filter(transaction -> transaction.getHoldPlacement() == placement)
+                .count();
+    }
+
+    public Map<String, Long> countBy(Function<Transaction, String> classifier) {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        for (Transaction transaction : transactions) {
+            String key = classifier.apply(transaction);
+            if (key == null) {
+                key = "Unknown";
+            }
+            counts.merge(key, 1L, Long::sum);
+        }
+        return counts;
+    }
+}
+
+// File: TransactionArchive.java
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class TransactionArchive {
+    private final Map<String, Integer> monthlyAggregates;
+    private final Map<String, Integer> annualAggregates;
+    private final Map<String, Integer> demographicAggregates;
+
+    public TransactionArchive() {
+        this.monthlyAggregates = new LinkedHashMap<>();
+        this.annualAggregates = new LinkedHashMap<>();
+        this.demographicAggregates = new LinkedHashMap<>();
+    }
+
+    public void archive(List<Transaction> transactions) {
+        for (Transaction transaction : transactions) {
+            String month = transaction.getTimestamp().getYear() + "-"
+                    + String.format("%02d", transaction.getTimestamp().getMonthValue());
+            monthlyAggregates.merge(month, 1, Integer::sum);
+            annualAggregates.merge(String.valueOf(transaction.getTimestamp().getYear()), 1, Integer::sum);
+            String ageRange = transaction.getPatronAgeRange() == null ? "Unknown" : transaction.getPatronAgeRange();
+            demographicAggregates.merge(ageRange, 1, Integer::sum);
+        }
+    }
+
+    public Map<String, Integer> getMonthlyAggregates() {
+        return new LinkedHashMap<>(monthlyAggregates);
+    }
+
+    public Map<String, Integer> getAnnualAggregates() {
+        return new LinkedHashMap<>(annualAggregates);
+    }
+
+    public Map<String, Integer> getDemographicAggregates() {
+        return new LinkedHashMap<>(demographicAggregates);
+    }
+}
+
+// File: Item.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public class Item {
+    private final String id;
+    private final String title;
+    private final String callNumber;
+    private final String genre;
+    private final String format;
+    private LibraryBranch branch;
+    private ItemStatus status;
+    private final BigDecimal value;
+    private final double shelfSpaceUnits;
+    private final boolean uncataloged;
+    private LocalDate lastCheckedOut;
+    private LocalDate statusChangedDate;
+    private LocalDate inTransitSince;
+    private LibraryBranch transitFrom;
+    private LibraryBranch transitTo;
+    private boolean lastCopy;
+    private int checkOuts;
+    private int renewals;
+
+    public Item(String id, String title, String callNumber, String genre, String format,
+                LibraryBranch branch, ItemStatus status, BigDecimal value,
+                double shelfSpaceUnits, boolean uncataloged) {
+        this.id = id;
+        this.title = title;
+        this.callNumber = callNumber;
+        this.genre = genre;
+        this.format = format;
+        this.branch = branch;
+        this.status = status;
+        this.value = value;
+        this.shelfSpaceUnits = shelfSpaceUnits;
+        this.uncataloged = uncataloged;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getCallNumber() {
+        return callNumber;
+    }
+
+    public String getGenre() {
+        return genre;
+    }
+
+    public String getFormat() {
+        return format;
+    }
+
+    public LibraryBranch getBranch() {
+        return branch;
+    }
+
+    public void setBranch(LibraryBranch branch) {
+        this.branch = branch;
+    }
+
+    public ItemStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ItemStatus status) {
+        this.status = status;
+    }
+
+    public BigDecimal getValue() {
+        return value;
+    }
+
+    public double getShelfSpaceUnits() {
+        return shelfSpaceUnits;
+    }
+
+    public boolean isUncataloged() {
+        return uncataloged;
+    }
+
+    public LocalDate getLastCheckedOut() {
+        return lastCheckedOut;
+    }
+
+    public void setLastCheckedOut(LocalDate lastCheckedOut) {
+        this.lastCheckedOut = lastCheckedOut;
+    }
+
+    public LocalDate getStatusChangedDate() {
+        return statusChangedDate;
+    }
+
+    public void setStatusChangedDate(LocalDate statusChangedDate) {
+        this.statusChangedDate = statusChangedDate;
+    }
+
+    public LocalDate getInTransitSince() {
+        return inTransitSince;
+    }
+
+    public void setInTransitSince(LocalDate inTransitSince) {
+        this.inTransitSince = inTransitSince;
+    }
+
+    public LibraryBranch getTransitFrom() {
+        return transitFrom;
+    }
+
+    public void setTransitFrom(LibraryBranch transitFrom) {
+        this.transitFrom = transitFrom;
+    }
+
+    public LibraryBranch getTransitTo() {
+        return transitTo;
+    }
+
+    public void setTransitTo(LibraryBranch transitTo) {
+        this.transitTo = transitTo;
+    }
+
+    public boolean isLastCopy() {
+        return lastCopy;
+    }
+
+    public void setLastCopy(boolean lastCopy) {
+        this.lastCopy = lastCopy;
+    }
+
+    public int getCheckOuts() {
+        return checkOuts;
+    }
+
+    public void setCheckOuts(int checkOuts) {
+        this.checkOuts = checkOuts;
+    }
+
+    public int getRenewals() {
+        return renewals;
+    }
+
+    public void setRenewals(int renewals) {
+        this.renewals = renewals;
+    }
+
+    public void checkOut() {
+        this.status = ItemStatus.CHECKED_OUT;
+        this.lastCheckedOut = LocalDate.now();
+        this.checkOuts++;
+    }
+
+    public void checkIn() {
+        this.status = ItemStatus.AVAILABLE;
+    }
+
+    public void renew() {
+        this.renewals++;
+    }
+
+    public void markInTransit(LibraryBranch from, LibraryBranch to, LocalDate date) {
+        this.status = ItemStatus.IN_TRANSIT;
+        this.transitFrom = from;
+        this.transitTo = to;
+        this.inTransitSince = date;
+        this.statusChangedDate = date;
+    }
+}
+
+// File: ItemService.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ItemService {
+    private final List<Item> items;
+    private final Map<String, LibraryBranch> originalLocations;
+
+    public ItemService() {
+        this.items = new ArrayList<>();
+        this.originalLocations = new HashMap<>();
+    }
+
+    public void addItem(Item item) {
+        items.add(item);
+    }
+
+    public List<Item> getItems() {
+        return new ArrayList<>(items);
+    }
+
+    public List<Item> findByBranch(LibraryBranch branch) {
+        List<Item> result = new ArrayList<>();
+        for (Item item : items) {
+            if (item.getBranch() != null && item.getBranch().getId().equals(branch.getId())) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
+    public List<Item> query(ItemStatus status, String genre, LibraryBranch branch) {
+        List<Item> result = new ArrayList<>();
+        for (Item item : items) {
+            if (status != null && item.getStatus() != status) {
+                continue;
+            }
+            if (genre != null && !genre.equals(item.getGenre())) {
+                continue;
+            }
+            if (branch != null && (item.getBranch() == null || !item.getBranch().getId().equals(branch.getId()))) {
+                continue;
+            }
+            result.add(item);
+        }
+        return result;
+    }
+
+    public List<Item> queryCandidates(ItemStatus status, String genre) {
+        return query(status, genre, null);
+    }
+
+    public void transferBatch(List<Item> batch, LibraryBranch newBranch) {
+        for (Item item : batch) {
+            originalLocations.putIfAbsent(item.getId(), item.getBranch());
+            item.setBranch(newBranch);
+        }
+    }
+
+    public void revertItem(Item item) {
+        LibraryBranch original = originalLocations.get(item.getId());
+        if (original != null) {
+            item.setBranch(original);
+        }
+    }
+
+    public List<Item> purgeCandidates(int missingMonths, LocalDate now) {
+        List<Item> result = new ArrayList<>();
+        LocalDate cutoff = now.minusMonths(missingMonths);
+        for (Item item : items) {
+            if (item.getStatus() == ItemStatus.MISSING || item.getStatus() == ItemStatus.DISCARD_WEED) {
+                if (item.getStatusChangedDate() == null || item.getStatusChangedDate().isBefore(cutoff)) {
+                    result.add(item);
+                }
+            }
+        }
+        return result;
+    }
+
+    public int deleteItems(List<Item> batch) {
+        int count = 0;
+        for (Item item : batch) {
+            if (items.remove(item)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public Map<String, Integer> volumeReport(LibraryBranch branch, boolean includeOut) {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (Item item : items) {
+            if (branch != null && (item.getBranch() == null || !item.getBranch().getId().equals(branch.getId()))) {
+                continue;
+            }
+            if (!includeOut && item.getStatus() == ItemStatus.CHECKED_OUT) {
+                continue;
+            }
+            String category = item.getGenre() + " / " + item.getFormat() + " / " + item.getStatus();
+            counts.merge(category, 1, Integer::sum);
+        }
+        return counts;
+    }
+
+    public int totalItems(LibraryBranch branch) {
+        return findByBranch(branch).size();
+    }
+
+    public List<Item> lastCopies() {
+        List<Item> result = new ArrayList<>();
+        for (Item item : items) {
+            if (item.isLastCopy()) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
+    public List<Item> inTransitMoreThan(int days, LocalDate now) {
+        List<Item> result = new ArrayList<>();
+        LocalDate cutoff = now.minusDays(days);
+        for (Item item : items) {
+            if (item.getStatus() == ItemStatus.IN_TRANSIT
+                    && item.getInTransitSince() != null
+                    && item.getInTransitSince().isBefore(cutoff)) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
+    public List<Item> missingDamaged(LibraryBranch branch) {
+        List<Item> result = new ArrayList<>();
+        for (Item item : items) {
+            if (branch != null && (item.getBranch() == null || !item.getBranch().getId().equals(branch.getId()))) {
+                continue;
+            }
+            if (item.getStatus() == ItemStatus.MISSING || item.getStatus() == ItemStatus.DAMAGED) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
+    public BigDecimal valueByStatus(ItemStatus status) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (Item item : items) {
+            if (status == null || item.getStatus() == status) {
+                total = total.add(item.getValue());
+            }
+        }
+        return total;
+    }
+}
+
+// File: Charge.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public class Charge {
+    private final String id;
+    private final String patronId;
+    private final String itemId;
+    private final String type;
+    private final BigDecimal amount;
+    private final LocalDate date;
+    private final LibraryBranch branch;
+
+    public Charge(String id, String patronId, String itemId, String type, BigDecimal amount,
+                  LocalDate date, LibraryBranch branch) {
+        this.id = id;
+        this.patronId = patronId;
+        this.itemId = itemId;
+        this.type = type;
+        this.amount = amount;
+        this.date = date;
+        this.branch = branch;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getPatronId() {
+        return patronId;
+    }
+
+    public String getItemId() {
+        return itemId;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public LibraryBranch getBranch() {
+        return branch;
+    }
+}
+
+// File: Payment.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public class Payment {
+    private final String id;
+    private final String patronId;
+    private final BigDecimal amount;
+    private final PaymentMethod method;
+    private final LocalDate date;
+    private final LibraryBranch branch;
+
+    public Payment(String id, String patronId, BigDecimal amount, PaymentMethod method,
+                   LocalDate date, LibraryBranch branch) {
+        this.id = id;
+        this.patronId = patronId;
+        this.amount = amount;
+        this.method = method;
+        this.date = date;
+        this.branch = branch;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getPatronId() {
+        return patronId;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public PaymentMethod getMethod() {
+        return method;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public LibraryBranch getBranch() {
+        return branch;
+    }
+}
+
+// File: LedgerEntry.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public class LedgerEntry {
+    private final String id;
+    private final String patronId;
+    private final String chargeId;
+    private final String paymentId;
+    private final BigDecimal amount;
+    private final String description;
+    private final LocalDate date;
+
+    public LedgerEntry(String id, String patronId, String chargeId, String paymentId,
+                       BigDecimal amount, String description, LocalDate date) {
+        this.id = id;
+        this.patronId = patronId;
+        this.chargeId = chargeId;
+        this.paymentId = paymentId;
+        this.amount = amount;
+        this.description = description;
+        this.date = date;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getPatronId() {
+        return patronId;
+    }
+
+    public String getChargeId() {
+        return chargeId;
+    }
+
+    public String getPaymentId() {
+        return paymentId;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+}
+
+// File: FinancialService.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+
+public class FinancialService {
+    private final List<Charge> charges;
+    private final List<Payment> payments;
+    private final List<LedgerEntry> ledgerEntries;
+    private final Map<String, BigDecimal> waivers;
+    private final Map<String, BigDecimal> waiversByBranch;
+    private int nextLedgerId;
+
+    public FinancialService() {
+        this.charges = new ArrayList<>();
+        this.payments = new ArrayList<>();
+        this.ledgerEntries = new ArrayList<>();
+        this.waivers = new LinkedHashMap<>();
+        this.waiversByBranch = new LinkedHashMap<>();
+        this.nextLedgerId = 1;
+    }
+
+    public void addCharge(Charge charge) {
+        charges.add(charge);
+    }
+
+    public void addPayment(Payment payment, Map<String, BigDecimal> allocations) {
+        payments.add(payment);
+        for (Map.Entry<String, BigDecimal> allocation : allocations.entrySet()) {
+            ledgerEntries.add(new LedgerEntry("L" + nextLedgerId++, payment.getPatronId(),
+                    allocation.getKey(), payment.getId(), allocation.getValue(),
+                    "Payment allocation", payment.getDate()));
+        }
+    }
+
+    public void waive(String patronId, BigDecimal amount, LibraryBranch branch) {
+        waivers.merge(patronId, amount, BigDecimal::add);
+        waiversByBranch.merge(branch.getName(), amount, BigDecimal::add);
+        ledgerEntries.add(new LedgerEntry("L" + nextLedgerId++, patronId, null, null,
+                amount.negate(), "Waiver", LocalDate.now()));
+    }
+
+    public BigDecimal getBalance(String patronId) {
+        BigDecimal balance = BigDecimal.ZERO;
+        for (Charge charge : charges) {
+            if (charge.getPatronId().equals(patronId)) {
+                balance = balance.add(charge.getAmount());
+            }
+        }
+        for (Payment payment : payments) {
+            if (payment.getPatronId().equals(patronId)) {
+                balance = balance.subtract(payment.getAmount());
+            }
+        }
+        balance = balance.subtract(waivers.getOrDefault(patronId, BigDecimal.ZERO));
+        return balance;
+    }
+
+    public List<String> getPatronsWithBalanceGreaterThan(BigDecimal threshold, PatronService patronService) {
+        List<String> result = new ArrayList<>();
+        for (Patron patron : patronService.getAllPatrons()) {
+            if (getBalance(patron.getId()).compareTo(threshold) > 0) {
+                result.add(patron.getName() + " (" + patron.getId() + ")");
+            }
+        }
+        return result;
+    }
+
+    public Map<String, BigDecimal> balancesBy(PatronService patronService, Function<Patron, String> classifier) {
+        Map<String, BigDecimal> result = new LinkedHashMap<>();
+        for (Patron patron : patronService.getAllPatrons()) {
+            String key = classifier.apply(patron);
+            if (key == null) {
+                key = "Unknown";
+            }
+            result.merge(key, getBalance(patron.getId()), BigDecimal::add);
+        }
+        return result;
+    }
+
+    public Map<String, BigDecimal> finesAccruedByType() {
+        Map<String, BigDecimal> result = new LinkedHashMap<>();
+        for (Charge charge : charges) {
+            result.merge(charge.getType(), charge.getAmount(), BigDecimal::add);
+        }
+        return result;
+    }
+
+    public Map<String, BigDecimal> waiversByBranch() {
+        return new LinkedHashMap<>(waiversByBranch);
+    }
+
+    public Map<String, BigDecimal> paymentsByMethod() {
+        Map<String, BigDecimal> result = new LinkedHashMap<>();
+        for (Payment payment : payments) {
+            result.merge(payment.getMethod().name(), payment.getAmount(), BigDecimal::add);
+        }
+        return result;
+    }
+
+    public List<Payment> getPayments() {
+        return new ArrayList<>(payments);
+    }
+
+    public List<Charge> getCharges() {
+        return new ArrayList<>(charges);
+    }
+
+    public List<LedgerEntry> getLedgerEntries() {
+        return new ArrayList<>(ledgerEntries);
+    }
+}
+
+// File: PatronService.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+
+public class PatronService {
+    private final Map<String, Patron> patrons;
+
+    public PatronService() {
+        this.patrons = new LinkedHashMap<>();
+    }
+
+    public void addPatron(Patron patron) {
+        patrons.put(patron.getId(), patron);
+    }
+
+    public Patron getPatron(String id) {
+        return patrons.get(id);
+    }
+
+    public List<Patron> getAllPatrons() {
+        return new ArrayList<>(patrons.values());
+    }
+
+    public List<Patron> inactivePatrons(int days, LocalDate now, LibraryBranch branch) {
+        List<Patron> result = new ArrayList<>();
+        LocalDate cutoff = now.minusDays(days);
+        for (Patron patron : patrons.values()) {
+            if (branch != null && (patron.getHomeBranch() == null
+                    || !patron.getHomeBranch().getId().equals(branch.getId()))) {
+                continue;
+            }
+            if (patron.getLastActivityDate() == null || patron.getLastActivityDate().isBefore(cutoff)) {
+                result.add(patron);
+            }
+        }
+        return result;
+    }
+
+    public Map<String, Long> groupBy(Function<Patron, String> classifier) {
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (Patron patron : patrons.values()) {
+            String key = classifier.apply(patron);
+            if (key == null) {
+                key = "Unknown";
+            }
+            result.merge(key, 1L, Long::sum);
+        }
+        return result;
+    }
+
+    public boolean deletePatron(String id) {
+        return patrons.remove(id) != null;
+    }
+}
+
+// File: DeletionTracker.java
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class DeletionTracker {
+    private final Map<String, Integer> byLocation;
+    private final Map<String, Integer> bySystem;
+
+    public DeletionTracker() {
+        this.byLocation = new LinkedHashMap<>();
+        this.bySystem = new LinkedHashMap<>();
+    }
+
+    public void recordDeletion(String location, String system) {
+        byLocation.merge(location, 1, Integer::sum);
+        bySystem.merge(system, 1, Integer::sum);
+    }
+
+    public Map<String, Integer> getByLocation() {
+        return new LinkedHashMap<>(byLocation);
+    }
+
+    public Map<String, Integer> getBySystem() {
+        return new LinkedHashMap<>(bySystem);
+    }
+}
+
+// File: ReportingService.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+
+public class ReportingService {
+    private final ItemService itemService;
+    private final PatronService patronService;
+    private final TransactionService transactionService;
+    private final FinancialService financialService;
+    private final DeletionTracker deletionTracker;
+
+    public ReportingService(ItemService itemService, PatronService patronService,
+                            TransactionService transactionService, FinancialService financialService,
+                            DeletionTracker deletionTracker) {
+        this.itemService = itemService;
+        this.patronService = patronService;
+        this.transactionService = transactionService;
+        this.financialService = financialService;
+        this.deletionTracker = deletionTracker;
+    }
+
+    public ReportResult boardReport() {
+        ReportResult result = new ReportResult("Board Report",
+                List.of("Metric", "Count"), Map.of("period", "current"));
+        result.addRow("Check-outs", String.valueOf(transactionService.count(TransactionType.CHECK_OUT)));
+        result.addRow("Check-ins", String.valueOf(transactionService.count(TransactionType.CHECK_IN)));
+        result.addRow("Holds placed", String.valueOf(transactionService.count(TransactionType.HOLD_PLACED)));
+        result.addRow("Holds filled", String.valueOf(transactionService.count(TransactionType.HOLD_FILLED)));
+        result.addRow("Patron registrations", String.valueOf(patronService.getAllPatrons().size()));
+        return result;
+    }
+
+    public ReportResult boardReportBy(String dimension) {
+        Function<Transaction, String> classifier = transaction -> {
+            if ("terminal".equals(dimension)) {
+                return transaction.getTerminalId();
+            }
+            if ("branch".equals(dimension)) {
+                return transaction.getBranch() == null ? "Unknown" : transaction.getBranch().getName();
+            }
+            if ("system".equals(dimension)) {
+                return transaction.getBranch() == null ? "Unknown" : transaction.getBranch().getSystemName();
+            }
+            if ("hour".equals(dimension)) {
+                return String.valueOf(transaction.getTimestamp().getHour());
+            }
+            if ("patronAge".equals(dimension)) {
+                return transaction.getPatronAgeRange();
+            }
+            if ("patronType".equals(dimension)) {
+                return transaction.getPatronType() == null ? "Unknown" : transaction.getPatronType().name();
+            }
+            if ("patronLocation".equals(dimension)) {
+                return transaction.getPatronLocation();
+            }
+            return "Unknown";
+        };
+        Map<String, Long> counts = transactionService.countBy(classifier);
+        ReportResult result = new ReportResult("Board Report by " + dimension,
+                List.of(dimension, "Count"), Map.of("dimension", dimension));
+        for (Map.Entry<String, Long> entry : counts.entrySet()) {
+            result.addRow(entry.getKey(), String.valueOf(entry.getValue()));
+        }
+        return result;
+    }
+
+    public ReportResult periodicReport(PredefinedReportType type, int xDays) {
+        if (type == PredefinedReportType.PATRONS_WITH_INVALID_HOME_LIBRARY) {
+            ReportResult result = new ReportResult("Periodic Report: " + type,
+                    List.of("Patron ID", "Name", "Home Branch"), Map.of("type", type.name()));
+            for (Patron patron : patronService.getAllPatrons()) {
+                if (patron.getHomeBranch() == null) {
+                    result.addRow(patron.getId(), patron.getName(), "Invalid");
+                }
+            }
+            return result;
+        }
+
+        List<Item> selected = new ArrayList<>();
+        LocalDate now = LocalDate.now();
+        switch (type) {
+            case ITEMS_NOT_CHECKED_OUT_IN_X_DAYS:
+                for (Item item : itemService.getItems()) {
+                    if (item.getLastCheckedOut() == null || item.getLastCheckedOut().isBefore(now.minusDays(xDays))) {
+                        selected.add(item);
+                    }
+                }
+                break;
+            case IN_TRANSIT_ITEMS_MORE_THAN_X_DAYS:
+                selected.addAll(itemService.inTransitMoreThan(xDays, now));
+                break;
+            case LAST_COPY_IN_SYSTEM:
+                selected.addAll(itemService.lastCopies());
+                break;
+            case ITEMS_WITH_LONG_CALL_NUMBER:
+                for (Item item : itemService.getItems()) {
+                    if (item.getCallNumber() != null && item.getCallNumber().length() > 20) {
+                        selected.add(item);
+                    }
+                }
+                break;
+            case MISSING_ITEMS:
+                selected.addAll(itemService.query(ItemStatus.MISSING, null, null));
+                break;
+            default:
+                selected.addAll(itemService.getItems());
+                break;
+        }
+
+        ReportResult result = new ReportResult("Periodic Report: " + type,
+                List.of("Item ID", "Title", "Status", "Branch"), Map.of("type", type.name()));
+        for (Item item : selected) {
+            result.addRow(item.getId(), item.getTitle(), item.getStatus().name(),
+                    item.getBranch() == null ? "Unknown" : item.getBranch().getName());
+        }
+        return result;
+    }
+
+    public ReportResult inventoryVolumeReport(LibraryBranch branch, boolean includeOut) {
+        Map<String, Integer> counts = itemService.volumeReport(branch, includeOut);
+        ReportResult result = new ReportResult("Inventory Volume Report",
+                List.of("Category", "Count"), Map.of("includeOut", String.valueOf(includeOut)));
+        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
+            result.addRow(entry.getKey(), String.valueOf(entry.getValue()));
+        }
+        return result;
+    }
+
+    public ReportResult capacityReport(List<LibraryBranch> branches) {
+        ReportResult result = new ReportResult("System Capacity Report",
+                List.of("Branch", "Total Items", "Capacity", "Usage %"), Map.of());
+        for (LibraryBranch branch : branches) {
+            int total = itemService.totalItems(branch);
+            double usage = branch.getCapacity() == 0 ? 0.0 : (100.0 * total / branch.getCapacity());
+            result.addRow(branch.getName(), String.valueOf(total),
+                    String.valueOf(branch.getCapacity()),
+                    String.format(Locale.US, "%.2f", usage));
+        }
+        return result;
+    }
+
+    public ReportResult shelfSpaceReport(LibraryBranch branch) {
+        Map<String, Integer> collection = new LinkedHashMap<>();
+        Map<String, Integer> circulation = new LinkedHashMap<>();
+        Map<String, Double> shelfSpace = new LinkedHashMap<>();
+        int totalCollection = 0;
+        int totalCirculation = 0;
+        double totalShelfSpace = 0.0;
+
+        for (Item item : itemService.getItems()) {
+            if (branch != null && (item.getBranch() == null
+                    || !item.getBranch().getId().equals(branch.getId()))) {
+                continue;
+            }
+            String key = item.getGenre() + " / " + item.getFormat();
+            collection.merge(key, 1, Integer::sum);
+            circulation.merge(key, item.getCheckOuts(), Integer::sum);
+            shelfSpace.merge(key, item.getShelfSpaceUnits(), Double::sum);
+            totalCollection++;
+            totalCirculation += item.getCheckOuts();
+            totalShelfSpace += item.getShelfSpaceUnits();
+        }
+
+        ReportResult result = new ReportResult("Shelf Space Report",
+                List.of("Genre / Format", "Collection %", "Circulation %", "Shelf Space %"), Map.of());
+        for (String key : collection.keySet()) {
+            double collectionPercent = totalCollection == 0 ? 0.0
+                    : 100.0 * collection.get(key) / totalCollection;
+            double circulationPercent = totalCirculation == 0 ? 0.0
+                    : 100.0 * circulation.getOrDefault(key, 0) / totalCirculation;
+            double shelfPercent = totalShelfSpace == 0.0 ? 0.0
+                    : 100.0 * shelfSpace.getOrDefault(key, 0.0) / totalShelfSpace;
+            result.addRow(key,
+                    String.format(Locale.US, "%.2f", collectionPercent),
+                    String.format(Locale.US, "%.2f", circulationPercent),
+                    String.format(Locale.US, "%.2f", shelfPercent));
+        }
+        return result;
+    }
+
+    public ReportResult inTransitReport(int days) {
+        List<Item> items = itemService.inTransitMoreThan(days, LocalDate.now());
+        ReportResult result = new ReportResult("In-Transit Items Report",
+                List.of("Item ID", "Title", "From", "To", "Days In Transit"), Map.of("days", String.valueOf(days)));
+        for (Item item : items) {
+            long daysInTransit = item.getInTransitSince() == null ? 0
+                    : java.time.temporal.ChronoUnit.DAYS.between(item.getInTransitSince(), LocalDate.now());
+            result.addRow(item.getId(), item.getTitle(),
+                    item.getTransitFrom() == null ? "Unknown" : item.getTransitFrom().getName(),
+                    item.getTransitTo() == null ? "Unknown" : item.getTransitTo().getName(),
+                    String.valueOf(daysInTransit));
+        }
+        return result;
+    }
+
+    public ReportResult missingDamagedReport(LibraryBranch branch) {
+        List<Item> items = itemService.missingDamaged(branch);
+        ReportResult result = new ReportResult("Missing and Damaged Items Report",
+                List.of("Item ID", "Title", "Status", "Branch"), Map.of());
+        for (Item item : items) {
+            result.addRow(item.getId(), item.getTitle(), item.getStatus().name(),
+                    item.getBranch() == null ? "Unknown" : item.getBranch().getName());
+        }
+        return result;
+    }
+
+    public ReportResult inactivePatronsReport(int days, LocalDate now, LibraryBranch branch) {
+        List<Patron> patrons = patronService.inactivePatrons(days, now, branch);
+        ReportResult result = new ReportResult("Inactive Patrons Report",
+                List.of("Patron ID", "Name", "Last Activity", "Home Branch"), Map.of("days", String.valueOf(days)));
+        for (Patron patron : patrons) {
+            result.addRow(patron.getId(), patron.getName(),
+                    patron.getLastActivityDate() == null ? "Never" : patron.getLastActivityDate().toString(),
+                    patron.getHomeBranch() == null ? "Unknown" : patron.getHomeBranch().getName());
+        }
+        return result;
+    }
+
+    public ReportResult itemValueReport(ItemStatus status, String genre) {
+        BigDecimal total = BigDecimal.ZERO;
+        ReportResult result = new ReportResult("Value of Items Report",
+                List.of("Item ID", "Title", "Status", "Genre", "Value"), Map.of());
+        for (Item item : itemService.getItems()) {
+            if (status != null && item.getStatus() != status) {
+                continue;
+            }
+            if (genre != null && !genre.equals(item.getGenre())) {
+                continue;
+            }
+            total = total.add(item.getValue());
+            result.addRow(item.getId(), item.getTitle(), item.getStatus().name(),
+                    item.getGenre(), item.getValue().toPlainString());
+        }
+        result.addRow("TOTAL", "", "", "", total.toPlainString());
+        return result;
+    }
+
+    public ReportResult financialReport() {
+        ReportResult result = new ReportResult("Financial Report",
+                List.of("Category", "Value"), Map.of());
+        for (Map.Entry<String, BigDecimal> entry
+                : financialService.balancesBy(patronService, patron -> patron.getName()).entrySet()) {
+            result.addRow("Balance - " + entry.getKey(), entry.getValue().toPlainString());
+        }
+        for (Map.Entry<String, BigDecimal> entry : financialService.finesAccruedByType().entrySet()) {
+            result.addRow("Fine - " + entry.getKey(), entry.getValue().toPlainString());
+        }
+        for (Map.Entry<String, BigDecimal> entry : financialService.waiversByBranch().entrySet()) {
+            result.addRow("Waiver - " + entry.getKey(), entry.getValue().toPlainString());
+        }
+        for (Map.Entry<String, BigDecimal> entry : financialService.paymentsByMethod().entrySet()) {
+            result.addRow("Payment - " + entry.getKey(), entry.getValue().toPlainString());
+        }
+        return result;
+    }
+
+    public ReportResult behaviorAnalysis() {
+        long checkouts = transactionService.count(TransactionType.CHECK_OUT);
+        long renewals = transactionService.count(TransactionType.RENEWAL);
+        double renewalPercent = checkouts == 0 ? 0.0 : 100.0 * renewals / checkouts;
+        ReportResult result = new ReportResult("Patron Behavior and Use Analysis",
+                List.of("Metric", "Value"), Map.of());
+        result.addRow("Check-outs", String.valueOf(checkouts));
+        result.addRow("Renewals", String.valueOf(renewals));
+        result.addRow("Renewal % of check-outs", String.format(Locale.US, "%.2f", renewalPercent));
+        long holdPlaced = transactionService.count(TransactionType.HOLD_PLACED);
+        long holdFilled = transactionService.count(TransactionType.HOLD_FILLED);
+        result.addRow("Holds placed", String.valueOf(holdPlaced));
+        result.addRow("Holds filled", String.valueOf(holdFilled));
+        return result;
+    }
+
+    public ReportResult demographicStatistics() {
+        ReportResult result = new ReportResult("Demographic Statistics",
+                List.of("Dimension", "Value", "Count"), Map.of());
+        addDemographicRows(result, "Age Range", patronService.groupBy(Patron::getAgeRange));
+        addDemographicRows(result, "Zip Code", patronService.groupBy(Patron::getZipCode));
+        addDemographicRows(result, "County", patronService.groupBy(Patron::getCountyOfResidence));
+        addDemographicRows(result, "Home Branch", patronService.groupBy(
+                patron -> patron.getHomeBranch() == null ? "Unknown" : patron.getHomeBranch().getName()));
+        addDemographicRows(result, "Patron Type", patronService.groupBy(
+                patron -> patron.getPatronType() == null ? "Unknown" : patron.getPatronType().name()));
+        addDemographicRows(result, "Preferred Language", patronService.groupBy(Patron::getPreferredLanguage));
+        return result;
+    }
+
+    private void addDemographicRows(ReportResult result, String dimension, Map<String, Long> counts) {
+        for (Map.Entry<String, Long> entry : counts.entrySet()) {
+            result.addRow(dimension, entry.getKey(), String.valueOf(entry.getValue()));
+        }
+    }
+
+    public ReportResult deletionReport() {
+        ReportResult result = new ReportResult("Deletion Tracking Report",
+                List.of("Type", "Location", "Count"), Map.of());
+        for (Map.Entry<String, Integer> entry : deletionTracker.getByLocation().entrySet()) {
+            result.addRow("Location", entry.getKey(), String.valueOf(entry.getValue()));
+        }
+        for (Map.Entry<String, Integer> entry : deletionTracker.getBySystem().entrySet()) {
+            result.addRow("System", entry.getKey(), String.valueOf(entry.getValue()));
+        }
+        return result;
+    }
+}
+
+// File: Main.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Main {
+    public static void main(String[] args) {
+        LibrarySystem pines = new LibrarySystem("PINES");
+        LibraryBranch mainBranch = new LibraryBranch("B1", "Main Branch", "Fulton", "PINES", 1000);
+        LibraryBranch eastBranch = new LibraryBranch("B2", "East Branch", "DeKalb", "PINES", 800);
+        pines.addBranch(mainBranch);
+        pines.addBranch(eastBranch);
+
+        GlobalSystemAdministrator admin = new GlobalSystemAdministrator(
+                "U1", "Alice Admin", "alice", "pw", "CARD1", mainBranch);
+        LibraryManager manager = new LibraryManager(
+                "U2", "Mona Manager", "mona", "pw2", "CARD2", mainBranch, "Children's Services");
+        Staff clerk = new Staff("U3", "Carl Clerk", Role.STAFF, "carl", "pw3", "CARD3", mainBranch);
+
+        PermissionManager permissions = new PermissionManager();
+        permissions.grantAll(Role.GLOBAL_SYSTEM_ADMINISTRATOR, Permission.values());
+        permissions.grantAll(Role.LIBRARY_MANAGER,
+                Permission.RUN_REPORT,
+                Permission.CREATE_REPORT_TEMPLATE,
+                Permission.CLONE_REPORT_TEMPLATE,
+                Permission.RUN_ADHOC_QUERY);
+        permissions.grantAll(Role.STAFF,
+                Permission.RUN_REPORT,
+                Permission.RUN_ADHOC_QUERY);
+        permissions.grant(Role.LIBRARY_DIRECTOR, Permission.RUN_REPORT);
+        permissions.grant(Role.LOCAL_SYSTEM_ADMINISTRATOR,
+                Permission.MANAGE_REPORT_FOLDERS,
+                Permission.VIEW_FINANCIAL_DATA);
+
+        StaffLoginService loginService = new StaffLoginService();
+        loginService.register(admin);
+        loginService.register(manager);
+        loginService.register(clerk);
+        Staff loggedInStaff = loginService.loginByCard("CARD3");
+        System.out.println("Logged in: " + loggedInStaff.getName()
+                + " as " + loggedInStaff.getRole());
+
+        Patron patronOne = new Patron("P1", "Pat One", true, "35-44", "30303",
+                "Fulton", mainBranch, PatronType.ADULT, "English");
+        patronOne.setLastActivityDate(LocalDate.now().minusDays(90));
+        Patron patronTwo = new Patron("P2", "Pat Two", true, "6-12", "30308",
+                "DeKalb", eastBranch, PatronType.CHILD, "Spanish");
+        patronTwo.recordActivity(LocalDate.now());
+
+        PatronService patronService = new PatronService();
+        patronService.addPatron(patronOne);
+        patronService.addPatron(patronTwo);
+
+        ItemService itemService = new ItemService();
+        Item itemOne = new Item("I1", "Java Basics", "005.1 JAV", "Nonfiction", "Book",
+                mainBranch, ItemStatus.AVAILABLE, new BigDecimal("25.00"), 1.0, false);
+        itemOne.setCheckOuts(5);
+        itemOne.setLastCheckedOut(LocalDate.now().minusDays(20));
+        Item itemTwo = new Item("I2", "Board Book", "BB 123", "Children", "Board Book",
+                mainBranch, ItemStatus.MISSING, new BigDecimal("8.00"), 0.5, true);
+        itemTwo.setStatusChangedDate(LocalDate.now().minusMonths(8));
+        Item itemThree = new Item("I3", "DVD Adventure", "DVD 456", "Children", "DVD",
+                eastBranch, ItemStatus.IN_TRANSIT, new BigDecimal("15.00"), 0.8, false);
+        itemThree.setInTransitSince(LocalDate.now().minusDays(15));
+        itemThree.setTransitFrom(mainBranch);
+        itemThree.setTransitTo(eastBranch);
+        Item itemFour = new Item("I4", "Last Copy", "FIC LAS", "Fiction", "Book",
+                eastBranch, ItemStatus.AVAILABLE, new BigDecimal("30.00"), 1.2, false);
+        itemFour.setLastCopy(true);
+        itemFour.setCheckOuts(10);
+        itemService.addItem(itemOne);
+        itemService.addItem(itemTwo);
+        itemService.addItem(itemThree);
+        itemService.addItem(itemFour);
+
+        TransactionService transactionService = new TransactionService();
+        transactionService.recordCheckout(patronOne, itemOne, CheckoutType.STAFF_CHECKOUT, mainBranch, "T1");
+        transactionService.recordCheckin(itemOne, CheckinType.BOOK_DROP, mainBranch, "T1");
+        transactionService.recordCheckout(patronTwo, itemFour, CheckoutType.SELF_CHECKOUT, eastBranch, "T2");
+        transactionService.recordHoldPlaced(patronOne, HoldPlacement.REMOTE, mainBranch, "WEB");
+        transactionService.recordHoldFilled(patronOne, mainBranch, "T1");
+
+        FinancialService financialService = new FinancialService();
+        financialService.addCharge(new Charge("C1", "P1", "I1", "OVERDUE_FINE",
+                new BigDecimal("3.50"), LocalDate.now(), mainBranch));
+        Payment payment = new Payment("PAY1", "P1", new BigDecimal("2.00"),
+                PaymentMethod.CREDIT_CARD, LocalDate.now(), mainBranch);
+        financialService.addPayment(payment, Map.of("C1", new BigDecimal("2.00")));
+        financialService.waive("P1", new BigDecimal("0.50"), mainBranch);
+
+        DeletionTracker deletionTracker = new DeletionTracker();
+        deletionTracker.recordDeletion(mainBranch.getName(), mainBranch.getSystemName());
+        deletionTracker.recordDeletion(mainBranch.getName(), mainBranch.getSystemName());
+
+        TransactionArchive archive = new TransactionArchive();
+        archive.archive(transactionService.getTransactions());
+
+        ReportingService reportingService = new ReportingService(
+                itemService, patronService, transactionService, financialService, deletionTracker);
+
+        System.out.println("--- Board Report ---");
+        System.out.println(reportingService.boardReport());
+        System.out.println("--- Board Report by Branch ---");
+        System.out.println(reportingService.boardReportBy("branch"));
+        System.out.println("--- Periodic Report ---");
+        System.out.println(reportingService.periodicReport(
+                PredefinedReportType.ITEMS_NOT_CHECKED_OUT_IN_X_DAYS, 10));
+        System.out.println("--- Capacity Report ---");
+        System.out.println(reportingService.capacityReport(List.of(mainBranch, eastBranch)));
+        System.out.println("--- Shelf Space Report ---");
+        System.out.println(reportingService.shelfSpaceReport(mainBranch));
+        System.out.println("--- Inactive Patrons Report ---");
+        System.out.println(reportingService.inactivePatronsReport(30, LocalDate.now(), mainBranch));
+        System.out.println("--- Financial Report ---");
+        System.out.println(reportingService.financialReport());
+
+        ReportTemplateManager templateManager = new ReportTemplateManager();
+        ReportTemplate weedingTemplate = new ReportTemplate(
+                "Weeding Report",
+                List.of("Title", "Status", "Branch"),
+                Map.of("deletedItems", "false"),
+                Set.of(),
+                Set.of("deletedItems"),
+                Set.of("CallNumber"),
+                Set.of("status", "callNumberRange"),
+                false);
+        templateManager.createTemplate(manager, permissions, weedingTemplate);
+
+        ReportConfig config = templateManager.createConfig(
+                "Weeding Report",
+                List.of("CallNumber", "DeletedItems"),
+                Map.of("status", "LOST", "deletedItems", "true"),
+                true);
+        System.out.println("Template config fields=" + config.getDisplayFields()
+                + " filters=" + config.getFilters()
+                + " includeDeleted=" + config.isIncludeDeleted());
+
+        ReportQueue reportQueue = new ReportQueue();
+        ReportJob reportJob = new ReportJob("J1", "Weeding Report", config, manager.getId());
+        reportQueue.submit(reportJob);
+        System.out.println("Queue position: " + reportQueue.getPosition(reportJob));
+        ReportJob nextJob = reportQueue.next();
+        reportQueue.complete(nextJob, reportingService.boardReport());
+        System.out.println("Completed report job status: " + nextJob.getStatus());
+
+        QueryBuilder queryBuilder = new QueryBuilder();
+        queryBuilder.selectField("name");
+        queryBuilder.selectField("ageRange");
+        queryBuilder.selectField("homeBranch");
+        queryBuilder.addCriterion("ageRange", QueryOperator.EQUALS, "35-44");
+        List<Map<String, String>> records = new ArrayList<>();
+        for (Patron patron : patronService.getAllPatrons()) {
+            Map<String, String> record = new LinkedHashMap<>();
+            record.put("id", patron.getId());
+            record.put("name", patron.getName());
+            record.put("ageRange", patron.getAgeRange());
+            record.put("homeBranch", patron.getHomeBranch() == null
+                    ? "" : patron.getHomeBranch().getName());
+            records.add(record);
+        }
+        QueryResult queryResult = queryBuilder.execute(records);
+        System.out.println("Query fields: " + queryResult.getSelectedFields()
+                + " results: " + queryResult.getResults());
+
+        itemService.transferBatch(List.of(itemOne), eastBranch);
+        System.out.println("Transferred item branch: " + itemOne.getBranch().getName());
+        itemService.revertItem(itemOne);
+        System.out.println("Reverted item branch: " + itemOne.getBranch().getName());
+
+        System.out.println("--- Demo complete ---");
+    }
+}

@@ -1,0 +1,1308 @@
+// File: Role.java
+public enum Role {
+    USER,
+    PUBLISHER,
+    ADMINISTRATOR,
+    COMMUNITY_MEMBER
+}
+
+// File: User.java
+import java.util.Objects;
+
+public final class User {
+    private final String id;
+    private String username;
+    private final Role role;
+
+    public User(String id, String username, Role role) {
+        this.id = Objects.requireNonNull(id);
+        this.username = Objects.requireNonNull(username);
+        this.role = Objects.requireNonNull(role);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public boolean isPublisher() {
+        return role == Role.PUBLISHER || role == Role.ADMINISTRATOR;
+    }
+
+    public boolean isAdministrator() {
+        return role == Role.ADMINISTRATOR;
+    }
+
+    public void setUsername(String username) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username must not be blank");
+        }
+        this.username = username;
+    }
+}
+
+// File: DatasetStatus.java
+public enum DatasetStatus {
+    PUBLIC,
+    HIDDEN
+}
+
+// File: DataSet.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+public final class DataSet {
+    private final String id;
+    private String title;
+    private String description;
+    private final String ownerId;
+    private DatasetStatus status;
+    private Map<String, String> metadata;
+    private Map<String, String> model;
+    private String sourceDescription;
+    private String sourceLocation;
+    private boolean automaticUpdate;
+    private Instant lastUpdated;
+    private List<Map<String, Object>> rows;
+    private final List<String> geoJsonSources = new ArrayList<>();
+
+    public DataSet(String id, String title, String description, String ownerId,
+                   DatasetStatus status, List<Map<String, Object>> rows) {
+        this.id = Objects.requireNonNull(id);
+        this.title = Objects.requireNonNull(title);
+        this.description = description == null ? "" : description;
+        this.ownerId = Objects.requireNonNull(ownerId);
+        this.status = Objects.requireNonNull(status);
+        this.rows = copyRows(rows);
+        this.metadata = new LinkedHashMap<>();
+        this.model = new LinkedHashMap<>();
+        this.lastUpdated = Instant.now();
+    }
+
+    private static List<Map<String, Object>> copyRows(List<Map<String, Object>> input) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (input != null) {
+            for (Map<String, Object> row : input) {
+                result.add(new LinkedHashMap<>(row));
+            }
+        }
+        return result;
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public String getOwnerId() { return ownerId; }
+    public DatasetStatus getStatus() { return status; }
+    public Map<String, String> getMetadata() { return Collections.unmodifiableMap(metadata); }
+    public Map<String, String> getModel() { return Collections.unmodifiableMap(model); }
+    public String getSourceDescription() { return sourceDescription; }
+    public String getSourceLocation() { return sourceLocation; }
+    public boolean isAutomaticUpdate() { return automaticUpdate; }
+    public Instant getLastUpdated() { return lastUpdated; }
+    public List<Map<String, Object>> getRows() { return Collections.unmodifiableList(copyRows(rows)); }
+    public List<String> getGeoJsonSources() { return Collections.unmodifiableList(geoJsonSources); }
+
+    public void setTitle(String title) {
+        if (title == null || title.isBlank()) throw new IllegalArgumentException("Title is required");
+        this.title = title;
+        touch();
+    }
+
+    public void setDescription(String description) {
+        this.description = description == null ? "" : description;
+        touch();
+    }
+
+    public void setStatus(DatasetStatus status) {
+        this.status = Objects.requireNonNull(status);
+        touch();
+    }
+
+    public void setMetadata(Map<String, String> metadata) {
+        this.metadata = new LinkedHashMap<>(metadata == null ? Map.of() : metadata);
+        touch();
+    }
+
+    public void setModel(Map<String, String> model) {
+        this.model = new LinkedHashMap<>(model == null ? Map.of() : model);
+        touch();
+    }
+
+    public void setSource(String description, String location) {
+        this.sourceDescription = description;
+        this.sourceLocation = location;
+        touch();
+    }
+
+    public void setAutomaticUpdate(boolean automaticUpdate) {
+        this.automaticUpdate = automaticUpdate;
+        touch();
+    }
+
+    public void replaceRows(List<Map<String, Object>> rows) {
+        this.rows = copyRows(rows);
+        touch();
+    }
+
+    public void addGeoJsonSource(String source) {
+        if (source == null || source.isBlank()) throw new IllegalArgumentException("GeoJSON source is required");
+        if (!geoJsonSources.contains(source)) geoJsonSources.add(source);
+        touch();
+    }
+
+    private void touch() {
+        lastUpdated = Instant.now();
+    }
+}
+
+// File: Csv.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public final class Csv {
+    private Csv() {}
+
+    public static List<List<String>> parse(String text) {
+        List<List<String>> rows = new ArrayList<>();
+        List<String> row = new ArrayList<>();
+        StringBuilder cell = new StringBuilder();
+        boolean quoted = false;
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (quoted) {
+                if (c == '"') {
+                    if (i + 1 < text.length() && text.charAt(i + 1) == '"') {
+                        cell.append('"');
+                        i++;
+                    } else {
+                        quoted = false;
+                    }
+                } else {
+                    cell.append(c);
+                }
+            } else if (c == '"') {
+                quoted = true;
+            } else if (c == ',') {
+                row.add(cell.toString());
+                cell.setLength(0);
+            } else if (c == '\n' || c == '\r') {
+                if (c == '\r' && i + 1 < text.length() && text.charAt(i + 1) == '\n') i++;
+                row.add(cell.toString());
+                cell.setLength(0);
+                if (!(row.size() == 1 && row.get(0).isEmpty())) rows.add(row);
+                row = new ArrayList<>();
+            } else {
+                cell.append(c);
+            }
+        }
+
+        if (cell.length() > 0 || !row.isEmpty()) {
+            row.add(cell.toString());
+            rows.add(row);
+        }
+        return rows;
+    }
+
+    public static List<Map<String, Object>> toObjects(List<List<String>> table) {
+        if (table.isEmpty()) return List.of();
+        List<String> headers = table.get(0);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (int i = 1; i < table.size(); i++) {
+            List<String> values = table.get(i);
+            Map<String, Object> row = new LinkedHashMap<>();
+            for (int c = 0; c < headers.size(); c++) {
+                row.put(headers.get(c), c < values.size() ? values.get(c) : "");
+            }
+            result.add(row);
+        }
+        return result;
+    }
+
+    public static String write(List<Map<String, Object>> rows) {
+        if (rows == null || rows.isEmpty()) return "";
+        List<String> headers = new ArrayList<>(rows.get(0).keySet());
+        StringBuilder out = new StringBuilder();
+        appendRow(out, headers);
+        for (Map<String, Object> row : rows) {
+            List<String> values = new ArrayList<>();
+            for (String header : headers) values.add(row.get(header) == null ? "" : row.get(header).toString());
+            appendRow(out, values);
+        }
+        return out.toString();
+    }
+
+    private static void appendRow(StringBuilder out, List<String> values) {
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) out.append(',');
+            String value = values.get(i);
+            if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
+                out.append('"').append(value.replace("\"", "\"\"")).append('"');
+            } else {
+                out.append(value);
+            }
+        }
+        out.append('\n');
+    }
+}
+
+// File: Json.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public final class Json {
+    private Json() {}
+
+    public static Object parse(String text) {
+        Parser parser = new Parser(text);
+        Object value = parser.value();
+        parser.space();
+        if (!parser.end()) throw new IllegalArgumentException("Unexpected JSON content at " + parser.position);
+        return value;
+    }
+
+    public static String stringify(Object value) {
+        if (value == null) return "null";
+        if (value instanceof String s) return "\"" + escape(s) + "\"";
+        if (value instanceof Number || value instanceof Boolean) return value.toString();
+        if (value instanceof Map<?, ?> map) {
+            StringBuilder b = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<?, ?> e : map.entrySet()) {
+                if (!first) b.append(',');
+                first = false;
+                b.append(stringify(String.valueOf(e.getKey()))).append(':').append(stringify(e.getValue()));
+            }
+            return b.append('}').toString();
+        }
+        if (value instanceof Iterable<?> iterable) {
+            StringBuilder b = new StringBuilder("[");
+            boolean first = true;
+            for (Object item : iterable) {
+                if (!first) b.append(',');
+                first = false;
+                b.append(stringify(item));
+            }
+            return b.append(']').toString();
+        }
+        return stringify(value.toString());
+    }
+
+    private static String escape(String s) {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
+    }
+
+    private static final class Parser {
+        private final String text;
+        private int position;
+
+        private Parser(String text) { this.text = text; }
+        private boolean end() { return position >= text.length(); }
+        private void space() {
+            while (!end() && Character.isWhitespace(text.charAt(position))) position++;
+        }
+
+        private Object value() {
+            space();
+            if (end()) throw new IllegalArgumentException("Unexpected end of JSON");
+            char c = text.charAt(position);
+            if (c == '{') return object();
+            if (c == '[') return array();
+            if (c == '"') return string();
+            if (text.startsWith("true", position)) { position += 4; return true; }
+            if (text.startsWith("false", position)) { position += 5; return false; }
+            if (text.startsWith("null", position)) { position += 4; return null; }
+            return number();
+        }
+
+        private Map<String, Object> object() {
+            Map<String, Object> result = new LinkedHashMap<>();
+            position++;
+            space();
+            if (!end() && text.charAt(position) == '}') { position++; return result; }
+            while (true) {
+                space();
+                String key = string();
+                space();
+                expect(':');
+                result.put(key, value());
+                space();
+                if (!end() && text.charAt(position) == '}') { position++; return result; }
+                expect(',');
+            }
+        }
+
+        private List<Object> array() {
+            List<Object> result = new ArrayList<>();
+            position++;
+            space();
+            if (!end() && text.charAt(position) == ']') { position++; return result; }
+            while (true) {
+                result.add(value());
+                space();
+                if (!end() && text.charAt(position) == ']') { position++; return result; }
+                expect(',');
+            }
+        }
+
+        private String string() {
+            expect('"');
+            StringBuilder result = new StringBuilder();
+            while (!end()) {
+                char c = text.charAt(position++);
+                if (c == '"') return result.toString();
+                if (c == '\\') {
+                    if (end()) throw new IllegalArgumentException("Invalid escape");
+                    char e = text.charAt(position++);
+                    switch (e) {
+                        case '"', '\\', '/' -> result.append(e);
+                        case 'n' -> result.append('\n');
+                        case 'r' -> result.append('\r');
+                        case 't' -> result.append('\t');
+                        case 'b' -> result.append('\b');
+                        case 'f' -> result.append('\f');
+                        case 'u' -> {
+                            if (position + 4 > text.length()) throw new IllegalArgumentException("Invalid unicode escape");
+                            result.append((char) Integer.parseInt(text.substring(position, position + 4), 16));
+                            position += 4;
+                        }
+                        default -> throw new IllegalArgumentException("Invalid escape: " + e);
+                    }
+                } else result.append(c);
+            }
+            throw new IllegalArgumentException("Unterminated JSON string");
+        }
+
+        private Number number() {
+            int start = position;
+            while (!end() && "-+0123456789.eE".indexOf(text.charAt(position)) >= 0) position++;
+            if (start == position) throw new IllegalArgumentException("Invalid JSON value at " + position);
+            String raw = text.substring(start, position);
+            try {
+                return raw.contains(".") || raw.contains("e") || raw.contains("E")
+                        ? Double.parseDouble(raw) : Long.parseLong(raw);
+            } catch (NumberFormatException ex) {
+                throw new IllegalArgumentException("Invalid number: " + raw);
+            }
+        }
+
+        private void expect(char c) {
+            space();
+            if (end() || text.charAt(position) != c) throw new IllegalArgumentException("Expected '" + c + "' at " + position);
+            position++;
+        }
+    }
+}
+
+// File: ExcelImporter.java
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+public final class ExcelImporter {
+    private static final Pattern CELL = Pattern.compile("<c\\b([^>]*)>(.*?)</c>", Pattern.DOTALL);
+    private static final Pattern ATTR = Pattern.compile("(\\w+)=\"([^\"]*)\"");
+    private static final Pattern VALUE = Pattern.compile("<v>(.*?)</v>|<t>(.*?)</t>", Pattern.DOTALL);
+
+    public List<Map<String, Object>> readXlsx(byte[] bytes) {
+        try {
+            Map<String, String> files = unzip(bytes);
+            List<String> shared = readSharedStrings(files.get("xl/sharedStrings.xml"));
+            String sheet = files.get("xl/worksheets/sheet1.xml");
+            if (sheet == null) throw new IllegalArgumentException("Workbook has no first worksheet");
+            List<List<String>> table = parseSheet(sheet, shared);
+            return Csv.toObjects(table);
+        } catch (Exception e) {
+            if (e instanceof IllegalArgumentException iae) throw iae;
+            throw new IllegalArgumentException("Could not read Excel workbook", e);
+        }
+    }
+
+    private Map<String, String> unzip(byte[] bytes) throws Exception {
+        java.util.LinkedHashMap<String, String> files = new java.util.LinkedHashMap<>();
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes))) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                if (!entry.isDirectory() && (entry.getName().equals("xl/sharedStrings.xml")
+                        || entry.getName().matches("xl/worksheets/sheet\\d+\\.xml"))) {
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    zip.transferTo(out);
+                    files.put(entry.getName(), out.toString(StandardCharsets.UTF_8));
+                }
+            }
+        }
+        return files;
+    }
+
+    private List<String> readSharedStrings(String xml) {
+        List<String> result = new ArrayList<>();
+        if (xml == null) return result;
+        Matcher matcher = Pattern.compile("<si\\b[^>]*>(.*?)</si>", Pattern.DOTALL).matcher(xml);
+        while (matcher.find()) {
+            Matcher text = Pattern.compile("<t\\b[^>]*>(.*?)</t>", Pattern.DOTALL).matcher(matcher.group(1));
+            StringBuilder value = new StringBuilder();
+            while (text.find()) value.append(unescape(text.group(1)));
+            result.add(value.toString());
+        }
+        return result;
+    }
+
+    private List<List<String>> parseSheet(String xml, List<String> shared) {
+        List<List<String>> rows = new ArrayList<>();
+        Matcher rowMatcher = Pattern.compile("<row\\b[^>]*>(.*?)</row>", Pattern.DOTALL).matcher(xml);
+        while (rowMatcher.find()) {
+            List<String> row = new ArrayList<>();
+            Matcher cellMatcher = CELL.matcher(rowMatcher.group(1));
+            while (cellMatcher.find()) {
+                Map<String, String> attrs = new java.util.HashMap<>();
+                Matcher attrMatcher = ATTR.matcher(cellMatcher.group(1));
+                while (attrMatcher.find()) attrs.put(attrMatcher.group(1), attrMatcher.group(2));
+                String reference = attrs.getOrDefault("r", "A1");
+                int column = columnNumber(reference);
+                while (row.size() < column) row.add("");
+                Matcher valueMatcher = VALUE.matcher(cellMatcher.group(2));
+                String value = "";
+                if (valueMatcher.find()) {
+                    value = unescape(valueMatcher.group(1) != null ? valueMatcher.group(1) : valueMatcher.group(2));
+                }
+                if ("s".equals(attrs.get("t")) && !value.isEmpty()) {
+                    int index = Integer.parseInt(value);
+                    if (index >= 0 && index < shared.size()) value = shared.get(index);
+                }
+                row.set(column - 1, value);
+            }
+            rows.add(row);
+        }
+        return rows;
+    }
+
+    private int columnNumber(String reference) {
+        int result = 0;
+        for (int i = 0; i < reference.length() && Character.isLetter(reference.charAt(i)); i++) {
+            result = result * 26 + Character.toUpperCase(reference.charAt(i)) - 'A' + 1;
+        }
+        return Math.max(result, 1);
+    }
+
+    private String unescape(String value) {
+        return value.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+                .replace("&quot;", "\"").replace("&apos;", "'");
+    }
+}
+
+// File: DataImporter.java
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public final class DataImporter {
+    public enum Format { CSV, JSON, EXCEL, GOOGLE_SHEETS, FISCAL_DATA_PACKAGE }
+
+    private final ExcelImporter excelImporter = new ExcelImporter();
+
+    public List<Map<String, Object>> importText(Format format, String text) {
+        return switch (format) {
+            case CSV -> Csv.toObjects(Csv.parse(text));
+            case JSON -> jsonRows(text);
+            case GOOGLE_SHEETS -> Csv.toObjects(Csv.parse(text));
+            case FISCAL_DATA_PACKAGE -> fiscalPackageRows(text);
+            case EXCEL -> throw new IllegalArgumentException("Excel import requires XLSX bytes; use importExcel");
+        };
+    }
+
+    public List<Map<String, Object>> importExcel(byte[] bytes) {
+        return excelImporter.readXlsx(bytes);
+    }
+
+    public List<Map<String, Object>> importGoogleSpreadsheet(String url) {
+        try {
+            String csvUrl = url;
+            if (url.contains("/spreadsheets/d/") && !url.contains("export?")) {
+                String id = url.substring(url.indexOf("/d/") + 3);
+                int end = id.indexOf('/');
+                if (end >= 0) id = id.substring(0, end);
+                csvUrl = "https://docs.google.com/spreadsheets/d/" + id + "/export?format=csv";
+            }
+            HttpRequest request = HttpRequest.newBuilder(URI.create(csvUrl)).GET().build();
+            HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IllegalArgumentException("Spreadsheet returned HTTP " + response.statusCode());
+            }
+            return importText(Format.GOOGLE_SHEETS, response.body());
+        } catch (Exception e) {
+            if (e instanceof IllegalArgumentException iae) throw iae;
+            throw new IllegalArgumentException("Could not import Google Spreadsheet", e);
+        }
+    }
+
+    private List<Map<String, Object>> jsonRows(String text) {
+        Object parsed = Json.parse(text);
+        if (parsed instanceof List<?> list) {
+            List<Map<String, Object>> rows = new ArrayList<>();
+            for (Object item : list) {
+                if (!(item instanceof Map<?, ?> map)) throw new IllegalArgumentException("JSON array must contain objects");
+                rows.add(stringKeyMap(map));
+            }
+            return rows;
+        }
+        if (parsed instanceof Map<?, ?> map) {
+            Object data = map.get("data");
+            if (data instanceof List<?> list) {
+                List<Map<String, Object>> rows = new ArrayList<>();
+                for (Object item : list) {
+                    if (!(item instanceof Map<?, ?> row)) throw new IllegalArgumentException("data must contain objects");
+                    rows.add(stringKeyMap(row));
+                }
+                return rows;
+            }
+        }
+        throw new IllegalArgumentException("Expected a JSON array of objects or an object with a data array");
+    }
+
+    private List<Map<String, Object>> fiscalPackageRows(String text) {
+        Object parsed = Json.parse(text);
+        if (!(parsed instanceof Map<?, ?> descriptor)) throw new IllegalArgumentException("Fiscal Data Package descriptor must be an object");
+        Object resources = descriptor.get("resources");
+        if (!(resources instanceof List<?> list)) throw new IllegalArgumentException("Descriptor has no resources array");
+        for (Object resource : list) {
+            if (resource instanceof Map<?, ?> map) {
+                Object data = map.get("data");
+                if (data instanceof List<?> rows) {
+                    List<Map<String, Object>> result = new ArrayList<>();
+                    for (Object row : rows) {
+                        if (row instanceof Map<?, ?> rowMap) result.add(stringKeyMap(rowMap));
+                    }
+                    return result;
+                }
+                Object path = map.get("path");
+                if (path instanceof String pathString && pathString.startsWith("inline:")) {
+                    return importText(Format.CSV, pathString.substring("inline:".length()));
+                }
+            }
+        }
+        throw new IllegalArgumentException("Descriptor must contain inline resource data for in-memory import");
+    }
+
+    private Map<String, Object> stringKeyMap(Map<?, ?> map) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        map.forEach((key, value) -> result.put(String.valueOf(key), value));
+        return result;
+    }
+
+    public List<String> validateCsv(String csv) {
+        List<String> errors = new ArrayList<>();
+        List<List<String>> rows;
+        try {
+            rows = Csv.parse(csv);
+        } catch (RuntimeException e) {
+            return List.of("CSV could not be parsed: " + e.getMessage());
+        }
+        if (rows.isEmpty()) return List.of("CSV is empty");
+        int width = rows.get(0).size();
+        if (width == 0) errors.add("Header row is empty");
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.get(i).size() != width) errors.add("Row " + (i + 1) + " has " + rows.get(i).size()
+                    + " columns; expected " + width);
+        }
+        if (rows.get(0).stream().anyMatch(String::isBlank)) errors.add("Column names must not be blank");
+        return errors;
+    }
+
+    public List<Map<String, Object>> decodeUtf8(byte[] bytes) {
+        return importText(Format.CSV, new String(bytes, StandardCharsets.UTF_8));
+    }
+}
+
+// File: DatasetService.java
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class DatasetService {
+    private final Map<String, DataSet> datasets = new ConcurrentHashMap<>();
+
+    public DataSet publish(User user, String id, String title, String description,
+                           DatasetStatus initialStatus, List<Map<String, Object>> rows) {
+        requirePublisher(user);
+        if (datasets.containsKey(id)) throw new IllegalArgumentException("Dataset already exists: " + id);
+        DataSet dataSet = new DataSet(id, title, description, user.getId(), initialStatus, rows);
+        datasets.put(id, dataSet);
+        return dataSet;
+    }
+
+    public DataSet get(User user, String id) {
+        DataSet dataSet = requireDataset(id);
+        if (dataSet.getStatus() == DatasetStatus.HIDDEN && !canManage(user, dataSet)) {
+            throw new SecurityException("Dataset is hidden");
+        }
+        return dataSet;
+    }
+
+    public Optional<DataSet> findPublic(String id) {
+        DataSet dataSet = datasets.get(id);
+        return dataSet != null && dataSet.getStatus() == DatasetStatus.PUBLIC
+                ? Optional.of(dataSet) : Optional.empty();
+    }
+
+    public List<DataSet> listOwn(User user) {
+        requirePublisher(user);
+        return datasets.values().stream()
+                .filter(d -> d.getOwnerId().equals(user.getId()))
+                .sorted(Comparator.comparing(DataSet::getTitle))
+                .toList();
+    }
+
+    public List<DataSet> listAll(User administrator) {
+        requireAdministrator(administrator);
+        return datasets.values().stream().sorted(Comparator.comparing(DataSet::getTitle)).toList();
+    }
+
+    public List<DataSet> searchPublic(String text) {
+        String query = text == null ? "" : text.toLowerCase();
+        return datasets.values().stream()
+                .filter(d -> d.getStatus() == DatasetStatus.PUBLIC)
+                .filter(d -> d.getTitle().toLowerCase().contains(query)
+                        || d.getDescription().toLowerCase().contains(query)
+                        || d.getMetadata().entrySet().stream().anyMatch(e ->
+                        (e.getKey() + " " + e.getValue()).toLowerCase().contains(query)))
+                .sorted(Comparator.comparing(DataSet::getTitle))
+                .toList();
+    }
+
+    public void editDataset(User user, String id, String title, String description,
+                            Map<String, String> metadata, List<Map<String, Object>> rows) {
+        DataSet dataSet = requireManageable(user, id);
+        dataSet.setTitle(title);
+        dataSet.setDescription(description);
+        dataSet.setMetadata(metadata);
+        if (rows != null) dataSet.replaceRows(rows);
+    }
+
+    public void editModel(User user, String id, Map<String, String> model) {
+        requireManageable(user, id).setModel(model);
+    }
+
+    public void editSource(User user, String id, String description, String location) {
+        requireManageable(user, id).setSource(description, location);
+    }
+
+    public void setAutomaticUpdate(User user, String id, boolean enabled) {
+        requireManageable(user, id).setAutomaticUpdate(enabled);
+    }
+
+    public void refreshFromSource(User user, String id, List<Map<String, Object>> rows) {
+        DataSet dataSet = requireManageable(user, id);
+        if (!dataSet.isAutomaticUpdate()) throw new IllegalStateException("Automatic update is not enabled");
+        dataSet.replaceRows(rows);
+    }
+
+    public void hide(User user, String id) {
+        requireManageable(user, id).setStatus(DatasetStatus.HIDDEN);
+    }
+
+    public void makePublic(User user, String id) {
+        requireManageable(user, id).setStatus(DatasetStatus.PUBLIC);
+    }
+
+    public void delete(User user, String id) {
+        DataSet dataSet = requireDataset(id);
+        if (!canManage(user, dataSet)) throw new SecurityException("Not allowed to delete this dataset");
+        datasets.remove(id);
+    }
+
+    public void proposeGeoJsonSource(User user, String id, String source) {
+        requireManageable(user, id).addGeoJsonSource(source);
+    }
+
+    public void addConstantColumn(User user, String id, String column, Object value) {
+        DataSet dataSet = requireManageable(user, id);
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (Map<String, Object> old : dataSet.getRows()) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>(old);
+            row.put(column, value);
+            rows.add(row);
+        }
+        dataSet.replaceRows(rows);
+    }
+
+    private DataSet requireManageable(User user, String id) {
+        DataSet dataSet = requireDataset(id);
+        if (!canManage(user, dataSet)) throw new SecurityException("Not allowed to manage this dataset");
+        return dataSet;
+    }
+
+    private DataSet requireDataset(String id) {
+        DataSet dataSet = datasets.get(id);
+        if (dataSet == null) throw new IllegalArgumentException("Unknown dataset: " + id);
+        return dataSet;
+    }
+
+    private boolean canManage(User user, DataSet dataSet) {
+        return user != null && (user.isAdministrator() || dataSet.getOwnerId().equals(user.getId()));
+    }
+
+    private void requirePublisher(User user) {
+        if (user == null || !user.isPublisher()) throw new SecurityException("Publisher privileges required");
+    }
+
+    private void requireAdministrator(User user) {
+        if (user == null || !user.isAdministrator()) throw new SecurityException("Administrator privileges required");
+    }
+}
+
+// File: QuerySpec.java
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public final class QuerySpec {
+    public enum Operation { SUM, COUNT, AVERAGE, MIN, MAX }
+
+    private final Map<String, Object> filters = new LinkedHashMap<>();
+    private final List<String> groupBy = new java.util.ArrayList<>();
+    private final List<String> sortBy = new java.util.ArrayList<>();
+    private String measure;
+    private Operation operation = Operation.SUM;
+    private int limit = Integer.MAX_VALUE;
+
+    public QuerySpec filter(String dimension, Object value) { filters.put(dimension, value); return this; }
+    public QuerySpec groupBy(String... dimensions) { groupBy.addAll(List.of(dimensions)); return this; }
+    public QuerySpec sortBy(String... dimensions) { sortBy.addAll(List.of(dimensions)); return this; }
+    public QuerySpec measure(String measure) { this.measure = measure; return this; }
+    public QuerySpec operation(Operation operation) { this.operation = operation; return this; }
+    public QuerySpec limit(int limit) { this.limit = Math.max(0, limit); return this; }
+
+    public Map<String, Object> getFilters() { return Map.copyOf(filters); }
+    public List<String> getGroupBy() { return List.copyOf(groupBy); }
+    public List<String> getSortBy() { return List.copyOf(sortBy); }
+    public String getMeasure() { return measure; }
+    public Operation getOperation() { return operation; }
+    public int getLimit() { return limit; }
+}
+
+// File: DataQueryService.java
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+public final class DataQueryService {
+    public List<Map<String, Object>> query(DataSet dataset, QuerySpec spec) {
+        List<Map<String, Object>> selected = dataset.getRows().stream()
+                .filter(row -> spec.getFilters().entrySet().stream()
+                        .allMatch(filter -> Objects.equals(
+                                String.valueOf(row.get(filter.getKey())),
+                                String.valueOf(filter.getValue()))))
+                .map(LinkedHashMap::new)
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        List<Map<String, Object>> result = spec.getGroupBy().isEmpty()
+                ? selected : aggregate(selected, spec);
+        if (!spec.getSortBy().isEmpty()) {
+            Comparator<Map<String, Object>> comparator = null;
+            for (String key : spec.getSortBy()) {
+                Comparator<Map<String, Object>> next = Comparator.comparing(
+                        row -> row.get(key) == null ? "" : row.get(key).toString(),
+                        String.CASE_INSENSITIVE_ORDER);
+                comparator = comparator == null ? next : comparator.thenComparing(next);
+            }
+            result.sort(comparator);
+        }
+        return result.stream().limit(spec.getLimit()).toList();
+    }
+
+    private List<Map<String, Object>> aggregate(List<Map<String, Object>> rows, QuerySpec spec) {
+        Map<List<Object>, List<Map<String, Object>>> groups = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            List<Object> key = spec.getGroupBy().stream().map(row::get).toList();
+            groups.computeIfAbsent(key, ignored -> new ArrayList<>()).add(row);
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<List<Object>, List<Map<String, Object>>> group : groups.entrySet()) {
+            Map<String, Object> output = new LinkedHashMap<>();
+            for (int i = 0; i < spec.getGroupBy().size(); i++) {
+                output.put(spec.getGroupBy().get(i), group.getKey().get(i));
+            }
+            output.put(spec.getMeasure() == null ? "value" : spec.getMeasure(),
+                    calculate(group.getValue(), spec.getMeasure(), spec.getOperation()));
+            result.add(output);
+        }
+        return result;
+    }
+
+    private double calculate(List<Map<String, Object>> rows, String measure, QuerySpec.Operation operation) {
+        if (operation == QuerySpec.Operation.COUNT) return rows.size();
+        if (measure == null) throw new IllegalArgumentException("A measure is required for this operation");
+        List<Double> values = rows.stream().map(row -> number(row.get(measure))).filter(v -> !Double.isNaN(v)).toList();
+        if (values.isEmpty()) return 0;
+        return switch (operation) {
+            case SUM -> values.stream().mapToDouble(Double::doubleValue).sum();
+            case AVERAGE -> values.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+            case MIN -> values.stream().mapToDouble(Double::doubleValue).min().orElse(0);
+            case MAX -> values.stream().mapToDouble(Double::doubleValue).max().orElse(0);
+            case COUNT -> values.size();
+        };
+    }
+
+    private double number(Object value) {
+        if (value instanceof Number n) return n.doubleValue();
+        try { return Double.parseDouble(String.valueOf(value)); }
+        catch (RuntimeException e) { return Double.NaN; }
+    }
+
+    public List<Map<String, Object>> queryMultiple(List<DataSet> datasets, QuerySpec spec) {
+        List<Map<String, Object>> combined = new ArrayList<>();
+        for (DataSet dataset : datasets) {
+            for (Map<String, Object> row : query(dataset, spec)) {
+                Map<String, Object> tagged = new LinkedHashMap<>(row);
+                tagged.put("_dataset", dataset.getId());
+                combined.add(tagged);
+            }
+        }
+        return combined;
+    }
+
+    public String queryCsv(DataSet dataset, QuerySpec spec) {
+        return Csv.write(query(dataset, spec));
+    }
+
+    public List<Map<String, Object>> metadataMultiple(List<DataSet> datasets) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (DataSet dataset : datasets) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", dataset.getId());
+            item.put("title", dataset.getTitle());
+            item.put("description", dataset.getDescription());
+            item.put("metadata", dataset.getMetadata());
+            item.put("rowCount", dataset.getRows().size());
+            result.add(item);
+        }
+        return result;
+    }
+
+    public List<Map<String, Object>> convertCurrency(List<Map<String, Object>> rows,
+                                                      List<String> measures, double exchangeRate,
+                                                      String targetCurrency) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            Map<String, Object> copy = new LinkedHashMap<>(row);
+            for (String measure : measures) {
+                if (copy.get(measure) != null) copy.put(measure, number(copy.get(measure)) * exchangeRate);
+            }
+            copy.put("_currency", targetCurrency);
+            result.add(copy);
+        }
+        return result;
+    }
+
+    public List<Map<String, Object>> normalize(List<Map<String, Object>> rows, String measure,
+                                                Map<String, Double> contextByKey, String keyField) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            Map<String, Object> copy = new LinkedHashMap<>(row);
+            double context = contextByKey.getOrDefault(String.valueOf(row.get(keyField)), 0.0);
+            copy.put(measure, context == 0 ? null : number(row.get(measure)) / context);
+            result.add(copy);
+        }
+        return result;
+    }
+
+    public List<Map<String, Object>> percentageOfDataset(List<Map<String, Object>> rows, String measure) {
+        double total = rows.stream().mapToDouble(row -> number(row.get(measure))).sum();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            Map<String, Object> copy = new LinkedHashMap<>(row);
+            copy.put(measure + "_percentage", total == 0 ? 0.0 : number(row.get(measure)) / total * 100.0);
+            result.add(copy);
+        }
+        return result;
+    }
+
+    public List<Map<String, Object>> latestYear(List<Map<String, Object>> rows, String yearField) {
+        int latest = rows.stream().map(row -> {
+            try { return Integer.parseInt(String.valueOf(row.get(yearField))); }
+            catch (RuntimeException e) { return Integer.MIN_VALUE; }
+        }).max(Integer::compare).orElse(Integer.MIN_VALUE);
+        if (latest == Integer.MIN_VALUE) return rows;
+        return rows.stream().filter(row -> String.valueOf(row.get(yearField)).equals(String.valueOf(latest))).toList();
+    }
+}
+
+// File: GeoService.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class GeoService {
+    public record Region(String hasc, String name, String parentHasc, String geoJson) {}
+
+    private final Map<String, Region> regions = new ConcurrentHashMap<>();
+    private final Map<String, List<String>> borders = new ConcurrentHashMap<>();
+
+    public void addRegion(Region region, List<String> borderingHascCodes) {
+        regions.put(region.hasc(), region);
+        borders.put(region.hasc(), List.copyOf(borderingHascCodes));
+    }
+
+    public Region getByHasc(String hasc) {
+        Region region = regions.get(hasc);
+        if (region == null) throw new IllegalArgumentException("Unknown HASC code: " + hasc);
+        return region;
+    }
+
+    public List<Region> bordersOf(String hasc) {
+        getByHasc(hasc);
+        List<Region> result = new ArrayList<>();
+        for (String border : borders.getOrDefault(hasc, List.of())) {
+            Region region = regions.get(border);
+            if (region != null) result.add(region);
+        }
+        return result;
+    }
+
+    public List<Region> query(String countryHasc, String regionHasc, String cityHasc) {
+        String requested = cityHasc != null ? cityHasc : regionHasc != null ? regionHasc : countryHasc;
+        if (requested == null) return List.of();
+        Region region = getByHasc(requested);
+        List<Region> result = new ArrayList<>();
+        result.add(region);
+        result.addAll(bordersOf(requested));
+        return result;
+    }
+
+    public String polygonForQuery(String hasc) {
+        return getByHasc(hasc).geoJson();
+    }
+
+    public Map<String, Object> featureCollection(String hasc) {
+        Region region = getByHasc(hasc);
+        Map<String, Object> feature = new LinkedHashMap<>();
+        feature.put("type", "Feature");
+        feature.put("properties", Map.of("hasc", region.hasc(), "name", region.name()));
+        feature.put("geometry", Json.parse(region.geoJson()));
+        return Map.of("type", "FeatureCollection", "features", List.of(feature));
+    }
+}
+
+// File: MapReadiness.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+public final class MapReadiness {
+    public List<String> validate(DataSet dataset) {
+        List<String> issues = new ArrayList<>();
+        if (dataset.getRows().isEmpty()) {
+            issues.add("Dataset has no rows");
+            return issues;
+        }
+        Map<String, Object> first = dataset.getRows().get(0);
+        boolean coordinates = first.containsKey("latitude") && first.containsKey("longitude");
+        boolean hasc = first.containsKey("hasc") || first.containsKey("region_code");
+        if (!coordinates && !hasc) issues.add("Include latitude/longitude or a HASC/region_code column");
+        if (coordinates) {
+            int valid = 0;
+            for (Map<String, Object> row : dataset.getRows()) {
+                try {
+                    double lat = Double.parseDouble(String.valueOf(row.get("latitude")));
+                    double lon = Double.parseDouble(String.valueOf(row.get("longitude")));
+                    if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) valid++;
+                } catch (RuntimeException ignored) {}
+            }
+            if (valid == 0) issues.add("No valid latitude/longitude pairs were found");
+        }
+        issues.add("Add a numeric measure to colour or size map marks");
+        return issues;
+    }
+}
+
+// File: VisualizationState.java
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public final class VisualizationState {
+    private final String id;
+    private final String ownerId;
+    private final String datasetId;
+    private final Map<String, Object> state;
+    private final Instant createdAt;
+
+    public VisualizationState(String id, String ownerId, String datasetId, Map<String, Object> state) {
+        this.id = id;
+        this.ownerId = ownerId;
+        this.datasetId = datasetId;
+        this.state = new LinkedHashMap<>(state);
+        this.createdAt = Instant.now();
+    }
+
+    public String getId() { return id; }
+    public String getOwnerId() { return ownerId; }
+    public String getDatasetId() { return datasetId; }
+    public Map<String, Object> getState() { return Map.copyOf(state); }
+    public Instant getCreatedAt() { return createdAt; }
+}
+
+// File: VisualizationService.java
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class VisualizationService {
+    private final Map<String, VisualizationState> states = new ConcurrentHashMap<>();
+
+    public VisualizationState save(User user, String datasetId, Map<String, Object> state) {
+        String id = UUID.randomUUID().toString();
+        VisualizationState saved = new VisualizationState(id, user.getId(), datasetId, state);
+        states.put(id, saved);
+        return saved;
+    }
+
+    public VisualizationState get(String id) {
+        VisualizationState state = states.get(id);
+        if (state == null) throw new IllegalArgumentException("Unknown visualization state");
+        return state;
+    }
+
+    public String shareUrl(String baseUrl, String id) {
+        get(id);
+        return baseUrl.replaceAll("/$", "") + "/visualization/" + id;
+    }
+
+    public byte[] exportImage(String id) {
+        VisualizationState state = get(id);
+        String svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"450\">"
+                + "<rect width=\"100%\" height=\"100%\" fill=\"white\"/>"
+                + "<text x=\"24\" y=\"40\" font-family=\"sans-serif\" font-size=\"18\">"
+                + escape(state.getDatasetId()) + " visualization</text>"
+                + "<text x=\"24\" y=\"75\" font-family=\"monospace\" font-size=\"12\">"
+                + escape(Json.stringify(state.getState())) + "</text></svg>";
+        return svg.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public String shareImage(String id, String socialMediaImageEndpoint) {
+        get(id);
+        return socialMediaImageEndpoint.replaceAll("/$", "") + "/visualization/" + id + ".svg";
+    }
+
+    private String escape(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;");
+    }
+}
+
+// File: Branding.java
+public record Branding(String brandName, String iconUrl, String primaryColor) {
+    public Branding {
+        if (brandName == null || brandName.isBlank()) throw new IllegalArgumentException("Brand name is required");
+        if (primaryColor == null || !primaryColor.matches("#[0-9a-fA-F]{6}")) {
+            throw new IllegalArgumentException("Primary color must be a hex color such as #336699");
+        }
+    }
+}
+
+// File: ViewerConfiguration.java
+import java.util.Map;
+
+public record ViewerConfiguration(
+        Branding branding,
+        Map<String, String> visualizationColors,
+        Map<String, String> styles,
+        Map<String, String> translations,
+        int mapZoomStep,
+        String mapColorScheme,
+        String description) {
+
+    public ViewerConfiguration {
+        visualizationColors = visualizationColors == null ? Map.of() : Map.copyOf(visualizationColors);
+        styles = styles == null ? Map.of() : Map.copyOf(styles);
+        translations = translations == null ? Map.of() : Map.copyOf(translations);
+        if (mapZoomStep < 1) mapZoomStep = 1;
+        if (mapColorScheme == null || mapColorScheme.isBlank()) mapColorScheme = "sequential-blue";
+        description = description == null ? "" : description;
+    }
+
+    public String translateHierarchy(String key) {
+        return translations.getOrDefault(key, key);
+    }
+
+    public double zoomIn(double currentZoom) {
+        return currentZoom + mapZoomStep;
+    }
+
+    public double zoomOut(double currentZoom) {
+        return Math.max(0, currentZoom - mapZoomStep);
+    }
+}
+
+// File: DatasetDefaults.java
+import java.util.List;
+import java.util.Map;
+
+public final class DatasetDefaults {
+    private DatasetDefaults() {}
+
+    public static Map<String, List<Map<String, Object>>> recentYearDefaults(
+            DataSet dataset, String yearField, List<String> visualizationTypes, DataQueryService queryService) {
+        List<Map<String, Object>> recentRows = queryService.latestYear(dataset.getRows(), yearField);
+        java.util.LinkedHashMap<String, List<Map<String, Object>>> result = new java.util.LinkedHashMap<>();
+        for (String type : visualizationTypes) result.put(type, recentRows);
+        return result;
+    }
+}
+
+// File: BlogPost.java
+import java.time.Instant;
+
+public record BlogPost(String title, String author, String body, Instant publishedAt) {
+    public BlogPost {
+        if (title == null || title.isBlank()) throw new IllegalArgumentException("Title is required");
+        body = body == null ? "" : body;
+        publishedAt = publishedAt == null ? Instant.now() : publishedAt;
+    }
+}
+
+// File: ExampleProject.java
+import java.util.List;
+
+public record ExampleProject(String title, String description, String url, List<String> tags) {
+    public ExampleProject {
+        tags = tags == null ? List.of() : List.copyOf(tags);
+    }
+}
+
+// File: CommunityService.java
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public final class CommunityService {
+    private final List<BlogPost> posts = new CopyOnWriteArrayList<>();
+    private final List<ExampleProject> examples = new CopyOnWriteArrayList<>();
+
+    public void addBlogPost(User user, BlogPost post) {
+        if (user == null || (user.getRole() != Role.COMMUNITY_MEMBER && !user.isAdministrator())) {
+            throw new SecurityException("Community membership required");
+        }
+        posts.add(post);
+    }
+
+    public List<BlogPost> blogPosts() {
+        return posts.stream().sorted(Comparator.comparing(BlogPost::publishedAt).reversed()).toList();
+    }
+
+    public void addExample(ExampleProject example) {
+        examples.add(example);
+    }
+
+    public List<ExampleProject> examples() {
+        return List.copyOf(examples);
+    }
+}
+
+// File: UserService.java
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class UserService {
+    private final Map<String, User> users = new ConcurrentHashMap<>();
+
+    public void register(User user) {
+        users.put(user.getId(), user);
+    }
+
+    public User get(String id) {
+        User user = users.get(id);
+        if (user == null) throw new IllegalArgumentException("Unknown user");
+        return user;
+    }
+
+    public void setUsername(User user, String username) {
+        user.setUsername(username);
+    }
+
+    public boolean isPublisher(String userId) {
+        return get(userId).isPublisher();
+    }
+
+    public boolean isAdministrator(String userId) {
+        return get(userId).isAdministrator();
+    }
+}
+
+// File: Main.java
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class Main {
+    public static void main(String[] args) {
+        User publisher = new User("u-1", "data.editor", Role.PUBLISHER);
+        User administrator = new User("u-2", "platform.admin", Role.ADMINISTRATOR);
+
+        DataImporter importer = new DataImporter();
+        String csv = "region,year,spending\nNorth,2023,120\nSouth,2023,80\nNorth,2024,150\nSouth,2024,95";
+        List<Map<String, Object>> rows = importer.importText(DataImporter.Format.CSV, csv);
+
+        DatasetService datasets = new DatasetService();
+        DataSet dataset = datasets.publish(publisher, "budget-2024", "Example Budget",
+                "Public spending by region", DatasetStatus.PUBLIC, rows);
+        dataset.setMetadata(Map.of("country", "Exampleland", "currency", "USD"));
+        dataset.setModel(Map.of("spending", "measure", "region", "dimension"));
+
+        DataQueryService queries = new DataQueryService();
+        QuerySpec spec = new QuerySpec().groupBy("region").measure("spending")
+                .operation(QuerySpec.Operation.SUM).filter("year", "2024");
+        System.out.println("Aggregated data:");
+        System.out.println(queries.queryCsv(dataset, spec));
+
+        VisualizationService visualizations = new VisualizationService();
+        VisualizationState state = visualizations.save(publisher, dataset.getId(),
+                Map.of("year", 2024, "visualization", "treemap"));
+        System.out.println("Share URL: " + visualizations.shareUrl("https://openspending.example", state.getId()));
+        System.out.println("Administrator can view " + datasets.listAll(administrator).size() + " dataset(s).");
+    }
+}

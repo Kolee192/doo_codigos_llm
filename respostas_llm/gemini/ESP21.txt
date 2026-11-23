@@ -1,0 +1,1099 @@
+// File: SystemMode.java
+public enum SystemMode {
+    NORMAL_INTERACTIVE,
+    ELECTION_MODE
+}
+
+// File: VotingStatus.java
+public enum VotingStatus {
+    NOT_VOTED,
+    ONLINE_VOTED,
+    OFFLINE_VOTED
+}
+
+// File: UserRole.java
+public enum UserRole {
+    VOTER,
+    CANDIDATE,
+    ECA,
+    ESS
+}
+
+// File: User.java
+public abstract class User {
+    private final String userId;
+    private String password;
+    private final UserRole role;
+
+    public User(String userId, String password, UserRole role) {
+        this.userId = userId;
+        this.password = password;
+        this.role = role;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public boolean checkPassword(String password) {
+        return this.password != null && this.password.equals(password);
+    }
+}
+
+// File: VoterApplication.java
+public class VoterApplication {
+    private final String applicationId;
+    private final String tck;
+    private final String fullName;
+    private final String address;
+    private final String region;
+    private final String pictureRef;
+    private boolean approved;
+
+    public VoterApplication(String applicationId, String tck, String fullName, String address, String region, String pictureRef) {
+        this.applicationId = applicationId;
+        this.tck = tck;
+        this.fullName = fullName;
+        this.address = address;
+        this.region = region;
+        this.pictureRef = pictureRef;
+        this.approved = false;
+    }
+
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public String getTck() {
+        return tck;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public String getPictureRef() {
+        return pictureRef;
+    }
+
+    public boolean isApproved() {
+        return approved;
+    }
+
+    public void setApproved(boolean approved) {
+        this.approved = approved;
+    }
+}
+
+// File: Voter.java
+public class Voter extends User {
+    private final String tck;
+    private String fullName;
+    private String address;
+    private String region;
+    private final String vin; // Voter Identification Number / VIC
+    private String stationId;
+    private VotingStatus votingStatus;
+
+    public Voter(String userId, String password, String tck, String fullName, String address, String region, String vin, String stationId) {
+        super(userId, password, UserRole.VOTER);
+        this.tck = tck;
+        this.fullName = fullName;
+        this.address = address;
+        this.region = region;
+        this.vin = vin;
+        this.stationId = stationId;
+        this.votingStatus = VotingStatus.NOT_VOTED;
+    }
+
+    public String getTck() {
+        return tck;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public void setRegion(String region) {
+        this.region = region;
+    }
+
+    public String getVin() {
+        return vin;
+    }
+
+    public String getStationId() {
+        return stationId;
+    }
+
+    public void setStationId(String stationId) {
+        this.stationId = stationId;
+    }
+
+    public VotingStatus getVotingStatus() {
+        return votingStatus;
+    }
+
+    public void setVotingStatus(VotingStatus votingStatus) {
+        this.votingStatus = votingStatus;
+    }
+}
+
+// File: ECA.java
+public class ECA extends User {
+    private final String authorityName;
+
+    public ECA(String userId, String password, String authorityName) {
+        super(userId, password, UserRole.ECA);
+        this.authorityName = authorityName;
+    }
+
+    public String getAuthorityName() {
+        return authorityName;
+    }
+}
+
+// File: CandidateQuestion.java
+public class CandidateQuestion {
+    private final String questionId;
+    private final String voterId;
+    private final String questionText;
+    private String answerText;
+    private boolean answered;
+
+    public CandidateQuestion(String questionId, String voterId, String questionText) {
+        this.questionId = questionId;
+        this.voterId = voterId;
+        this.questionText = questionText;
+        this.answerText = null;
+        this.answered = false;
+    }
+
+    public String getQuestionId() {
+        return questionId;
+    }
+
+    public String getVoterId() {
+        return voterId;
+    }
+
+    public String getQuestionText() {
+        return questionText;
+    }
+
+    public String getAnswerText() {
+        return answerText;
+    }
+
+    public boolean isAnswered() {
+        return answered;
+    }
+
+    public void answer(String answer) {
+        this.answerText = answer;
+        this.answered = true;
+    }
+}
+
+// File: Candidate.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Candidate extends User {
+    private final String candidateName;
+    private final String party;
+    private final String region;
+    private boolean activated;
+    private String cv;
+    private final List<String> promises;
+    private final List<CandidateQuestion> questions;
+
+    public Candidate(String userId, String password, String candidateName, String party, String region) {
+        super(userId, password, UserRole.CANDIDATE);
+        this.candidateName = candidateName;
+        this.party = party;
+        this.region = region;
+        this.activated = false;
+        this.cv = "";
+        this.promises = new ArrayList<>();
+        this.questions = new ArrayList<>();
+    }
+
+    public String getCandidateName() {
+        return candidateName;
+    }
+
+    public String getParty() {
+        return party;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public boolean isActivated() {
+        return activated;
+    }
+
+    public void setActivated(boolean activated) {
+        this.activated = activated;
+    }
+
+    public String getCv() {
+        return cv;
+    }
+
+    public void setCv(String cv) {
+        this.cv = cv;
+    }
+
+    public List<String> getPromises() {
+        return new ArrayList<>(promises);
+    }
+
+    public void addPromise(String promise) {
+        if (promise != null && !promise.trim().isEmpty()) {
+            this.promises.add(promise);
+        }
+    }
+
+    public void editPromise(int index, String newPromise) {
+        if (index >= 0 && index < promises.size()) {
+            promises.set(index, newPromise);
+        }
+    }
+
+    public List<CandidateQuestion> getQuestions() {
+        return questions;
+    }
+
+    public void addQuestion(CandidateQuestion question) {
+        this.questions.add(question);
+    }
+}
+
+// File: ESS.java
+public class ESS extends User {
+    private final String tck;
+    private final String stationId;
+
+    public ESS(String userId, String password, String tck, String stationId) {
+        super(userId, password, UserRole.ESS);
+        this.tck = tck;
+        this.stationId = stationId;
+    }
+
+    public String getTck() {
+        return tck;
+    }
+
+    public String getStationId() {
+        return stationId;
+    }
+}
+
+// File: BallotVote.java
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.nio.charset.StandardCharsets;
+
+public class BallotVote {
+    private final String electionYear;
+    private final String region;
+    private final String candidateId;
+    private final String partyName;
+    private final boolean offline;
+    private final String voteSecurityHash;
+
+    public BallotVote(String electionYear, String region, String candidateId, String partyName, boolean offline, long timestamp) {
+        this.electionYear = electionYear;
+        this.region = region;
+        this.candidateId = candidateId;
+        this.partyName = partyName;
+        this.offline = offline;
+        this.voteSecurityHash = computeHash(electionYear + ":" + region + ":" + candidateId + ":" + partyName + ":" + timestamp);
+    }
+
+    private String computeHash(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encoded = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : encoded) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            return String.valueOf(input.hashCode());
+        }
+    }
+
+    public String getElectionYear() {
+        return electionYear;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public String getCandidateId() {
+        return candidateId;
+    }
+
+    public String getPartyName() {
+        return partyName;
+    }
+
+    public boolean isOffline() {
+        return offline;
+    }
+
+    public String getVoteSecurityHash() {
+        return voteSecurityHash;
+    }
+}
+
+// File: ElectionCenterStation.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class ElectionCenterStation {
+    private final String stationId;
+    private final String region;
+    private boolean systemOpen;
+    private final Map<String, String> activeVotingTokens; // Voter TCK -> One-time Hash Token
+    private int offlineVotesMarkedCount;
+
+    public ElectionCenterStation(String stationId, String region) {
+        this.stationId = stationId;
+        this.region = region;
+        this.systemOpen = false;
+        this.activeVotingTokens = new HashMap<>();
+        this.offlineVotesMarkedCount = 0;
+    }
+
+    public String getStationId() {
+        return stationId;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public boolean isSystemOpen() {
+        return systemOpen;
+    }
+
+    public void setSystemOpen(boolean systemOpen) {
+        this.systemOpen = systemOpen;
+    }
+
+    public void issueVotingPasswordToken(String tck, String token) {
+        activeVotingTokens.put(tck, token);
+    }
+
+    public boolean consumeVotingToken(String tck, String token) {
+        if (activeVotingTokens.containsKey(tck) && activeVotingTokens.get(tck).equals(token)) {
+            activeVotingTokens.remove(tck);
+            return true;
+        }
+        return false;
+    }
+
+    public void incrementOfflineCount() {
+        offlineVotesMarkedCount++;
+    }
+
+    public int getOfflineVotesMarkedCount() {
+        return offlineVotesMarkedCount;
+    }
+}
+
+// File: OfficialVoterRecord.java
+public class OfficialVoterRecord {
+    private final String tck;
+    private final String fullName;
+    private final String officialAddress;
+    private final String region;
+    private final boolean eligible;
+
+    public OfficialVoterRecord(String tck, String fullName, String officialAddress, String region, boolean eligible) {
+        this.tck = tck;
+        this.fullName = fullName;
+        this.officialAddress = officialAddress;
+        this.region = region;
+        this.eligible = eligible;
+    }
+
+    public String getTck() {
+        return tck;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public String getOfficialAddress() {
+        return officialAddress;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public boolean isEligible() {
+        return eligible;
+    }
+}
+
+// File: OperationResult.java
+public class OperationResult {
+    private final boolean success;
+    private final String message;
+    private final Object payload;
+
+    public OperationResult(boolean success, String message) {
+        this(success, message, null);
+    }
+
+    public OperationResult(boolean success, String message, Object payload) {
+        this.success = success;
+        this.message = message;
+        this.payload = payload;
+    }
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public Object getPayload() {
+        return payload;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + (success ? "SUCCESS" : "ERROR") + "] " + message;
+    }
+}
+
+// File: SystemSession.java
+public class SystemSession {
+    private final String sessionId;
+    private final User currentUser;
+    private final long createdAt;
+
+    public SystemSession(String sessionId, User currentUser) {
+        this.sessionId = sessionId;
+        this.currentUser = currentUser;
+        this.createdAt = System.currentTimeMillis();
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public User getCurrentUser() {
+        return currentUser;
+    }
+
+    public long getCreatedAt() {
+        return createdAt;
+    }
+}
+
+// File: OnevElectionSystem.java
+import java.security.SecureRandom;
+import java.util.*;
+
+public class OnevElectionSystem {
+    private SystemMode currentMode;
+    private final String currentElectionYear;
+
+    // Database simulation
+    private final Map<String, User> users; // userId -> User
+    private final Map<String, Voter> votersByTck; // TCK -> Voter
+    private final Map<String, Voter> votersByVin; // VIN -> Voter
+    private final Map<String, Candidate> candidates; // candidateId -> Candidate
+    private final Map<String, VoterApplication> applications; // applicationId -> VoterApplication
+    private final Map<String, ElectionCenterStation> stations; // stationId -> ElectionCenterStation
+    private final Map<String, OfficialVoterRecord> upcomingElectionRoster; // TCK -> Official Record
+    private final List<BallotVote> ballotBoxVotes;
+
+    // Active session
+    private SystemSession activeSession;
+
+    private final SecureRandom secureRandom;
+    private int counter;
+
+    public OnevElectionSystem(String currentElectionYear) {
+        this.currentMode = SystemMode.NORMAL_INTERACTIVE;
+        this.currentElectionYear = currentElectionYear;
+        this.users = new HashMap<>();
+        this.votersByTck = new HashMap<>();
+        this.votersByVin = new HashMap<>();
+        this.candidates = new HashMap<>();
+        this.applications = new HashMap<>();
+        this.stations = new HashMap<>();
+        this.upcomingElectionRoster = new HashMap<>();
+        this.ballotBoxVotes = new ArrayList<>();
+        this.activeSession = null;
+        this.secureRandom = new SecureRandom();
+        this.counter = 1000;
+    }
+
+    public SystemMode getCurrentMode() {
+        return currentMode;
+    }
+
+    public void setSystemMode(SystemMode mode) {
+        this.currentMode = mode;
+    }
+
+    public SystemSession getActiveSession() {
+        return activeSession;
+    }
+
+    public void registerStation(ElectionCenterStation station) {
+        stations.put(station.getStationId(), station);
+    }
+
+    public void addOfficialRosterRecord(OfficialVoterRecord record) {
+        upcomingElectionRoster.put(record.getTck(), record);
+    }
+
+    // 2.2.1.5 / 3.2.1.5 Login/Logout
+    public OperationResult login(String userId, String password) {
+        if (userId == null || password == null) {
+            return new OperationResult(false, "Login credentials must not be empty.");
+        }
+        User user = users.get(userId);
+        if (user != null && user.checkPassword(password)) {
+            String sessionId = "SESS-" + UUID.randomUUID();
+            this.activeSession = new SystemSession(sessionId, user);
+            return new OperationResult(true, "User " + userId + " logged in successfully as " + user.getRole() + ".", user);
+        }
+        return new OperationResult(false, "Invalid username or password.");
+    }
+
+    public OperationResult logout() {
+        if (activeSession != null) {
+            String uid = activeSession.getCurrentUser().getUserId();
+            this.activeSession = null;
+            return new OperationResult(true, "User " + uid + " logged out successfully.");
+        }
+        return new OperationResult(false, "No active session to terminate.");
+    }
+
+    // 2.2.1.6 / 3.2.1.6 Account Update
+    public OperationResult updateAccountPassword(String oldPassword, String newPassword) {
+        if (activeSession == null) {
+            return new OperationResult(false, "You must be logged in to update your account.");
+        }
+        User user = activeSession.getCurrentUser();
+        if (!user.checkPassword(oldPassword)) {
+            return new OperationResult(false, "Old password was entered incorrectly.");
+        }
+        if (newPassword == null || newPassword.trim().length() < 4) {
+            return new OperationResult(false, "New password is too weak or invalid.");
+        }
+        user.setPassword(newPassword);
+        return new OperationResult(true, "Password changed successfully for user " + user.getUserId());
+    }
+
+    // 2.2.1.1 / 3.2.1.1 Voter Registration
+    public OperationResult registerVoterApplication(String tck, String fullName, String address, String region, String pictureRef) {
+        if (currentMode != SystemMode.NORMAL_INTERACTIVE) {
+            return new OperationResult(false, "Voter registration is only available during Normal Interactive Mode.");
+        }
+        if (tck == null || tck.length() != 11 || fullName == null || address == null || region == null || pictureRef == null) {
+            return new OperationResult(false, "Application form contains invalid or missing fields.");
+        }
+        if (votersByTck.containsKey(tck)) {
+            return new OperationResult(false, "A voter with this TCK is already registered.");
+        }
+
+        String appId = "APP-" + (++counter);
+        VoterApplication app = new VoterApplication(appId, tck, fullName, address, region, pictureRef);
+        applications.put(appId, app);
+        return new OperationResult(true, "Application submitted successfully. Reference ID: " + appId, appId);
+    }
+
+    // 2.2.1.2 / 3.2.1.2 Approve Application (ECA)
+    public OperationResult approveVoterApplicant(String applicationId, boolean informationIsCorrect, String assignedStationId) {
+        if (activeSession == null || activeSession.getCurrentUser().getRole() != UserRole.ECA) {
+            return new OperationResult(false, "Only ECA can approve voter applications.");
+        }
+        VoterApplication app = applications.get(applicationId);
+        if (app == null) {
+            return new OperationResult(false, "Application not found: " + applicationId);
+        }
+        if (app.isApproved()) {
+            return new OperationResult(false, "Application is already processed.");
+        }
+
+        if (!informationIsCorrect) {
+            applications.remove(applicationId);
+            return new OperationResult(true, "Application rejected. Discrepancy notice sent to voter's address via postal mail.");
+        }
+
+        // Generate account, VIC (Voter Identity Card / VIN) and password
+        String vin = "VIN-" + (100000 + secureRandom.nextInt(900000));
+        String generatedPassword = "VP-" + (1000 + secureRandom.nextInt(9000));
+        String voterUserId = "VOTER-" + app.getTck();
+
+        Voter newVoter = new Voter(voterUserId, generatedPassword, app.getTck(), app.getFullName(), app.getAddress(), app.getRegion(), vin, assignedStationId);
+        users.put(voterUserId, newVoter);
+        votersByTck.put(app.getTck(), newVoter);
+        votersByVin.put(vin, newVoter);
+        app.setApproved(true);
+
+        return new OperationResult(true, "Voter approved. Account: " + voterUserId + ", VIN: " + vin + ", Password generated and mailed to address.", newVoter);
+    }
+
+    // 2.2.1.3 / 3.2.1.3 Update Registered Voters (ECA)
+    public OperationResult updateRegisteredVotersWithOfficialRoster() {
+        if (activeSession == null || activeSession.getCurrentUser().getRole() != UserRole.ECA) {
+            return new OperationResult(false, "Only ECA can update registered voters.");
+        }
+        int updatedCount = 0;
+        int deletedCount = 0;
+
+        List<String> registeredTcks = new ArrayList<>(votersByTck.keySet());
+        for (String tck : registeredTcks) {
+            Voter voter = votersByTck.get(tck);
+            OfficialVoterRecord official = upcomingElectionRoster.get(tck);
+            if (official != null && official.isEligible()) {
+                voter.setFullName(official.getFullName());
+                voter.setAddress(official.getOfficialAddress());
+                voter.setRegion(official.getRegion());
+                updatedCount++;
+            } else {
+                // Delete voter who cannot use vote officially
+                users.remove(voter.getUserId());
+                votersByVin.remove(voter.getVin());
+                votersByTck.remove(tck);
+                deletedCount++;
+            }
+        }
+        return new OperationResult(true, "Roster update complete. Updated: " + updatedCount + ", Removed: " + deletedCount);
+    }
+
+    // 2.2.1.4 / 3.2.1.4 Open Candidate Account (ECA)
+    public OperationResult openCandidateAccount(String candidateName, String party, String region) {
+        if (activeSession == null || activeSession.getCurrentUser().getRole() != UserRole.ECA) {
+            return new OperationResult(false, "Only ECA can open candidate accounts.");
+        }
+        String candidateUserId = "CAND-" + (++counter);
+        String candidatePassword = "CP-" + (1000 + secureRandom.nextInt(9000));
+
+        Candidate candidate = new Candidate(candidateUserId, candidatePassword, candidateName, party, region);
+        users.put(candidateUserId, candidate);
+        candidates.put(candidateUserId, candidate);
+
+        return new OperationResult(true, "Candidate account created. ID: " + candidateUserId + ", Temp Password: " + candidatePassword, candidate);
+    }
+
+    // Candidate Profile Activation
+    public OperationResult activateCandidateProfile(String candidateId) {
+        Candidate candidate = candidates.get(candidateId);
+        if (candidate == null) {
+            return new OperationResult(false, "Candidate not found.");
+        }
+        candidate.setActivated(true);
+        return new OperationResult(true, "Candidate profile activated successfully.");
+    }
+
+    // 2.2.1.7 / 3.2.1.7 View EC Information (Voter)
+    public OperationResult viewCandidateInformation(String candidateId) {
+        if (activeSession == null || activeSession.getCurrentUser().getRole() != UserRole.VOTER) {
+            return new OperationResult(false, "Only logged in voters can view candidate details.");
+        }
+        Voter voter = (Voter) activeSession.getCurrentUser();
+        Candidate cand = candidates.get(candidateId);
+        if (cand == null) {
+            return new OperationResult(false, "Candidate does not exist.");
+        }
+        if (!cand.isActivated()) {
+            return new OperationResult(false, "Candidate profile has not been activated yet.");
+        }
+        if (!cand.getRegion().equalsIgnoreCase(voter.getRegion())) {
+            return new OperationResult(false, "Candidate belongs to region " + cand.getRegion() + ", not voter's region (" + voter.getRegion() + ").");
+        }
+        return new OperationResult(true, "Candidate found: " + cand.getCandidateName(), cand);
+    }
+
+    // 2.2.1.8 / 3.2.1.8 Ask Question to Candidate (Voter)
+    public OperationResult askCandidateQuestion(String candidateId, String questionText) {
+        if (activeSession == null || activeSession.getCurrentUser().getRole() != UserRole.VOTER) {
+            return new OperationResult(false, "Only logged-in voters can submit questions.");
+        }
+        Candidate cand = candidates.get(candidateId);
+        if (cand == null || !cand.isActivated()) {
+            return new OperationResult(false, "Candidate is unavailable or not activated.");
+        }
+        String qId = "Q-" + (++counter);
+        CandidateQuestion question = new CandidateQuestion(qId, activeSession.getCurrentUser().getUserId(), questionText);
+        cand.addQuestion(question);
+        return new OperationResult(true, "Question submitted to " + cand.getCandidateName() + ". ID: " + qId, question);
+    }
+
+    // 2.2.1.9 / 3.2.1.9 CV Edit (Candidate)
+    public OperationResult editCV(String newCvContent) {
+        if (activeSession == null || activeSession.getCurrentUser().getRole() != UserRole.CANDIDATE) {
+            return new OperationResult(false, "Only logged-in candidate can edit CV.");
+        }
+        Candidate cand = (Candidate) activeSession.getCurrentUser();
+        cand.setCv(newCvContent);
+        return new OperationResult(true, "CV updated successfully.");
+    }
+
+    // 2.2.1.10 / 3.2.1.10 Add/Edit Promises (Candidate)
+    public OperationResult addPromise(String promiseText) {
+        if (activeSession == null || activeSession.getCurrentUser().getRole() != UserRole.CANDIDATE) {
+            return new OperationResult(false, "Only logged-in candidate can add promises.");
+        }
+        Candidate cand = (Candidate) activeSession.getCurrentUser();
+        cand.addPromise(promiseText);
+        return new OperationResult(true, "Promise added to profile.");
+    }
+
+    // 2.2.1.11 / 3.2.1.11 Read/Answer Questions (Candidate)
+    public OperationResult answerQuestion(String questionId, String answerText) {
+        if (activeSession == null || activeSession.getCurrentUser().getRole() != UserRole.CANDIDATE) {
+            return new OperationResult(false, "Only candidate can reply to questions.");
+        }
+        Candidate cand = (Candidate) activeSession.getCurrentUser();
+        for (CandidateQuestion q : cand.getQuestions()) {
+            if (q.getQuestionId().equals(questionId)) {
+                q.answer(answerText);
+                return new OperationResult(true, "Answer posted successfully for question " + questionId);
+            }
+        }
+        return new OperationResult(false, "Question ID not found in candidate inbox.");
+    }
+
+    // 2.2.1.12 / 3.2.1.12 View Election Results
+    public Map<String, Integer> viewElectionResults(String electionYear, String region, String party) {
+        Map<String, Integer> results = new HashMap<>();
+        for (BallotVote vote : ballotBoxVotes) {
+            boolean matchesYear = (electionYear == null || electionYear.isEmpty() || vote.getElectionYear().equalsIgnoreCase(electionYear));
+            boolean matchesRegion = (region == null || region.isEmpty() || vote.getRegion().equalsIgnoreCase(region));
+            boolean matchesParty = (party == null || party.isEmpty() || vote.getPartyName().equalsIgnoreCase(party));
+
+            if (matchesYear && matchesRegion && matchesParty) {
+                String key = vote.getPartyName() + " (" + vote.getCandidateId() + ")";
+                results.put(key, results.getOrDefault(key, 0) + 1);
+            }
+        }
+        return results;
+    }
+
+    // 2.2.2.1 / 3.2.2.1 Open System (ESS)
+    public OperationResult openSystemAtStation(String tck, String supervisorId, String password) {
+        User user = users.get(supervisorId);
+        if (user == null || !user.checkPassword(password) || user.getRole() != UserRole.ESS) {
+            return new OperationResult(false, "Supervisor authentication failed. Wrong TCK/ID/password.");
+        }
+        ESS supervisor = (ESS) user;
+        if (!supervisor.getTck().equals(tck)) {
+            return new OperationResult(false, "Invalid TCK match for Supervisor.");
+        }
+        ElectionCenterStation station = stations.get(supervisor.getStationId());
+        if (station == null) {
+            return new OperationResult(false, "Assigned station " + supervisor.getStationId() + " not configured.");
+        }
+
+        station.setSystemOpen(true);
+        this.currentMode = SystemMode.ELECTION_MODE;
+        return new OperationResult(true, "Station " + station.getStationId() + " successfully initiated in ELECTION MODE.");
+    }
+
+    // 2.2.2.2 / 3.2.2.2 Mark Voted and Generate Password (ESS)
+    public OperationResult markVotedAndGeneratePassword(String stationId, String voterTck, boolean wantOnline) {
+        if (currentMode != SystemMode.ELECTION_MODE) {
+            return new OperationResult(false, "Voting operations can only be executed in Election Mode.");
+        }
+        ElectionCenterStation station = stations.get(stationId);
+        if (station == null || !station.isSystemOpen()) {
+            return new OperationResult(false, "Station is not opened for election.");
+        }
+
+        Voter voter = votersByTck.get(voterTck);
+        if (voter == null) {
+            return new OperationResult(false, "Voter with specified TCK was not found.");
+        }
+        if (voter.getVotingStatus() != VotingStatus.NOT_VOTED) {
+            return new OperationResult(false, "Voter has already cast vote (" + voter.getVotingStatus() + ").");
+        }
+
+        if (wantOnline) {
+            String hashPassword = "HASH-" + (100000 + secureRandom.nextInt(900000));
+            station.issueVotingPasswordToken(voterTck, hashPassword);
+            return new OperationResult(true, "Online vote token generated and printed for voter.", hashPassword);
+        } else {
+            voter.setVotingStatus(VotingStatus.OFFLINE_VOTED);
+            station.incrementOfflineCount();
+            return new OperationResult(true, "Voter marked as 'Offline Voted'. Station offline total: " + station.getOfflineVotesMarkedCount());
+        }
+    }
+
+    // 2.2.2.3 / 3.2.2.3 Vote Online (Voter)
+    public OperationResult castVoteOnline(String vin, String password, String hashPassword, String stationId, String candidateId) {
+        if (currentMode != SystemMode.ELECTION_MODE) {
+            return new OperationResult(false, "Vote polling is only allowed during Election Mode on Election Day.");
+        }
+        Voter voter = votersByVin.get(vin);
+        if (voter == null || !voter.checkPassword(password)) {
+            return new OperationResult(false, "Invalid Voter Identification Number or password.");
+        }
+        if (voter.getVotingStatus() != VotingStatus.NOT_VOTED) {
+            return new OperationResult(false, "Voter has already voted.");
+        }
+
+        ElectionCenterStation station = stations.get(stationId);
+        if (station == null || !station.isSystemOpen()) {
+            return new OperationResult(false, "Election station is not active.");
+        }
+
+        boolean tokenValid = station.consumeVotingToken(voter.getTck(), hashPassword);
+        if (!tokenValid) {
+            return new OperationResult(false, "Invalid or expired hash password token.");
+        }
+
+        Candidate candidate = candidates.get(candidateId);
+        if (candidate == null) {
+            return new OperationResult(false, "Selected candidate does not exist.");
+        }
+
+        // Cast anonymous ballot
+        BallotVote ballot = new BallotVote(currentElectionYear, voter.getRegion(), candidate.getUserId(), candidate.getParty(), false, System.currentTimeMillis());
+        ballotBoxVotes.add(ballot);
+        voter.setVotingStatus(VotingStatus.ONLINE_VOTED);
+
+        return new OperationResult(true, "Vote cast successfully and stored in DB. Voter marked as 'Online Voted'.");
+    }
+
+    // 2.2.2.4 / 3.2.2.4 Enter Offline Votes (ESS)
+    public OperationResult enterOfflineVotes(String supervisorId, String password, Map<String, Integer> candidateVotesEntered) {
+        User user = users.get(supervisorId);
+        if (user == null || !user.checkPassword(password) || user.getRole() != UserRole.ESS) {
+            return new OperationResult(false, "Invalid ESS authentication.");
+        }
+        ESS supervisor = (ESS) user;
+        ElectionCenterStation station = stations.get(supervisor.getStationId());
+        if (station == null) {
+            return new OperationResult(false, "Station not found.");
+        }
+
+        int totalEntered = 0;
+        for (int count : candidateVotesEntered.values()) {
+            if (count < 0) {
+                return new OperationResult(false, "Vote count cannot be negative.");
+            }
+            totalEntered += count;
+        }
+
+        // System compares the number of votes ESS entered with the number of votes marked as "Offline Voted"
+        if (totalEntered != station.getOfflineVotesMarkedCount()) {
+            return new OperationResult(false, "Offline vote equality check failed! Entered: " + totalEntered + ", Marked as Offline: " + station.getOfflineVotesMarkedCount());
+        }
+
+        // Add verified offline votes to database
+        for (Map.Entry<String, Integer> entry : candidateVotesEntered.entrySet()) {
+            String cId = entry.getKey();
+            int count = entry.getValue();
+            Candidate cand = candidates.get(cId);
+            String party = (cand != null) ? cand.getParty() : "Independent";
+            for (int i = 0; i < count; i++) {
+                BallotVote offlineBallot = new BallotVote(currentElectionYear, station.getRegion(), cId, party, true, System.currentTimeMillis());
+                ballotBoxVotes.add(offlineBallot);
+            }
+        }
+        return new OperationResult(true, "All " + totalEntered + " offline votes successfully recorded into ballot database.");
+    }
+
+    public void registerUserDirectly(User user) {
+        users.put(user.getUserId(), user);
+        if (user instanceof Candidate cand) {
+            candidates.put(cand.getUserId(), cand);
+        } else if (user instanceof Voter v) {
+            votersByTck.put(v.getTck(), v);
+            votersByVin.put(v.getVin(), v);
+        }
+    }
+
+    public Candidate getCandidate(String candidateId) {
+        return candidates.get(candidateId);
+    }
+
+    public Voter getVoterByTck(String tck) {
+        return votersByTck.get(tck);
+    }
+}
+
+// File: Main.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=================================================");
+        System.out.println("   ONEV - Online National Election Voting System ");
+        System.out.println("=================================================\n");
+
+        OnevElectionSystem system = new OnevElectionSystem("2025");
+
+        // Set up Election Center Station
+        ElectionCenterStation station1 = new ElectionCenterStation("STATION-001", "Ankara");
+        system.registerStation(station1);
+
+        // Pre-create ECA and ESS users
+        ECA eca = new ECA("eca_admin", "Admin123", "Supreme Election Council");
+        ESS ess = new ESS("ess_01", "EssPass456", "11122233344", "STATION-001");
+        system.registerUserDirectly(eca);
+        system.registerUserDirectly(ess);
+
+        // -----------------------------------------------------------------
+        // PHASE 1: NORMAL INTERACTIVE MODE
+        // -----------------------------------------------------------------
+        System.out.println("--- PHASE 1: Normal Interactive Mode ---");
+
+        // 1. Voter Registration Application
+        OperationResult regRes = system.registerVoterApplication(
+                "12345678901",
+                "Ali Yilmaz",
+                "Cankaya, Ankara",
+                "Ankara",
+                "photo_ref_ali.png"
+        );
+        System.out.println("Voter Application: " + regRes);
+        String appId = (String) regRes.getPayload();
+
+        // 2. ECA Log In & Approve Applicant
+        system.login("eca_admin", "Admin123");
+        OperationResult approveRes = system.approveVoterApplicant(appId, true, "STATION-001");
+        System.out.println("ECA Approval: " + approveRes);
+        Voter voterAli = (Voter) approveRes.getPayload();
+
+        // 3. ECA creates Candidate Account
+        OperationResult candRes = system.openCandidateAccount("Ayse Kaya", "Justice & Peace Party", "Ankara");
+        System.out.println("Candidate Account Creation: " + candRes);
+        Candidate candidateAyse = (Candidate) candRes.getPayload();
+        candidateAyse.setPassword("CandPass789"); // Candidate custom password
+
+        // ECA updates voters with official roster check
+        system.addOfficialRosterRecord(new OfficialVoterRecord("12345678901", "Ali Yilmaz", "Cankaya, Ankara", "Ankara", true));
+        OperationResult updateRosterRes = system.updateRegisteredVotersWithOfficialRoster();
+        System.out.println("Roster Synchronization: " + updateRosterRes);
+
+        system.logout();
+
+        // 4. Candidate Logs In, edits CV and Promises
+        system.login(candidateAyse.getUserId(), "CandPass789");
+        system.activateCandidateProfile(candidateAyse.getUserId());
+        system.editCV("Graduated in Political Science. 15 years in public administration.");
+        system.addPromise("Modernize digital public transport and education infrastructure.");
+        system.logout();
+
+        // 5. Voter Ali logs in, views candidate, and asks a question
+        system.login(voterAli.getUserId(), voterAli.getPassword());
+        OperationResult viewRes = system.viewCandidateInformation(candidateAyse.getUserId());
+        System.out.println("Voter Viewing Candidate: " + viewRes);
+        OperationResult questionRes = system.askCandidateQuestion(candidateAyse.getUserId(), "What is your environmental policy for our region?");
+        System.out.println("Voter Question: " + questionRes);
+        system.logout();
+
+        // 6. Candidate answers question
+        system.login(candidateAyse.getUserId(), "CandPass789");
+        CandidateQuestion q = candidateAyse.getQuestions().get(0);
+        OperationResult answerRes = system.answerQuestion(q.getQuestionId(), "We will plant 100,000 trees and subsidize solar panels.");
+        System.out.println("Candidate Answer: " + answerRes);
+        system.logout();
+
+        // -----------------------------------------------------------------
+        // PHASE 2: ELECTION MODE (ELECTION DAY)
+        // -----------------------------------------------------------------
+        System.out.println("\n--- PHASE 2: Election Mode (Election Day) ---");
+
+        // 1. ESS opens the system at Station-001
+        OperationResult openRes = system.openSystemAtStation("11122233344", "ess_01", "EssPass456");
+        System.out.println("Open Station System: " + openRes);
+
+        // 2. ESS generates one-time voting token for Voter Ali (wants online vote)
+        OperationResult tokenRes = system.markVotedAndGeneratePassword("STATION-001", "12345678901", true);
+        System.out.println("ESS Generate Online Hash Token: " + tokenRes);
+        String hashToken = (String) tokenRes.getPayload();
+
+        // 3. Voter Ali casts vote online
+        OperationResult voteRes = system.castVoteOnline(
+                voterAli.getVin(),
+                voterAli.getPassword(),
+                hashToken,
+                "STATION-001",
+                candidateAyse.getUserId()
+        );
+        System.out.println("Online Vote Polling: " + voteRes);
+
+        // Register a second voter who chooses to vote offline
+        Voter voterMehmet = new Voter("VOTER-OFFLINE", "Pass123", "98765432100", "Mehmet Demir", "Kecioren, Ankara", "Ankara", "VIN-OFFLINE", "STATION-001");
+        system.registerUserDirectly(voterMehmet);
+
+        // 4. ESS marks Mehmet as Offline Voted
+        OperationResult offlineMarkRes = system.markVotedAndGeneratePassword("STATION-001", "98765432100", false);
+        System.out.println("ESS Offline Voting Mark: " + offlineMarkRes);
+
+        // 5. ESS enters offline voting counts after polls close
+        Map<String, Integer> offlineTallies = new HashMap<>();
+        offlineTallies.put(candidateAyse.getUserId(), 1);
+
+        OperationResult enterOfflineRes = system.enterOfflineVotes("ess_01", "EssPass456", offlineTallies);
+        System.out.println("ESS Enter Offline Votes: " + enterOfflineRes);
+
+        // 6. View Election Results
+        System.out.println("\n--- Election Results ---");
+        Map<String, Integer> finalResults = system.viewElectionResults("2025", "Ankara", "");
+        finalResults.forEach((key, count) -> System.out.println(key + " -> " + count + " votes"));
+    }
+}

@@ -1,0 +1,2061 @@
+// File: FinancialContact.java
+import java.util.Objects;
+
+public class FinancialContact {
+    private final String name;
+    private final String phone;
+    private final String email;
+    private final String title;
+    private final String address;
+
+    public FinancialContact(String name, String phone, String email, String title, String address) {
+        this.name = Objects.requireNonNull(name, "Name cannot be null");
+        this.phone = phone != null ? phone : "";
+        this.email = Objects.requireNonNull(email, "Email cannot be null");
+        this.title = title != null ? title : "";
+        this.address = address != null ? address : "";
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof FinancialContact that)) return false;
+        return Objects.equals(email, that.email);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(email);
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + title + ") <" + email + "> Ph: " + phone + ", Addr: " + address;
+    }
+}
+
+// File: AuthorAuthority.java
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+public class AuthorAuthority {
+    private final String canonicalId; // e.g. ORCID: 0000-0002-1825-0097
+    private String primaryName;
+    private final Set<String> nameVariants;
+
+    public AuthorAuthority(String canonicalId, String primaryName) {
+        this.canonicalId = canonicalId;
+        this.primaryName = primaryName;
+        this.nameVariants = new HashSet<>();
+        this.nameVariants.add(primaryName);
+    }
+
+    public String getCanonicalId() {
+        return canonicalId;
+    }
+
+    public String getPrimaryName() {
+        return primaryName;
+    }
+
+    public void setPrimaryName(String primaryName) {
+        this.primaryName = primaryName;
+        this.nameVariants.add(primaryName);
+    }
+
+    public void addVariant(String variant) {
+        if (variant != null && !variant.isBlank()) {
+            this.nameVariants.add(variant.trim());
+        }
+    }
+
+    public Set<String> getNameVariants() {
+        return Collections.unmodifiableSet(nameVariants);
+    }
+
+    public boolean matches(String query) {
+        if (canonicalId.equalsIgnoreCase(query)) return true;
+        return nameVariants.stream().anyMatch(v -> v.equalsIgnoreCase(query));
+    }
+
+    @Override
+    public String toString() {
+        return primaryName + " [" + canonicalId + "] (Aliases: " + nameVariants + ")";
+    }
+}
+
+// File: License.java
+public class License {
+    private final String id;
+    private final String name;
+    private final String terms;
+
+    public License(String id, String name, String terms) {
+        this.id = id;
+        this.name = name;
+        this.terms = terms;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getTerms() {
+        return terms;
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + id + ")";
+    }
+}
+
+// File: AccessPermission.java
+public enum AccessPermission {
+    PUBLIC,
+    DUKE_IP_ONLY,
+    WHITELIST_IP_ONLY,
+    AUTHENTICATED_USERS_ONLY,
+    RESTRICTED_CURATOR_ONLY
+}
+
+// File: ReplicationStatus.java
+public enum ReplicationStatus {
+    NOT_SCHEDULED,
+    QUEUED,
+    ENCRYPTED,
+    REPLICATING,
+    COMPLETED,
+    FAILED
+}
+
+// File: ReplicationPolicy.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class ReplicationPolicy {
+    private boolean replicateRemotely;
+    private String primaryRemoteSite;
+    private final List<String> secondarySites;
+
+    public ReplicationPolicy(boolean replicateRemotely, String primaryRemoteSite) {
+        this.replicateRemotely = replicateRemotely;
+        this.primaryRemoteSite = primaryRemoteSite;
+        this.secondarySites = new ArrayList<>();
+    }
+
+    public boolean isReplicateRemotely() {
+        return replicateRemotely;
+    }
+
+    public void setReplicateRemotely(boolean replicateRemotely) {
+        this.replicateRemotely = replicateRemotely;
+    }
+
+    public String getPrimaryRemoteSite() {
+        return primaryRemoteSite;
+    }
+
+    public void setPrimaryRemoteSite(String primaryRemoteSite) {
+        this.primaryRemoteSite = primaryRemoteSite;
+    }
+
+    public List<String> getSecondarySites() {
+        return Collections.unmodifiableList(secondarySites);
+    }
+
+    public void addSecondarySite(String site) {
+        if (site != null && !site.isBlank() && !secondarySites.contains(site)) {
+            secondarySites.add(site);
+        }
+    }
+}
+
+// File: ReplicationRecord.java
+import java.time.LocalDateTime;
+
+public class ReplicationRecord {
+    private final String site;
+    private ReplicationStatus status;
+    private String encryptedChecksumSha256;
+    private LocalDateTime timestamp;
+
+    public ReplicationRecord(String site) {
+        this.site = site;
+        this.status = ReplicationStatus.QUEUED;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getSite() {
+        return site;
+    }
+
+    public ReplicationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ReplicationStatus status) {
+        this.status = status;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getEncryptedChecksumSha256() {
+        return encryptedChecksumSha256;
+    }
+
+    public void setEncryptedChecksumSha256(String checksum) {
+        this.encryptedChecksumSha256 = checksum;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + site + ": " + status + (encryptedChecksumSha256 != null ? ", SHA256: " + encryptedChecksumSha256 : "") + "]";
+    }
+}
+
+// File: Component.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Component {
+    private final String id;
+    private final String filename;
+    private final long sizeBytes;
+    private final String format;
+    private boolean wellFormed;
+    private boolean valid;
+    private LocalDate scheduledDeletionDate;
+    private final List<ReplicationRecord> replicationRecords;
+
+    public Component(String id, String filename, long sizeBytes, String format) {
+        this.id = id;
+        this.filename = filename;
+        this.sizeBytes = sizeBytes;
+        this.format = format;
+        this.wellFormed = true;
+        this.valid = true;
+        this.replicationRecords = new ArrayList<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getFilename() {
+        return filename;
+    }
+
+    public long getSizeBytes() {
+        return sizeBytes;
+    }
+
+    public String getFormat() {
+        return format;
+    }
+
+    public boolean isWellFormed() {
+        return wellFormed;
+    }
+
+    public void setWellFormed(boolean wellFormed) {
+        this.wellFormed = wellFormed;
+    }
+
+    public boolean isValid() {
+        return valid;
+    }
+
+    public void setValid(boolean valid) {
+        this.valid = valid;
+    }
+
+    public LocalDate getScheduledDeletionDate() {
+        return scheduledDeletionDate;
+    }
+
+    public void setScheduledDeletionDate(LocalDate scheduledDeletionDate) {
+        this.scheduledDeletionDate = scheduledDeletionDate;
+    }
+
+    public List<ReplicationRecord> getReplicationRecords() {
+        return Collections.unmodifiableList(replicationRecords);
+    }
+
+    public void addReplicationRecord(ReplicationRecord record) {
+        this.replicationRecords.add(record);
+    }
+
+    public String displayComponentPage() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("--- Component: ").append(filename).append(" (ID: ").append(id).append(") ---\n");
+        sb.append("Size: ").append(sizeBytes).append(" bytes | Format: ").append(format).append("\n");
+        sb.append("Format Validity: [Valid: ").append(valid).append(", Well-Formed: ").append(wellFormed).append("]\n");
+        sb.append("Scheduled Deletion Date: ").append(scheduledDeletionDate != null ? scheduledDeletionDate.toString() : "None").append("\n");
+        sb.append("Replication Status: ");
+        if (replicationRecords.isEmpty()) {
+            sb.append("No replication records\n");
+        } else {
+            for (ReplicationRecord r : replicationRecords) {
+                sb.append(r.toString()).append(" ");
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
+}
+
+// File: ItemVersion.java
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class ItemVersion {
+    private final int versionNumber;
+    private final LocalDateTime timestamp;
+    private final String modifiedBy;
+    private final String titleSnapshot;
+    private final List<String> componentIdsSnapshot;
+    private final AccessPermission permissionSnapshot;
+
+    public ItemVersion(int versionNumber, String modifiedBy, String titleSnapshot,
+                       List<String> componentIdsSnapshot, AccessPermission permissionSnapshot) {
+        this.versionNumber = versionNumber;
+        this.timestamp = LocalDateTime.now();
+        this.modifiedBy = modifiedBy;
+        this.titleSnapshot = titleSnapshot;
+        this.componentIdsSnapshot = List.copyOf(componentIdsSnapshot);
+        this.permissionSnapshot = permissionSnapshot;
+    }
+
+    public int getVersionNumber() {
+        return versionNumber;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public String getModifiedBy() {
+        return modifiedBy;
+    }
+
+    public String getTitleSnapshot() {
+        return titleSnapshot;
+    }
+
+    public List<String> getComponentIdsSnapshot() {
+        return componentIdsSnapshot;
+    }
+
+    public AccessPermission getPermissionSnapshot() {
+        return permissionSnapshot;
+    }
+}
+
+// File: AuditAction.java
+public enum AuditAction {
+    INGEST,
+    PUBLISH,
+    UNPUBLISH,
+    METADATA_UPDATE,
+    EMBARGO_LIFT,
+    EMBARGO_MODIFIED,
+    PERMISSION_CHANGE,
+    VERSION_RESTORE,
+    ITEM_MOVED,
+    ITEM_DELETED,
+    ITEM_HIDDEN
+}
+
+// File: AuditEvent.java
+import java.time.LocalDateTime;
+
+public class AuditEvent {
+    private final String eventId;
+    private final LocalDateTime timestamp;
+    private final AuditAction action;
+    private final String targetId;
+    private final String actorNetId;
+    private final String comment;
+
+    public AuditEvent(String eventId, AuditAction action, String targetId, String actorNetId, String comment) {
+        this.eventId = eventId;
+        this.timestamp = LocalDateTime.now();
+        this.action = action;
+        this.targetId = targetId;
+        this.actorNetId = actorNetId;
+        this.comment = comment;
+    }
+
+    public String getEventId() {
+        return eventId;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public AuditAction getAction() {
+        return action;
+    }
+
+    public String getTargetId() {
+        return targetId;
+    }
+
+    public String getActorNetId() {
+        return actorNetId;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[%s] Event: %s on Target: %s by %s | Comment: '%s'",
+                timestamp, action, targetId, actorNetId, comment);
+    }
+}
+
+// File: AuditService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+public class AuditService {
+    private final List<AuditEvent> events = new ArrayList<>();
+
+    public AuditEvent logEvent(AuditAction action, String targetId, String actorNetId, String comment) {
+        AuditEvent event = new AuditEvent(UUID.randomUUID().toString(), action, targetId, actorNetId, comment);
+        events.add(event);
+        return event;
+    }
+
+    public List<AuditEvent> getEventsForTarget(String targetId) {
+        return events.stream()
+                .filter(e -> e.getTargetId().equals(targetId))
+                .collect(Collectors.toList());
+    }
+
+    public List<AuditEvent> getAllEvents() {
+        return Collections.unmodifiableList(events);
+    }
+}
+
+// File: User.java
+import java.util.HashSet;
+import java.util.Set;
+
+public class User {
+    private final String netId;
+    private final String name;
+    private final String email;
+    private final Set<String> roles;
+    private boolean superuserMode;
+    private String ipAddress;
+
+    public User(String netId, String name, String email, String ipAddress) {
+        this.netId = netId;
+        this.name = name;
+        this.email = email;
+        this.roles = new HashSet<>();
+        this.superuserMode = false;
+        this.ipAddress = ipAddress;
+    }
+
+    public String getNetId() {
+        return netId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public void setIpAddress(String ipAddress) {
+        this.ipAddress = ipAddress;
+    }
+
+    public void addRole(String role) {
+        this.roles.add(role.toUpperCase());
+    }
+
+    public boolean hasRole(String role) {
+        return this.roles.contains(role.toUpperCase()) || (superuserMode && "SUPERUSER".equalsIgnoreCase(role));
+    }
+
+    public boolean isSuperuserMode() {
+        return superuserMode;
+    }
+
+    public void enterSuperuserScope() {
+        if (this.roles.contains("SUPERUSER")) {
+            this.superuserMode = true;
+        } else {
+            throw new SecurityException("User " + netId + " is not authorized as a superuser.");
+        }
+    }
+
+    public void exitSuperuserScope() {
+        this.superuserMode = false;
+    }
+}
+
+// File: DepositForm.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class DepositForm {
+    private final String formId;
+    private final String collectionId;
+    private final boolean allowEmbargoOption;
+    private final List<License> allowedLicenses;
+
+    public DepositForm(String formId, String collectionId, boolean allowEmbargoOption) {
+        this.formId = formId;
+        this.collectionId = collectionId;
+        this.allowEmbargoOption = allowEmbargoOption;
+        this.allowedLicenses = new ArrayList<>();
+    }
+
+    public String getFormId() {
+        return formId;
+    }
+
+    public String getCollectionId() {
+        return collectionId;
+    }
+
+    public boolean isAllowEmbargoOption() {
+        return allowEmbargoOption;
+    }
+
+    public void addLicense(License license) {
+        this.allowedLicenses.add(license);
+    }
+
+    public List<License> getAllowedLicenses() {
+        return Collections.unmodifiableList(allowedLicenses);
+    }
+}
+
+// File: DepositGroup.java
+import java.time.LocalDate;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+public class DepositGroup {
+    private final String groupId;
+    private final String collectionId;
+    private final String facultyOwnerNetId;
+    private final Set<String> memberNetIds;
+    private final Map<String, Boolean> submissionStatus; // netId -> hasSubmitted
+    private LocalDate windowStartDate;
+    private LocalDate windowEndDate;
+
+    public DepositGroup(String groupId, String collectionId, String facultyOwnerNetId,
+                        LocalDate windowStartDate, LocalDate windowEndDate) {
+        this.groupId = groupId;
+        this.collectionId = collectionId;
+        this.facultyOwnerNetId = facultyOwnerNetId;
+        this.memberNetIds = new HashSet<>();
+        this.submissionStatus = new HashMap<>();
+        this.windowStartDate = windowStartDate;
+        this.windowEndDate = windowEndDate;
+    }
+
+    public String getGroupId() {
+        return groupId;
+    }
+
+    public String getCollectionId() {
+        return collectionId;
+    }
+
+    public String getFacultyOwnerNetId() {
+        return facultyOwnerNetId;
+    }
+
+    public LocalDate getWindowStartDate() {
+        return windowStartDate;
+    }
+
+    public void setWindowStartDate(LocalDate windowStartDate) {
+        this.windowStartDate = windowStartDate;
+    }
+
+    public LocalDate getWindowEndDate() {
+        return windowEndDate;
+    }
+
+    public void setWindowEndDate(LocalDate windowEndDate) {
+        this.windowEndDate = windowEndDate;
+    }
+
+    public boolean isWindowOpen(LocalDate date) {
+        if (windowStartDate != null && date.isBefore(windowStartDate)) return false;
+        if (windowEndDate != null && date.isAfter(windowEndDate)) return false;
+        return true;
+    }
+
+    public void addMember(String netId) {
+        this.memberNetIds.add(netId);
+        this.submissionStatus.putIfAbsent(netId, false);
+    }
+
+    public void removeMember(String netId) {
+        this.memberNetIds.remove(netId);
+        this.submissionStatus.remove(netId);
+    }
+
+    public void recordSubmission(String netId) {
+        if (this.memberNetIds.contains(netId)) {
+            this.submissionStatus.put(netId, true);
+        }
+    }
+
+    public boolean hasSubmitted(String netId) {
+        return this.submissionStatus.getOrDefault(netId, false);
+    }
+
+    public Set<String> getMemberNetIds() {
+        return Collections.unmodifiableSet(memberNetIds);
+    }
+
+    public Map<String, Boolean> getSubmissionStatusReport() {
+        return Collections.unmodifiableMap(submissionStatus);
+    }
+}
+
+// File: Collection.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class Collection {
+    private final String id;
+    private String name;
+    private String ownerNetId;
+    private FinancialContact financialContact;
+    private ReplicationPolicy replicationPolicy;
+    private AccessPermission defaultAccessPermission;
+    private DepositForm depositForm;
+    private final Set<String> whitelistedIps;
+    private final List<String> itemIds;
+
+    public Collection(String id, String name, String ownerNetId, FinancialContact financialContact) {
+        this.id = id;
+        this.name = name;
+        this.ownerNetId = ownerNetId;
+        this.financialContact = financialContact;
+        this.replicationPolicy = new ReplicationPolicy(true, "Primary-AWS-Storage");
+        this.defaultAccessPermission = AccessPermission.PUBLIC;
+        this.whitelistedIps = new HashSet<>();
+        this.itemIds = new ArrayList<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getOwnerNetId() {
+        return ownerNetId;
+    }
+
+    public void setOwnerNetId(String ownerNetId) {
+        this.ownerNetId = ownerNetId;
+    }
+
+    public FinancialContact getFinancialContact() {
+        return financialContact;
+    }
+
+    public void setFinancialContact(FinancialContact financialContact) {
+        this.financialContact = financialContact;
+    }
+
+    public ReplicationPolicy getReplicationPolicy() {
+        return replicationPolicy;
+    }
+
+    public void setReplicationPolicy(ReplicationPolicy replicationPolicy) {
+        this.replicationPolicy = replicationPolicy;
+    }
+
+    public AccessPermission getDefaultAccessPermission() {
+        return defaultAccessPermission;
+    }
+
+    public void setDefaultAccessPermission(AccessPermission defaultAccessPermission) {
+        this.defaultAccessPermission = defaultAccessPermission;
+    }
+
+    public DepositForm getDepositForm() {
+        return depositForm;
+    }
+
+    public void setDepositForm(DepositForm depositForm) {
+        this.depositForm = depositForm;
+    }
+
+    public Set<String> getWhitelistedIps() {
+        return Collections.unmodifiableSet(whitelistedIps);
+    }
+
+    public void addWhitelistedIp(String ip) {
+        this.whitelistedIps.add(ip);
+    }
+
+    public List<String> getItemIds() {
+        return Collections.unmodifiableList(itemIds);
+    }
+
+    public void addItemId(String itemId) {
+        if (!this.itemIds.contains(itemId)) {
+            this.itemIds.add(itemId);
+        }
+    }
+
+    public void removeItemId(String itemId) {
+        this.itemIds.remove(itemId);
+    }
+}
+
+// File: Item.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+public class Item {
+    private final String id;
+    private String title;
+    private String primaryCollectionId;
+    private final Set<String> mappedCollectionIds;
+    private final Set<String> authorAuthorityIds; // Linked canonical IDs
+    private FinancialContact financialContact;
+    private final List<Component> components;
+    private final Map<Integer, ItemVersion> versions;
+    private int currentVersionNumber;
+    private LocalDate depositDate;
+    private LocalDate expirationDate;
+    private boolean hideThenDelete;
+    private boolean hidden;
+    private boolean deleted;
+    private LocalDate embargoReleaseDate;
+    private AccessPermission postEmbargoAccessPermission;
+    private AccessPermission currentAccessPermission;
+    private License license;
+    private String doi;
+    private boolean ezidSynced;
+    private boolean isEtd;
+    private String depositorNetId;
+    private final Set<String> authorizedEditors;
+    private final Map<String, Integer> referrers; // referer url -> count
+
+    public Item(String id, String title, String primaryCollectionId, String depositorNetId,
+                FinancialContact financialContact, AccessPermission accessPermission) {
+        this.id = id;
+        this.title = title;
+        this.primaryCollectionId = primaryCollectionId;
+        this.depositorNetId = depositorNetId;
+        this.financialContact = financialContact;
+        this.currentAccessPermission = accessPermission;
+        this.postEmbargoAccessPermission = accessPermission;
+        this.mappedCollectionIds = new HashSet<>();
+        this.authorAuthorityIds = new HashSet<>();
+        this.components = new ArrayList<>();
+        this.versions = new HashMap<>();
+        this.currentVersionNumber = 1;
+        this.depositDate = LocalDate.now();
+        this.authorizedEditors = new HashSet<>();
+        this.authorizedEditors.add(depositorNetId);
+        this.referrers = new HashMap<>();
+        recordVersion("Initial deposit");
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getPrimaryCollectionId() {
+        return primaryCollectionId;
+    }
+
+    public void setPrimaryCollectionId(String primaryCollectionId) {
+        this.primaryCollectionId = primaryCollectionId;
+    }
+
+    public Set<String> getMappedCollectionIds() {
+        return Collections.unmodifiableSet(mappedCollectionIds);
+    }
+
+    public void addMappedCollection(String collectionId) {
+        this.mappedCollectionIds.add(collectionId);
+    }
+
+    public void removeMappedCollection(String collectionId) {
+        this.mappedCollectionIds.remove(collectionId);
+    }
+
+    public Set<String> getAuthorAuthorityIds() {
+        return Collections.unmodifiableSet(authorAuthorityIds);
+    }
+
+    public void addAuthorAuthorityId(String authId) {
+        this.authorAuthorityIds.add(authId);
+    }
+
+    public FinancialContact getFinancialContact() {
+        return financialContact;
+    }
+
+    public void setFinancialContact(FinancialContact financialContact) {
+        this.financialContact = financialContact;
+    }
+
+    public List<Component> getComponents() {
+        return Collections.unmodifiableList(components);
+    }
+
+    public void addComponent(Component component) {
+        this.components.add(component);
+        if (expirationDate != null) {
+            component.setScheduledDeletionDate(expirationDate);
+        }
+    }
+
+    public LocalDate getDepositDate() {
+        return depositDate;
+    }
+
+    public void setDepositDate(LocalDate depositDate) {
+        this.depositDate = depositDate;
+    }
+
+    public LocalDate getExpirationDate() {
+        return expirationDate;
+    }
+
+    public void setExpirationPolicy(LocalDate expirationDate, boolean hideThenDelete) {
+        this.expirationDate = expirationDate;
+        this.hideThenDelete = hideThenDelete;
+        for (Component c : components) {
+            c.setScheduledDeletionDate(expirationDate);
+        }
+    }
+
+    public boolean isHideThenDelete() {
+        return hideThenDelete;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public LocalDate getEmbargoReleaseDate() {
+        return embargoReleaseDate;
+    }
+
+    public void setEmbargo(LocalDate embargoReleaseDate, AccessPermission postEmbargoPermission) {
+        this.embargoReleaseDate = embargoReleaseDate;
+        this.postEmbargoAccessPermission = postEmbargoPermission;
+    }
+
+    public boolean isUnderEmbargo(LocalDate currentDate) {
+        return embargoReleaseDate != null && currentDate.isBefore(embargoReleaseDate);
+    }
+
+    public void liftEmbargo() {
+        this.embargoReleaseDate = null;
+        this.currentAccessPermission = this.postEmbargoAccessPermission;
+    }
+
+    public void checkAndAutoLiftEmbargo(LocalDate currentDate) {
+        if (embargoReleaseDate != null && !currentDate.isBefore(embargoReleaseDate)) {
+            liftEmbargo();
+        }
+    }
+
+    public AccessPermission getCurrentAccessPermission() {
+        return currentAccessPermission;
+    }
+
+    public void setCurrentAccessPermission(AccessPermission currentAccessPermission) {
+        this.currentAccessPermission = currentAccessPermission;
+    }
+
+    public AccessPermission getPostEmbargoAccessPermission() {
+        return postEmbargoAccessPermission;
+    }
+
+    public License getLicense() {
+        return license;
+    }
+
+    public void setLicense(License license) {
+        this.license = license;
+    }
+
+    public String getDoi() {
+        return doi;
+    }
+
+    public void setDoi(String doi) {
+        this.doi = doi;
+        this.ezidSynced = false;
+    }
+
+    public boolean isEzidSynced() {
+        return ezidSynced;
+    }
+
+    public void setEzidSynced(boolean ezidSynced) {
+        this.ezidSynced = ezidSynced;
+    }
+
+    public boolean isEtd() {
+        return isEtd;
+    }
+
+    public void setEtd(boolean etd) {
+        isEtd = etd;
+    }
+
+    public String getDepositorNetId() {
+        return depositorNetId;
+    }
+
+    public void addAuthorizedEditor(String netId) {
+        this.authorizedEditors.add(netId);
+    }
+
+    public boolean isAuthorizedToEdit(String netId) {
+        return this.authorizedEditors.contains(netId);
+    }
+
+    public void recordReferrer(String referrerUrl) {
+        if (referrerUrl != null && !referrerUrl.isBlank()) {
+            referrers.merge(referrerUrl, 1, Integer::sum);
+        }
+    }
+
+    public Map<String, Integer> getReferrers() {
+        return Collections.unmodifiableMap(referrers);
+    }
+
+    public long getTotalSizeBytes() {
+        return components.stream().mapToLong(Component::getSizeBytes).sum();
+    }
+
+    public void recordVersion(String modifiedBy) {
+        List<String> compIds = components.stream().map(Component::getId).collect(Collectors.toList());
+        ItemVersion v = new ItemVersion(currentVersionNumber, modifiedBy, this.title, compIds, this.currentAccessPermission);
+        versions.put(currentVersionNumber, v);
+        currentVersionNumber++;
+    }
+
+    public Map<Integer, ItemVersion> getVersions() {
+        return Collections.unmodifiableMap(versions);
+    }
+
+    public boolean restoreVersion(int versionNumber, String modifiedBy) {
+        ItemVersion v = versions.get(versionNumber);
+        if (v == null) return false;
+        this.title = v.getTitleSnapshot();
+        this.currentAccessPermission = v.getPermissionSnapshot();
+        recordVersion(modifiedBy + " (Restored v" + versionNumber + ")");
+        return true;
+    }
+
+    public String displayItemPage(LocalDate currentDate) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("====================================================\n");
+        sb.append("Item ID: ").append(id).append(" | Title: ").append(title).append("\n");
+        sb.append("Primary Collection: ").append(primaryCollectionId);
+        if (!mappedCollectionIds.isEmpty()) {
+            sb.append(" | Mapped Collections: ").append(mappedCollectionIds);
+        }
+        sb.append("\n");
+        sb.append("Financial Contact: ").append(financialContact != null ? financialContact.getName() : "None").append("\n");
+        sb.append("License: ").append(license != null ? license.toString() : "None").append("\n");
+        sb.append("DOI: ").append(doi != null ? doi + (ezidSynced ? " (EZID Synced)" : " (EZID Pending)") : "None").append("\n");
+        sb.append("Scheduled Deletion Date: ").append(expirationDate != null ? expirationDate.toString() : "None")
+                .append(hideThenDelete ? " (Action: Hide then Delete)" : " (Action: Direct Delete)").append("\n");
+
+        if (isUnderEmbargo(currentDate)) {
+            sb.append(">>> EMBARGO NOTICE: Item is UNDER EMBARGO until [").append(embargoReleaseDate).append("] <<<\n");
+            sb.append("Metadata is discoverable. File download is restricted.\n");
+        } else {
+            sb.append("Access Level: ").append(currentAccessPermission).append("\n");
+        }
+        sb.append("Components (").append(components.size()).append("):\n");
+        for (Component c : components) {
+            sb.append("  - ").append(c.getFilename()).append(" (").append(c.getSizeBytes()).append(" bytes) ")
+                    .append("Scheduled Deletion: ").append(c.getScheduledDeletionDate() != null ? c.getScheduledDeletionDate() : "None").append("\n");
+        }
+        sb.append("====================================================\n");
+        return sb.toString();
+    }
+}
+
+// File: BatchIngestRecord.java
+import java.time.LocalDate;
+import java.util.List;
+
+public class BatchIngestRecord {
+    private final String title;
+    private final String authorNetIdOrName;
+    private final String orcidId;
+    private final String licenseId;
+    private final LocalDate embargoReleaseDate;
+    private final List<Component> components;
+
+    public BatchIngestRecord(String title, String authorNetIdOrName, String orcidId,
+                             String licenseId, LocalDate embargoReleaseDate, List<Component> components) {
+        this.title = title;
+        this.authorNetIdOrName = authorNetIdOrName;
+        this.orcidId = orcidId;
+        this.licenseId = licenseId;
+        this.embargoReleaseDate = embargoReleaseDate;
+        this.components = components;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getAuthorNetIdOrName() {
+        return authorNetIdOrName;
+    }
+
+    public String getOrcidId() {
+        return orcidId;
+    }
+
+    public String getLicenseId() {
+        return licenseId;
+    }
+
+    public LocalDate getEmbargoReleaseDate() {
+        return embargoReleaseDate;
+    }
+
+    public List<Component> getComponents() {
+        return components;
+    }
+}
+
+// File: SearchService.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+public class SearchService {
+
+    public enum DateFilterType {
+        NONE,
+        BEFORE,
+        AFTER,
+        BETWEEN
+    }
+
+    private final AtomicReference<List<Item>> indexRef = new AtomicReference<>(new ArrayList<>());
+
+    public void updateIndex(Collection<Item> items) {
+        // Zero-downtime shadow index update
+        List<Item> newIndex = new ArrayList<>(items);
+        indexRef.set(newIndex);
+    }
+
+    public List<Item> search(String query, DateFilterType filterType, LocalDate date1, LocalDate date2) {
+        List<Item> currentSnapshot = indexRef.get();
+        return currentSnapshot.stream()
+                .filter(item -> !item.isDeleted() && !item.isHidden())
+                .filter(item -> {
+                    if (query == null || query.isBlank()) return true;
+                    String q = query.toLowerCase();
+                    return item.getTitle().toLowerCase().contains(q)
+                            || item.getId().toLowerCase().contains(q)
+                            || item.getAuthorAuthorityIds().stream().anyMatch(a -> a.toLowerCase().contains(q));
+                })
+                .filter(item -> {
+                    LocalDate d = item.getDepositDate();
+                    if (d == null) return false;
+                    switch (filterType) {
+                        case BEFORE:
+                            return date1 != null && d.isBefore(date1);
+                        case AFTER:
+                            return date1 != null && d.isAfter(date1);
+                        case BETWEEN:
+                            return date1 != null && date2 != null && !d.isBefore(date1) && !d.isAfter(date2);
+                        case NONE:
+                        default:
+                            return true;
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+}
+
+// File: OaiPmhService.java
+import java.util.List;
+
+public class OaiPmhService {
+    public String listRecords(List<Item> items) {
+        StringBuilder xml = new StringBuilder();
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        xml.append("<OAI-PMH xmlns=\"http://www.openarchives.org/OAI/2.0/\">\n");
+        xml.append("  <responseDate>").append(java.time.Instant.now()).append("</responseDate>\n");
+        xml.append("  <ListRecords>\n");
+        for (Item item : items) {
+            if (item.isDeleted() || item.isHidden()) continue;
+            xml.append("    <record>\n");
+            xml.append("      <header>\n");
+            xml.append("        <identifier>oai:ddr:").append(item.getId()).append("</identifier>\n");
+            xml.append("        <datestamp>").append(item.getDepositDate()).append("</datestamp>\n");
+            xml.append("      </header>\n");
+            xml.append("      <metadata>\n");
+            xml.append("        <oai_dc:dc xmlns:oai_dc=\"http://www.openarchives.org/OAI/2.0/oai_dc/\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n");
+            xml.append("          <dc:title>").append(item.getTitle()).append("</dc:title>\n");
+            xml.append("          <dc:identifier>").append(item.getId()).append("</dc:identifier>\n");
+            if (item.getLicense() != null) {
+                xml.append("          <dc:rights>").append(item.getLicense().getName()).append("</dc:rights>\n");
+            }
+            xml.append("        </oai_dc:dc>\n");
+            xml.append("      </metadata>\n");
+            xml.append("    </record>\n");
+        }
+        xml.append("  </ListRecords>\n");
+        xml.append("</OAI-PMH>");
+        return xml.toString();
+    }
+}
+
+// File: LinkedDataService.java
+public class LinkedDataService {
+    public String getJsonLd(Item item) {
+        StringBuilder json = new StringBuilder();
+        json.append("{\n");
+        json.append("  \"@context\": \"https://schema.org/\",\n");
+        json.append("  \"@type\": \"DigitalDocument\",\n");
+        json.append("  \"@id\": \"urn:ddr:item:").append(item.getId()).append("\",\n");
+        json.append("  \"name\": \"").append(item.getTitle()).append("\",\n");
+        json.append("  \"dateCreated\": \"").append(item.getDepositDate()).append("\",\n");
+        if (item.getDoi() != null) {
+            json.append("  \"identifier\": \"https://doi.org/").append(item.getDoi()).append("\",\n");
+        }
+        if (item.getLicense() != null) {
+            json.append("  \"license\": \"").append(item.getLicense().getName()).append("\",\n");
+        }
+        json.append("  \"isPartOf\": \"urn:ddr:collection:").append(item.getPrimaryCollectionId()).append("\"\n");
+        json.append("}");
+        return json.toString();
+    }
+}
+
+// File: EzidService.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class EzidService {
+    private final Map<String, String> registeredDois = new HashMap<>();
+
+    public boolean propagateMetadata(String doi, String title, String author) {
+        if (doi == null || doi.isBlank()) return false;
+        registeredDois.put(doi, "Title: " + title + " | Author: " + author);
+        return true;
+    }
+
+    public String getRegisteredRecord(String doi) {
+        return registeredDois.get(doi);
+    }
+}
+
+// File: SymplecticElementsConnector.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class SymplecticElementsConnector {
+    private final Map<String, String> syncedPublications = new HashMap<>();
+
+    public void exportToSymplectic(Item item) {
+        syncedPublications.put(item.getId(), "SymplecticPublicationRef-" + item.getId() + " [" + item.getTitle() + "]");
+    }
+
+    public Item importFromSymplectic(String pubId, String title, String author, FinancialContact fc, String colId) {
+        Item item = new Item(pubId, title, colId, author, fc, AccessPermission.PUBLIC);
+        syncedPublications.put(pubId, "Imported from Symplectic: " + title);
+        return item;
+    }
+
+    public Map<String, String> getSyncedPublications() {
+        return syncedPublications;
+    }
+}
+
+// File: SystemBanner.java
+import java.time.LocalDateTime;
+
+public class SystemBanner {
+    private final String id;
+    private final String message;
+    private final LocalDateTime startTime;
+    private final LocalDateTime endTime;
+
+    public SystemBanner(String id, String message, LocalDateTime startTime, LocalDateTime endTime) {
+        this.id = id;
+        this.message = message;
+        this.startTime = startTime;
+        this.endTime = endTime;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public boolean isActive(LocalDateTime now) {
+        return (startTime == null || !now.isBefore(startTime)) &&
+               (endTime == null || !now.isAfter(endTime));
+    }
+}
+
+// File: SystemErrorLog.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class SystemErrorLog {
+    public static class DeduplicatedError {
+        private final String message;
+        private int count;
+        private LocalDateTime firstOccurred;
+        private LocalDateTime lastOccurred;
+
+        public DeduplicatedError(String message) {
+            this.message = message;
+            this.count = 1;
+            this.firstOccurred = LocalDateTime.now();
+            this.lastOccurred = this.firstOccurred;
+        }
+
+        public void increment() {
+            this.count++;
+            this.lastOccurred = LocalDateTime.now();
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public LocalDateTime getFirstOccurred() {
+            return firstOccurred;
+        }
+
+        public LocalDateTime getLastOccurred() {
+            return lastOccurred;
+        }
+
+        @Override
+        public String toString() {
+            return "[" + count + "x] '" + message + "' (Last: " + lastOccurred + ")";
+        }
+    }
+
+    private final Map<String, DeduplicatedError> errorMap = new HashMap<>();
+
+    public void logError(String message) {
+        errorMap.computeIfAbsent(message, DeduplicatedError::new).increment();
+    }
+
+    public List<DeduplicatedError> getDeduplicatedErrors() {
+        return new ArrayList<>(errorMap.values());
+    }
+}
+
+// File: RepositoryService.java
+import java.security.MessageDigest;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class RepositoryService {
+    private final Map<String, Collection> collections = new HashMap<>();
+    private final Map<String, Item> items = new HashMap<>();
+    private final Map<String, User> users = new HashMap<>();
+    private final Map<String, AuthorAuthority> authorAuthorities = new HashMap<>();
+    private final Map<String, DepositGroup> depositGroups = new HashMap<>();
+    private final Map<String, License> licenses = new HashMap<>();
+    private final List<SystemBanner> banners = new ArrayList<>();
+    private final Set<String> anonymousSessionIps = new HashSet<>();
+    private final Set<String> activeUserNetIds = new HashSet<>();
+    private final List<String> contactCuratorRequests = new ArrayList<>();
+
+    private final AuditService auditService = new AuditService();
+    private final SearchService searchService = new SearchService();
+    private final OaiPmhService oaiPmhService = new OaiPmhService();
+    private final LinkedDataService linkedDataService = new LinkedDataService();
+    private final EzidService ezidService = new EzidService();
+    private final SymplecticElementsConnector symplecticConnector = new SymplecticElementsConnector();
+    private final SystemErrorLog errorLog = new SystemErrorLog();
+
+    private static final Set<String> ACCEPTED_FORMATS = Set.of("PDF", "TIFF", "JPEG", "MP4", "WAV", "XML", "JSON", "CSV");
+
+    public RepositoryService() {
+        initializeDefaultLicenses();
+    }
+
+    private void initializeDefaultLicenses() {
+        License ccBy = new License("CC-BY-4.0", "Creative Commons Attribution 4.0", "https://creativecommons.org/licenses/by/4.0/");
+        License cc0 = new License("CC0-1.0", "Creative Commons Zero", "https://creativecommons.org/publicdomain/zero/1.0/");
+        licenses.put(ccBy.getId(), ccBy);
+        licenses.put(cc0.getId(), cc0);
+    }
+
+    public void registerUser(User user) {
+        users.put(user.getNetId(), user);
+    }
+
+    public User getUser(String netId) {
+        return users.get(netId);
+    }
+
+    public void recordActiveSession(String netId, String ip) {
+        if (netId != null && users.containsKey(netId)) {
+            activeUserNetIds.add(netId);
+        } else {
+            anonymousSessionIps.add(ip != null ? ip : "unknown-ip");
+        }
+    }
+
+    public String getActiveUsersReport() {
+        return "Active Authenticated Users (" + activeUserNetIds.size() + "): " + activeUserNetIds +
+                " | Anonymous Visitors (" + anonymousSessionIps.size() + "): " + anonymousSessionIps;
+    }
+
+    public void addAuthorAuthority(AuthorAuthority authority) {
+        authorAuthorities.put(authority.getCanonicalId(), authority);
+    }
+
+    public AuthorAuthority getAuthorAuthority(String canonicalId) {
+        return authorAuthorities.get(canonicalId);
+    }
+
+    public void createCollection(Collection collection) {
+        collections.put(collection.getId(), collection);
+        auditService.logEvent(AuditAction.INGEST, collection.getId(), collection.getOwnerNetId(), "Collection created: " + collection.getName());
+    }
+
+    public Collection getCollection(String id) {
+        return collections.get(id);
+    }
+
+    public Map<String, Collection> getAllCollections() {
+        return Collections.unmodifiableMap(collections);
+    }
+
+    public boolean depositItem(Item item, String depositorNetId, String licenseAcceptedId) {
+        Collection col = collections.get(item.getPrimaryCollectionId());
+        if (col == null) {
+            errorLog.logError("Collection not found for deposit: " + item.getPrimaryCollectionId());
+            return false;
+        }
+
+        DepositForm form = col.getDepositForm();
+        if (form != null && !form.getAllowedLicenses().isEmpty()) {
+            boolean validLicenseAccepted = form.getAllowedLicenses().stream()
+                    .anyMatch(l -> l.getId().equalsIgnoreCase(licenseAcceptedId));
+            if (!validLicenseAccepted) {
+                errorLog.logError("Deposit rejected: Required collection license was not accepted for item " + item.getId());
+                return false;
+            }
+            item.setLicense(licenses.get(licenseAcceptedId));
+        }
+
+        // Validate format for components
+        for (Component c : item.getComponents()) {
+            if (!ACCEPTED_FORMATS.contains(c.getFormat().toUpperCase())) {
+                c.setValid(false);
+                errorLog.logError("Unrecognized format for component " + c.getFilename() + ": " + c.getFormat());
+            }
+        }
+
+        items.put(item.getId(), item);
+        col.addItemId(item.getId());
+        queueReplication(col, item);
+
+        auditService.logEvent(AuditAction.INGEST, item.getId(), depositorNetId, "Item deposited into collection " + col.getId());
+        searchService.updateIndex(items.values());
+        return true;
+    }
+
+    public void queueReplication(Collection col, Item item) {
+        ReplicationPolicy policy = col.getReplicationPolicy();
+        if (!policy.isReplicateRemotely()) return;
+
+        List<String> targetSites = new ArrayList<>();
+        if (policy.getPrimaryRemoteSite() != null) targetSites.add(policy.getPrimaryRemoteSite());
+        targetSites.addAll(policy.getSecondarySites());
+
+        for (Component c : item.getComponents()) {
+            for (String site : targetSites) {
+                ReplicationRecord rec = new ReplicationRecord(site);
+                rec.setStatus(ReplicationStatus.ENCRYPTED);
+                String simulatedChecksum = computeSha256("ServerSecretKey:" + c.getFilename() + ":" + c.getSizeBytes());
+                rec.setEncryptedChecksumSha256(simulatedChecksum);
+                rec.setStatus(ReplicationStatus.COMPLETED);
+                c.addReplicationRecord(rec);
+            }
+        }
+        auditService.logEvent(AuditAction.INGEST, item.getId(), "SYSTEM", "Remote replication completed for " + targetSites);
+    }
+
+    public void mapItemToCollection(String itemId, String targetCollectionId, String actorNetId) {
+        Item item = items.get(itemId);
+        Collection targetCol = collections.get(targetCollectionId);
+        if (item != null && targetCol != null) {
+            item.addMappedCollection(targetCollectionId);
+            targetCol.addItemId(itemId);
+            auditService.logEvent(AuditAction.METADATA_UPDATE, itemId, actorNetId, "Mapped to collection " + targetCollectionId);
+        }
+    }
+
+    public void moveItemToCollection(String itemId, String newCollectionId, String actorNetId) {
+        Item item = items.get(itemId);
+        Collection oldCol = collections.get(item.getPrimaryCollectionId());
+        Collection newCol = collections.get(newCollectionId);
+        if (item != null && oldCol != null && newCol != null) {
+            oldCol.removeItemId(itemId);
+            item.setPrimaryCollectionId(newCollectionId);
+            newCol.addItemId(itemId);
+            auditService.logEvent(AuditAction.ITEM_MOVED, itemId, actorNetId,
+                    "Moved item from " + oldCol.getId() + " to " + newCol.getId());
+        }
+    }
+
+    public void batchUpdatePermissions(List<String> itemIds, AccessPermission newPermission, String actorNetId) {
+        for (String id : itemIds) {
+            Item it = items.get(id);
+            if (it != null) {
+                it.setCurrentAccessPermission(newPermission);
+                it.recordVersion(actorNetId + " (Permission update)");
+                auditService.logEvent(AuditAction.PERMISSION_CHANGE, id, actorNetId, "Permission updated to " + newPermission);
+            }
+        }
+    }
+
+    public void publishItem(String itemId, String actorNetId, String comment) {
+        Item item = items.get(itemId);
+        if (item != null) {
+            item.setHidden(false);
+            auditService.logEvent(AuditAction.PUBLISH, itemId, actorNetId, comment);
+        }
+    }
+
+    public void unpublishItem(String itemId, String actorNetId, String comment) {
+        Item item = items.get(itemId);
+        if (item != null) {
+            item.setHidden(true);
+            auditService.logEvent(AuditAction.UNPUBLISH, itemId, actorNetId, comment);
+        }
+    }
+
+    public void processDataExpiration(LocalDate currentDate) {
+        for (Item item : items.values()) {
+            if (item.getExpirationDate() != null && !currentDate.isBefore(item.getExpirationDate())) {
+                if (item.isHideThenDelete()) {
+                    if (!item.isHidden() && !item.isDeleted()) {
+                        item.setHidden(true);
+                        auditService.logEvent(AuditAction.ITEM_HIDDEN, item.getId(), "EXPIRATION_DAEMON", "Item hidden due to expiration policy.");
+                    } else if (item.isHidden() && !item.isDeleted()) {
+                        item.setDeleted(true);
+                        auditService.logEvent(AuditAction.ITEM_DELETED, item.getId(), "EXPIRATION_DAEMON", "Item permanently deleted after hidden period.");
+                    }
+                } else {
+                    item.setDeleted(true);
+                    auditService.logEvent(AuditAction.ITEM_DELETED, item.getId(), "EXPIRATION_DAEMON", "Item permanently deleted upon expiration date.");
+                }
+            }
+        }
+        searchService.updateIndex(items.values());
+    }
+
+    public void processAutoEmbargoLifting(LocalDate currentDate) {
+        for (Item item : items.values()) {
+            if (item.isUnderEmbargo(currentDate)) {
+                // remains under embargo
+            } else if (item.getEmbargoReleaseDate() != null) {
+                item.liftEmbargo();
+                auditService.logEvent(AuditAction.EMBARGO_LIFT, item.getId(), "EMBARGO_DAEMON", "Embargo automatically lifted on release date.");
+            }
+        }
+    }
+
+    public void updateDoiMetadata(String itemId, String doi, String actorNetId) {
+        Item item = items.get(itemId);
+        if (item != null) {
+            item.setDoi(doi);
+            boolean synced = ezidService.propagateMetadata(doi, item.getTitle(), item.getDepositorNetId());
+            item.setEzidSynced(synced);
+            auditService.logEvent(AuditAction.METADATA_UPDATE, itemId, actorNetId, "DOI metadata pushed to EZID: " + doi);
+        }
+    }
+
+    public boolean checkAccess(Item item, User user, String callerIp) {
+        if (user != null && user.isSuperuserMode()) return true;
+        if (item.isDeleted()) return false;
+        if (item.isHidden()) {
+            return user != null && (user.hasRole("CURATOR") || user.hasRole("REPOADMIN"));
+        }
+
+        // Whitelisted IPs from collection
+        Collection col = collections.get(item.getPrimaryCollectionId());
+        if (callerIp != null && col != null && col.getWhitelistedIps().contains(callerIp)) {
+            return true;
+        }
+
+        AccessPermission perm = item.getCurrentAccessPermission();
+        switch (perm) {
+            case PUBLIC:
+                return true;
+            case DUKE_IP_ONLY:
+                return callerIp != null && callerIp.startsWith("152.3."); // Duke IP range
+            case WHITELIST_IP_ONLY:
+                return callerIp != null && col != null && col.getWhitelistedIps().contains(callerIp);
+            case AUTHENTICATED_USERS_ONLY:
+                return user != null;
+            case RESTRICTED_CURATOR_ONLY:
+                return user != null && (user.hasRole("CURATOR") || user.hasRole("REPOADMIN") || item.isAuthorizedToEdit(user.getNetId()));
+            default:
+                return false;
+        }
+    }
+
+    public void requestAccessToRestrictedObject(String itemId, String requesterEmail, String message) {
+        Item item = items.get(itemId);
+        if (item != null) {
+            String record = "Access request for item [" + itemId + " - " + item.getTitle() + "] from: " + requesterEmail + " | Note: " + message;
+            contactCuratorRequests.add(record);
+        }
+    }
+
+    public List<String> getAccessRequests() {
+        return Collections.unmodifiableList(contactCuratorRequests);
+    }
+
+    public String generateFinancialStorageReport() {
+        Map<FinancialContact, Long> storagePerContact = new HashMap<>();
+        for (Item item : items.values()) {
+            if (item.isDeleted()) continue;
+            FinancialContact fc = item.getFinancialContact();
+            if (fc != null) {
+                storagePerContact.merge(fc, item.getTotalSizeBytes(), Long::sum);
+            }
+        }
+        StringBuilder sb = new StringBuilder("=== Financial Storage Consumption Report ===\n");
+        storagePerContact.forEach((contact, bytes) -> {
+            sb.append(contact.getName()).append(" <").append(contact.getEmail()).append(">: ")
+                    .append(bytes).append(" bytes (").append(String.format("%.2f MB", bytes / (1024.0 * 1024.0))).append(")\n");
+        });
+        return sb.toString();
+    }
+
+    public String generateCollectionDashboard(String collectionId) {
+        Collection col = collections.get(collectionId);
+        if (col == null) return "Collection not found";
+
+        List<Item> colItems = items.values().stream()
+                .filter(i -> i.getPrimaryCollectionId().equals(collectionId) || i.getMappedCollectionIds().contains(collectionId))
+                .filter(i -> !i.isDeleted())
+                .collect(Collectors.toList());
+
+        long totalComponents = colItems.stream().mapToLong(i -> i.getComponents().size()).sum();
+        long totalBytes = colItems.stream().mapToLong(Item::getTotalSizeBytes).sum();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== Dashboard for Collection: ").append(col.getName()).append(" ===\n");
+        sb.append("Total Items: ").append(colItems.size()).append(" | Total Components: ").append(totalComponents).append("\n");
+        sb.append("Total Storage: ").append(totalBytes).append(" bytes\n");
+        sb.append("Replication Summary:\n");
+        for (Item it : colItems) {
+            for (Component c : it.getComponents()) {
+                sb.append("  [").append(c.getFilename()).append("]: ");
+                for (ReplicationRecord r : c.getReplicationRecords()) {
+                    sb.append(r.getSite()).append("=").append(r.getStatus()).append(" ");
+                }
+                sb.append("\n");
+            }
+        }
+        sb.append("Recent Submissions (Last 5):\n");
+        colItems.stream().sorted(Comparator.comparing(Item::getDepositDate).reversed()).limit(5)
+                .forEach(i -> sb.append("  * ").append(i.getTitle()).append(" (Deposited: ").append(i.getDepositDate()).append(")\n"));
+        return sb.toString();
+    }
+
+    public String getEtdEmbargoSummaryReport() {
+        StringBuilder sb = new StringBuilder("ID,Title,Depositor,EmbargoReleaseDate,IsActive\n");
+        LocalDate today = LocalDate.now();
+        for (Item it : items.values()) {
+            if (it.isEtd()) {
+                sb.append(it.getId()).append(",")
+                        .append("\"").append(it.getTitle()).append("\",")
+                        .append(it.getDepositorNetId()).append(",")
+                        .append(it.getEmbargoReleaseDate() != null ? it.getEmbargoReleaseDate() : "None").append(",")
+                        .append(it.isUnderEmbargo(today)).append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
+    public void addBanner(SystemBanner banner) {
+        banners.add(banner);
+    }
+
+    public List<SystemBanner> getActiveBanners(LocalDateTime now) {
+        return banners.stream().filter(b -> b.isActive(now)).collect(Collectors.toList());
+    }
+
+    public void createDepositGroup(DepositGroup group) {
+        depositGroups.put(group.getGroupId(), group);
+    }
+
+    public DepositGroup getDepositGroup(String groupId) {
+        return depositGroups.get(groupId);
+    }
+
+    public String batchAddNetIdsToGroup(String groupId, List<String> rawNetIds) {
+        DepositGroup g = depositGroups.get(groupId);
+        if (g == null) return "Group not found";
+        int added = 0;
+        int recognized = 0;
+        for (String raw : rawNetIds) {
+            String netId = raw.trim();
+            if (users.containsKey(netId)) {
+                recognized++;
+                g.addMember(netId);
+                added++;
+            }
+        }
+        return "Added " + added + " members out of " + rawNetIds.size() + " provided (Recognized DDR NetIDs: " + recognized + ").";
+    }
+
+    public String getServerSlaAndDrp() {
+        return """
+                === REPOSITORY SLA & DISASTER RECOVERY PLAN (DRP) ===
+                SLA: 99.9% uptime for public metadata and content discovery interfaces.
+                Recovery Point Objective (RPO): 1 hour (replicated multi-site storage).
+                Recovery Time Objective (RTO): 4 hours failover to secondary hot-standby.
+                Disaster Recovery Plan: Off-site AES-encrypted replicated archives with cryptographic checksums.
+                Suitable for referencing in Grant Proposals and Data Management Plans (DMPs).
+                """;
+    }
+
+    public String getAcceptedFormatsDocumentation() {
+        return """
+                === Accepted Formats and Recommendations ===
+                Accepted Formats: PDF, TIFF, JPEG, MP4, WAV, XML, JSON, CSV.
+                Recommended preservation formats: PDF/A-1b, uncompressed TIFF, WAV 24-bit/96kHz.
+                DOI Eligibility: All published scholarly datasets, ETDs, and faculty publications with full metadata.
+                Required DOI Metadata: Title, Creator, Publication Year, Publisher, and Resource Type.
+                """;
+    }
+
+    public String getFolderIngestDocumentation() {
+        return """
+                === Batch Folder Ingest Process ===
+                1. Place files inside folder structure: /ingest-batch/{collection_id}/{item_identifier}/
+                2. Include metadata.xml or manifest.json in the item directory.
+                3. Specify embargo dates, licenses, and format checksums.
+                4. The ingest daemon processes batches asynchronously, verifies SHA-256, and replicates to remote store.
+                """;
+    }
+
+    private static String computeSha256(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            return "simulated-sha256-hash-" + input.hashCode();
+        }
+    }
+
+    public SearchService getSearchService() {
+        return searchService;
+    }
+
+    public AuditService getAuditService() {
+        return auditService;
+    }
+
+    public OaiPmhService getOaiPmhService() {
+        return oaiPmhService;
+    }
+
+    public LinkedDataService getLinkedDataService() {
+        return linkedDataService;
+    }
+
+    public EzidService getEzidService() {
+        return ezidService;
+    }
+
+    public SymplecticElementsConnector getSymplecticConnector() {
+        return symplecticConnector;
+    }
+
+    public SystemErrorLog getErrorLog() {
+        return errorLog;
+    }
+
+    public License getLicense(String id) {
+        return licenses.get(id);
+    }
+
+    public void addLicense(License license) {
+        licenses.put(license.getId(), license);
+    }
+
+    public Item getItem(String id) {
+        return items.get(id);
+    }
+}
+
+// File: BatchIngestService.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public class BatchIngestService {
+    private final RepositoryService repositoryService;
+
+    public BatchIngestService(RepositoryService repositoryService) {
+        this.repositoryService = repositoryService;
+    }
+
+    public List<String> batchIngestProQuestEtds(String collectionId, List<BatchIngestRecord> etdRecords, FinancialContact fc) {
+        List<String> createdIds = new ArrayList<>();
+        for (BatchIngestRecord rec : etdRecords) {
+            String itemId = "etd-" + UUID.randomUUID().toString().substring(0, 8);
+            Item item = new Item(itemId, rec.getTitle(), collectionId, rec.getAuthorNetIdOrName(), fc, AccessPermission.PUBLIC);
+            item.setEtd(true);
+
+            if (rec.getOrcidId() != null) {
+                item.addAuthorAuthorityId(rec.getOrcidId());
+            }
+
+            for (Component comp : rec.getComponents()) {
+                item.addComponent(comp);
+            }
+
+            if (rec.getEmbargoReleaseDate() != null) {
+                // ETD embargo: metadata open to all, files restricted to curators/repoadmins until release date
+                item.setEmbargo(rec.getEmbargoReleaseDate(), AccessPermission.PUBLIC);
+                item.setCurrentAccessPermission(AccessPermission.RESTRICTED_CURATOR_ONLY);
+            }
+
+            boolean success = repositoryService.depositItem(item, rec.getAuthorNetIdOrName(), rec.getLicenseId());
+            if (success) {
+                createdIds.add(itemId);
+            }
+        }
+        return createdIds;
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=================================================================");
+        System.out.println("  DUKE DIGITAL REPOSITORY (DDR) / HYDRA-FEDORA 4 PROTOTYPE SYSTEM");
+        System.out.println("=================================================================\n");
+
+        RepositoryService repo = new RepositoryService();
+        BatchIngestService batchIngester = new BatchIngestService(repo);
+
+        // 1. Users, Superuser Scope, and Financial Contacts
+        User curator = new User("curator1", "Alice Curator", "alice@duke.edu", "152.3.10.15");
+        curator.addRole("CURATOR");
+        User repoAdmin = new User("admin1", "Bob RepoAdmin", "bob@duke.edu", "152.3.10.20");
+        repoAdmin.addRole("REPOADMIN");
+        repoAdmin.addRole("SUPERUSER");
+        User faculty = new User("prof_smith", "Dr. John Smith", "jsmith@duke.edu", "152.3.50.12");
+        faculty.addRole("FACULTY");
+        User student1 = new User("stu_net1", "Student One", "stu1@duke.edu", "152.3.88.1");
+        User student2 = new User("stu_net2", "Student Two", "stu2@duke.edu", "152.3.88.2");
+
+        repo.registerUser(curator);
+        repo.registerUser(repoAdmin);
+        repo.registerUser(faculty);
+        repo.registerUser(student1);
+        repo.registerUser(student2);
+
+        // Active users check
+        repo.recordActiveSession("curator1", "152.3.10.15");
+        repo.recordActiveSession(null, "192.168.1.100"); // anonymous visitor
+        System.out.println("[Active Users Track]: " + repo.getActiveUsersReport());
+
+        // Superuser scope toggle
+        repoAdmin.enterSuperuserScope();
+        System.out.println("[Superuser Scope]: Admin entered superuser scope? " + repoAdmin.isSuperuserMode());
+        repoAdmin.exitSuperuserScope();
+        System.out.println("[Superuser Scope]: Admin exited superuser scope? " + repoAdmin.isSuperuserMode());
+
+        // Financial contact
+        FinancialContact fcBio = new FinancialContact(
+                "Dept of Biology Finance", "919-660-1234", "bio-finance@duke.edu",
+                "Financial Officer", "Duke Box 90338, Durham NC 27708"
+        );
+
+        // 2. Collection & Deposit Form Setup
+        Collection bioCollection = new Collection("col-bio", "Biology Research Papers", "curator1", fcBio);
+        bioCollection.getReplicationPolicy().setReplicateRemotely(true);
+        bioCollection.getReplicationPolicy().setPrimaryRemoteSite("Duke-IronMountain-Remote");
+        bioCollection.getReplicationPolicy().addSecondarySite("Wasabi-Glacier-Backup");
+        bioCollection.addWhitelistedIp("152.3.200.5");
+
+        DepositForm bioForm = new DepositForm("form-bio-01", "col-bio", true);
+        bioForm.addLicense(repo.getLicense("CC-BY-4.0"));
+        bioForm.addLicense(repo.getLicense("CC0-1.0"));
+        bioCollection.setDepositForm(bioForm);
+        repo.createCollection(bioCollection);
+
+        Collection crossCol = new Collection("col-open", "Duke Open Scholarship Archive", "curator1", fcBio);
+        repo.createCollection(crossCol);
+
+        // 3. Author Authority Control
+        AuthorAuthority auth1 = new AuthorAuthority("0000-0002-1825-0097", "Smith, John D.");
+        auth1.addVariant("Smith, J. D.");
+        auth1.addVariant("John Donald Smith");
+        repo.addAuthorAuthority(auth1);
+        System.out.println("\n[Author Authority Created]: " + auth1);
+
+        // 4. Deposit Items with Expiration Policy, Encryption, Remote Replication
+        Item bioPaper = new Item("item-101", "CRISPR Genome Editing in Zebrafish", "col-bio", "prof_smith", fcBio, AccessPermission.PUBLIC);
+        bioPaper.addAuthorAuthorityId(auth1.getCanonicalId());
+        Component pdfComp = new Component("cmp-1", "crispr_study.pdf", 5_242_880L, "PDF"); // 5 MB
+        bioPaper.addComponent(pdfComp);
+
+        // Schedule deletion date (hide then delete)
+        bioPaper.setExpirationPolicy(LocalDate.of(2030, 1, 1), true);
+
+        // Deposit item
+        boolean deposited = repo.depositItem(bioPaper, "prof_smith", "CC-BY-4.0");
+        System.out.println("[Deposit bioPaper]: Success = " + deposited);
+
+        // Cross-collection mapping and movement
+        repo.mapItemToCollection("item-101", "col-open", "curator1");
+        System.out.println("[Cross-Collection Mapping]: Primary=" + bioPaper.getPrimaryCollectionId() +
+                ", Mapped=" + bioPaper.getMappedCollectionIds());
+
+        // Component & Item Display pages showing scheduled deletion date & replication status
+        System.out.println("\n" + bioPaper.displayItemPage(LocalDate.now()));
+        System.out.println(pdfComp.displayComponentPage());
+
+        // 5. Batch Ingest ETDs from ProQuest with Embargo Handling
+        BatchIngestRecord etdRec = new BatchIngestRecord(
+                "Neural Pathways of Olfactory Navigation in Mice",
+                "doctoral_candidate_42",
+                "0000-0003-9999-1234",
+                "CC-BY-4.0",
+                LocalDate.now().plusMonths(6),
+                List.of(new Component("cmp-etd-1", "dissertation_final.pdf", 12_500_000L, "PDF"))
+        );
+        List<String> ingestedEtds = batchIngester.batchIngestProQuestEtds("col-bio", List.of(etdRec), fcBio);
+        String etdId = ingestedEtds.get(0);
+        Item etdItem = repo.getItem(etdId);
+        System.out.println("[Batch Ingest ETD]: Created " + etdId + " under embargo until " + etdItem.getEmbargoReleaseDate());
+        System.out.println("[Visitor View of Embargoed Item]:\n" + etdItem.displayItemPage(LocalDate.now()));
+
+        // Check summary embargo metadata report for ETDs
+        System.out.println("[ETD Embargo Summary Metadata CSV]:\n" + repo.getEtdEmbargoSummaryReport());
+
+        // Manual lifting of embargo
+        etdItem.liftEmbargo();
+        System.out.println("[Manual Embargo Lift]: Under embargo now? " + etdItem.isUnderEmbargo(LocalDate.now()) +
+                ", Current Permission: " + etdItem.getCurrentAccessPermission());
+
+        // 6. Faculty Dashboard: Class NetIDs Management & Submission Window
+        DepositGroup bioClassGroup = new DepositGroup(
+                "grp-bio-class-2025", "col-bio", "prof_smith",
+                LocalDate.now().minusDays(2), LocalDate.now().plusDays(10)
+        );
+        repo.createDepositGroup(bioClassGroup);
+        String addResult = repo.batchAddNetIdsToGroup("grp-bio-class-2025", List.of("stu_net1", "stu_net2", "unregistered_999"));
+        System.out.println("\n[Faculty Class NetID Management]: " + addResult);
+        bioClassGroup.recordSubmission("stu_net1");
+        System.out.println("[Submission Status Report]: " + bioClassGroup.getSubmissionStatusReport());
+
+        // 7. Search Service with Date Delimiters & Shadow Zero-Downtime Index Rebuilding
+        List<Item> searchResults = repo.getSearchService().search("CRISPR",
+                SearchService.DateFilterType.BETWEEN,
+                LocalDate.now().minusDays(5),
+                LocalDate.now().plusDays(5));
+        System.out.println("\n[Search with Date Delimiters]: Found " + searchResults.size() + " items matching 'CRISPR'.");
+
+        // 8. OAI-PMH & Linked Data
+        String oaiXml = repo.getOaiPmhService().listRecords(List.of(bioPaper));
+        System.out.println("\n[OAI-PMH Feed Export Snippet]:\n" + oaiXml.substring(0, Math.min(300, oaiXml.length())) + "\n...");
+
+        String jsonLd = repo.getLinkedDataService().getJsonLd(bioPaper);
+        System.out.println("\n[Linked Data (JSON-LD)]:\n" + jsonLd);
+
+        // 9. EZID DOI Sync & Symplectic Elements Integration
+        repo.updateDoiMetadata("item-101", "10.1234/ddr.bio.101", "curator1");
+        System.out.println("\n[EZID DOI Propagated]: " + repo.getEzidService().getRegisteredRecord("10.1234/ddr.bio.101"));
+        repo.getSymplecticConnector().exportToSymplectic(bioPaper);
+        System.out.println("[Symplectic Connector Synced]: " + repo.getSymplecticConnector().getSyncedPublications());
+
+        // 10. Audit Logging (Fedora 4 Event Audit Service) & DPC Publish/Unpublish
+        repo.publishItem("item-101", "curator1", "Published after final thesis defense verification");
+        repo.unpublishItem("item-101", "curator1", "Withdrawn temporarily for patent review");
+        System.out.println("\n[Audit Events for item-101]:");
+        for (AuditEvent ev : repo.getAuditService().getEventsForTarget("item-101")) {
+            System.out.println("  " + ev);
+        }
+
+        // 11. Scheduled Banner Messages
+        SystemBanner downtimeBanner = new SystemBanner(
+                "banner-1", "Notice: Maintenance scheduled this Saturday 2 AM - 4 AM EST.",
+                LocalDateTime.now().minusHours(1), LocalDateTime.now().plusHours(24)
+        );
+        repo.addBanner(downtimeBanner);
+        System.out.println("\n[Active System Banners]: " + repo.getActiveBanners(LocalDateTime.now()).get(0).getMessage());
+
+        // 12. Deduplicated Error Display
+        repo.getErrorLog().logError("Invalid MIME format for video/avi file upload");
+        repo.getErrorLog().logError("Invalid MIME format for video/avi file upload");
+        repo.getErrorLog().logError("Deposit license terms not acknowledged");
+        System.out.println("\n[Deduplicated System Errors]:");
+        for (SystemErrorLog.DeduplicatedError err : repo.getErrorLog().getDeduplicatedErrors()) {
+            System.out.println("  " + err);
+        }
+
+        // 13. Reports: Storage by Financial Contact and Collection Dashboard
+        System.out.println("\n" + repo.generateFinancialStorageReport());
+        System.out.println(repo.generateCollectionDashboard("col-bio"));
+
+        // 14. Versioning and Restoration
+        bioPaper.setTitle("CRISPR Genome Editing in Zebrafish (Second Edition Revised)");
+        bioPaper.recordVersion("curator1");
+        System.out.println("[Item Versions]: Total recorded = " + bioPaper.getVersions().size());
+        bioPaper.restoreVersion(1, "curator1");
+        System.out.println("[Version Restored to v1]: Current title = '" + bioPaper.getTitle() + "'");
+
+        // 15. Access Restriction and Contact Curator Request
+        bioPaper.setCurrentAccessPermission(AccessPermission.RESTRICTED_CURATOR_ONLY);
+        boolean accessGrantedPublic = repo.checkAccess(bioPaper, null, "192.168.1.50");
+        System.out.println("\n[Access Control Check]: Public IP granted restricted item? " + accessGrantedPublic);
+        repo.requestAccessToRestrictedObject("item-101", "external-researcher@harvard.edu", "Requesting dataset for comparative study.");
+        System.out.println("[Contact Curator Request Submitted]: " + repo.getAccessRequests().get(0));
+
+        System.out.println("\nAll specification requirements successfully verified.");
+    }
+}

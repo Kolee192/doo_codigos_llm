@@ -1,0 +1,1307 @@
+// File: BookingStatus.java
+public enum BookingStatus {
+    PENDING,
+    CONFIRMED,
+    CANCELLED,
+    COMPLETED
+}
+
+// File: CarStatus.java
+public enum CarStatus {
+    AVAILABLE,
+    RENTED,
+    MAINTENANCE,
+    UNAVAILABLE
+}
+
+// File: Gender.java
+public enum Gender {
+    MALE,
+    FEMALE,
+    OTHER
+}
+
+// File: Country.java
+public class Country {
+    private String name;
+    private String abbreviation;
+
+    public Country(String name, String abbreviation) {
+        this.name = name;
+        this.abbreviation = abbreviation;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getAbbreviation() {
+        return abbreviation;
+    }
+}
+
+// File: City.java
+public class City {
+    private String name;
+    private String zipCode;
+    private Country country;
+
+    public City(String name, String zipCode, Country country) {
+        this.name = name;
+        this.zipCode = zipCode;
+        this.country = country;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getZipCode() {
+        return zipCode;
+    }
+
+    public Country getCountry() {
+        return country;
+    }
+}
+
+// File: Location.java
+public class Location {
+    private City city;
+    private String street;
+    private String number;
+
+    public Location(City city, String street, String number) {
+        this.city = city;
+        this.street = street;
+        this.number = number;
+    }
+
+    public City getCity() {
+        return city;
+    }
+
+    public String getStreet() {
+        return street;
+    }
+
+    public String getNumber() {
+        return number;
+    }
+}
+
+// File: FleetLocation.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class FleetLocation {
+    private String name;
+    private int capacity;
+    private Location location;
+    private List<Car> cars = new ArrayList<>();
+
+    public FleetLocation(String name, int capacity, Location location) {
+        this.name = name;
+        this.capacity = capacity;
+        this.location = location;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public Location getLocation() {
+        return location;
+    }
+
+    public List<Car> getCars() {
+        return cars;
+    }
+
+    public void addCar(Car car) {
+        if (!cars.contains(car)) {
+            cars.add(car);
+        }
+        car.setFleetLocation(this);
+    }
+}
+
+// File: ParkingLot.java
+public class ParkingLot {
+    private int lotNumber;
+    private double squareMetres;
+    private FleetLocation fleetLocation;
+
+    public ParkingLot(int lotNumber, double squareMetres, FleetLocation fleetLocation) {
+        this.lotNumber = lotNumber;
+        this.squareMetres = squareMetres;
+        this.fleetLocation = fleetLocation;
+    }
+
+    public int getLotNumber() {
+        return lotNumber;
+    }
+
+    public double getSquareMetres() {
+        return squareMetres;
+    }
+
+    public FleetLocation getFleetLocation() {
+        return fleetLocation;
+    }
+}
+
+// File: CarCategory.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class CarCategory {
+    private String name;
+    private int carSize;
+    private List<CarModel> carModels = new ArrayList<>();
+
+    public CarCategory(String name, int carSize) {
+        this.name = name;
+        this.carSize = carSize;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getCarSize() {
+        return carSize;
+    }
+
+    public List<CarModel> getCarModels() {
+        return carModels;
+    }
+
+    public void addCarModel(CarModel carModel) {
+        if (!carModels.contains(carModel)) {
+            carModels.add(carModel);
+        }
+        carModel.setCategory(this);
+    }
+}
+
+// File: CarBrand.java
+public class CarBrand {
+    private String name;
+
+    public CarBrand(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// File: CarModel.java
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
+public class CarModel {
+    private String name;
+    private BigDecimal dayPrice;
+    private int yearOfDesign;
+    private CarCategory category;
+    private List<Car> cars = new ArrayList<>();
+
+    public CarModel(String name, BigDecimal dayPrice, int yearOfDesign, CarCategory category) {
+        this.name = name;
+        this.dayPrice = dayPrice;
+        this.yearOfDesign = yearOfDesign;
+        this.category = category;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public BigDecimal getDayPrice() {
+        return dayPrice;
+    }
+
+    public int getYearOfDesign() {
+        return yearOfDesign;
+    }
+
+    public CarCategory getCategory() {
+        return category;
+    }
+
+    public void setCategory(CarCategory category) {
+        this.category = category;
+    }
+
+    public List<Car> getCars() {
+        return cars;
+    }
+
+    public void addCar(Car car) {
+        if (!cars.contains(car)) {
+            cars.add(car);
+        }
+        car.setModel(this);
+    }
+}
+
+// File: Car.java
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Car {
+    private CarModel model;
+    private String color;
+    private String licensePlate;
+    private int yearOfProduction;
+    private CarStatus status;
+    private FleetLocation fleetLocation;
+    private List<Rental> rentals = new ArrayList<>();
+
+    public Car(CarModel model, String color, String licensePlate, int yearOfProduction,
+               CarStatus status, FleetLocation fleetLocation) {
+        this.model = model;
+        this.color = color;
+        this.licensePlate = licensePlate;
+        this.yearOfProduction = yearOfProduction;
+        this.status = status;
+        this.fleetLocation = fleetLocation;
+    }
+
+    public CarModel getModel() {
+        return model;
+    }
+
+    public void setModel(CarModel model) {
+        this.model = model;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public String getLicensePlate() {
+        return licensePlate;
+    }
+
+    public int getYearOfProduction() {
+        return yearOfProduction;
+    }
+
+    public CarStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(CarStatus status) {
+        this.status = status;
+    }
+
+    public FleetLocation getFleetLocation() {
+        return fleetLocation;
+    }
+
+    public void setFleetLocation(FleetLocation fleetLocation) {
+        this.fleetLocation = fleetLocation;
+    }
+
+    public List<Rental> getRentals() {
+        return rentals;
+    }
+
+    public void addRental(Rental rental) {
+        if (!rentals.contains(rental)) {
+            rentals.add(rental);
+        }
+    }
+
+    public BigDecimal averageRentalPrice() {
+        if (rentals.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        for (Rental rental : rentals) {
+            total = total.add(rental.getPrice());
+        }
+        return total.divide(BigDecimal.valueOf(rentals.size()), 2, RoundingMode.HALF_UP);
+    }
+}
+
+// File: RentalType.java
+public class RentalType {
+    private String name;
+
+    public RentalType(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// File: CarPickup.java
+import java.time.LocalDate;
+
+public class CarPickup {
+    private LocalDate date;
+    private ParkingLot parkingLot;
+    private Rental rental;
+
+    public CarPickup(LocalDate date, ParkingLot parkingLot) {
+        this.date = date;
+        this.parkingLot = parkingLot;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public ParkingLot getParkingLot() {
+        return parkingLot;
+    }
+
+    public Rental getRental() {
+        return rental;
+    }
+
+    public void setRental(Rental rental) {
+        this.rental = rental;
+    }
+}
+
+// File: CarDropoff.java
+import java.time.LocalDate;
+
+public class CarDropoff {
+    private LocalDate date;
+    private ParkingLot parkingLot;
+    private boolean damaged;
+    private Rental rental;
+
+    public CarDropoff(LocalDate date, ParkingLot parkingLot, boolean damaged) {
+        this.date = date;
+        this.parkingLot = parkingLot;
+        this.damaged = damaged;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public ParkingLot getParkingLot() {
+        return parkingLot;
+    }
+
+    public boolean isDamaged() {
+        return damaged;
+    }
+
+    public Rental getRental() {
+        return rental;
+    }
+
+    public void setRental(Rental rental) {
+        this.rental = rental;
+    }
+}
+
+// File: Rental.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public class Rental {
+    private Booking booking;
+    private Car car;
+    private BigDecimal price;
+    private RentalType rentalType;
+    private CarPickup pickup;
+    private CarDropoff dropoff;
+
+    public Rental(Car car, BigDecimal price, RentalType rentalType) {
+        this.car = car;
+        this.price = price;
+        this.rentalType = rentalType;
+    }
+
+    public Booking getBooking() {
+        return booking;
+    }
+
+    public void setBooking(Booking booking) {
+        this.booking = booking;
+    }
+
+    public Car getCar() {
+        return car;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public RentalType getRentalType() {
+        return rentalType;
+    }
+
+    public CarPickup getPickup() {
+        return pickup;
+    }
+
+    public void setPickup(CarPickup pickup) {
+        this.pickup = pickup;
+        if (pickup != null) {
+            pickup.setRental(this);
+        }
+    }
+
+    public CarDropoff getDropoff() {
+        return dropoff;
+    }
+
+    public void setDropoff(CarDropoff dropoff) {
+        this.dropoff = dropoff;
+        if (dropoff != null) {
+            dropoff.setRental(this);
+        }
+    }
+
+    public boolean isBookedForToday() {
+        if (pickup == null) {
+            return false;
+        }
+        LocalDate today = LocalDate.now();
+        LocalDate start = pickup.getDate();
+        LocalDate end = dropoff != null ? dropoff.getDate() : start;
+        return !today.isBefore(start) && !today.isAfter(end);
+    }
+}
+
+// File: BookingInvoice.java
+import java.math.BigDecimal;
+
+public class BookingInvoice {
+    private Booking booking;
+    private BigDecimal totalAmount;
+
+    public BookingInvoice(BigDecimal totalAmount) {
+        this.totalAmount = totalAmount;
+    }
+
+    public Booking getBooking() {
+        return booking;
+    }
+
+    public void setBooking(Booking booking) {
+        this.booking = booking;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
+}
+
+// File: Booking.java
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Booking {
+    private Person person;
+    private String name;
+    private BookingStatus status;
+    private CarCategory carCategory;
+    private List<BookingInvoice> invoices = new ArrayList<>();
+    private List<Rental> rentals = new ArrayList<>();
+
+    public Booking(Person person, String name, CarCategory carCategory) {
+        this.person = person;
+        this.name = name;
+        this.carCategory = carCategory;
+        this.status = BookingStatus.PENDING;
+    }
+
+    public Person getPerson() {
+        return person;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public BookingStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(BookingStatus status) {
+        this.status = status;
+    }
+
+    public CarCategory getCarCategory() {
+        return carCategory;
+    }
+
+    public List<BookingInvoice> getInvoices() {
+        return invoices;
+    }
+
+    public void addInvoice(BookingInvoice invoice) {
+        if (!invoices.contains(invoice)) {
+            invoices.add(invoice);
+        }
+        invoice.setBooking(this);
+    }
+
+    public List<Rental> getRentals() {
+        return rentals;
+    }
+
+    public void addRental(Rental rental) {
+        if (!rentals.contains(rental)) {
+            rentals.add(rental);
+        }
+        rental.setBooking(this);
+    }
+
+    public BigDecimal totalInvoicedAmount() {
+        BigDecimal total = BigDecimal.ZERO;
+        for (BookingInvoice invoice : invoices) {
+            total = total.add(invoice.getTotalAmount());
+        }
+        return total;
+    }
+}
+
+// File: Industry.java
+public class Industry {
+    private String name;
+
+    public Industry(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// File: Bank.java
+public class Bank {
+    private String name;
+    private String bic;
+
+    public Bank(String name, String bic) {
+        this.name = name;
+        this.bic = bic;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getBic() {
+        return bic;
+    }
+}
+
+// File: BankAccountType.java
+public class BankAccountType {
+    private String name;
+
+    public BankAccountType(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// File: BankCardType.java
+public class BankCardType {
+    private String name;
+
+    public BankCardType(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// File: BankAccount.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class BankAccount {
+    private String accountNumber;
+    private String iban;
+    private BankAccountType accountType;
+    private Bank bank;
+    private Person owner;
+    private List<BankCard> cards = new ArrayList<>();
+
+    public BankAccount(String accountNumber, String iban, BankAccountType accountType, Bank bank) {
+        this.accountNumber = accountNumber;
+        this.iban = iban;
+        this.accountType = accountType;
+        this.bank = bank;
+    }
+
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+
+    public String getIban() {
+        return iban;
+    }
+
+    public BankAccountType getAccountType() {
+        return accountType;
+    }
+
+    public Bank getBank() {
+        return bank;
+    }
+
+    public Person getOwner() {
+        return owner;
+    }
+
+    public void setOwner(Person owner) {
+        this.owner = owner;
+    }
+
+    public List<BankCard> getCards() {
+        return cards;
+    }
+
+    public void addCard(BankCard card) {
+        if (!cards.contains(card)) {
+            cards.add(card);
+        }
+        card.setBankAccount(this);
+    }
+}
+
+// File: BankCard.java
+import java.time.LocalDate;
+
+public class BankCard {
+    private String cardNumber;
+    private BankCardType cardType;
+    private LocalDate expirationDate;
+    private BankAccount bankAccount;
+
+    public BankCard(String cardNumber, BankCardType cardType, LocalDate expirationDate) {
+        this.cardNumber = cardNumber;
+        this.cardType = cardType;
+        this.expirationDate = expirationDate;
+    }
+
+    public String getCardNumber() {
+        return cardNumber;
+    }
+
+    public BankCardType getCardType() {
+        return cardType;
+    }
+
+    public LocalDate getExpirationDate() {
+        return expirationDate;
+    }
+
+    public BankAccount getBankAccount() {
+        return bankAccount;
+    }
+
+    public void setBankAccount(BankAccount bankAccount) {
+        this.bankAccount = bankAccount;
+    }
+}
+
+// File: ConnectionType.java
+public class ConnectionType {
+    private String name;
+
+    public ConnectionType(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// File: Connection.java
+import java.time.LocalDate;
+
+public class Connection {
+    private Person from;
+    private Person to;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private ConnectionType connectionType;
+
+    public Connection(Person from, Person to, LocalDate startDate, LocalDate endDate,
+                      ConnectionType connectionType) {
+        this.from = from;
+        this.to = to;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.connectionType = connectionType;
+    }
+
+    public Person getFrom() {
+        return from;
+    }
+
+    public Person getTo() {
+        return to;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public ConnectionType getConnectionType() {
+        return connectionType;
+    }
+}
+
+// File: FaxType.java
+public class FaxType {
+    private String name;
+
+    public FaxType(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// File: Fax.java
+public class Fax {
+    private String faxNumber;
+    private FaxType type;
+    private boolean preferred;
+    private Person person;
+
+    public Fax(String faxNumber, FaxType type, boolean preferred) {
+        this.faxNumber = faxNumber;
+        this.type = type;
+        this.preferred = preferred;
+    }
+
+    public String getFaxNumber() {
+        return faxNumber;
+    }
+
+    public FaxType getType() {
+        return type;
+    }
+
+    public boolean isPreferred() {
+        return preferred;
+    }
+
+    public Person getPerson() {
+        return person;
+    }
+
+    public void setPerson(Person person) {
+        this.person = person;
+    }
+}
+
+// File: PhoneType.java
+public class PhoneType {
+    private String name;
+
+    public PhoneType(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// File: Phone.java
+public class Phone {
+    private String phoneNumber;
+    private PhoneType type;
+    private boolean preferred;
+    private Person person;
+
+    public Phone(String phoneNumber, PhoneType type, boolean preferred) {
+        this.phoneNumber = phoneNumber;
+        this.type = type;
+        this.preferred = preferred;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public PhoneType getType() {
+        return type;
+    }
+
+    public boolean isPreferred() {
+        return preferred;
+    }
+
+    public Person getPerson() {
+        return person;
+    }
+
+    public void setPerson(Person person) {
+        this.person = person;
+    }
+}
+
+// File: EmailType.java
+public class EmailType {
+    private String name;
+
+    public EmailType(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// File: Email.java
+public class Email {
+    private String emailAddress;
+    private EmailType type;
+    private boolean preferred;
+    private Person person;
+
+    public Email(String emailAddress, EmailType type, boolean preferred) {
+        this.emailAddress = emailAddress;
+        this.type = type;
+        this.preferred = preferred;
+    }
+
+    public String getEmailAddress() {
+        return emailAddress;
+    }
+
+    public EmailType getType() {
+        return type;
+    }
+
+    public boolean isPreferred() {
+        return preferred;
+    }
+
+    public Person getPerson() {
+        return person;
+    }
+
+    public void setPerson(Person person) {
+        this.person = person;
+    }
+}
+
+// File: SocialMediaType.java
+public class SocialMediaType {
+    private String name;
+
+    public SocialMediaType(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// File: SocialMediaAccount.java
+public class SocialMediaAccount {
+    private String accountName;
+    private SocialMediaType type;
+    private Person person;
+
+    public SocialMediaAccount(String accountName, SocialMediaType type) {
+        this.accountName = accountName;
+        this.type = type;
+    }
+
+    public String getAccountName() {
+        return accountName;
+    }
+
+    public SocialMediaType getType() {
+        return type;
+    }
+
+    public Person getPerson() {
+        return person;
+    }
+
+    public void setPerson(Person person) {
+        this.person = person;
+    }
+}
+
+// File: PersonLocationType.java
+public class PersonLocationType {
+    private String name;
+
+    public PersonLocationType(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// File: PersonLocation.java
+import java.time.LocalDate;
+
+public class PersonLocation {
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private PersonLocationType type;
+    private Location location;
+    private Person person;
+
+    public PersonLocation(LocalDate startDate, LocalDate endDate, PersonLocationType type, Location location) {
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.type = type;
+        this.location = location;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public PersonLocationType getType() {
+        return type;
+    }
+
+    public Location getLocation() {
+        return location;
+    }
+
+    public Person getPerson() {
+        return person;
+    }
+
+    public void setPerson(Person person) {
+        this.person = person;
+    }
+}
+
+// File: Person.java
+import java.util.ArrayList;
+import java.util.List;
+
+public abstract class Person {
+    private String name;
+    private String title;
+    private String notes;
+    private List<Booking> bookings = new ArrayList<>();
+    private List<BankAccount> bankAccounts = new ArrayList<>();
+    private List<Connection> connections = new ArrayList<>();
+    private List<Fax> faxes = new ArrayList<>();
+    private List<Phone> phones = new ArrayList<>();
+    private List<Email> emails = new ArrayList<>();
+    private List<SocialMediaAccount> socialMediaAccounts = new ArrayList<>();
+    private List<PersonLocation> locations = new ArrayList<>();
+
+    public Person(String name, String title, String notes) {
+        this.name = name;
+        this.title = title;
+        this.notes = notes;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public List<Booking> getBookings() {
+        return bookings;
+    }
+
+    public Booking createBooking(String bookingName, CarCategory carCategory) {
+        Booking booking = new Booking(this, bookingName, carCategory);
+        bookings.add(booking);
+        return booking;
+    }
+
+    public List<BankAccount> getBankAccounts() {
+        return bankAccounts;
+    }
+
+    public void addBankAccount(BankAccount bankAccount) {
+        if (!bankAccounts.contains(bankAccount)) {
+            bankAccounts.add(bankAccount);
+        }
+        bankAccount.setOwner(this);
+    }
+
+    public List<Connection> getConnections() {
+        return connections;
+    }
+
+    public void addConnection(Connection connection) {
+        if (!connections.contains(connection)) {
+            connections.add(connection);
+        }
+    }
+
+    public List<Fax> getFaxes() {
+        return faxes;
+    }
+
+    public void addFax(Fax fax) {
+        if (!faxes.contains(fax)) {
+            faxes.add(fax);
+        }
+        fax.setPerson(this);
+    }
+
+    public List<Phone> getPhones() {
+        return phones;
+    }
+
+    public void addPhone(Phone phone) {
+        if (!phones.contains(phone)) {
+            phones.add(phone);
+        }
+        phone.setPerson(this);
+    }
+
+    public List<Email> getEmails() {
+        return emails;
+    }
+
+    public void addEmail(Email email) {
+        if (!emails.contains(email)) {
+            emails.add(email);
+        }
+        email.setPerson(this);
+    }
+
+    public List<SocialMediaAccount> getSocialMediaAccounts() {
+        return socialMediaAccounts;
+    }
+
+    public void addSocialMediaAccount(SocialMediaAccount account) {
+        if (!socialMediaAccounts.contains(account)) {
+            socialMediaAccounts.add(account);
+        }
+        account.setPerson(this);
+    }
+
+    public List<PersonLocation> getLocations() {
+        return locations;
+    }
+
+    public void addLocation(PersonLocation personLocation) {
+        if (!locations.contains(personLocation)) {
+            locations.add(personLocation);
+        }
+        personLocation.setPerson(this);
+    }
+}
+
+// File: NaturalPerson.java
+import java.time.LocalDate;
+
+public class NaturalPerson extends Person {
+    private String firstName;
+    private String lastName;
+    private Gender gender;
+    private LocalDate birthDate;
+    private String passportId;
+    private String nationalRegisterNumber;
+
+    public NaturalPerson(String name, String title, String notes, String firstName, String lastName,
+                         Gender gender, LocalDate birthDate, String passportId,
+                         String nationalRegisterNumber) {
+        super(name, title, notes);
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.gender = gender;
+        this.birthDate = birthDate;
+        this.passportId = passportId;
+        this.nationalRegisterNumber = nationalRegisterNumber;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public Gender getGender() {
+        return gender;
+    }
+
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
+
+    public String getPassportId() {
+        return passportId;
+    }
+
+    public String getNationalRegisterNumber() {
+        return nationalRegisterNumber;
+    }
+}
+
+// File: LegalPerson.java
+public class LegalPerson extends Person {
+    private String vatNumber;
+    private String companyNumber;
+    private Industry industry;
+
+    public LegalPerson(String name, String title, String notes, String vatNumber,
+                       String companyNumber, Industry industry) {
+        super(name, title, notes);
+        this.vatNumber = vatNumber;
+        this.companyNumber = companyNumber;
+        this.industry = industry;
+    }
+
+    public String getVatNumber() {
+        return vatNumber;
+    }
+
+    public String getCompanyNumber() {
+        return companyNumber;
+    }
+
+    public Industry getIndustry() {
+        return industry;
+    }
+}
+
+// File: Main.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public class Main {
+    public static void main(String[] args) {
+        Country country = new Country("Belgium", "BE");
+        City city = new City("Brussels", "1000", country);
+        Location location = new Location(city, "Main Street", "10");
+
+        FleetLocation fleetLocation = new FleetLocation("Central Fleet", 50, location);
+        ParkingLot parkingLot = new ParkingLot(7, 120.5, fleetLocation);
+
+        CarCategory carCategory = new CarCategory("SUV", 5);
+        CarModel carModel = new CarModel("Toyota RAV4", new BigDecimal("75.00"), 2020, carCategory);
+        carCategory.addCarModel(carModel);
+
+        Car car = new Car(carModel, "Black", "1-ABC-123", 2021, CarStatus.AVAILABLE, fleetLocation);
+        carModel.addCar(car);
+        fleetLocation.addCar(car);
+
+        NaturalPerson alice = new NaturalPerson(
+                "Alice Smith", "Ms.", "VIP customer",
+                "Alice", "Smith", Gender.FEMALE,
+                LocalDate.of(1990, 1, 1), "P123456", "NR123456"
+        );
+
+        LegalPerson acme = new LegalPerson(
+                "Acme Corp", "Mr.", "Partner company",
+                "VAT123", "COMP123", new Industry("Logistics")
+        );
+
+        Booking booking = alice.createBooking("Weekend trip", carCategory);
+        booking.setStatus(BookingStatus.CONFIRMED);
+        booking.addInvoice(new BookingInvoice(new BigDecimal("150.00")));
+
+        RentalType rentalType = new RentalType("Daily");
+        Rental rental = new Rental(car, new BigDecimal("75.00"), rentalType);
+        rental.setPickup(new CarPickup(LocalDate.now(), parkingLot));
+        rental.setDropoff(new CarDropoff(LocalDate.now().plusDays(2), parkingLot, false));
+        car.addRental(rental);
+        booking.addRental(rental);
+
+        Bank bank = new Bank("Demo Bank", "BIC123");
+        BankAccountType accountType = new BankAccountType("Savings");
+        BankAccount bankAccount = new BankAccount("123456789", "IBAN123", accountType, bank);
+        alice.addBankAccount(bankAccount);
+
+        BankCardType bankCardType = new BankCardType("Visa");
+        BankCard bankCard = new BankCard("4111111111111111", bankCardType, LocalDate.of(2027, 1, 1));
+        bankAccount.addCard(bankCard);
+
+        alice.addFax(new Fax("+32 2 123 4567", new FaxType("Home"), true));
+        alice.addPhone(new Phone("+32 470 12 34 56", new PhoneType("Mobile"), true));
+        alice.addEmail(new Email("alice@example.com", new EmailType("Personal"), true));
+        alice.addSocialMediaAccount(new SocialMediaAccount("alice_smith", new SocialMediaType("Social Network")));
+
+        PersonLocationType homeType = new PersonLocationType("Home");
+        PersonLocation personLocation = new PersonLocation(
+                LocalDate.now().minusYears(1),
+                LocalDate.now(),
+                homeType,
+                location
+        );
+        alice.addLocation(personLocation);
+
+        ConnectionType connectionType = new ConnectionType("Employer");
+        Connection connection = new Connection(
+                alice, acme,
+                LocalDate.now().minusMonths(6),
+                LocalDate.now(),
+                connectionType
+        );
+        alice.addConnection(connection);
+        acme.addConnection(connection);
+
+        System.out.println("Booking: " + booking.getName());
+        System.out.println("Person: " + alice.getName());
+        System.out.println("Status: " + booking.getStatus());
+        System.out.println("Category: " + carCategory.getName() + " (size " + carCategory.getCarSize() + ")");
+        System.out.println("Car: " + car.getLicensePlate() + " / " + carModel.getName());
+        System.out.println("Rental for today: " + rental.isBookedForToday());
+        System.out.println("Average car rental price: " + car.averageRentalPrice());
+        System.out.println("Total invoiced: " + booking.totalInvoicedAmount());
+        System.out.println("Bank cards: " + bankAccount.getCards().size());
+        System.out.println("Connections: " + alice.getConnections().size());
+    }
+}

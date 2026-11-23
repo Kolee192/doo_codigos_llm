@@ -1,0 +1,1536 @@
+// File: Role.java
+public enum Role {
+    DAMS_MANAGER,
+    REPOSITORY_MANAGER,
+    STAFF,
+    USER
+}
+
+// File: NameRole.java
+public enum NameRole {
+    CREATOR,
+    SOURCE,
+    SUBJECT,
+    ILLUSTRATOR,
+    PHOTOGRAPHER,
+    AUTHOR,
+    EDITOR,
+    CONTRIBUTOR,
+    OWNER,
+    OTHER
+}
+
+// File: SubjectType.java
+public enum SubjectType {
+    TITLE,
+    TOPIC,
+    GENRE_FORM,
+    GEOGRAPHICAL_NAME,
+    FUNCTION,
+    OCCUPATION,
+    NAME,
+    CARTOGRAPHICS,
+    OTHER
+}
+
+// File: TitleType.java
+public enum TitleType {
+    MAIN,
+    ALTERNATIVE,
+    TRANSLATED,
+    UNIFORM,
+    OTHER
+}
+
+// File: RelationType.java
+public enum RelationType {
+    RELATED_TO,
+    PART_OF,
+    ASSEMBLED_FROM,
+    HAS_PART,
+    DERIVATIVE_OF
+}
+
+// File: EventType.java
+public enum EventType {
+    CREATED,
+    UPDATED,
+    DELETED,
+    TITLE_CHANGED,
+    LANGUAGE_CHANGED,
+    NOTE_CHANGED,
+    ORIGIN_CHANGED,
+    CHECKSUM_CHANGED,
+    RIGHTS_CHANGED,
+    ACCESSED,
+    DESCRIPTION_CHANGED,
+    FILE_ADDED,
+    COMPONENT_ADDED,
+    COLLECTION_RELATED,
+    COPYRIGHT_EXPIRED,
+    POLICY_CHANGED,
+    LICENSE_APPLIED,
+    STATUTE_CHANGED,
+    PRESERVATION,
+    OTHER
+}
+
+// File: CopyrightStatus.java
+public enum CopyrightStatus {
+    PUBLIC_DOMAIN,
+    IN_COPYRIGHT,
+    UNKNOWN,
+    UNDER_LICENSE,
+    RESTRICTED
+}
+
+// File: ChecksumMethod.java
+public enum ChecksumMethod {
+    MD5,
+    SHA1,
+    SHA256,
+    SHA512
+}
+
+// File: DateRange.java
+public class DateRange {
+    private String start;
+    private String end;
+    private String type;
+
+    public DateRange(String start, String end, String type) {
+        this.start = start;
+        this.end = end;
+        this.type = type;
+    }
+
+    public String getStart() { return start; }
+    public String getEnd() { return end; }
+    public String getType() { return type; }
+
+    @Override
+    public String toString() {
+        return type + ": " + start + " - " + end;
+    }
+}
+
+// File: Title.java
+public class Title {
+    private String id;
+    private String value;
+    private TitleType type;
+
+    public Title(String id, String value, TitleType type) {
+        this.id = id;
+        this.value = value;
+        this.type = type;
+    }
+
+    public String getId() { return id; }
+    public String getValue() { return value; }
+    public TitleType getType() { return type; }
+
+    @Override
+    public String toString() {
+        return type + ": " + value;
+    }
+}
+
+// File: Note.java
+public class Note {
+    private String id;
+    private String text;
+    private String noteType;
+
+    public Note(String id, String text, String noteType) {
+        this.id = id;
+        this.text = text;
+        this.noteType = noteType;
+    }
+
+    public String getId() { return id; }
+    public String getText() { return text; }
+    public String getNoteType() { return noteType; }
+
+    @Override
+    public String toString() {
+        return noteType + ": " + text;
+    }
+}
+
+// File: ExternalDescription.java
+public class ExternalDescription {
+    private String id;
+    private String source;
+    private String description;
+    private String url;
+
+    public ExternalDescription(String id, String source, String description, String url) {
+        this.id = id;
+        this.source = source;
+        this.description = description;
+        this.url = url;
+    }
+
+    public String getId() { return id; }
+    public String getSource() { return source; }
+    public String getDescription() { return description; }
+    public String getUrl() { return url; }
+
+    @Override
+    public String toString() {
+        return source + ": " + description + " (" + url + ")";
+    }
+}
+
+// File: OriginInfo.java
+public class OriginInfo {
+    private String placeOfPublication;
+    private String publisher;
+    private String edition;
+    private String date;
+    private String other;
+
+    public OriginInfo() {}
+
+    public OriginInfo(String placeOfPublication, String publisher, String edition, String date, String other) {
+        this.placeOfPublication = placeOfPublication;
+        this.publisher = publisher;
+        this.edition = edition;
+        this.date = date;
+        this.other = other;
+    }
+
+    public String getPlaceOfPublication() { return placeOfPublication; }
+    public void setPlaceOfPublication(String placeOfPublication) { this.placeOfPublication = placeOfPublication; }
+    public String getPublisher() { return publisher; }
+    public void setPublisher(String publisher) { this.publisher = publisher; }
+    public String getEdition() { return edition; }
+    public void setEdition(String edition) { this.edition = edition; }
+    public String getDate() { return date; }
+    public void setDate(String date) { this.date = date; }
+    public String getOther() { return other; }
+    public void setOther(String other) { this.other = other; }
+
+    @Override
+    public String toString() {
+        return "OriginInfo{" +
+                "place='" + placeOfPublication + '\'' +
+                ", publisher='" + publisher + '\'' +
+                ", edition='" + edition + '\'' +
+                ", date='" + date + '\'' +
+                ", other='" + other + '\'' +
+                '}';
+    }
+}
+
+// File: UsePermission.java
+import java.time.LocalDate;
+
+public class UsePermission {
+    private String act;
+    private LocalDate startDate;
+    private LocalDate endDate;
+
+    public UsePermission(String act, LocalDate startDate, LocalDate endDate) {
+        this.act = act;
+        this.startDate = startDate;
+        this.endDate = endDate;
+    }
+
+    public String getAct() { return act; }
+    public LocalDate getStartDate() { return startDate; }
+    public LocalDate getEndDate() { return endDate; }
+
+    public boolean isActive(LocalDate date) {
+        if (date == null) date = LocalDate.now();
+        return (startDate == null || !date.isBefore(startDate)) &&
+               (endDate == null || !date.isAfter(endDate));
+    }
+
+    @Override
+    public String toString() {
+        return act + " [" + startDate + " to " + endDate + "]";
+    }
+}
+
+// File: Event.java
+import java.time.LocalDateTime;
+
+public class Event {
+    private String id;
+    private EventType type;
+    private LocalDateTime occurredAt;
+    private User agent;
+    private String outcome;
+    private String targetType;
+    private String targetId;
+    private String details;
+
+    public Event(String id, EventType type, LocalDateTime occurredAt, User agent,
+                 String outcome, String targetType, String targetId, String details) {
+        this.id = id;
+        this.type = type;
+        this.occurredAt = occurredAt;
+        this.agent = agent;
+        this.outcome = outcome;
+        this.targetType = targetType;
+        this.targetId = targetId;
+        this.details = details;
+    }
+
+    public String getId() { return id; }
+    public EventType getType() { return type; }
+    public LocalDateTime getOccurredAt() { return occurredAt; }
+    public User getAgent() { return agent; }
+    public String getOutcome() { return outcome; }
+    public String getTargetType() { return targetType; }
+    public String getTargetId() { return targetId; }
+    public String getDetails() { return details; }
+
+    @Override
+    public String toString() {
+        return "Event{" +
+                "type=" + type +
+                ", at=" + occurredAt +
+                ", agent=" + (agent == null ? "system" : agent.getUsername()) +
+                ", outcome='" + outcome + '\'' +
+                ", target=" + targetType + "/" + targetId +
+                ", details='" + details + '\'' +
+                '}';
+    }
+}
+
+// File: User.java
+public class User {
+    private String id;
+    private String username;
+    private String fullName;
+    private Role role;
+    private Repository homeRepository;
+    private String contactInfo;
+
+    public User(String id, String username, String fullName, Role role, Repository homeRepository, String contactInfo) {
+        this.id = id;
+        this.username = username;
+        this.fullName = fullName;
+        this.role = role;
+        this.homeRepository = homeRepository;
+        this.contactInfo = contactInfo;
+    }
+
+    public String getId() { return id; }
+    public String getUsername() { return username; }
+    public String getFullName() { return fullName; }
+    public Role getRole() { return role; }
+    public Repository getHomeRepository() { return homeRepository; }
+    public String getContactInfo() { return contactInfo; }
+
+    public boolean isDAMSManager() {
+        return role == Role.DAMS_MANAGER;
+    }
+
+    public boolean isStaffOf(Repository repository) {
+        return repository != null && repository.hasStaff(this);
+    }
+
+    @Override
+    public String toString() {
+        return fullName + " (" + username + ", " + role + ")";
+    }
+}
+
+// File: Repository.java
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+public class Repository {
+    private String id;
+    private String name;
+    private String description;
+    private String contactInfo;
+    private User manager;
+    private Set<User> staffMembers = new LinkedHashSet<>();
+    private Set<Collection> collections = new LinkedHashSet<>();
+    private Set<DAMSObject> objects = new LinkedHashSet<>();
+
+    public Repository(String id, String name, String description, String contactInfo) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.contactInfo = contactInfo;
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getDescription() { return description; }
+    public String getContactInfo() { return contactInfo; }
+    public void setContactInfo(String contactInfo) { this.contactInfo = contactInfo; }
+
+    public User getManager() { return manager; }
+    public void setManager(User manager) { this.manager = manager; }
+
+    public void addStaff(User user) { staffMembers.add(user); }
+    public boolean hasStaff(User user) { return staffMembers.contains(user); }
+    public Set<User> getStaffMembers() { return staffMembers; }
+
+    public void addCollection(Collection collection) { collections.add(collection); }
+    public void addObject(DAMSObject object) { objects.add(object); }
+    public List<Collection> getCollections() { return new ArrayList<>(collections); }
+    public List<DAMSObject> getObjects() { return new ArrayList<>(objects); }
+
+    public List<ContentFile> getAllFiles() {
+        List<ContentFile> files = new ArrayList<>();
+        for (DAMSObject object : objects) {
+            files.addAll(object.getAllFiles());
+        }
+        return files;
+    }
+
+    public List<Collection> getCollectionsCuratedBy(User user) {
+        List<Collection> result = new ArrayList<>();
+        for (Collection collection : collections) {
+            if (collection.getCurator() != null && collection.getCurator().equals(user)) {
+                result.add(collection);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + id + ")";
+    }
+}
+
+// File: AccessControl.java
+public class AccessControl {
+    public static boolean canCurate(User user, Repository repository) {
+        if (user == null || repository == null) return false;
+        if (user.getRole() == Role.DAMS_MANAGER) return true;
+        return (user.getRole() == Role.STAFF || user.getRole() == Role.REPOSITORY_MANAGER)
+                && repository.hasStaff(user);
+    }
+
+    public static boolean canView(User user, Repository repository) {
+        if (user == null || repository == null) return false;
+        if (user.getRole() == Role.DAMS_MANAGER) return true;
+        if (user.getRole() == Role.STAFF || user.getRole() == Role.REPOSITORY_MANAGER) {
+            return repository.hasStaff(user);
+        }
+        return true;
+    }
+}
+
+// File: NameRecord.java
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+public class NameRecord {
+    private String id;
+    private String uniqueIdentity;
+    private String preferredName;
+    private Set<String> variantNames = new LinkedHashSet<>();
+    private String dates;
+    private String description;
+
+    public NameRecord(String id, String uniqueIdentity, String preferredName, String dates, String description) {
+        this.id = id;
+        this.uniqueIdentity = uniqueIdentity;
+        this.preferredName = preferredName;
+        this.dates = dates;
+        this.description = description;
+    }
+
+    public String getId() { return id; }
+    public String getUniqueIdentity() { return uniqueIdentity; }
+    public String getPreferredName() { return preferredName; }
+    public Set<String> getVariantNames() { return variantNames; }
+    public String getDates() { return dates; }
+    public String getDescription() { return description; }
+
+    public void addVariantName(String name) { variantNames.add(name); }
+
+    public boolean containsName(String text) {
+        if (text == null) return false;
+        String lower = text.toLowerCase();
+        if (preferredName != null && preferredName.toLowerCase().contains(lower)) return true;
+        for (String variant : variantNames) {
+            if (variant != null && variant.toLowerCase().contains(lower)) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return preferredName + " (" + uniqueIdentity + ")";
+    }
+}
+
+// File: Subject.java
+public class Subject {
+    private String id;
+    private SubjectType type;
+    private String heading;
+    private String geoCoordinates;
+    private String description;
+
+    public Subject(String id, SubjectType type, String heading, String geoCoordinates, String description) {
+        this.id = id;
+        this.type = type;
+        this.heading = heading;
+        this.geoCoordinates = geoCoordinates;
+        this.description = description;
+    }
+
+    public String getId() { return id; }
+    public SubjectType getType() { return type; }
+    public String getHeading() { return heading; }
+    public String getGeoCoordinates() { return geoCoordinates; }
+    public String getDescription() { return description; }
+
+    public boolean containsHeading(String text) {
+        if (text == null) return false;
+        return heading != null && heading.toLowerCase().contains(text.toLowerCase());
+    }
+
+    @Override
+    public String toString() {
+        return type + ": " + heading + (geoCoordinates == null ? "" : " @ " + geoCoordinates);
+    }
+}
+
+// File: LibraryPolicy.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+public class LibraryPolicy {
+    private String id;
+    private String name;
+    private String description;
+    private String accessRestriction;
+    private LocalDate scheduledExpiration;
+    private List<Event> events = new ArrayList<>();
+
+    public LibraryPolicy(String id, String name, String description, String accessRestriction, LocalDate scheduledExpiration) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.accessRestriction = accessRestriction;
+        this.scheduledExpiration = scheduledExpiration;
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getDescription() { return description; }
+    public String getAccessRestriction() { return accessRestriction; }
+    public LocalDate getScheduledExpiration() { return scheduledExpiration; }
+    public List<Event> getEvents() { return events; }
+
+    public void setScheduledExpiration(LocalDate scheduledExpiration) { this.scheduledExpiration = scheduledExpiration; }
+    public void addEvent(Event event) { events.add(event); }
+
+    @Override
+    public String toString() {
+        return name + ": " + accessRestriction + " (expires " + scheduledExpiration + ")";
+    }
+}
+
+// File: License.java
+import java.time.LocalDate;
+
+public class License {
+    private String id;
+    private String name;
+    private String terms;
+    private boolean applicable;
+    private LocalDate expirationDate;
+
+    public License(String id, String name, String terms, boolean applicable, LocalDate expirationDate) {
+        this.id = id;
+        this.name = name;
+        this.terms = terms;
+        this.applicable = applicable;
+        this.expirationDate = expirationDate;
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getTerms() { return terms; }
+    public boolean isApplicable() { return applicable; }
+    public LocalDate getExpirationDate() { return expirationDate; }
+
+    @Override
+    public String toString() {
+        return name + " (" + terms + ")";
+    }
+}
+
+// File: Statute.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Statute {
+    private String id;
+    private String name;
+    private String description;
+    private String jurisdiction;
+    private LocalDate scheduledExpiration;
+    private List<Event> events = new ArrayList<>();
+
+    public Statute(String id, String name, String description, String jurisdiction, LocalDate scheduledExpiration) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.jurisdiction = jurisdiction;
+        this.scheduledExpiration = scheduledExpiration;
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getDescription() { return description; }
+    public String getJurisdiction() { return jurisdiction; }
+    public LocalDate getScheduledExpiration() { return scheduledExpiration; }
+    public List<Event> getEvents() { return events; }
+
+    public void setScheduledExpiration(LocalDate scheduledExpiration) { this.scheduledExpiration = scheduledExpiration; }
+    public void addEvent(Event event) { events.add(event); }
+
+    @Override
+    public String toString() {
+        return name + " (" + jurisdiction + ", expires " + scheduledExpiration + ")";
+    }
+}
+
+// File: RightsStatus.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+public class RightsStatus {
+    private CopyrightStatus copyrightStatus;
+    private String rightsHolder;
+    private LocalDate copyrightExpirationDate;
+    private List<UsePermission> permittedUses = new ArrayList<>();
+    private List<UsePermission> restrictedUses = new ArrayList<>();
+    private Set<LibraryPolicy> libraryPolicies = new LinkedHashSet<>();
+    private List<Event> modificationHistory = new ArrayList<>();
+
+    public RightsStatus(CopyrightStatus copyrightStatus, String rightsHolder, LocalDate copyrightExpirationDate) {
+        this.copyrightStatus = copyrightStatus;
+        this.rightsHolder = rightsHolder;
+        this.copyrightExpirationDate = copyrightExpirationDate;
+    }
+
+    public CopyrightStatus getCopyrightStatus() { return copyrightStatus; }
+    public String getRightsHolder() { return rightsHolder; }
+    public LocalDate getCopyrightExpirationDate() { return copyrightExpirationDate; }
+    public List<UsePermission> getPermittedUses() { return permittedUses; }
+    public List<UsePermission> getRestrictedUses() { return restrictedUses; }
+    public Set<LibraryPolicy> getLibraryPolicies() { return libraryPolicies; }
+    public List<Event> getModificationHistory() { return modificationHistory; }
+
+    public void addPermittedUse(UsePermission use) { permittedUses.add(use); }
+    public void addRestrictedUse(UsePermission use) { restrictedUses.add(use); }
+    public void addLibraryPolicy(LibraryPolicy policy) { libraryPolicies.add(policy); }
+    public void addModificationEvent(Event event) { modificationHistory.add(event); }
+
+    public void updateCopyrightStatus(CopyrightStatus status, String holder, LocalDate expiration, Event event) {
+        this.copyrightStatus = status;
+        this.rightsHolder = holder;
+        this.copyrightExpirationDate = expiration;
+        modificationHistory.add(event);
+    }
+
+    public List<UsePermission> getActivePermittedUses(LocalDate date) {
+        List<UsePermission> result = new ArrayList<>();
+        for (UsePermission use : permittedUses) {
+            if (use.isActive(date)) result.add(use);
+        }
+        return result;
+    }
+
+    public List<UsePermission> getActiveRestrictedUses(LocalDate date) {
+        List<UsePermission> result = new ArrayList<>();
+        for (UsePermission use : restrictedUses) {
+            if (use.isActive(date)) result.add(use);
+        }
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return copyrightStatus + ", holder=" + rightsHolder + ", expires=" + copyrightExpirationDate;
+    }
+}
+
+// File: ContentFile.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ContentFile {
+    private String id;
+    private String filename;
+    private long sizeBytes;
+    private LocalDate creationDate;
+    private String format;
+    private String formatVersion;
+    private String checksum;
+    private ChecksumMethod checksumMethod;
+    private String sourceCapture;
+    private String hardware;
+    private String software;
+    private DAMSObject object;
+    private Component component;
+    private List<Event> events = new ArrayList<>();
+    private String lastRegisteredChecksum;
+
+    public ContentFile(String id, String filename, long sizeBytes, LocalDate creationDate,
+                       String format, String formatVersion) {
+        this.id = id;
+        this.filename = filename;
+        this.sizeBytes = sizeBytes;
+        this.creationDate = creationDate;
+        this.format = format;
+        this.formatVersion = formatVersion;
+    }
+
+    public String getId() { return id; }
+    public String getFilename() { return filename; }
+    public long getSizeBytes() { return sizeBytes; }
+    public LocalDate getCreationDate() { return creationDate; }
+    public String getFormat() { return format; }
+    public String getFormatVersion() { return formatVersion; }
+    public String getChecksum() { return checksum; }
+    public ChecksumMethod getChecksumMethod() { return checksumMethod; }
+    public String getSourceCapture() { return sourceCapture; }
+    public String getHardware() { return hardware; }
+    public String getSoftware() { return software; }
+    public DAMSObject getObject() { return object; }
+    public Component getComponent() { return component; }
+    public List<Event> getEvents() { return events; }
+    public String getLastRegisteredChecksum() { return lastRegisteredChecksum; }
+
+    public void setObject(DAMSObject object) { this.object = object; }
+    public void setComponent(Component component) { this.component = component; }
+    public void setSourceCapture(String sourceCapture) { this.sourceCapture = sourceCapture; }
+    public void setHardware(String hardware) { this.hardware = hardware; }
+    public void setSoftware(String software) { this.software = software; }
+
+    public void registerChecksum(String checksum, ChecksumMethod method) {
+        this.checksum = checksum;
+        this.lastRegisteredChecksum = checksum;
+        this.checksumMethod = method;
+    }
+
+    public boolean updateChecksum(String newChecksum, ChecksumMethod method, Event event) {
+        boolean changed = this.checksum != null && !this.checksum.equals(newChecksum);
+        this.checksum = newChecksum;
+        this.checksumMethod = method;
+        if (changed) {
+            events.add(event);
+        }
+        return changed;
+    }
+
+    public boolean hasChecksumChanged() {
+        return checksum != null && lastRegisteredChecksum != null && !checksum.equals(lastRegisteredChecksum);
+    }
+
+    public void addEvent(Event event) { events.add(event); }
+
+    public String getPreservationSummary() {
+        return "size=" + sizeBytes + "B, created=" + creationDate + ", format=" + format + "/" + formatVersion +
+                ", checksum=" + checksum + " (" + checksumMethod + ")" +
+                ", sourceCapture=" + sourceCapture + ", hardware=" + hardware + ", software=" + software;
+    }
+
+    @Override
+    public String toString() {
+        return filename + " [" + id + "] (" + format + ")";
+    }
+}
+
+// File: Component.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Component {
+    private String id;
+    private String title;
+    private DAMSObject object;
+    private Component parent;
+    private List<Component> children = new ArrayList<>();
+    private int order;
+    private String description;
+    private DateRange dates;
+    private Set<String> languages = new LinkedHashSet<>();
+    private Map<NameRole, Set<NameRecord>> names = new LinkedHashMap<>();
+    private Set<Subject> subjects = new LinkedHashSet<>();
+    private RightsStatus rightsStatus;
+    private Set<Statute> statutes = new LinkedHashSet<>();
+    private Set<License> licenses = new LinkedHashSet<>();
+    private String otherRights;
+    private List<Event> events = new ArrayList<>();
+    private Set<Component> linkedComponents = new LinkedHashSet<>();
+    private Set<ContentFile> linkedFiles = new LinkedHashSet<>();
+
+    public Component(String id, String title, DAMSObject object, int order) {
+        this.id = id;
+        this.title = title;
+        this.object = object;
+        this.order = order;
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public DAMSObject getObject() { return object; }
+    public Component getParent() { return parent; }
+    public List<Component> getChildren() { return children; }
+    public int getOrder() { return order; }
+    public String getDescription() { return description; }
+    public DateRange getDates() { return dates; }
+    public Set<String> getLanguages() { return languages; }
+    public Map<NameRole, Set<NameRecord>> getNames() { return names; }
+    public Set<Subject> getSubjects() { return subjects; }
+    public RightsStatus getRightsStatus() {
+        return rightsStatus != null ? rightsStatus : (object != null ? object.getRightsStatus() : null);
+    }
+    public Set<Statute> getStatutes() { return statutes; }
+    public Set<License> getLicenses() { return licenses; }
+    public String getOtherRights() { return otherRights; }
+    public List<Event> getEvents() { return events; }
+    public Set<Component> getLinkedComponents() { return linkedComponents; }
+    public Set<ContentFile> getLinkedFiles() { return linkedFiles; }
+
+    public void setDescription(String description) { this.description = description; }
+    public void setDates(DateRange dates) { this.dates = dates; }
+    public void setRightsStatus(RightsStatus rightsStatus) { this.rightsStatus = rightsStatus; }
+    public void setOtherRights(String otherRights) { this.otherRights = otherRights; }
+
+    public void addChild(Component child) {
+        child.parent = this;
+        child.order = children.size();
+        children.add(child);
+        if (object != null && !object.getComponents().contains(child)) {
+            object.addComponent(child);
+        }
+    }
+
+    public void addLanguage(String language) { languages.add(language); }
+
+    public void addName(NameRecord name, NameRole role) {
+        names.computeIfAbsent(role, k -> new LinkedHashSet<>()).add(name);
+    }
+
+    public void addSubject(Subject subject) { subjects.add(subject); }
+    public void addStatute(Statute statute) { statutes.add(statute); }
+    public void addLicense(License license) { licenses.add(license); }
+    public void addEvent(Event event) { events.add(event); }
+
+    public void linkComponent(Component component) { linkedComponents.add(component); }
+    public void linkFile(ContentFile file) {
+        linkedFiles.add(file);
+        file.setComponent(this);
+    }
+
+    public List<ContentFile> getAllFiles() {
+        List<ContentFile> result = new ArrayList<>(linkedFiles);
+        for (Component child : children) {
+            result.addAll(child.getAllFiles());
+        }
+        return result;
+    }
+
+    public List<Component> getOrderedDescendants() {
+        List<Component> result = new ArrayList<>();
+        List<Component> sorted = new ArrayList<>(children);
+        sorted.sort((a, b) -> Integer.compare(a.getOrder(), b.getOrder()));
+        for (Component child : sorted) {
+            result.add(child);
+            result.addAll(child.getOrderedDescendants());
+        }
+        return result;
+    }
+
+    public String getHierarchyString() {
+        StringBuilder sb = new StringBuilder();
+        buildHierarchyString(sb, 0);
+        return sb.toString();
+    }
+
+    private void buildHierarchyString(StringBuilder sb, int depth) {
+        sb.append("  ".repeat(depth)).append(order).append(". ").append(title).append("\n");
+        List<Component> sorted = new ArrayList<>(children);
+        sorted.sort((a, b) -> Integer.compare(a.getOrder(), b.getOrder()));
+        for (Component child : sorted) {
+            child.buildHierarchyString(sb, depth + 1);
+        }
+    }
+
+    public boolean hasName(String text) {
+        for (Set<NameRecord> records : names.values()) {
+            for (NameRecord record : records) {
+                if (record.containsName(text)) return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean hasRole(NameRole role) {
+        return names.containsKey(role) && !names.get(role).isEmpty();
+    }
+
+    @Override
+    public String toString() {
+        return title + " [" + id + "]";
+    }
+}
+
+// File: DAMSObject.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class DAMSObject {
+    private String id;
+    private String title;
+    private Repository repository;
+    private Set<Collection> collections = new LinkedHashSet<>();
+    private List<Component> components = new ArrayList<>();
+    private Set<ContentFile> files = new LinkedHashSet<>();
+    private DateRange dates;
+    private Set<String> languages = new LinkedHashSet<>();
+    private Map<NameRole, Set<NameRecord>> names = new LinkedHashMap<>();
+    private Set<Subject> subjects = new LinkedHashSet<>();
+    private RightsStatus rightsStatus;
+    private Set<Statute> statutes = new LinkedHashSet<>();
+    private Set<License> licenses = new LinkedHashSet<>();
+    private String otherRights;
+    private List<ExternalDescription> externalDescriptions = new ArrayList<>();
+    private List<Event> events = new ArrayList<>();
+    private List<Note> notes = new ArrayList<>();
+    private OriginInfo originInfo = new OriginInfo();
+    private List<Title> titleForms = new ArrayList<>();
+
+    public DAMSObject(String id, String title, Repository repository) {
+        this.id = id;
+        this.title = title;
+        this.repository = repository;
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public Repository getRepository() { return repository; }
+    public Set<Collection> getCollections() { return collections; }
+    public List<Component> getComponents() { return components; }
+    public Set<ContentFile> getFiles() { return files; }
+    public DateRange getDates() { return dates; }
+    public Set<String> getLanguages() { return languages; }
+    public Map<NameRole, Set<NameRecord>> getNames() { return names; }
+    public Set<Subject> getSubjects() { return subjects; }
+    public RightsStatus getRightsStatus() { return rightsStatus; }
+    public Set<Statute> getStatutes() { return statutes; }
+    public Set<License> getLicenses() { return licenses; }
+    public String getOtherRights() { return otherRights; }
+    public List<ExternalDescription> getExternalDescriptions() { return externalDescriptions; }
+    public List<Event> getEvents() { return events; }
+    public List<Note> getNotes() { return notes; }
+    public OriginInfo getOriginInfo() { return originInfo; }
+    public List<Title> getTitleForms() { return titleForms; }
+
+    public void setTitle(String title) { this.title = title; }
+    public void setDates(DateRange dates) { this.dates = dates; }
+    public void setRightsStatus(RightsStatus rightsStatus) { this.rightsStatus = rightsStatus; }
+    public void setOtherRights(String otherRights) { this.otherRights = otherRights; }
+
+    public void addCollection(Collection collection) {
+        collections.add(collection);
+        if (collection != null && !collection.getObjects().contains(this)) {
+            collection.addObject(this);
+        }
+    }
+
+    public void addComponent(Component component) {
+        if (!components.contains(component)) {
+            components.add(component);
+        }
+    }
+
+    public void addFile(ContentFile file) {
+        files.add(file);
+        file.setObject(this);
+    }
+
+    public void addLanguage(String language) { languages.add(language); }
+
+    public void addName(NameRecord name, NameRole role) {
+        names.computeIfAbsent(role, k -> new LinkedHashSet<>()).add(name);
+    }
+
+    public void addSubject(Subject subject) { subjects.add(subject); }
+    public void addStatute(Statute statute) { statutes.add(statute); }
+    public void addLicense(License license) { licenses.add(license); }
+    public void addExternalDescription(ExternalDescription description) { externalDescriptions.add(description); }
+    public void addEvent(Event event) { events.add(event); }
+    public void addNote(Note note) { notes.add(note); }
+    public void addTitleForm(Title title) { titleForms.add(title); }
+
+    public List<Component> getOrderedComponents() {
+        List<Component> sorted = new ArrayList<>(components);
+        sorted.sort((a, b) -> Integer.compare(a.getOrder(), b.getOrder()));
+        return sorted;
+    }
+
+    public List<ContentFile> getAllFiles() {
+        List<ContentFile> result = new ArrayList<>(files);
+        for (Component component : components) {
+            result.addAll(component.getAllFiles());
+        }
+        return result;
+    }
+
+    public boolean hasName(String text) {
+        for (Set<NameRecord> records : names.values()) {
+            for (NameRecord record : records) {
+                if (record.containsName(text)) return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean hasRole(NameRole role) {
+        return names.containsKey(role) && !names.get(role).isEmpty();
+    }
+
+    @Override
+    public String toString() {
+        return title + " [" + id + "]";
+    }
+}
+
+// File: Collection.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Collection {
+    private String id;
+    private String title;
+    private Repository repository;
+    private User curator;
+    private String description;
+    private DateRange inclusiveDates;
+    private DateRange bulkDates;
+    private Set<String> languages = new LinkedHashSet<>();
+    private Map<NameRole, Set<NameRecord>> names = new LinkedHashMap<>();
+    private Set<Subject> subjects = new LinkedHashSet<>();
+    private List<ExternalDescription> externalDescriptions = new ArrayList<>();
+    private List<Event> events = new ArrayList<>();
+    private List<Note> notes = new ArrayList<>();
+    private OriginInfo originInfo = new OriginInfo();
+    private Map<Collection, RelationType> relatedCollections = new LinkedHashMap<>();
+    private String provenance;
+    private Collection partOf;
+    private Set<Collection> assembledFromCollections = new LinkedHashSet<>();
+    private Set<DAMSObject> assembledFromObjects = new LinkedHashSet<>();
+    private Set<DAMSObject> objects = new LinkedHashSet<>();
+    private List<Title> titleForms = new ArrayList<>();
+
+    public Collection(String id, String title, Repository repository, User curator) {
+        this.id = id;
+        this.title = title;
+        this.repository = repository;
+        this.curator = curator;
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public Repository getRepository() { return repository; }
+    public User getCurator() { return curator; }
+    public String getDescription() { return description; }
+    public DateRange getInclusiveDates() { return inclusiveDates; }
+    public DateRange getBulkDates() { return bulkDates; }
+    public Set<String> getLanguages() { return languages; }
+    public Map<NameRole, Set<NameRecord>> getNames() { return names; }
+    public Set<Subject> getSubjects() { return subjects; }
+    public List<ExternalDescription> getExternalDescriptions() { return externalDescriptions; }
+    public List<Event> getEvents() { return events; }
+    public List<Note> getNotes() { return notes; }
+    public OriginInfo getOriginInfo() { return originInfo; }
+    public Map<Collection, RelationType> getRelatedCollections() { return relatedCollections; }
+    public String getProvenance() { return provenance; }
+    public Collection getPartOf() { return partOf; }
+    public Set<Collection> getAssembledFromCollections() { return assembledFromCollections; }
+    public Set<DAMSObject> getAssembledFromObjects() { return assembledFromObjects; }
+    public Set<DAMSObject> getObjects() { return objects; }
+    public List<Title> getTitleForms() { return titleForms; }
+
+    public void setTitle(String title) { this.title = title; }
+    public void setDescription(String description) { this.description = description; }
+    public void setInclusiveDates(DateRange inclusiveDates) { this.inclusiveDates = inclusiveDates; }
+    public void setBulkDates(DateRange bulkDates) { this.bulkDates = bulkDates; }
+    public void setCurator(User curator) { this.curator = curator; }
+    public void setProvenance(String provenance) { this.provenance = provenance; }
+    public void setPartOf(Collection partOf) { this.partOf = partOf; }
+
+    public void addObject(DAMSObject object) {
+        objects.add(object);
+        if (object != null && !object.getCollections().contains(this)) {
+            object.addCollection(this);
+        }
+    }
+
+    public void addLanguage(String language) { languages.add(language); }
+
+    public void addName(NameRecord name, NameRole role) {
+        names.computeIfAbsent(role, k -> new LinkedHashSet<>()).add(name);
+    }
+
+    public void addSubject(Subject subject) { subjects.add(subject); }
+    public void addExternalDescription(ExternalDescription description) { externalDescriptions.add(description); }
+    public void addEvent(Event event) { events.add(event); }
+    public void addNote(Note note) { notes.add(note); }
+    public void addTitleForm(Title title) { titleForms.add(title); }
+
+    public void addRelatedCollection(Collection collection, RelationType relationType) {
+        relatedCollections.put(collection, relationType);
+    }
+
+    public void assembleFromCollection(Collection collection) {
+        assembledFromCollections.add(collection);
+        addRelatedCollection(collection, RelationType.ASSEMBLED_FROM);
+    }
+
+    public void assembleFromObject(DAMSObject object) {
+        assembledFromObjects.add(object);
+    }
+
+    public boolean hasName(String text) {
+        for (Set<NameRecord> records : names.values()) {
+            for (NameRecord record : records) {
+                if (record.containsName(text)) return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean hasRole(NameRole role) {
+        return names.containsKey(role) && !names.get(role).isEmpty();
+    }
+
+    @Override
+    public String toString() {
+        return title + " [" + id + "]";
+    }
+}
+
+// File: DAMS.java
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+public class DAMS {
+    private String name;
+    private Set<Repository> repositories = new LinkedHashSet<>();
+    private Set<User> users = new LinkedHashSet<>();
+    private Set<Collection> collections = new LinkedHashSet<>();
+    private Set<DAMSObject> objects = new LinkedHashSet<>();
+    private Set<Component> components = new LinkedHashSet<>();
+    private Set<ContentFile> files = new LinkedHashSet<>();
+    private Set<NameRecord> nameRecords = new LinkedHashSet<>();
+    private Set<Subject> subjects = new LinkedHashSet<>();
+    private List<Event> events = new ArrayList<>();
+
+    public DAMS(String name) {
+        this.name = name;
+    }
+
+    public String getName() { return name; }
+    public Set<Repository> getRepositories() { return repositories; }
+    public Set<User> getUsers() { return users; }
+    public List<Event> getEvents() { return events; }
+
+    public void addRepository(Repository repository) { repositories.add(repository); }
+    public void addUser(User user) { users.add(user); }
+    public void addCollection(Collection collection) {
+        collections.add(collection);
+        if (collection.getRepository() != null) collection.getRepository().addCollection(collection);
+    }
+    public void addObject(DAMSObject object) {
+        objects.add(object);
+        if (object.getRepository() != null) object.getRepository().addObject(object);
+    }
+    public void addComponent(Component component) { components.add(component); }
+    public void addFile(ContentFile file) { files.add(file); }
+    public void addNameRecord(NameRecord nameRecord) { nameRecords.add(nameRecord); }
+    public void addSubject(Subject subject) { subjects.add(subject); }
+    public void recordEvent(Event event) { events.add(event); }
+
+    public List<Collection> listAllFormalCollections() { return new ArrayList<>(collections); }
+    public List<Collection> listCollectionsByRepository(Repository repository) { return repository.getCollections(); }
+    public List<DAMSObject> listObjectsByRepository(Repository repository) { return repository.getObjects(); }
+
+    public List<DAMSObject> listObjectsByCollection(Collection collection) {
+        List<DAMSObject> result = new ArrayList<>();
+        for (DAMSObject object : objects) {
+            if (object.getCollections().contains(collection)) result.add(object);
+        }
+        return result;
+    }
+
+    public List<DAMSObject> searchObjectsInCollections(Collection... selected) {
+        List<DAMSObject> result = new ArrayList<>();
+        for (DAMSObject object : objects) {
+            for (Collection collection : selected) {
+                if (object.getCollections().contains(collection)) {
+                    result.add(object);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public List<Collection> searchCollectionsByTitle(String text) {
+        List<Collection> result = new ArrayList<>();
+        for (Collection collection : collections) {
+            if (collection.getTitle().toLowerCase().contains(text.toLowerCase())) result.add(collection);
+        }
+        return result;
+    }
+
+    public List<DAMSObject> searchObjectsByTitle(String text) {
+        List<DAMSObject> result = new ArrayList<>();
+        for (DAMSObject object : objects) {
+            if (object.getTitle().toLowerCase().contains(text.toLowerCase())) result.add(object);
+        }
+        return result;
+    }
+
+    public List<Component> searchComponentsByTitle(String text) {
+        List<Component> result = new ArrayList<>();
+        for (Component component : components) {
+            if (component.getTitle().toLowerCase().contains(text.toLowerCase())) result.add(component);
+        }
+        return result;
+    }
+
+    public List<Collection> searchCollectionsByLanguage(String language) {
+        List<Collection> result = new ArrayList<>();
+        for (Collection collection : collections) {
+            if (collection.getLanguages().contains(language)) result.add(collection);
+        }
+        return result;
+    }
+
+    public List<DAMSObject> searchObjectsByLanguage(String language) {
+        List<DAMSObject> result = new ArrayList<>();
+        for (DAMSObject object : objects) {
+            if (object.getLanguages().contains(language)) result.add(object);
+        }
+        return result;
+    }
+
+    public List<Component> searchComponentsByLanguage(String language) {
+        List<Component> result = new ArrayList<>();
+        for (Component component : components) {
+            if (component.getLanguages().contains(language)) result.add(component);
+        }
+        return result;
+    }
+
+    public List<Collection> searchCollectionsByName(String name) {
+        List<Collection> result = new ArrayList<>();
+        for (Collection collection : collections) {
+            if (collection.hasName(name)) result.add(collection);
+        }
+        return result;
+    }
+
+    public List<DAMSObject> searchObjectsByName(String name) {
+        List<DAMSObject> result = new ArrayList<>();
+        for (DAMSObject object : objects) {
+            if (object.hasName(name)) result.add(object);
+        }
+        return result;
+    }
+
+    public List<Component> searchComponentsByName(String name) {
+        List<Component> result = new ArrayList<>();
+        for (Component component : components) {
+            if (component.hasName(name)) result.add(component);
+        }
+        return result;
+    }
+
+    public List<Collection> searchCollectionsBySubject(String heading) {
+        List<Collection> result = new ArrayList<>();
+        for (Collection collection : collections) {
+            for (Subject subject : collection.getSubjects()) {
+                if (subject.containsHeading(heading)) {
+                    result.add(collection);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public List<DAMSObject> searchObjectsBySubject(String heading) {
+        List<DAMSObject> result = new ArrayList<>();
+        for (DAMSObject object : objects) {
+            for (Subject subject : object.getSubjects()) {
+                if (subject.containsHeading(heading)) {
+                    result.add(object);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public List<Component> searchComponentsBySubject(String heading) {
+        List<Component> result = new ArrayList<>();
+        for (Component component : components) {
+            for (Subject subject : component.getSubjects()) {
+                if (subject.containsHeading(heading)) {
+                    result.add(component);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public List<Collection> searchCollectionsByRole(NameRole role) {
+        List<Collection> result = new ArrayList<>();
+        for (Collection collection : collections) {
+            if (collection.hasRole(role)) result.add(collection);
+        }
+        return result;
+    }
+
+    public List<DAMSObject> searchObjectsByRole(NameRole role) {
+        List<DAMSObject> result = new ArrayList<>();
+        for (DAMSObject object : objects) {
+            if (object.hasRole(role)) result.add(object);
+        }
+        return result;
+    }
+
+    public List<Component> searchComponentsByRole(NameRole role) {
+        List<Component> result = new ArrayList<>();
+        for (Component component : components) {
+            if (component.hasRole(role)) result.add(component);
+        }
+        return result;
+    }
+
+    public List<DAMSObject> getObjectsUnderCopyright() {
+        List<DAMSObject> result = new ArrayList<>();
+        for (DAMSObject object : objects) {
+            if (object.getRightsStatus() != null &&
+                (object.getRightsStatus().getCopyrightStatus() == CopyrightStatus.IN_COPYRIGHT ||
+                 object.getRightsStatus().getCopyrightStatus() == CopyrightStatus.RESTRICTED)) {
+                result.add(object);
+            }
+        }
+        return result;
+    }
+
+    public List<ContentFile> getFilesWithChangedChecksum() {
+        List<ContentFile> result = new ArrayList<>();
+        for (ContentFile file : files) {
+            if (file.hasChecksumChanged()) result.add(file);
+        }
+        return result;
+    }
+
+    public List<ContentFile> getFilesForRepository(Repository repository) {
+        return repository.getAllFiles();
+    }
+
+    public List<Event> getEventsForTarget(String targetType, String targetId) {
+        List<Event> result = new ArrayList<>();
+        for (Event event : events) {
+            if (targetType.equals(event.getTargetType()) && targetId.equals(event.getTargetId())) {
+                result.add(event);
+            }
+        }
+        return result;
+    }
+
+    public boolean canCurate(User user, Repository repository) {
+        return AccessControl.canCurate(user, repository);
+    }
+
+    public List<Collection> browseByCollections() {
+        return listAllFormalCollections();
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+public class Main {
+    public static void main(String[] args) {
+        DAMS dams = new DAMS("University DAMS");
+
+        Repository mainLibrary = new Repository("repo-1", "Main Library", "General collections", "main-library@example.edu");
+        Repository specialCollections = new Repository("repo-2", "Special Collections", "Rare materials", "special@example.edu");
+        dams.addRepository(mainLibrary);
+        dams.addRepository(specialCollections);
+
+        User damsManager = new User("u1", "damsadmin", "Dana Manager", Role.DAMS_MANAGER, null, "dams@example.edu");
+        User repoManager = new User("u2", "repoman", "Riley Curator", Role.REPOSITORY_MANAGER, mainLibrary, "riley@example.edu");
+        User staff = new User("u3", "staff", "Sam Staff", Role.STAFF, mainLibrary, "sam@example.edu");
+        User publicUser = new User("u4", "patron", "Patron User", Role.USER, null, "patron@example.edu");
+
+        mainLibrary.setManager(repoManager);
+        mainLibrary.addStaff(repoManager);
+        mainLibrary.addStaff(staff);
+
+        dams.addUser(damsManager);
+        dams.addUser(repoManager);
+        dams.addUser(staff);
+        dams.addUser(publicUser);
+
+        NameRecord photographer = new NameRecord("n1", "local:photographer-1", "Jane Doe", "1900-1990", "Photographer");
+        photographer.addVariantName("J. Doe");
+        dams.addNameRecord(photographer);
+
+        Subject topic = new Subject("s1", SubjectType.TOPIC, "Historic buildings", null, "Buildings of historic interest");
+        Subject geo = new Subject("s2", SubjectType.GEOGRAPHICAL_NAME, "Exampleville", "40.0,-75.0", "City");
+        dams.addSubject(topic);
+        dams.addSubject(geo);
+
+        Collection photos = new Collection("c1", "Historic Photographs", mainLibrary, repoManager);
+        photos.setDescription("Photographs of Exampleville");
+        photos.setInclusiveDates(new DateRange("1900", "1950", "inclusive"));
+        photos.setBulkDates(new DateRange("1920", "1930", "bulk"));
+        photos.addLanguage("eng");
+        photos.addName(photographer, NameRole.CREATOR);
+        photos.addName(photographer, NameRole.PHOTOGRAPHER);
+        photos.addSubject(topic);
+        photos.addSubject(geo);
+        photos.addNote(new Note("note1", "Scope and content: images of downtown.", "scopeContent"));
+        photos.getOriginInfo().setPublisher("Example Press");
+        dams.addCollection(photos);
+
+        Collection postcards = new Collection("c2", "Postcard Collection", mainLibrary, repoManager);
+        postcards.addLanguage("eng");
+        postcards.addRelatedCollection(photos, RelationType.RELATED_TO);
+        dams.addCollection(postcards);
+
+        DAMSObject album = new DAMSObject("o1", "Exampleville Photo Album", mainLibrary);
+        album.setDates(new DateRange("1925", "1925", "inclusive"));
+        album.addLanguage("eng");
+        album.addName(photographer, NameRole.CREATOR);
+        album.addName(photographer, NameRole.PHOTOGRAPHER);
+        album.addSubject(topic);
+        album.addCollection(photos);
+        dams.addObject(album);
+
+        RightsStatus rights = new RightsStatus(CopyrightStatus.IN_COPYRIGHT, "Estate of Jane Doe", LocalDate.of(2030, 1, 1));
+        rights.addPermittedUse(new UsePermission("display", LocalDate.of(2020, 1, 1), LocalDate.of(2025, 1, 1)));
+        rights.addRestrictedUse(new UsePermission("commercial-use", null, null));
+        album.setRightsStatus(rights);
+
+        Statute statute = new Statute("st1", "Copyright Term Extension", "Federal copyright law", "US", LocalDate.of(2030, 1, 1));
+        album.addStatute(statute);
+        License license = new License("lic1", "Display License", "Permission for display only", true, LocalDate.of(2025, 12, 31));
+        album.addLicense(license);
+        album.addExternalDescription(new ExternalDescription("ext1", "WorldCat", "Catalog record", "https://worldcat.org/example"));
+        album.addEvent(new Event("e1", EventType.CREATED, LocalDateTime.now(), repoManager, "success", "object", "o1", "Object created"));
+        dams.recordEvent(album.getEvents().get(0));
+
+        Component cover = new Component("comp1", "Cover", album, 0);
+        cover.addLanguage("eng");
+        cover.addName(photographer, NameRole.PHOTOGRAPHER);
+        cover.addSubject(topic);
+        album.addComponent(cover);
+        dams.addComponent(cover);
+
+        Component page1 = new Component("comp2", "Page 1", album, 1);
+        page1.addLanguage("eng");
+        page1.setRightsStatus(new RightsStatus(CopyrightStatus.PUBLIC_DOMAIN, null, null));
+        album.addComponent(page1);
+        dams.addComponent(page1);
+        cover.addChild(new Component("comp1a", "Front Cover Image", album, 0));
+
+        ContentFile master = new ContentFile("f1", "album_master.tif", 1048576L, LocalDate.of(2024, 1, 10), "TIFF", "6.0");
+        master.registerChecksum("abc123", ChecksumMethod.SHA256);
+        master.setSourceCapture("scanner-1");
+        master.setHardware("Epson 10000XL");
+        master.setSoftware("CapturePro 5");
+        album.addFile(master);
+        dams.addFile(master);
+
+        ContentFile pageFile = new ContentFile("f2", "page1.jpg", 204800L, LocalDate.of(2024, 1, 11), "JPEG", "1.0");
+        pageFile.registerChecksum("def456", ChecksumMethod.MD5);
+        page1.linkFile(pageFile);
+        dams.addFile(pageFile);
+
+        Component child = cover.getChildren().get(0);
+        dams.addComponent(child);
+
+        System.out.println("=== DAMS Demo: " + dams.getName() + " ===");
+        System.out.println("Repositories: " + dams.getRepositories());
+        System.out.println("Repository contact: " + mainLibrary.getContactInfo());
+        System.out.println("Collections in Main Library: " + mainLibrary.getCollections());
+        System.out.println("Objects in Main Library: " + mainLibrary.getObjects());
+        System.out.println("All formal collections: " + dams.listAllFormalCollections());
+        System.out.println("Objects in Historic Photographs: " + dams.listObjectsByCollection(photos));
+        System.out.println("Search collections by title 'Historic': " + dams.searchCollectionsByTitle("Historic"));
+        System.out.println("Search objects by title 'Album': " + dams.searchObjectsByTitle("Album"));
+        System.out.println("Search components by title 'Page': " + dams.searchComponentsByTitle("Page"));
+        System.out.println("Search collections by language eng: " + dams.searchCollectionsByLanguage("eng"));
+        System.out.println("Search objects by name 'Doe': " + dams.searchObjectsByName("Doe"));
+        System.out.println("Search objects by role PHOTOGRAPHER: " + dams.searchObjectsByRole(NameRole.PHOTOGRAPHER));
+        System.out.println("Search objects by subject 'Historic': " + dams.searchObjectsBySubject("Historic"));
+        System.out.println("Component hierarchy for album:\n" + album.getOrderedComponents().get(0).getHierarchyString());
+        System.out.println("All files for album: " + album.getAllFiles());
+        System.out.println("File preservation info: " + master.getPreservationSummary());
+        System.out.println("Under copyright objects: " + dams.getObjectsUnderCopyright());
+        System.out.println("Rights: " + album.getRightsStatus());
+        System.out.println("Active permitted uses: " + album.getRightsStatus().getActivePermittedUses(LocalDate.now()));
+        System.out.println("Active restricted uses: " + album.getRightsStatus().getActiveRestrictedUses(LocalDate.now()));
+        System.out.println("Statutes: " + album.getStatutes());
+        System.out.println("Licenses: " + album.getLicenses());
+        System.out.println("External descriptions: " + album.getExternalDescriptions());
+        System.out.println("Events for object o1: " + dams.getEventsForTarget("object", "o1"));
+
+        System.out.println("DAMS manager can curate mainLibrary: " + dams.canCurate(damsManager, mainLibrary));
+        System.out.println("Staff can curate mainLibrary: " + dams.canCurate(staff, mainLibrary));
+        System.out.println("Public user can curate mainLibrary: " + dams.canCurate(publicUser, mainLibrary));
+
+        boolean changed = master.updateChecksum("xyz789", ChecksumMethod.SHA256,
+                new Event("e2", EventType.CHECKSUM_CHANGED, LocalDateTime.now(), damsManager, "detected", "file", "f1", "Checksum changed"));
+        System.out.println("Checksum changed for master: " + changed);
+        System.out.println("Files with changed checksum: " + dams.getFilesWithChangedChecksum());
+        System.out.println("Events for file f1: " + master.getEvents());
+
+        System.out.println("Repository manager curated collections: " + mainLibrary.getCollectionsCuratedBy(repoManager));
+        System.out.println("Search objects in selected collections: " + dams.searchObjectsInCollections(photos, postcards));
+    }
+}

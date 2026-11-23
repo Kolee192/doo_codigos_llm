@@ -1,0 +1,1455 @@
+// File: Role.java
+public enum Role { CUSTOMER, WAITER, SUPERVISOR, CHEF }
+
+// File: OrderStatus.java
+public enum OrderStatus { PENDING, PLACED, ACCEPTED, CANCELLED, PURGED, COMPLETED }
+
+// File: OrderItemStatus.java
+public enum OrderItemStatus { PLACED, ACCEPTED, REJECTED, READY, DELIVERED, REFUNDED, PURGED }
+
+// File: NotificationType.java
+public enum NotificationType { ORDER_PLACED, ITEM_REJECTED, ITEM_READY, WAITER_ASSISTANCE }
+
+// File: PaymentType.java
+public enum PaymentType { CASH, BANKCARD }
+
+// File: Gesture.java
+public enum Gesture { DOUBLE_TAP, DRAG }
+
+// File: TouchScreen.java
+public interface TouchScreen {
+    void performGesture(Gesture gesture, String target);
+}
+
+// File: MenuItem.java
+public class MenuItem {
+    private final int id;
+    private final String name;
+    private final double price;
+
+    public MenuItem(int id, String name, double price) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    @Override
+    public String toString() {
+        return name + " ($" + String.format("%.2f", price) + ")";
+    }
+}
+
+// File: DietaryRequirement.java
+public class DietaryRequirement {
+    private final String name;
+    private final boolean wildcard;
+
+    public DietaryRequirement(String name) {
+        this(name, false);
+    }
+
+    public DietaryRequirement(String name, boolean wildcard) {
+        this.name = name;
+        this.wildcard = wildcard;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public boolean isWildcard() {
+        return wildcard;
+    }
+
+    @Override
+    public String toString() {
+        return name + (wildcard ? " [wildcard]" : "");
+    }
+}
+
+// File: TipDenomination.java
+public class TipDenomination {
+    private final double amount;
+
+    public TipDenomination(double amount) {
+        this.amount = amount;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    @Override
+    public String toString() {
+        return "$" + String.format("%.2f", amount);
+    }
+}
+
+// File: OrderItem.java
+public class OrderItem {
+    private static int nextId = 1;
+    private final int id;
+    private final MenuItem item;
+    private OrderItemStatus status;
+
+    public OrderItem(MenuItem item) {
+        this.id = nextId++;
+        this.item = item;
+        this.status = OrderItemStatus.PLACED;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public MenuItem getItem() {
+        return item;
+    }
+
+    public OrderItemStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(OrderItemStatus status) {
+        this.status = status;
+    }
+
+    @Override
+    public String toString() {
+        return item.getName() + " [" + status + "]";
+    }
+}
+
+// File: Order.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Order {
+    private static int nextId = 1;
+    private final int id;
+    private final int tableNumber;
+    private final List<OrderItem> items;
+    private final List<DietaryRequirement> dietaryRequirements;
+    private OrderStatus status;
+
+    public Order(int tableNumber) {
+        this.id = nextId++;
+        this.tableNumber = tableNumber;
+        this.items = new ArrayList<>();
+        this.dietaryRequirements = new ArrayList<>();
+        this.status = OrderStatus.PENDING;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public int getTableNumber() {
+        return tableNumber;
+    }
+
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public boolean isPending() {
+        return status == OrderStatus.PENDING;
+    }
+
+    public boolean isEmpty() {
+        return items.isEmpty();
+    }
+
+    public List<OrderItem> getItems() {
+        return Collections.unmodifiableList(items);
+    }
+
+    public List<DietaryRequirement> getDietaryRequirements() {
+        return Collections.unmodifiableList(dietaryRequirements);
+    }
+
+    public OrderItem addItem(MenuItem menuItem) {
+        if (status != OrderStatus.PENDING) {
+            throw new IllegalStateException("Only pending orders can be modified");
+        }
+        OrderItem orderItem = new OrderItem(menuItem);
+        items.add(orderItem);
+        return orderItem;
+    }
+
+    public boolean removeItem(int orderItemId) {
+        if (status != OrderStatus.PENDING) {
+            return false;
+        }
+        return items.removeIf(item -> item.getId() == orderItemId);
+    }
+
+    public void addDietaryRequirement(DietaryRequirement requirement) {
+        if (status != OrderStatus.PENDING) {
+            throw new IllegalStateException("Dietary requirements can only be added to pending orders");
+        }
+        dietaryRequirements.add(requirement);
+    }
+
+    public boolean place() {
+        if (status == OrderStatus.PENDING && !items.isEmpty()) {
+            status = OrderStatus.PLACED;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean cancel() {
+        if (status == OrderStatus.PENDING) {
+            status = OrderStatus.CANCELLED;
+            return true;
+        }
+        return false;
+    }
+
+    public void accept() {
+        if (status == OrderStatus.PLACED) {
+            status = OrderStatus.ACCEPTED;
+        }
+    }
+
+    public void reject() {
+        if (status == OrderStatus.PLACED || status == OrderStatus.PENDING) {
+            status = OrderStatus.CANCELLED;
+            for (OrderItem item : items) {
+                item.setStatus(OrderItemStatus.REJECTED);
+            }
+        }
+    }
+
+    public void purge() {
+        status = OrderStatus.PURGED;
+        for (OrderItem item : items) {
+            item.setStatus(OrderItemStatus.PURGED);
+        }
+    }
+
+    public OrderItem findItem(int itemId) {
+        for (OrderItem item : items) {
+            if (item.getId() == itemId) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public double subtotal() {
+        double total = 0.0;
+        for (OrderItem item : items) {
+            total += item.getItem().getPrice();
+        }
+        return total;
+    }
+}
+
+// File: Payment.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public abstract class Payment {
+    private final PaymentType type;
+    private final List<OrderItem> meals;
+    private final List<TipDenomination> tips;
+    private boolean paid;
+
+    protected Payment(PaymentType type) {
+        this.type = type;
+        this.meals = new ArrayList<>();
+        this.tips = new ArrayList<>();
+        this.paid = false;
+    }
+
+    public PaymentType getType() {
+        return type;
+    }
+
+    public void addMeal(OrderItem item) {
+        if (!meals.contains(item)) {
+            meals.add(item);
+        }
+    }
+
+    public boolean removeMeal(int itemId) {
+        return meals.removeIf(meal -> meal.getId() == itemId);
+    }
+
+    public List<OrderItem> getMeals() {
+        return Collections.unmodifiableList(meals);
+    }
+
+    public void addTip(TipDenomination tip) {
+        tips.add(tip);
+    }
+
+    public boolean removeTip(double amount) {
+        for (int i = 0; i < tips.size(); i++) {
+            if (Double.compare(tips.get(i).getAmount(), amount) == 0) {
+                tips.remove(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public List<TipDenomination> getTips() {
+        return Collections.unmodifiableList(tips);
+    }
+
+    public double getAmount() {
+        double total = 0.0;
+        for (OrderItem meal : meals) {
+            total += meal.getItem().getPrice();
+        }
+        for (TipDenomination tip : tips) {
+            total += tip.getAmount();
+        }
+        return total;
+    }
+
+    public boolean isPaid() {
+        return paid;
+    }
+
+    public void markPaid() {
+        this.paid = true;
+    }
+}
+
+// File: CashPayment.java
+public class CashPayment extends Payment {
+    public CashPayment() {
+        super(PaymentType.CASH);
+    }
+}
+
+// File: BankCardPayment.java
+public class BankCardPayment extends Payment {
+    private final String customerId;
+
+    public BankCardPayment(String customerId) {
+        super(PaymentType.BANKCARD);
+        this.customerId = customerId;
+    }
+
+    public String getCustomerId() {
+        return customerId;
+    }
+}
+
+// File: Account.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class Account {
+    private final int tableNumber;
+    private boolean open;
+    private boolean billMode;
+    private final List<Order> orders;
+    private CashPayment cashPayment;
+    private final Map<String, BankCardPayment> bankCardPayments;
+
+    public Account(int tableNumber) {
+        this.tableNumber = tableNumber;
+        this.open = false;
+        this.billMode = false;
+        this.orders = new ArrayList<>();
+        this.bankCardPayments = new LinkedHashMap<>();
+    }
+
+    public int getTableNumber() {
+        return tableNumber;
+    }
+
+    public boolean isOpen() {
+        return open;
+    }
+
+    public void open() {
+        this.open = true;
+    }
+
+    public void close() {
+        this.open = false;
+        this.billMode = false;
+    }
+
+    public boolean isBillMode() {
+        return billMode;
+    }
+
+    public void engageBillMode() {
+        if (!open) {
+            throw new IllegalStateException("Cannot engage bill mode for a closed account");
+        }
+        billMode = true;
+    }
+
+    public void disengageBillMode() {
+        billMode = false;
+    }
+
+    public void addOrder(Order order) {
+        if (!open) {
+            throw new IllegalStateException("Cannot add an order to a closed account");
+        }
+        orders.add(order);
+    }
+
+    public List<Order> getOrders() {
+        return Collections.unmodifiableList(orders);
+    }
+
+    public Order getPendingOrder() {
+        for (int i = orders.size() - 1; i >= 0; i--) {
+            Order order = orders.get(i);
+            if (order.getStatus() == OrderStatus.PENDING) {
+                return order;
+            }
+        }
+        return null;
+    }
+
+    public Order getLatestPlacedOrder() {
+        for (int i = orders.size() - 1; i >= 0; i--) {
+            Order order = orders.get(i);
+            if (order.getStatus() == OrderStatus.PLACED) {
+                return order;
+            }
+        }
+        return null;
+    }
+
+    public OrderItem findOrderItem(int itemId) {
+        for (Order order : orders) {
+            OrderItem item = order.findItem(itemId);
+            if (item != null) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    public CashPayment getCashPayment() {
+        return cashPayment;
+    }
+
+    public CashPayment createCashPayment() {
+        if (cashPayment == null) {
+            cashPayment = new CashPayment();
+        }
+        return cashPayment;
+    }
+
+    public BankCardPayment getBankCardPayment(String customerId) {
+        return bankCardPayments.get(customerId);
+    }
+
+    public BankCardPayment getOrCreateBankCardPayment(String customerId) {
+        return bankCardPayments.computeIfAbsent(customerId, BankCardPayment::new);
+    }
+
+    public Map<String, BankCardPayment> getBankCardPayments() {
+        return Collections.unmodifiableMap(bankCardPayments);
+    }
+
+    public Payment getOrCreatePayment(PaymentType type, String customerId) {
+        if (type == PaymentType.CASH) {
+            return createCashPayment();
+        }
+        return getOrCreateBankCardPayment(customerId);
+    }
+
+    public Payment getPayment(PaymentType type, String customerId) {
+        if (type == PaymentType.CASH) {
+            return cashPayment;
+        }
+        return bankCardPayments.get(customerId);
+    }
+
+    public void purgeAll() {
+        for (Order order : orders) {
+            order.purge();
+        }
+        orders.clear();
+        cashPayment = null;
+        bankCardPayments.clear();
+        billMode = false;
+    }
+}
+
+// File: Table.java
+public class Table {
+    private final int number;
+    private SurfaceComputer surfaceComputer;
+    private final Account account;
+    private User assignedWaiter;
+    private boolean active;
+
+    public Table(int number) {
+        this.number = number;
+        this.account = new Account(number);
+        this.active = false;
+    }
+
+    public int getNumber() {
+        return number;
+    }
+
+    public SurfaceComputer getSurfaceComputer() {
+        return surfaceComputer;
+    }
+
+    public void setSurfaceComputer(SurfaceComputer surfaceComputer) {
+        this.surfaceComputer = surfaceComputer;
+    }
+
+    public Account getAccount() {
+        return account;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void activate(User waiter) {
+        this.active = true;
+        this.assignedWaiter = waiter;
+        account.open();
+    }
+
+    public void deactivate() {
+        this.active = false;
+        this.assignedWaiter = null;
+        account.close();
+    }
+
+    public User getAssignedWaiter() {
+        return assignedWaiter;
+    }
+}
+
+// File: User.java
+public class User {
+    private final String username;
+    private final String password;
+    private final Role role;
+
+    public User(String username, String password, Role role) {
+        this.username = username;
+        this.password = password;
+        this.role = role;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public boolean checkPassword(String password) {
+        return this.password.equals(password);
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public boolean hasRole(Role... roles) {
+        for (Role role : roles) {
+            if (this.role == role) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return username + " (" + role + ")";
+    }
+}
+
+// File: Waiter.java
+public class Waiter extends User {
+    public Waiter(String username, String password) {
+        super(username, password, Role.WAITER);
+    }
+}
+
+// File: Supervisor.java
+public class Supervisor extends User {
+    public Supervisor(String username, String password) {
+        super(username, password, Role.SUPERVISOR);
+    }
+}
+
+// File: Chef.java
+public class Chef extends User {
+    public Chef(String username, String password) {
+        super(username, password, Role.CHEF);
+    }
+}
+
+// File: Customer.java
+public class Customer {
+    private final String id;
+    private final String name;
+
+    public Customer(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// File: Notification.java
+public class Notification {
+    private final NotificationType type;
+    private final int tableNumber;
+    private final String message;
+
+    public Notification(NotificationType type, int tableNumber, String message) {
+        this.type = type;
+        this.tableNumber = tableNumber;
+        this.message = message;
+    }
+
+    public NotificationType getType() {
+        return type;
+    }
+
+    public int getTableNumber() {
+        return tableNumber;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    @Override
+    public String toString() {
+        return type + " [table " + tableNumber + "]: " + message;
+    }
+}
+
+// File: Menu.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Menu {
+    private final List<MenuItem> items;
+    private final List<DietaryRequirement> dietaryRequirements;
+
+    public Menu() {
+        this.items = new ArrayList<>();
+        this.dietaryRequirements = new ArrayList<>();
+    }
+
+    public void addItem(MenuItem item) {
+        items.add(item);
+    }
+
+    public void addDietaryRequirement(DietaryRequirement requirement) {
+        dietaryRequirements.add(requirement);
+    }
+
+    public List<MenuItem> getItems() {
+        return Collections.unmodifiableList(items);
+    }
+
+    public List<DietaryRequirement> getDietaryRequirements() {
+        return Collections.unmodifiableList(dietaryRequirements);
+    }
+}
+
+// File: Register.java
+public class Register {
+    public boolean processCardPayment(double amount, String cardNumber) {
+        return amount >= 0.0 && cardNumber != null && cardNumber.length() >= 4;
+    }
+
+    public boolean processCashPayment(double amount, double tendered) {
+        return amount >= 0.0 && tendered >= amount;
+    }
+}
+
+// File: RMOS.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class RMOS {
+    private final Menu menu;
+    private final Map<String, User> users;
+    private final Map<Integer, Table> tables;
+    private final Map<String, List<Notification>> notifications;
+
+    public RMOS() {
+        this.menu = new Menu();
+        this.users = new LinkedHashMap<>();
+        this.tables = new LinkedHashMap<>();
+        this.notifications = new LinkedHashMap<>();
+        seedMenu();
+    }
+
+    private void seedMenu() {
+        menu.addItem(new MenuItem(1, "Burger", 12.50));
+        menu.addItem(new MenuItem(2, "Pasta", 10.00));
+        menu.addItem(new MenuItem(3, "Salad", 8.00));
+        menu.addItem(new MenuItem(4, "Steak", 20.00));
+        menu.addDietaryRequirement(new DietaryRequirement("Gluten free"));
+        menu.addDietaryRequirement(new DietaryRequirement("Vegetarian"));
+        menu.addDietaryRequirement(new DietaryRequirement("Nut free"));
+    }
+
+    public Menu getMenu() {
+        return menu;
+    }
+
+    public void addUser(User user) {
+        users.put(user.getUsername(), user);
+    }
+
+    public User login(String username, String password) {
+        User user = users.get(username);
+        if (user == null || !user.checkPassword(password)) {
+            throw new SecurityException("Invalid credentials");
+        }
+        return user;
+    }
+
+    public void addTable(Table table) {
+        tables.put(table.getNumber(), table);
+    }
+
+    public Table getTable(int tableNumber) {
+        Table table = tables.get(tableNumber);
+        if (table == null) {
+            throw new IllegalArgumentException("Unknown table: " + tableNumber);
+        }
+        return table;
+    }
+
+    private Table getActiveTable(int tableNumber) {
+        Table table = getTable(tableNumber);
+        if (!table.isActive()) {
+            throw new IllegalStateException("Table " + tableNumber + " is not active");
+        }
+        return table;
+    }
+
+    private void requireRole(User user, Role... roles) {
+        if (user == null || !user.hasRole(roles)) {
+            throw new SecurityException("Access denied");
+        }
+    }
+
+    private void requireWaiter(User user) {
+        requireRole(user, Role.WAITER, Role.SUPERVISOR);
+    }
+
+    private void requireChef(User user) {
+        requireRole(user, Role.CHEF, Role.SUPERVISOR);
+    }
+
+    private void requireSupervisor(User user) {
+        requireRole(user, Role.SUPERVISOR);
+    }
+
+    public void activateTable(int tableNumber, User staff) {
+        requireWaiter(staff);
+        getTable(tableNumber).activate(staff);
+    }
+
+    public void deactivateTable(int tableNumber, User staff) {
+        requireWaiter(staff);
+        getTable(tableNumber).deactivate();
+    }
+
+    private void notifyAssignedWaiter(Table table, NotificationType type, String message) {
+        User waiter = table.getAssignedWaiter();
+        if (waiter != null) {
+            notifications.computeIfAbsent(waiter.getUsername(), key -> new ArrayList<>())
+                    .add(new Notification(type, table.getNumber(), message));
+        }
+    }
+
+    public List<Notification> getNotifications(User user) {
+        List<Notification> list = notifications.get(user.getUsername());
+        if (list == null) {
+            return List.of();
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public List<Notification> drainNotifications(User user) {
+        List<Notification> list = notifications.get(user.getUsername());
+        if (list == null) {
+            return List.of();
+        }
+        List<Notification> copy = new ArrayList<>(list);
+        list.clear();
+        return copy;
+    }
+
+    public Order createPendingOrder(int tableNumber) {
+        Table table = getActiveTable(tableNumber);
+        Order order = new Order(tableNumber);
+        table.getAccount().addOrder(order);
+        return order;
+    }
+
+    public Order getPendingOrder(int tableNumber) {
+        return getTable(tableNumber).getAccount().getPendingOrder();
+    }
+
+    public OrderItem addItemToPendingOrder(int tableNumber, MenuItem menuItem) {
+        Order order = getPendingOrder(tableNumber);
+        if (order == null) {
+            throw new IllegalStateException("No pending order");
+        }
+        return order.addItem(menuItem);
+    }
+
+    public boolean removeItemFromPendingOrder(int tableNumber, int itemId) {
+        Order order = getPendingOrder(tableNumber);
+        if (order == null) {
+            return false;
+        }
+        return order.removeItem(itemId);
+    }
+
+    public void addDietaryRequirementToPendingOrder(int tableNumber, DietaryRequirement requirement) {
+        Order order = getPendingOrder(tableNumber);
+        if (order == null) {
+            throw new IllegalStateException("No pending order");
+        }
+        order.addDietaryRequirement(requirement);
+    }
+
+    public void placeOrder(int tableNumber) {
+        Table table = getActiveTable(tableNumber);
+        Order order = table.getAccount().getPendingOrder();
+        if (order == null || order.isEmpty() || !order.place()) {
+            throw new IllegalStateException("Order cannot be placed");
+        }
+        notifyAssignedWaiter(table, NotificationType.ORDER_PLACED, "Order placed at table " + tableNumber);
+    }
+
+    public void cancelOrder(int tableNumber) {
+        Order order = getPendingOrder(tableNumber);
+        if (order == null || !order.cancel()) {
+            throw new IllegalStateException("Order cannot be cancelled");
+        }
+    }
+
+    public void requestAssistance(int tableNumber) {
+        Table table = getActiveTable(tableNumber);
+        notifyAssignedWaiter(table, NotificationType.WAITER_ASSISTANCE, "Waiter assistance requested at table " + tableNumber);
+    }
+
+    public void engageBillMode(int tableNumber) {
+        getActiveTable(tableNumber).getAccount().engageBillMode();
+    }
+
+    public void disengageBillMode(int tableNumber) {
+        getTable(tableNumber).getAccount().disengageBillMode();
+    }
+
+    public List<OrderItem> getOrderedMeals(int tableNumber) {
+        List<OrderItem> meals = new ArrayList<>();
+        for (Order order : getTable(tableNumber).getAccount().getOrders()) {
+            for (OrderItem item : order.getItems()) {
+                if (item.getStatus() != OrderItemStatus.PURGED && item.getStatus() != OrderItemStatus.REJECTED) {
+                    meals.add(item);
+                }
+            }
+        }
+        return meals;
+    }
+
+    public List<TipDenomination> getTipDenominations() {
+        return List.of(
+                new TipDenomination(1.00),
+                new TipDenomination(2.00),
+                new TipDenomination(5.00),
+                new TipDenomination(10.00)
+        );
+    }
+
+    public Payment getOrCreatePayment(int tableNumber, PaymentType type, String customerId) {
+        Account account = getActiveTable(tableNumber).getAccount();
+        return account.getOrCreatePayment(type, customerId);
+    }
+
+    public void dragMealToPayment(int tableNumber, int itemId, PaymentType type, String customerId) {
+        Account account = getActiveTable(tableNumber).getAccount();
+        if (!account.isBillMode()) {
+            throw new IllegalStateException("Bill mode is not engaged");
+        }
+        OrderItem item = account.findOrderItem(itemId);
+        if (item == null) {
+            throw new IllegalArgumentException("Unknown meal");
+        }
+        account.getOrCreatePayment(type, customerId).addMeal(item);
+    }
+
+    public void dragMealOutOfPayment(int tableNumber, int itemId, PaymentType type, String customerId) {
+        Account account = getActiveTable(tableNumber).getAccount();
+        Payment payment = account.getPayment(type, customerId);
+        if (payment != null) {
+            payment.removeMeal(itemId);
+        }
+    }
+
+    public void dragTipToPayment(int tableNumber, double amount, PaymentType type, String customerId) {
+        Account account = getActiveTable(tableNumber).getAccount();
+        if (!account.isBillMode()) {
+            throw new IllegalStateException("Bill mode is not engaged");
+        }
+        account.getOrCreatePayment(type, customerId).addTip(new TipDenomination(amount));
+    }
+
+    public void dragTipOutOfPayment(int tableNumber, double amount, PaymentType type, String customerId) {
+        Account account = getActiveTable(tableNumber).getAccount();
+        Payment payment = account.getPayment(type, customerId);
+        if (payment != null) {
+            payment.removeTip(amount);
+        }
+    }
+
+    public OrderItem findOrderItem(int tableNumber, int itemId) {
+        return getTable(tableNumber).getAccount().findOrderItem(itemId);
+    }
+
+    public void acceptOrder(int tableNumber, User staff) {
+        requireWaiter(staff);
+        Order order = getTable(tableNumber).getAccount().getLatestPlacedOrder();
+        if (order == null) {
+            throw new IllegalStateException("No placed order to accept");
+        }
+        order.accept();
+    }
+
+    public void rejectOrder(int tableNumber, User staff) {
+        requireWaiter(staff);
+        Table table = getTable(tableNumber);
+        Order order = table.getAccount().getLatestPlacedOrder();
+        if (order == null) {
+            throw new IllegalStateException("No placed order to reject");
+        }
+        order.reject();
+        notifyAssignedWaiter(table, NotificationType.ITEM_REJECTED, "Order rejected at table " + tableNumber);
+    }
+
+    public void indicateDelivery(int tableNumber, int itemId, User staff) {
+        requireWaiter(staff);
+        OrderItem item = findOrderItem(tableNumber, itemId);
+        if (item == null) {
+            throw new IllegalArgumentException("Unknown item");
+        }
+        item.setStatus(OrderItemStatus.DELIVERED);
+    }
+
+    public void processCashPayment(int tableNumber, User staff, Register register, double tendered) {
+        requireWaiter(staff);
+        Account account = getActiveTable(tableNumber).getAccount();
+        CashPayment payment = account.getCashPayment();
+        if (payment == null) {
+            throw new IllegalStateException("No cash payment to process");
+        }
+        if (!register.processCashPayment(payment.getAmount(), tendered)) {
+            throw new IllegalStateException("Insufficient cash");
+        }
+        payment.markPaid();
+    }
+
+    public void processBankCardPayment(int tableNumber, String customerId, User staff, Register register, String cardNumber) {
+        requireWaiter(staff);
+        Account account = getActiveTable(tableNumber).getAccount();
+        BankCardPayment payment = account.getBankCardPayment(customerId);
+        if (payment == null) {
+            throw new IllegalStateException("No bankcard payment to process");
+        }
+        if (!register.processCardPayment(payment.getAmount(), cardNumber)) {
+            throw new IllegalStateException("Card payment declined");
+        }
+        payment.markPaid();
+    }
+
+    public void chefAcceptItem(int tableNumber, int itemId, User chef) {
+        requireChef(chef);
+        OrderItem item = findOrderItem(tableNumber, itemId);
+        if (item == null) {
+            throw new IllegalArgumentException("Unknown item");
+        }
+        item.setStatus(OrderItemStatus.ACCEPTED);
+    }
+
+    public void chefRejectItem(int tableNumber, int itemId, User chef) {
+        requireChef(chef);
+        OrderItem item = findOrderItem(tableNumber, itemId);
+        if (item == null) {
+            throw new IllegalArgumentException("Unknown item");
+        }
+        item.setStatus(OrderItemStatus.REJECTED);
+        notifyAssignedWaiter(getTable(tableNumber), NotificationType.ITEM_REJECTED,
+                "Item rejected: " + item.getItem().getName() + " at table " + tableNumber);
+    }
+
+    public void chefMarkItemReady(int tableNumber, int itemId, User chef) {
+        requireChef(chef);
+        OrderItem item = findOrderItem(tableNumber, itemId);
+        if (item == null) {
+            throw new IllegalArgumentException("Unknown item");
+        }
+        item.setStatus(OrderItemStatus.READY);
+        notifyAssignedWaiter(getTable(tableNumber), NotificationType.ITEM_READY,
+                "Item ready: " + item.getItem().getName() + " at table " + tableNumber);
+    }
+
+    public void purgeMeal(int tableNumber, int itemId, User staff) {
+        requireSupervisor(staff);
+        OrderItem item = findOrderItem(tableNumber, itemId);
+        if (item == null) {
+            throw new IllegalArgumentException("Unknown item");
+        }
+        item.setStatus(OrderItemStatus.PURGED);
+    }
+
+    public void purgeTableAccount(int tableNumber, User staff) {
+        requireSupervisor(staff);
+        getTable(tableNumber).getAccount().purgeAll();
+    }
+
+    public void refundItem(int tableNumber, int itemId, User staff) {
+        requireSupervisor(staff);
+        OrderItem item = findOrderItem(tableNumber, itemId);
+        if (item == null) {
+            throw new IllegalArgumentException("Unknown item");
+        }
+        item.setStatus(OrderItemStatus.REFUNDED);
+    }
+}
+
+// File: SurfaceComputer.java
+import java.util.List;
+
+public class SurfaceComputer implements TouchScreen {
+    private final RMOS server;
+    private final int tableNumber;
+    private String currentCustomerId;
+    private final Menu menu;
+    private boolean menuEngaged;
+    private int menuIndex;
+
+    public SurfaceComputer(RMOS server, int tableNumber, String currentCustomerId) {
+        this.server = server;
+        this.tableNumber = tableNumber;
+        this.currentCustomerId = currentCustomerId;
+        this.menu = server.getMenu();
+        this.menuEngaged = false;
+        this.menuIndex = 0;
+    }
+
+    public int getTableNumber() {
+        return tableNumber;
+    }
+
+    public String getCurrentCustomerId() {
+        return currentCustomerId;
+    }
+
+    public void setCurrentCustomerId(String currentCustomerId) {
+        this.currentCustomerId = currentCustomerId;
+    }
+
+    public boolean isMenuEngaged() {
+        return menuEngaged;
+    }
+
+    @Override
+    public void performGesture(Gesture gesture, String target) {
+        if (gesture == Gesture.DOUBLE_TAP) {
+            String normalized = target.toLowerCase();
+            if (normalized.equals("menu")) {
+                engageMenu();
+            } else if (normalized.equals("dismiss")) {
+                dismissMenu();
+            } else if (normalized.equals("bill")) {
+                engageBillMode();
+            } else if (normalized.equals("assistance")) {
+                requestWaiterAssistance();
+            }
+        }
+    }
+
+    public void engageMenu() {
+        if (!server.getTable(tableNumber).isActive()) {
+            throw new IllegalStateException("Table is not active");
+        }
+        menuEngaged = true;
+    }
+
+    public void dismissMenu() {
+        Order pending = server.getPendingOrder(tableNumber);
+        if (pending != null && !pending.isEmpty()) {
+            throw new IllegalStateException("Cannot dismiss menu while a non-empty pending order exists");
+        }
+        menuEngaged = false;
+    }
+
+    private void requireEngaged() {
+        if (!menuEngaged) {
+            throw new IllegalStateException("Menu is not engaged");
+        }
+    }
+
+    public Order createPendingOrder() {
+        requireEngaged();
+        return server.createPendingOrder(tableNumber);
+    }
+
+    public MenuItem navigateMenu(int delta) {
+        List<MenuItem> items = menu.getItems();
+        if (items.isEmpty()) {
+            throw new IllegalStateException("Menu has no items");
+        }
+        menuIndex = Math.floorMod(menuIndex + delta, items.size());
+        return items.get(menuIndex);
+    }
+
+    public OrderItem addItemToOrder(MenuItem item) {
+        requireEngaged();
+        return server.addItemToPendingOrder(tableNumber, item);
+    }
+
+    public boolean removeItemFromOrder(int itemId) {
+        requireEngaged();
+        return server.removeItemFromPendingOrder(tableNumber, itemId);
+    }
+
+    public void addDietaryRequirement(DietaryRequirement requirement) {
+        requireEngaged();
+        server.addDietaryRequirementToPendingOrder(tableNumber, requirement);
+    }
+
+    public void addWildcardDietaryRequirement(String description) {
+        requireEngaged();
+        server.addDietaryRequirementToPendingOrder(tableNumber, new DietaryRequirement(description, true));
+    }
+
+    public void placeOrder() {
+        requireEngaged();
+        server.placeOrder(tableNumber);
+    }
+
+    public void cancelOrder() {
+        requireEngaged();
+        server.cancelOrder(tableNumber);
+    }
+
+    public void requestWaiterAssistance() {
+        server.requestAssistance(tableNumber);
+    }
+
+    public void engageBillMode() {
+        server.engageBillMode(tableNumber);
+    }
+
+    public void disengageBillMode() {
+        server.disengageBillMode(tableNumber);
+    }
+
+    public Payment getCashPaymentRepresentation() {
+        return server.getOrCreatePayment(tableNumber, PaymentType.CASH, currentCustomerId);
+    }
+
+    public Payment getBankCardPaymentRepresentation(String customerId) {
+        return server.getOrCreatePayment(tableNumber, PaymentType.BANKCARD, customerId);
+    }
+
+    public List<OrderItem> getMealsForBilling() {
+        return server.getOrderedMeals(tableNumber);
+    }
+
+    public List<TipDenomination> getTipDenominations() {
+        return server.getTipDenominations();
+    }
+
+    public void dragMealIntoPayment(int itemId, PaymentType type, String customerId) {
+        server.dragMealToPayment(tableNumber, itemId, type, customerId);
+    }
+
+    public void dragMealOutOfPayment(int itemId, PaymentType type, String customerId) {
+        server.dragMealOutOfPayment(tableNumber, itemId, type, customerId);
+    }
+
+    public void dragTipIntoPayment(double amount, PaymentType type, String customerId) {
+        server.dragTipToPayment(tableNumber, amount, type, customerId);
+    }
+
+    public void dragTipOutOfPayment(double amount, PaymentType type, String customerId) {
+        server.dragTipOutOfPayment(tableNumber, amount, type, customerId);
+    }
+}
+
+// File: Tablet.java
+import java.util.List;
+
+public class Tablet implements TouchScreen {
+    private final RMOS server;
+    private final Register register;
+    private User loggedInUser;
+
+    public Tablet(RMOS server, Register register) {
+        this.server = server;
+        this.register = register;
+        this.loggedInUser = null;
+    }
+
+    @Override
+    public void performGesture(Gesture gesture, String target) {
+        if (gesture == Gesture.DOUBLE_TAP && target.equalsIgnoreCase("notifications")) {
+            getNotifications();
+        }
+    }
+
+    public void login(String username, String password) {
+        User user = server.login(username, password);
+        if (!user.hasRole(Role.WAITER, Role.SUPERVISOR)) {
+            throw new SecurityException("Only waiters and supervisors may use a waiter tablet");
+        }
+        loggedInUser = user;
+    }
+
+    public void logout() {
+        loggedInUser = null;
+    }
+
+    public boolean isLoggedIn() {
+        return loggedInUser != null;
+    }
+
+    public User getLoggedInUser() {
+        return loggedInUser;
+    }
+
+    private void requireLogin() {
+        if (loggedInUser == null) {
+            throw new IllegalStateException("Tablet is not logged in");
+        }
+    }
+
+    public List<Notification> getNotifications() {
+        requireLogin();
+        return server.getNotifications(loggedInUser);
+    }
+
+    public List<Notification> drainNotifications() {
+        requireLogin();
+        return server.drainNotifications(loggedInUser);
+    }
+
+    public void activateSurface(int tableNumber) {
+        requireLogin();
+        server.activateTable(tableNumber, loggedInUser);
+    }
+
+    public void deactivateSurface(int tableNumber) {
+        requireLogin();
+        server.deactivateTable(tableNumber, loggedInUser);
+    }
+
+    public void acceptOrder(int tableNumber) {
+        requireLogin();
+        server.acceptOrder(tableNumber, loggedInUser);
+    }
+
+    public void rejectOrder(int tableNumber) {
+        requireLogin();
+        server.rejectOrder(tableNumber, loggedInUser);
+    }
+
+    public void indicateDelivery(int tableNumber, int itemId) {
+        requireLogin();
+        server.indicateDelivery(tableNumber, itemId, loggedInUser);
+    }
+
+    public void processCashPayment(int tableNumber, double tendered) {
+        requireLogin();
+        server.processCashPayment(tableNumber, loggedInUser, register, tendered);
+    }
+
+    public void processBankCardPayment(int tableNumber, String customerId, String cardNumber) {
+        requireLogin();
+        server.processBankCardPayment(tableNumber, customerId, loggedInUser, register, cardNumber);
+    }
+
+    public void purgeMeal(int tableNumber, int itemId) {
+        requireLogin();
+        server.purgeMeal(tableNumber, itemId, loggedInUser);
+    }
+
+    public void purgeTableAccount(int tableNumber) {
+        requireLogin();
+        server.purgeTableAccount(tableNumber, loggedInUser);
+    }
+
+    public void refundItem(int tableNumber, int itemId) {
+        requireLogin();
+        server.refundItem(tableNumber, itemId, loggedInUser);
+    }
+}
+
+// File: Display.java
+public class Display implements TouchScreen {
+    private final RMOS server;
+    private User loggedInUser;
+
+    public Display(RMOS server) {
+        this.server = server;
+        this.loggedInUser = null;
+    }
+
+    @Override
+    public void performGesture(Gesture gesture, String target) {
+    }
+
+    public void login(String username, String password) {
+        User user = server.login(username, password);
+        if (!user.hasRole(Role.CHEF, Role.SUPERVISOR)) {
+            throw new SecurityException("Only chefs and supervisors may use a chef display");
+        }
+        loggedInUser = user;
+    }
+
+    public void logout() {
+        loggedInUser = null;
+    }
+
+    private void requireLogin() {
+        if (loggedInUser == null) {
+            throw new IllegalStateException("Display is not logged in");
+        }
+    }
+
+    public void acceptOrderItem(int tableNumber, int itemId) {
+        requireLogin();
+        server.chefAcceptItem(tableNumber, itemId, loggedInUser);
+    }
+
+    public void rejectOrderItem(int tableNumber, int itemId) {
+        requireLogin();
+        server.chefRejectItem(tableNumber, itemId, loggedInUser);
+    }
+
+    public void markOrderItemReady(int tableNumber, int itemId) {
+        requireLogin();
+        server.chefMarkItemReady(tableNumber, itemId, loggedInUser);
+    }
+}
+
+// File: Main.java
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        RMOS server = new RMOS();
+
+        User alice = new Waiter("alice", "pass");
+        User sam = new Supervisor("sam", "pass");
+        User carol = new Chef("carol", "pass");
+        server.addUser(alice);
+        server.addUser(sam);
+        server.addUser(carol);
+
+        Table table1 = new Table(1);
+        SurfaceComputer surface1 = new SurfaceComputer(server, 1, "customer-1");
+        table1.setSurfaceComputer(surface1);
+        server.addTable(table1);
+
+        Register register = new Register();
+        Tablet tablet = new Tablet(server, register);
+        tablet.login("alice", "pass");
+        tablet.activateSurface(1);
+        System.out.println("Waiter activated table 1");
+
+        surface1.engageMenu();
+        surface1.createPendingOrder();
+        MenuItem burger = server.getMenu().getItems().get(0);
+        OrderItem orderedBurger = surface1.addItemToOrder(burger);
+        surface1.addDietaryRequirement(server.getMenu().getDietaryRequirements().get(0));
+        surface1.addWildcardDietaryRequirement("No onions");
+        surface1.placeOrder();
+        System.out.println("Customer placed order at table 1");
+
+        List<Notification> firstAlerts = tablet.drainNotifications();
+        for (Notification notification : firstAlerts) {
+            System.out.println("Waiter alert: " + notification.getMessage());
+        }
+
+        tablet.acceptOrder(1);
+
+        Display display = new Display(server);
+        display.login("carol", "pass");
+        display.acceptOrderItem(1, orderedBurger.getId());
+        display.markOrderItemReady(1, orderedBurger.getId());
+
+        List<Notification> kitchenAlerts = tablet.drainNotifications();
+        for (Notification notification : kitchenAlerts) {
+            System.out.println("Waiter alert: " + notification.getMessage());
+        }
+
+        surface1.engageBillMode();
+        surface1.dragMealIntoPayment(orderedBurger.getId(), PaymentType.BANKCARD, "customer-1");
+        surface1.dragTipIntoPayment(3.00, PaymentType.BANKCARD, "customer-1");
+
+        Payment payment = surface1.getBankCardPaymentRepresentation("customer-1");
+        System.out.println("Bankcard payment total: $" + String.format("%.2f", payment.getAmount()));
+
+        tablet.processBankCardPayment(1, "customer-1", "1234-5678");
+        System.out.println("Bankcard paid: " + payment.isPaid());
+
+        tablet.logout();
+        tablet.login("sam", "pass");
+        tablet.refundItem(1, orderedBurger.getId());
+        System.out.println("Supervisor refunded item status: " + orderedBurger.getStatus());
+
+        tablet.purgeTableAccount(1);
+        System.out.println("Supervisor purged table account; item status: " + orderedBurger.getStatus());
+
+        tablet.deactivateSurface(1);
+        System.out.println("Table 1 active: " + server.getTable(1).isActive());
+    }
+}

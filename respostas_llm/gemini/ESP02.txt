@@ -1,0 +1,1743 @@
+// File: WasteType.java
+import java.util.Arrays;
+import java.util.List;
+
+public enum WasteType {
+    PLASTIC,
+    GLASS,
+    METAL,
+    PAPER,
+    CARDBOARD,
+    ELECTRONICS,
+    BATTERIES,
+    HAZARDOUS,
+    ORGANIC,
+    TEXTILES;
+
+    public static List<WasteType> specialWasteTypes() {
+        return Arrays.asList(ELECTRONICS, BATTERIES, HAZARDOUS);
+    }
+}
+// File: UserRole.java
+public enum UserRole {
+    CITIZEN,
+    FACILITY_REP,
+    SUPERUSER,
+    EMPLOYEE,
+    HR_OFFICER,
+    ACCOUNTANT,
+    ADMIN,
+    EXECUTIVE
+}
+// File: Address.java
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
+public class Address {
+    private final String street;
+    private final String city;
+    private final String state;
+    private final String zipCode;
+    private final double latitude;
+    private final double longitude;
+
+    public Address(String street, String city, String state, String zipCode, double latitude, double longitude) {
+        this.street = street;
+        this.city = city;
+        this.state = state;
+        this.zipCode = zipCode;
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    public String getStreet() {
+        return street;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public String getZipCode() {
+        return zipCode;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    public String getFullAddress() {
+        return street + ", " + city + ", " + state + " " + zipCode;
+    }
+
+    public String getGoogleMapsUrl() {
+        String query = URLEncoder.encode(getFullAddress(), StandardCharsets.UTF_8);
+        return "https://www.google.com/maps/search/?api=1&query=" + query;
+    }
+
+    @Override
+    public String toString() {
+        return getFullAddress();
+    }
+}
+// File: OperatingHours.java
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.util.EnumMap;
+import java.util.Map;
+
+public class OperatingHours {
+    public static class TimeSlot {
+        private final LocalTime openTime;
+        private final LocalTime closeTime;
+
+        public TimeSlot(LocalTime openTime, LocalTime closeTime) {
+            this.openTime = openTime;
+            this.closeTime = closeTime;
+        }
+
+        public LocalTime getOpenTime() {
+            return openTime;
+        }
+
+        public LocalTime getCloseTime() {
+            return closeTime;
+        }
+
+        public boolean covers(LocalTime time) {
+            return !time.isBefore(openTime) && !time.isAfter(closeTime);
+        }
+
+        @Override
+        public String toString() {
+            return openTime + " - " + closeTime;
+        }
+    }
+
+    private final Map<DayOfWeek, TimeSlot> schedule = new EnumMap<>(DayOfWeek.class);
+
+    public void setHours(DayOfWeek day, LocalTime open, LocalTime close) {
+        schedule.put(day, new TimeSlot(open, close));
+    }
+
+    public TimeSlot getHours(DayOfWeek day) {
+        return schedule.get(day);
+    }
+
+    public boolean isOpen(DayOfWeek day, LocalTime time) {
+        TimeSlot slot = schedule.get(day);
+        return slot != null && slot.covers(time);
+    }
+
+    public Map<DayOfWeek, TimeSlot> getAllHours() {
+        return new EnumMap<>(schedule);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (DayOfWeek day : DayOfWeek.values()) {
+            TimeSlot slot = schedule.get(day);
+            sb.append(day).append(": ").append(slot != null ? slot.toString() : "Closed").append("; ");
+        }
+        return sb.toString();
+    }
+}
+// File: RecyclingFacility.java
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+public class RecyclingFacility {
+    private final String id;
+    private String name;
+    private Address address;
+    private OperatingHours operatingHours;
+    private final Set<WasteType> acceptedWasteTypes;
+    private boolean ecoFriendlyCertified;
+    private boolean active;
+    private int visitCount;
+
+    public RecyclingFacility(String id, String name, Address address, OperatingHours operatingHours, boolean ecoFriendlyCertified) {
+        this.id = id;
+        this.name = name;
+        this.address = address;
+        this.operatingHours = operatingHours;
+        this.acceptedWasteTypes = new HashSet<>();
+        this.ecoFriendlyCertified = ecoFriendlyCertified;
+        this.active = true;
+        this.visitCount = 0;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
+    }
+
+    public OperatingHours getOperatingHours() {
+        return operatingHours;
+    }
+
+    public void setOperatingHours(OperatingHours operatingHours) {
+        this.operatingHours = operatingHours;
+    }
+
+    public Set<WasteType> getAcceptedWasteTypes() {
+        return Collections.unmodifiableSet(acceptedWasteTypes);
+    }
+
+    public void addAcceptedWasteType(WasteType type) {
+        this.acceptedWasteTypes.add(type);
+    }
+
+    public void removeAcceptedWasteType(WasteType type) {
+        this.acceptedWasteTypes.remove(type);
+    }
+
+    public boolean accepts(WasteType type) {
+        return acceptedWasteTypes.contains(type);
+    }
+
+    public boolean isEcoFriendlyCertified() {
+        return ecoFriendlyCertified;
+    }
+
+    public void setEcoFriendlyCertified(boolean ecoFriendlyCertified) {
+        this.ecoFriendlyCertified = ecoFriendlyCertified;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public int getVisitCount() {
+        return visitCount;
+    }
+
+    public void incrementVisitCount() {
+        this.visitCount++;
+    }
+
+    public boolean isOpenAt(DayOfWeek day, LocalTime time) {
+        return operatingHours != null && operatingHours.isOpen(day, time);
+    }
+
+    @Override
+    public String toString() {
+        return "Facility[" + id + "]: " + name + " (" + (ecoFriendlyCertified ? "Eco-Friendly, " : "") + address + ") Accepts: " + acceptedWasteTypes;
+    }
+}
+// File: PublicBin.java
+import java.util.Collections;
+import java.util.Set;
+
+public class PublicBin {
+    private final String id;
+    private final Address address;
+    private final Set<WasteType> acceptedTypes;
+    private final String description;
+
+    public PublicBin(String id, Address address, Set<WasteType> acceptedTypes, String description) {
+        this.id = id;
+        this.address = address;
+        this.acceptedTypes = acceptedTypes;
+        this.description = description;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public Set<WasteType> getAcceptedTypes() {
+        return Collections.unmodifiableSet(acceptedTypes);
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return "PublicBin #" + id + " at " + address + " for " + acceptedTypes;
+    }
+}
+// File: SpecialWasteSite.java
+import java.util.Collections;
+import java.util.Set;
+
+public class SpecialWasteSite {
+    private final String id;
+    private final String name;
+    private final Address address;
+    private final Set<WasteType> acceptedSpecialTypes;
+    private final String safetyProtocols;
+
+    public SpecialWasteSite(String id, String name, Address address, Set<WasteType> acceptedSpecialTypes, String safetyProtocols) {
+        this.id = id;
+        this.name = name;
+        this.address = address;
+        this.acceptedSpecialTypes = acceptedSpecialTypes;
+        this.safetyProtocols = safetyProtocols;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public Set<WasteType> getAcceptedSpecialTypes() {
+        return Collections.unmodifiableSet(acceptedSpecialTypes);
+    }
+
+    public String getSafetyProtocols() {
+        return safetyProtocols;
+    }
+
+    @Override
+    public String toString() {
+        return "SpecialWasteSite[" + id + "] " + name + " at " + address + " Accepts: " + acceptedSpecialTypes;
+    }
+}
+// File: SafeDisposalEvent.java
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+public class SafeDisposalEvent {
+    private final String id;
+    private final String title;
+    private final Address address;
+    private final LocalDate eventDate;
+    private final LocalTime startTime;
+    private final LocalTime endTime;
+    private final String description;
+
+    public SafeDisposalEvent(String id, String title, Address address, LocalDate eventDate, LocalTime startTime, LocalTime endTime, String description) {
+        this.id = id;
+        this.title = title;
+        this.address = address;
+        this.eventDate = eventDate;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.description = description;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public LocalDate getEventDate() {
+        return eventDate;
+    }
+
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return "Event[" + id + "]: " + title + " on " + eventDate + " (" + startTime + "-" + endTime + ") at " + address;
+    }
+}
+// File: SecurityUtils.java
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+
+public final class SecurityUtils {
+    private SecurityUtils() {}
+
+    public static String hash(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encoded = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(encoded);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not found", e);
+        }
+    }
+
+    public static String encryptData(String rawData, String secretKey) {
+        byte[] rawBytes = rawData.getBytes(StandardCharsets.UTF_8);
+        byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+        byte[] xorBytes = new byte[rawBytes.length];
+        for (int i = 0; i < rawBytes.length; i++) {
+            xorBytes[i] = (byte) (rawBytes[i] ^ keyBytes[i % keyBytes.length]);
+        }
+        return Base64.getEncoder().encodeToString(xorBytes);
+    }
+
+    public static String decryptData(String encryptedBase64, String secretKey) {
+        byte[] decoded = Base64.getDecoder().decode(encryptedBase64);
+        byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+        byte[] rawBytes = new byte[decoded.length];
+        for (int i = 0; i < decoded.length; i++) {
+            rawBytes[i] = (byte) (decoded[i] ^ keyBytes[i % keyBytes.length]);
+        }
+        return new String(rawBytes, StandardCharsets.UTF_8);
+    }
+}
+// File: UserSchedule.java
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.util.EnumMap;
+import java.util.Map;
+
+public class UserSchedule {
+    public static class AvailabilitySlot {
+        private final LocalTime availableFrom;
+        private final LocalTime availableTo;
+
+        public AvailabilitySlot(LocalTime availableFrom, LocalTime availableTo) {
+            this.availableFrom = availableFrom;
+            this.availableTo = availableTo;
+        }
+
+        public LocalTime getAvailableFrom() {
+            return availableFrom;
+        }
+
+        public LocalTime getAvailableTo() {
+            return availableTo;
+        }
+
+        public boolean overlaps(LocalTime open, LocalTime close) {
+            return !(availableTo.isBefore(open) || availableFrom.isAfter(close));
+        }
+
+        @Override
+        public String toString() {
+            return availableFrom + " to " + availableTo;
+        }
+    }
+
+    private final Map<DayOfWeek, AvailabilitySlot> weekSchedule = new EnumMap<>(DayOfWeek.class);
+
+    public void setAvailability(DayOfWeek day, LocalTime from, LocalTime to) {
+        weekSchedule.put(day, new AvailabilitySlot(from, to));
+    }
+
+    public AvailabilitySlot getAvailability(DayOfWeek day) {
+        return weekSchedule.get(day);
+    }
+
+    public Map<DayOfWeek, AvailabilitySlot> getWeekSchedule() {
+        return new EnumMap<>(weekSchedule);
+    }
+
+    public boolean fitsFacility(RecyclingFacility facility) {
+        OperatingHours hours = facility.getOperatingHours();
+        if (hours == null) return false;
+        for (Map.Entry<DayOfWeek, AvailabilitySlot> entry : weekSchedule.entrySet()) {
+            OperatingHours.TimeSlot slot = hours.getHours(entry.getKey());
+            if (slot != null && entry.getValue().overlaps(slot.getOpenTime(), slot.getCloseTime())) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+// File: PickupRequest.java
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Set;
+
+public class PickupRequest {
+    public enum Status {
+        PENDING,
+        ASSIGNED,
+        COMPLETED,
+        CANCELLED
+    }
+
+    private final String id;
+    private final String userId;
+    private final Address address;
+    private final LocalDateTime requestedDateTime;
+    private final boolean flexibleTimeWindow; // flexible pickup window
+    private final Set<WasteType> wasteTypes;
+    private Status status;
+    private String assignedEmployeeId;
+
+    public PickupRequest(String id, String userId, Address address, LocalDateTime requestedDateTime, boolean flexibleTimeWindow, Set<WasteType> wasteTypes) {
+        this.id = id;
+        this.userId = userId;
+        this.address = address;
+        this.requestedDateTime = requestedDateTime;
+        this.flexibleTimeWindow = flexibleTimeWindow;
+        this.wasteTypes = wasteTypes;
+        this.status = Status.PENDING;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public LocalDateTime getRequestedDateTime() {
+        return requestedDateTime;
+    }
+
+    public boolean isFlexibleTimeWindow() {
+        return flexibleTimeWindow;
+    }
+
+    public Set<WasteType> getWasteTypes() {
+        return Collections.unmodifiableSet(wasteTypes);
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+    public String getAssignedEmployeeId() {
+        return assignedEmployeeId;
+    }
+
+    public void setAssignedEmployeeId(String assignedEmployeeId) {
+        this.assignedEmployeeId = assignedEmployeeId;
+    }
+
+    @Override
+    public String toString() {
+        return "PickupRequest[" + id + "] User: " + userId + " at " + requestedDateTime + (flexibleTimeWindow ? " (Flexible)" : "") + " Status: " + status;
+    }
+}
+// File: TransactionRecord.java
+import java.time.LocalDateTime;
+
+public class TransactionRecord {
+    private final String id;
+    private final String userId;
+    private final String facilityId;
+    private final WasteType wasteType;
+    private final double quantityKg;
+    private final int rewardPointsEarned;
+    private final double activityFee;
+    private final LocalDateTime timestamp;
+
+    public TransactionRecord(String id, String userId, String facilityId, WasteType wasteType, double quantityKg, int rewardPointsEarned, double activityFee) {
+        this.id = id;
+        this.userId = userId;
+        this.facilityId = facilityId;
+        this.wasteType = wasteType;
+        this.quantityKg = quantityKg;
+        this.rewardPointsEarned = rewardPointsEarned;
+        this.activityFee = activityFee;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getFacilityId() {
+        return facilityId;
+    }
+
+    public WasteType getWasteType() {
+        return wasteType;
+    }
+
+    public double getQuantityKg() {
+        return quantityKg;
+    }
+
+    public int getRewardPointsEarned() {
+        return rewardPointsEarned;
+    }
+
+    public double getActivityFee() {
+        return activityFee;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "Transaction[" + id + "] Date: " + timestamp + " Type: " + wasteType + " " + quantityKg + "kg Points: +" + rewardPointsEarned + " Fee: $" + String.format("%.2f", activityFee);
+    }
+}
+// File: FeedbackMessage.java
+import java.time.LocalDateTime;
+
+public class FeedbackMessage {
+    private final String id;
+    private final String userEmail;
+    private final String subject;
+    private final String message;
+    private final LocalDateTime submittedAt;
+    private boolean resolved;
+
+    public FeedbackMessage(String id, String userEmail, String subject, String message) {
+        this.id = id;
+        this.userEmail = userEmail;
+        this.subject = subject;
+        this.message = message;
+        this.submittedAt = LocalDateTime.now();
+        this.resolved = false;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public LocalDateTime getSubmittedAt() {
+        return submittedAt;
+    }
+
+    public boolean isResolved() {
+        return resolved;
+    }
+
+    public void setResolved(boolean resolved) {
+        this.resolved = resolved;
+    }
+
+    @Override
+    public String toString() {
+        return "Feedback[" + id + " from " + userEmail + "]: " + subject + " - " + message + " (Resolved: " + resolved + ")";
+    }
+}
+// File: FacilityInquiry.java
+import java.time.LocalDateTime;
+
+public class FacilityInquiry {
+    private final String id;
+    private final String userId;
+    private final String facilityId;
+    private final String question;
+    private String answer;
+    private final LocalDateTime askedAt;
+    private LocalDateTime answeredAt;
+
+    public FacilityInquiry(String id, String userId, String facilityId, String question) {
+        this.id = id;
+        this.userId = userId;
+        this.facilityId = facilityId;
+        this.question = question;
+        this.askedAt = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getFacilityId() {
+        return facilityId;
+    }
+
+    public String getQuestion() {
+        return question;
+    }
+
+    public String getAnswer() {
+        return answer;
+    }
+
+    public LocalDateTime getAskedAt() {
+        return askedAt;
+    }
+
+    public LocalDateTime getAnsweredAt() {
+        return answeredAt;
+    }
+
+    public void reply(String answer) {
+        this.answer = answer;
+        this.answeredAt = LocalDateTime.now();
+    }
+
+    @Override
+    public String toString() {
+        return "Inquiry[" + id + "] Q: " + question + (answer != null ? " | Reply: " + answer : " (Pending answer)");
+    }
+}
+// File: FacilityCommunication.java
+import java.time.LocalDateTime;
+
+public class FacilityCommunication {
+    private final String id;
+    private final String facilityId;
+    private final String sender;
+    private final String message;
+    private final LocalDateTime sentAt;
+
+    public FacilityCommunication(String id, String facilityId, String sender, String message) {
+        this.id = id;
+        this.facilityId = facilityId;
+        this.sender = sender;
+        this.message = message;
+        this.sentAt = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getFacilityId() {
+        return facilityId;
+    }
+
+    public String getSender() {
+        return sender;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public LocalDateTime getSentAt() {
+        return sentAt;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + sentAt + "] Facility " + facilityId + " <-> " + sender + ": " + message;
+    }
+}
+// File: ErrorLogEntry.java
+import java.time.LocalDateTime;
+
+public class ErrorLogEntry {
+    private final String id;
+    private final String ipAddress;
+    private final String userEmail;
+    private final String errorDetails;
+    private final LocalDateTime timestamp;
+
+    public ErrorLogEntry(String id, String ipAddress, String userEmail, String errorDetails) {
+        this.id = id;
+        this.ipAddress = ipAddress;
+        this.userEmail = userEmail;
+        this.errorDetails = errorDetails;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public String getErrorDetails() {
+        return errorDetails;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + timestamp + "] IP: " + ipAddress + " (User: " + (userEmail != null ? userEmail : "Guest") + ") Error: " + errorDetails;
+    }
+}
+// File: Employee.java
+public class Employee {
+    private final String id;
+    private final String name;
+    private final String department;
+    private final String position;
+    private final double salary;
+    private final String email;
+    private final String phone;
+
+    public Employee(String id, String name, String department, String position, double salary, String email, String phone) {
+        this.id = id;
+        this.name = name;
+        this.department = department;
+        this.position = position;
+        this.salary = salary;
+        this.email = email;
+        this.phone = phone;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public String getPosition() {
+        return position;
+    }
+
+    public double getSalary() {
+        return salary;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    @Override
+    public String toString() {
+        return "Employee #" + id + ": " + name + " (" + department + " - " + position + ") Salary: $" + salary + ", Contact: " + email + ", " + phone;
+    }
+}
+// File: UserProfile.java
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
+public class UserProfile {
+    private final String id;
+    private final String username;
+    private String email;
+    private String passwordHash;
+    private String encryptedPersonalInfo; // Encrypted phone/SSN/personal identity info
+    private final String ipAddress;
+    private UserRole role;
+    private final Set<String> favoriteFacilityIds;
+    private int rewardPoints;
+    private UserSchedule weekSchedule;
+    private String associatedFacilityId; // For facility reps/superusers
+
+    public UserProfile(String id, String username, String email, String passwordHash, String encryptedPersonalInfo, String ipAddress, UserRole role) {
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.encryptedPersonalInfo = encryptedPersonalInfo;
+        this.ipAddress = ipAddress;
+        this.role = role;
+        this.favoriteFacilityIds = new HashSet<>();
+        this.rewardPoints = 0;
+        this.weekSchedule = new UserSchedule();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public String getEncryptedPersonalInfo() {
+        return encryptedPersonalInfo;
+    }
+
+    public void setEncryptedPersonalInfo(String encryptedPersonalInfo) {
+        this.encryptedPersonalInfo = encryptedPersonalInfo;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+
+    public Set<String> getFavoriteFacilityIds() {
+        return Collections.unmodifiableSet(favoriteFacilityIds);
+    }
+
+    public void addFavoriteFacility(String facilityId) {
+        favoriteFacilityIds.add(facilityId);
+    }
+
+    public void removeFavoriteFacility(String facilityId) {
+        favoriteFacilityIds.remove(facilityId);
+    }
+
+    public int getRewardPoints() {
+        return rewardPoints;
+    }
+
+    public void addRewardPoints(int points) {
+        this.rewardPoints += points;
+    }
+
+    public UserSchedule getWeekSchedule() {
+        return weekSchedule;
+    }
+
+    public void setWeekSchedule(UserSchedule weekSchedule) {
+        this.weekSchedule = weekSchedule;
+    }
+
+    public String getAssociatedFacilityId() {
+        return associatedFacilityId;
+    }
+
+    public void setAssociatedFacilityId(String associatedFacilityId) {
+        this.associatedFacilityId = associatedFacilityId;
+    }
+
+    public String resetPasswordWithTemporary() {
+        String tempPass = "Temp#" + UUID.randomUUID().toString().substring(0, 8);
+        this.passwordHash = SecurityUtils.hash(tempPass);
+        return tempPass;
+    }
+
+    @Override
+    public String toString() {
+        return "UserProfile[" + username + " (" + role + "), Email: " + email + ", Rewards: " + rewardPoints + " pts]";
+    }
+}
+// File: RouteStep.java
+public class RouteStep {
+    private final int sequence;
+    private final Address address;
+    private final String description;
+    private final double distanceKm;
+
+    public RouteStep(int sequence, Address address, String description, double distanceKm) {
+        this.sequence = sequence;
+        this.address = address;
+        this.description = description;
+        this.distanceKm = distanceKm;
+    }
+
+    public int getSequence() {
+        return sequence;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public double getDistanceKm() {
+        return distanceKm;
+    }
+
+    @Override
+    public String toString() {
+        return sequence + ". " + description + " at " + address.getFullAddress() + " (~" + distanceKm + " km)";
+    }
+}
+// File: NeighborhoodRoutePlan.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class NeighborhoodRoutePlan {
+    private final String routeId;
+    private final String neighborhoodName;
+    private final List<RouteStep> steps;
+
+    public NeighborhoodRoutePlan(String routeId, String neighborhoodName) {
+        this.routeId = routeId;
+        this.neighborhoodName = neighborhoodName;
+        this.steps = new ArrayList<>();
+    }
+
+    public void addStep(RouteStep step) {
+        steps.add(step);
+    }
+
+    public String getRouteId() {
+        return routeId;
+    }
+
+    public String getNeighborhoodName() {
+        return neighborhoodName;
+    }
+
+    public List<RouteStep> getSteps() {
+        return Collections.unmodifiableList(steps);
+    }
+
+    public double getTotalDistanceKm() {
+        return steps.stream().mapToDouble(RouteStep::getDistanceKm).sum();
+    }
+}
+// File: RoutePlannerService.java
+import java.util.List;
+
+public class RoutePlannerService {
+    public NeighborhoodRoutePlan createOptimalRoute(String routeId, String neighborhood, List<Address> addresses) {
+        NeighborhoodRoutePlan plan = new NeighborhoodRoutePlan(routeId, neighborhood);
+        int seq = 1;
+        for (Address addr : addresses) {
+            plan.addStep(new RouteStep(seq, addr, "Drop-off / Pick-up Node", 1.8 * seq));
+            seq++;
+        }
+        return plan;
+    }
+}
+// File: BillingStatement.java
+import java.time.LocalDate;
+import java.util.List;
+
+public class BillingStatement {
+    private final String invoiceNumber;
+    private final LocalDate issueDate;
+    private final List<TransactionRecord> transactions;
+    private final double totalActivityFees;
+
+    public BillingStatement(String invoiceNumber, LocalDate issueDate, List<TransactionRecord> transactions) {
+        this.invoiceNumber = invoiceNumber;
+        this.issueDate = issueDate;
+        this.transactions = transactions;
+        this.totalActivityFees = transactions.stream().mapToDouble(TransactionRecord::getActivityFee).sum();
+    }
+
+    public String getInvoiceNumber() {
+        return invoiceNumber;
+    }
+
+    public LocalDate getIssueDate() {
+        return issueDate;
+    }
+
+    public List<TransactionRecord> getTransactions() {
+        return transactions;
+    }
+
+    public double getTotalActivityFees() {
+        return totalActivityFees;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== BILLING STATEMENT ===").append("\n");
+        sb.append("Invoice #: ").append(invoiceNumber).append(" | Date: ").append(issueDate).append("\n");
+        sb.append("Activity Count: ").append(transactions.size()).append("\n");
+        for (TransactionRecord record : transactions) {
+            sb.append("  - Tx: ").append(record.getId())
+              .append(" | ").append(record.getWasteType())
+              .append(" | Fee: $").append(String.format("%.2f", record.getActivityFee()))
+              .append("\n");
+        }
+        sb.append("Total Activity Fees Payable: $").append(String.format("%.2f", totalActivityFees));
+        return sb.toString();
+    }
+}
+// File: UserDocumentation.java
+public class UserDocumentation {
+    public static String getGuide() {
+        return """
+            ======================================================================
+                         RECYCLEHUB PLATFORM - USER DOCUMENTATION
+            ======================================================================
+            Welcome to the RecycleHub Web Application!
+            
+            1. ANONYMOUS BROWSING:
+               - Enter a valid 5-digit US ZIP code to view recycling centers, public
+                 bins, special drop-off sites, and safe disposal events.
+               - Click on facility addresses to directly open navigation in Google Maps.
+               - Filter facilities based on accepted waste materials (Plastic, Glass,
+                 Electronics, Batteries, etc.) and check daily operating hours.
+               
+            2. CREATING AN ACCOUNT & PROFILE:
+               - Sign up to bookmark favorite recycling & donation centers.
+               - Upload your weekly schedule to obtain automatic center suggestions.
+               - Link your verified email address for event alerts and password resets.
+               - Request home waste pick-up with flexible scheduling.
+               
+            3. EARNING REWARDS:
+               - Earn reward points for every kilogram of waste recycled or dropped off.
+               - Check your transaction history and past contributions anytime.
+               
+            4. FACILITY REPRESENTATIVES & SUPERUSERS:
+               - Update material acceptance policies, operating hours, and reply
+                 to community inquiries directly.
+               - Analyze visitor statistics and scheduled drop-offs.
+               
+            5. ADMINISTRATORS & EXECUTIVES:
+               - Real-time platform status monitoring, neighborhood drop-off trends,
+                 IP safety blocks, user error logs, and activity fee accounting.
+            ======================================================================
+            """;
+    }
+}
+// File: DeveloperApiResponse.java
+public class DeveloperApiResponse<T> {
+    private final boolean success;
+    private final String message;
+    private final T data;
+
+    public DeveloperApiResponse(boolean success, String message, T data) {
+        this.success = success;
+        this.message = message;
+        this.data = data;
+    }
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public T getData() {
+        return data;
+    }
+
+    @Override
+    public String toString() {
+        return "ApiResponse[success=" + success + ", message='" + message + "', data=" + data + "]";
+    }
+}
+// File: RecycleHubPlatform.java
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+public class RecycleHubPlatform {
+    private static final String ENCRYPTION_KEY = "RecycleHubGlobalSecretKey#2024!";
+    private static final Pattern ZIP_CODE_PATTERN = Pattern.compile("^\\d{5}$");
+
+    private final Map<String, RecyclingFacility> facilities = new HashMap<>();
+    private final Map<String, PublicBin> publicBins = new HashMap<>();
+    private final Map<String, SpecialWasteSite> specialWasteSites = new HashMap<>();
+    private final List<SafeDisposalEvent> safeDisposalEvents = new ArrayList<>();
+    private final Map<String, UserProfile> users = new HashMap<>();
+    private final Set<String> blockedIpAddresses = new HashSet<>();
+    private final List<ErrorLogEntry> errorLogs = new ArrayList<>();
+    private final List<FeedbackMessage> feedbackMessages = new ArrayList<>();
+    private final List<FacilityInquiry> inquiries = new ArrayList<>();
+    private final List<FacilityCommunication> facilityCommunications = new ArrayList<>();
+    private final List<TransactionRecord> transactions = new ArrayList<>();
+    private final List<PickupRequest> pickupRequests = new ArrayList<>();
+    private final Map<String, Employee> employees = new HashMap<>();
+    private final Set<String> subscribedNotificationEmails = new HashSet<>();
+    private final RoutePlannerService routePlannerService = new RoutePlannerService();
+
+    // ================= ZIP CODE VALIDATION =================
+    public boolean isValidZipCode(String zipCode) {
+        return zipCode != null && ZIP_CODE_PATTERN.matcher(zipCode.trim()).matches();
+    }
+
+    public void validateZipOrThrow(String zipCode, String callerIp) {
+        if (!isValidZipCode(zipCode)) {
+            String errorMsg = "Invalid zip code format: '" + zipCode + "'. Must be exactly 5 numeric digits.";
+            logError(callerIp, null, errorMsg);
+            throw new IllegalArgumentException(errorMsg);
+        }
+    }
+
+    // ================= SECURITY & IP FILTER =================
+    public void blockIp(String ipAddress) {
+        blockedIpAddresses.add(ipAddress);
+    }
+
+    public void unblockIp(String ipAddress) {
+        blockedIpAddresses.remove(ipAddress);
+    }
+
+    public boolean isIpBlocked(String ipAddress) {
+        return blockedIpAddresses.contains(ipAddress);
+    }
+
+    public void verifyIpAccess(String ipAddress) {
+        if (isIpBlocked(ipAddress)) {
+            throw new SecurityException("Access denied: IP address " + ipAddress + " has been blocked by administrators.");
+        }
+    }
+
+    public void logError(String ip, String userEmail, String details) {
+        String logId = "ERR-" + (errorLogs.size() + 1);
+        errorLogs.add(new ErrorLogEntry(logId, ip, userEmail, details));
+    }
+
+    public List<ErrorLogEntry> getErrorLogs() {
+        return Collections.unmodifiableList(errorLogs);
+    }
+
+    // ================= USER & PROFILE MANAGEMENT =================
+    public UserProfile registerUser(String username, String email, String password, String personalInfo, String ip, UserRole role) {
+        verifyIpAccess(ip);
+        if (users.containsKey(username)) {
+            throw new IllegalArgumentException("Username already exists: " + username);
+        }
+        String id = "USR-" + (users.size() + 1);
+        String passHash = SecurityUtils.hash(password);
+        String encryptedInfo = SecurityUtils.encryptData(personalInfo, ENCRYPTION_KEY);
+        UserProfile user = new UserProfile(id, username, email, passHash, encryptedInfo, ip, role);
+        users.put(username, user);
+        return user;
+    }
+
+    public UserProfile authenticate(String username, String password, String ip) {
+        verifyIpAccess(ip);
+        UserProfile user = users.get(username);
+        if (user == null || !user.getPasswordHash().equals(SecurityUtils.hash(password))) {
+            logError(ip, username, "Failed authentication attempt for user: " + username);
+            throw new SecurityException("Invalid credentials.");
+        }
+        return user;
+    }
+
+    public String decryptUserPersonalInfo(UserProfile user) {
+        return SecurityUtils.decryptData(user.getEncryptedPersonalInfo(), ENCRYPTION_KEY);
+    }
+
+    public void subscribeForEventNotifications(String email) {
+        if (email != null && email.contains("@")) {
+            subscribedNotificationEmails.add(email.trim());
+        }
+    }
+
+    public Set<String> getSubscribedNotificationEmails() {
+        return Collections.unmodifiableSet(subscribedNotificationEmails);
+    }
+
+    public String requestTemporaryPassword(String username, String email) {
+        UserProfile user = users.get(username);
+        if (user != null && user.getEmail().equalsIgnoreCase(email)) {
+            return user.resetPasswordWithTemporary();
+        }
+        throw new IllegalArgumentException("User matching username and email not found.");
+    }
+
+    // ================= FACILITIES & PUBLIC DATA =================
+    public void addFacility(RecyclingFacility facility) {
+        facilities.put(facility.getId(), facility);
+    }
+
+    public void removeFacility(String facilityId) {
+        facilities.remove(facilityId);
+    }
+
+    public RecyclingFacility getFacility(String facilityId) {
+        return facilities.get(facilityId);
+    }
+
+    public Collection<RecyclingFacility> getAllFacilities() {
+        return facilities.values();
+    }
+
+    public List<RecyclingFacility> findFacilitiesByZip(String zipCode, String callerIp) {
+        verifyIpAccess(callerIp);
+        validateZipOrThrow(zipCode, callerIp);
+        return facilities.values().stream()
+                .filter(RecyclingFacility::isActive)
+                .filter(f -> f.getAddress().getZipCode().equals(zipCode))
+                .peek(RecyclingFacility::incrementVisitCount)
+                .collect(Collectors.toList());
+    }
+
+    public List<RecyclingFacility> findFacilitiesByWasteType(WasteType wasteType) {
+        return facilities.values().stream()
+                .filter(RecyclingFacility::isActive)
+                .filter(f -> f.accepts(wasteType))
+                .collect(Collectors.toList());
+    }
+
+    public List<RecyclingFacility> getEcoFriendlyFacilities() {
+        return facilities.values().stream()
+                .filter(RecyclingFacility::isActive)
+                .filter(RecyclingFacility::isEcoFriendlyCertified)
+                .collect(Collectors.toList());
+    }
+
+    public List<RecyclingFacility> recommendFacilitiesForUserSchedule(UserProfile user) {
+        return facilities.values().stream()
+                .filter(RecyclingFacility::isActive)
+                .filter(f -> user.getWeekSchedule().fitsFacility(f))
+                .collect(Collectors.toList());
+    }
+
+    // Public Bins, Special Drop-off Sites, Events
+    public void addPublicBin(PublicBin bin) {
+        publicBins.put(bin.getId(), bin);
+    }
+
+    public List<PublicBin> findPublicBinsAround(String zipCode, String callerIp) {
+        verifyIpAccess(callerIp);
+        validateZipOrThrow(zipCode, callerIp);
+        return publicBins.values().stream()
+                .filter(b -> b.getAddress().getZipCode().equals(zipCode))
+                .collect(Collectors.toList());
+    }
+
+    public void addSpecialWasteSite(SpecialWasteSite site) {
+        specialWasteSites.put(site.getId(), site);
+    }
+
+    public List<SpecialWasteSite> findSpecialWasteSitesAround(String zipCode, String callerIp) {
+        verifyIpAccess(callerIp);
+        validateZipOrThrow(zipCode, callerIp);
+        return specialWasteSites.values().stream()
+                .filter(s -> s.getAddress().getZipCode().equals(zipCode))
+                .collect(Collectors.toList());
+    }
+
+    public void addSafeDisposalEvent(SafeDisposalEvent event) {
+        safeDisposalEvents.add(event);
+    }
+
+    public List<SafeDisposalEvent> findEventsAround(String zipCode, String callerIp) {
+        verifyIpAccess(callerIp);
+        validateZipOrThrow(zipCode, callerIp);
+        return safeDisposalEvents.stream()
+                .filter(e -> e.getAddress().getZipCode().equals(zipCode))
+                .collect(Collectors.toList());
+    }
+
+    // Visual ASCII Map generator for public centers and bins
+    public String renderMapDisplay(String zipCode) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("------------------------------------------------------------\n");
+        sb.append("   MAP DISPLAY FOR ZIP CODE: ").append(zipCode).append("\n");
+        sb.append("------------------------------------------------------------\n");
+        sb.append("[REC-FACILITY]  (F)  |  [PUBLIC BIN] (B)  |  [SPECIAL SITE] (S)\n");
+        sb.append("------------------------------------------------------------\n");
+        facilities.values().stream().filter(f -> f.getAddress().getZipCode().equals(zipCode))
+                .forEach(f -> sb.append(String.format(" (F) %-25s @ Lat: %.4f, Lon: %.4f | Link: %s\n",
+                        f.getName(), f.getAddress().getLatitude(), f.getAddress().getLongitude(), f.getAddress().getGoogleMapsUrl())));
+
+        publicBins.values().stream().filter(b -> b.getAddress().getZipCode().equals(zipCode))
+                .forEach(b -> sb.append(String.format(" (B) %-25s @ Lat: %.4f, Lon: %.4f\n",
+                        b.getDescription(), b.getAddress().getLatitude(), b.getAddress().getLongitude())));
+
+        specialWasteSites.values().stream().filter(s -> s.getAddress().getZipCode().equals(zipCode))
+                .forEach(s -> sb.append(String.format(" (S) %-25s @ Lat: %.4f, Lon: %.4f\n",
+                        s.getName(), s.getAddress().getLatitude(), s.getAddress().getLongitude())));
+        sb.append("------------------------------------------------------------\n");
+        return sb.toString();
+    }
+
+    // ================= PICKUP & TRANSACTIONS & REWARDS =================
+    public PickupRequest requestPickup(String username, Address address, LocalDateTime dateTime, boolean flexibleWindow, Set<WasteType> wasteTypes) {
+        UserProfile user = users.get(username);
+        if (user == null) throw new IllegalArgumentException("User not found: " + username);
+        String id = "PICKUP-" + (pickupRequests.size() + 1);
+        PickupRequest req = new PickupRequest(id, user.getId(), address, dateTime, flexibleWindow, wasteTypes);
+        pickupRequests.add(req);
+        return req;
+    }
+
+    public List<PickupRequest> getPickupRequests() {
+        return Collections.unmodifiableList(pickupRequests);
+    }
+
+    public TransactionRecord recordWasteDropOff(String username, String facilityId, WasteType wasteType, double quantityKg, double fee) {
+        UserProfile user = users.get(username);
+        if (user == null) throw new IllegalArgumentException("User not found: " + username);
+        RecyclingFacility facility = facilities.get(facilityId);
+        if (facility == null) throw new IllegalArgumentException("Facility not found: " + facilityId);
+
+        // Reward formula: 10 points per kg + bonus for eco-friendly facilities
+        int points = (int) Math.round(quantityKg * 10);
+        if (facility.isEcoFriendlyCertified()) {
+            points += 5;
+        }
+        user.addRewardPoints(points);
+
+        String txId = "TX-" + (transactions.size() + 1);
+        TransactionRecord record = new TransactionRecord(txId, user.getId(), facilityId, wasteType, quantityKg, points, fee);
+        transactions.add(record);
+        return record;
+    }
+
+    public List<TransactionRecord> getUserTransactions(String username) {
+        UserProfile user = users.get(username);
+        if (user == null) return Collections.emptyList();
+        return transactions.stream()
+                .filter(t -> t.getUserId().equals(user.getId()))
+                .collect(Collectors.toList());
+    }
+
+    // ================= INQUIRIES & COMMUNICATIONS =================
+    public FacilityInquiry submitFacilityInquiry(String userId, String facilityId, String question) {
+        String inquiryId = "INQ-" + (inquiries.size() + 1);
+        FacilityInquiry inquiry = new FacilityInquiry(inquiryId, userId, facilityId, question);
+        inquiries.add(inquiry);
+        return inquiry;
+    }
+
+    public void answerFacilityInquiry(String inquiryId, String answer) {
+        for (FacilityInquiry inq : inquiries) {
+            if (inq.getId().equals(inquiryId)) {
+                inq.reply(answer);
+                return;
+            }
+        }
+        throw new IllegalArgumentException("Inquiry not found: " + inquiryId);
+    }
+
+    public List<FacilityInquiry> getInquiriesForFacility(String facilityId) {
+        return inquiries.stream()
+                .filter(i -> i.getFacilityId().equals(facilityId))
+                .collect(Collectors.toList());
+    }
+
+    public void sendFacilityMessage(String facilityId, String senderRole, String message) {
+        facilityCommunications.add(new FacilityCommunication("MSG-" + (facilityCommunications.size() + 1), facilityId, senderRole, message));
+    }
+
+    public List<FacilityCommunication> getFacilityMessages(String facilityId) {
+        return facilityCommunications.stream()
+                .filter(c -> c.getFacilityId().equals(facilityId))
+                .collect(Collectors.toList());
+    }
+
+    // ================= FEEDBACK & COMPLAINTS =================
+    public void submitFeedback(String email, String subject, String message) {
+        String id = "FB-" + (feedbackMessages.size() + 1);
+        feedbackMessages.add(new FeedbackMessage(id, email, subject, message));
+    }
+
+    public List<FeedbackMessage> getFeedbackMessages() {
+        return Collections.unmodifiableList(feedbackMessages);
+    }
+
+    // ================= HR & EMPLOYEES =================
+    public void addEmployee(Employee emp) {
+        employees.put(emp.getId(), emp);
+    }
+
+    public List<Employee> getHrEmployeeList(UserProfile hrUser) {
+        if (hrUser.getRole() != UserRole.HR_OFFICER && hrUser.getRole() != UserRole.ADMIN && hrUser.getRole() != UserRole.EXECUTIVE) {
+            throw new SecurityException("Unauthorized: Only HR officers or executives can view employee records.");
+        }
+        return new ArrayList<>(employees.values());
+    }
+
+    // ================= ACCOUNTING =================
+    public BillingStatement generateBillingStatement(UserProfile accountantUser) {
+        if (accountantUser.getRole() != UserRole.ACCOUNTANT && accountantUser.getRole() != UserRole.ADMIN && accountantUser.getRole() != UserRole.EXECUTIVE) {
+            throw new SecurityException("Unauthorized: Only accountants or administrators can generate billing statements.");
+        }
+        return new BillingStatement("INV-" + System.currentTimeMillis(), LocalDate.now(), transactions);
+    }
+
+    // ================= ROUTE PLANNING =================
+    public NeighborhoodRoutePlan planRouteForEmployee(String routeId, String neighborhood, List<Address> addresses) {
+        return routePlannerService.createOptimalRoute(routeId, neighborhood, addresses);
+    }
+
+    // ================= ADMIN & EXECUTIVE DASHBOARDS =================
+    public String getExecutivePerformanceReport(UserProfile executive) {
+        if (executive.getRole() != UserRole.EXECUTIVE && executive.getRole() != UserRole.ADMIN) {
+            throw new SecurityException("Unauthorized: Executive access required.");
+        }
+        double totalVolumeKg = transactions.stream().mapToDouble(TransactionRecord::getQuantityKg).sum();
+        double totalFees = transactions.stream().mapToDouble(TransactionRecord::getActivityFee).sum();
+        int totalPickups = pickupRequests.size();
+
+        return String.format("""
+            ==================================================
+                   EXECUTIVE COMPANY PERFORMANCE REPORT
+            ==================================================
+            Total Facilities Registered: %d
+            Total Registered Citizens   : %d
+            Total Recycled Volume (Kg)  : %.2f kg
+            Total Activity Fees Revenue : $%.2f
+            Completed/Pending Pickups   : %d
+            Total Subscribed Citizens   : %d
+            ==================================================
+            """, facilities.size(), users.size(), totalVolumeKg, totalFees, totalPickups, subscribedNotificationEmails.size());
+    }
+
+    public String getAdminDashboard() {
+        Map<String, Long> neighborhoodCounts = facilities.values().stream()
+                .collect(Collectors.groupingBy(f -> f.getAddress().getZipCode(), Collectors.counting()));
+
+        return String.format("""
+            ==================================================
+                     ADMIN MONITOR & SERVICE DASHBOARD
+            ==================================================
+            System Status            : ONLINE (Encrypted AES/SHA-256)
+            Monitored Facilities     : %d
+            Total Public Bins        : %d
+            Special Waste Sites      : %d
+            Active Safe Events       : %d
+            Blocked Spamming IPs     : %s
+            Logged User Error Logs   : %d
+            Pending Citizen Feedback : %d
+            Neighborhood Facilities Distribution (by Zip):
+            %s
+            ==================================================
+            """, facilities.size(), publicBins.size(), specialWasteSites.size(), safeDisposalEvents.size(),
+                blockedIpAddresses.toString(), errorLogs.size(),
+                feedbackMessages.stream().filter(f -> !f.isResolved()).count(),
+                neighborhoodCounts.toString());
+    }
+
+    // ================= DEVELOPER API =================
+    public DeveloperApiResponse<List<RecyclingFacility>> apiGetFacilitiesByZip(String zipCode, String apiKey) {
+        if (apiKey == null || apiKey.isBlank()) {
+            return new DeveloperApiResponse<>(false, "Invalid API key.", Collections.emptyList());
+        }
+        try {
+            List<RecyclingFacility> result = findFacilitiesByZip(zipCode, "API-CLIENT");
+            return new DeveloperApiResponse<>(true, "Facilities retrieved successfully.", result);
+        } catch (Exception e) {
+            return new DeveloperApiResponse<>(false, e.getMessage(), Collections.emptyList());
+        }
+    }
+}
+// File: Main.java
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class Main {
+    public static void main(String[] args) {
+        RecycleHubPlatform platform = new RecycleHubPlatform();
+
+        // 1. Set up operating hours
+        OperatingHours normalHours = new OperatingHours();
+        normalHours.setHours(DayOfWeek.MONDAY, LocalTime.of(8, 0), LocalTime.of(17, 0));
+        normalHours.setHours(DayOfWeek.TUESDAY, LocalTime.of(8, 0), LocalTime.of(17, 0));
+        normalHours.setHours(DayOfWeek.WEDNESDAY, LocalTime.of(8, 0), LocalTime.of(17, 0));
+        normalHours.setHours(DayOfWeek.THURSDAY, LocalTime.of(8, 0), LocalTime.of(17, 0));
+        normalHours.setHours(DayOfWeek.FRIDAY, LocalTime.of(8, 0), LocalTime.of(18, 0));
+        normalHours.setHours(DayOfWeek.SATURDAY, LocalTime.of(9, 0), LocalTime.of(14, 0));
+
+        // 2. Onboard facilities (Admin / Superuser story)
+        RecyclingFacility f1 = new RecyclingFacility("FAC-101", "GreenEarth Recycling Hub",
+                new Address("123 Solar Way", "Austin", "TX", "78701", 30.2672, -97.7431),
+                normalHours, true);
+        f1.addAcceptedWasteType(WasteType.PLASTIC);
+        f1.addAcceptedWasteType(WasteType.GLASS);
+        f1.addAcceptedWasteType(WasteType.CARDBOARD);
+        f1.addAcceptedWasteType(WasteType.PAPER);
+
+        RecyclingFacility f2 = new RecyclingFacility("FAC-102", "Downtown Eco Center",
+                new Address("456 Congress Ave", "Austin", "TX", "78701", 30.2685, -97.7420),
+                normalHours, false);
+        f2.addAcceptedWasteType(WasteType.METAL);
+        f2.addAcceptedWasteType(WasteType.ELECTRONICS);
+        f2.addAcceptedWasteType(WasteType.BATTERIES);
+
+        platform.addFacility(f1);
+        platform.addFacility(f2);
+
+        // 3. Add Public Bins & Special Drop-off Sites & Safe Events
+        platform.addPublicBin(new PublicBin("BIN-01",
+                new Address("200 6th Street", "Austin", "TX", "78701", 30.2679, -97.7405),
+                Set.of(WasteType.PLASTIC, WasteType.PAPER), "Dual Public Recycling Bin"));
+
+        platform.addSpecialWasteSite(new SpecialWasteSite("SPEC-01", "Hazardous Chemical Depository",
+                new Address("800 Riverside Dr", "Austin", "TX", "78701", 30.2541, -97.7411),
+                Set.of(WasteType.HAZARDOUS, WasteType.BATTERIES), "Protective gear required upon drop-off."));
+
+        platform.addSafeDisposalEvent(new SafeDisposalEvent("EVT-01", "Annual E-Waste Collection Drive",
+                new Address("Civic Plaza, 301 W 2nd St", "Austin", "TX", "78701", 30.2655, -97.7471),
+                LocalDate.now().plusDays(5), LocalTime.of(9, 0), LocalTime.of(15, 0),
+                "Free safe drop-off for computers, screens, and lithium batteries."));
+
+        System.out.println(">>> 1. ANONYMOUS BROWSING & GOOGLE MAPS LINK");
+        List<RecyclingFacility> facilities78701 = platform.findFacilitiesByZip("78701", "192.168.1.50");
+        for (RecyclingFacility f : facilities78701) {
+            System.out.println("Facility: " + f.getName() + " | Hours: " + f.getOperatingHours().getHours(DayOfWeek.FRIDAY));
+            System.out.println("  Map Link: " + f.getAddress().getGoogleMapsUrl());
+        }
+
+        System.out.println("\n>>> 2. ZIP CODE VALIDATION FEEDBACK");
+        try {
+            platform.findFacilitiesByZip("INVALID_ZIP", "192.168.1.50");
+        } catch (IllegalArgumentException ex) {
+            System.out.println("Validation Feedback: " + ex.getMessage());
+        }
+
+        System.out.println("\n>>> 3. ASCII MAP DISPLAY FOR PUBLIC SITES");
+        System.out.println(platform.renderMapDisplay("78701"));
+
+        System.out.println(">>> 4. USER REGISTRATION & ENCRYPTED PERSONAL DATA");
+        UserProfile alice = platform.registerUser("alice_citizen", "alice@example.com", "Password#123",
+                "SSN:999-88-7777, Phone:512-555-0199", "192.168.1.100", UserRole.CITIZEN);
+        System.out.println("Registered User: " + alice.getUsername());
+        System.out.println("Stored Encrypted Personal Info: " + alice.getEncryptedPersonalInfo());
+        System.out.println("Decrypted Info (Secure View): " + platform.decryptUserPersonalInfo(alice));
+
+        // Add favorite & upload user schedule
+        alice.addFavoriteFacility(f1.getId());
+        UserSchedule schedule = new UserSchedule();
+        schedule.setAvailability(DayOfWeek.FRIDAY, LocalTime.of(10, 0), LocalTime.of(12, 0));
+        schedule.setAvailability(DayOfWeek.SATURDAY, LocalTime.of(11, 0), LocalTime.of(13, 0));
+        alice.setWeekSchedule(schedule);
+
+        List<RecyclingFacility> recommendations = platform.recommendFacilitiesForUserSchedule(alice);
+        System.out.println("Schedule Matches for Alice: " + recommendations.stream().map(RecyclingFacility::getName).toList());
+
+        System.out.println("\n>>> 5. FLEXIBLE PICKUP & TRANSACTIONS & REWARDS");
+        PickupRequest pickup = platform.requestPickup("alice_citizen",
+                new Address("555 King St", "Austin", "TX", "78701", 30.2700, -97.7400),
+                LocalDateTime.now().plusDays(2), true, Set.of(WasteType.PLASTIC, WasteType.GLASS));
+        System.out.println("Pickup Created: " + pickup);
+
+        TransactionRecord tx = platform.recordWasteDropOff("alice_citizen", f1.getId(), WasteType.PLASTIC, 12.5, 4.50);
+        System.out.println("Drop-off Recorded: " + tx);
+        System.out.println("Alice's Reward Balance: " + alice.getRewardPoints() + " points");
+
+        System.out.println("\n>>> 6. FACILITY REPRESENTATIVE / SUPERUSER Q&A & STATS");
+        FacilityInquiry inquiry = platform.submitFacilityInquiry(alice.getId(), f1.getId(), "Do you accept crushed glass?");
+        System.out.println("Submitted Inquiry: " + inquiry);
+        platform.answerFacilityInquiry(inquiry.getId(), "Yes, we accept sorted crushed glass containers.");
+        System.out.println("Replied Inquiry: " + inquiry);
+        System.out.println("Facility " + f1.getName() + " Page Visits: " + f1.getVisitCount());
+
+        System.out.println("\n>>> 7. HR DEPARTMENT EMPLOYEE ACCESS");
+        Employee emp = new Employee("EMP-900", "David Worker", "Logistics & Collection", "Route Driver", 52000.0, "david@recyclehub.com", "512-555-1212");
+        platform.addEmployee(emp);
+
+        UserProfile hrOfficer = platform.registerUser("sarah_hr", "hr@recyclehub.com", "HrPass#2024",
+                "HR Master Access", "10.0.0.1", UserRole.HR_OFFICER);
+        List<Employee> empList = platform.getHrEmployeeList(hrOfficer);
+        System.out.println("HR Staff Roster: " + empList);
+
+        System.out.println("\n>>> 8. ROUTE PLANNING FOR WORKERS");
+        NeighborhoodRoutePlan route = platform.planRouteForEmployee("ROUTE-A1", "Downtown Austin",
+                Arrays.asList(f1.getAddress(), f2.getAddress()));
+        System.out.println("Route Steps for " + route.getNeighborhoodName() + " (Total " + route.getTotalDistanceKm() + " km):");
+        route.getSteps().forEach(System.out::println);
+
+        System.out.println("\n>>> 9. COMPANY ACCOUNTANT BILLING STATEMENT");
+        UserProfile accountant = platform.registerUser("bob_accountant", "bob@recyclehub.com", "BobPass#2024",
+                "Finance Dept", "10.0.0.2", UserRole.ACCOUNTANT);
+        BillingStatement stmt = platform.generateBillingStatement(accountant);
+        System.out.println(stmt);
+
+        System.out.println("\n>>> 10. ADMIN DASHBOARD & SECURITY IP BLOCK");
+        platform.blockIp("198.51.100.99");
+        System.out.println(platform.getAdminDashboard());
+
+        System.out.println(">>> 11. DEVELOPER API RESPONSE (FOR iOS APP)");
+        DeveloperApiResponse<List<RecyclingFacility>> apiResponse = platform.apiGetFacilitiesByZip("78701", "iOS-SECRET-API-KEY-XYZ");
+        System.out.println("API Success: " + apiResponse.isSuccess() + ", Message: " + apiResponse.getMessage());
+        System.out.println("API Facilities Returned Count: " + apiResponse.getData().size());
+
+        System.out.println("\n>>> 12. USER DOCUMENTATION GUIDE");
+        System.out.println(UserDocumentation.getGuide());
+    }
+}

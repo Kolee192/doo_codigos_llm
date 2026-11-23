@@ -1,0 +1,941 @@
+// File: DatasetStatus.java
+public enum DatasetStatus {
+    DRAFT,
+    IN_REVIEW,
+    PUBLISHED,
+    DISPOSED
+}
+
+// File: AccessRole.java
+public enum AccessRole {
+    READ,
+    DEPOSIT
+}
+
+// File: DepositChannel.java
+public enum DepositChannel {
+    WEB,
+    PURE,
+    VIRTUAL_RESEARCH_ENVIRONMENT,
+    API,
+    FACILITY,
+    ADMIN_IMPORT
+}
+
+// File: StoredObject.java
+public final class StoredObject {
+    private final String key;
+    private final long size;
+
+    public StoredObject(String key, long size) {
+        this.key = key;
+        this.size = size;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public long getSize() {
+        return size;
+    }
+}
+
+// File: StorageBackend.java
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+public interface StorageBackend {
+    StoredObject store(InputStream input, String originalFileName) throws IOException;
+
+    InputStream open(String storageKey) throws IOException;
+
+    void copyTo(String storageKey, OutputStream output) throws IOException;
+
+    void delete(String storageKey) throws IOException;
+}
+
+// File: LocalFileStorage.java
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.UUID;
+
+public final class LocalFileStorage implements StorageBackend {
+    private final Path root;
+
+    public LocalFileStorage(Path root) throws IOException {
+        this.root = root.toAbsolutePath().normalize();
+        Files.createDirectories(this.root);
+    }
+
+    @Override
+    public StoredObject store(InputStream input, String originalFileName) throws IOException {
+        String key = UUID.randomUUID().toString();
+        Path target = resolve(key);
+        long size;
+        try (OutputStream output = Files.newOutputStream(target)) {
+            size = input.transferTo(output);
+        }
+        return new StoredObject(key, size);
+    }
+
+    @Override
+    public InputStream open(String storageKey) throws IOException {
+        return Files.newInputStream(resolve(storageKey));
+    }
+
+    @Override
+    public void copyTo(String storageKey, OutputStream output) throws IOException {
+        try (InputStream input = open(storageKey)) {
+            input.transferTo(output);
+        }
+    }
+
+    @Override
+    public void delete(String storageKey) throws IOException {
+        Files.deleteIfExists(resolve(storageKey));
+    }
+
+    private Path resolve(String key) {
+        Path path = root.resolve(key).normalize();
+        if (!path.startsWith(root)) {
+            throw new IllegalArgumentException("Invalid storage key");
+        }
+        return path;
+    }
+}
+
+// File: IdentifierProvider.java
+public interface IdentifierProvider {
+    String mint(String datasetId);
+}
+
+// File: SimpleIdentifierProvider.java
+import java.util.concurrent.atomic.AtomicLong;
+
+public final class SimpleIdentifierProvider implements IdentifierProvider {
+    private final AtomicLong sequence = new AtomicLong();
+    private final String prefix;
+
+    public SimpleIdentifierProvider(String prefix) {
+        this.prefix = prefix;
+    }
+
+    @Override
+    public String mint(String datasetId) {
+        return prefix + "/" + sequence.incrementAndGet();
+    }
+}
+
+// File: IdentityProvider.java
+public interface IdentityProvider {
+    boolean isKnownUser(String userId);
+}
+
+// File: PermissiveIdentityProvider.java
+public final class PermissiveIdentityProvider implements IdentityProvider {
+    @Override
+    public boolean isKnownUser(String userId) {
+        return userId != null && !userId.isBlank();
+    }
+}
+
+// File: DatasetFile.java
+public final class DatasetFile {
+    private final String fileName;
+    private final String mediaType;
+    private final String storageKey;
+    private final long size;
+    private final String sha256;
+
+    public DatasetFile(String fileName, String mediaType, String storageKey, long size, String sha256) {
+        this.fileName = fileName;
+        this.mediaType = mediaType;
+        this.storageKey = storageKey;
+        this.size = size;
+        this.sha256 = sha256;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public String getMediaType() {
+        return mediaType;
+    }
+
+    public String getStorageKey() {
+        return storageKey;
+    }
+
+    public long getSize() {
+        return size;
+    }
+
+    public String getSha256() {
+        return sha256;
+    }
+}
+
+// File: DatasetVersion.java
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+
+public final class DatasetVersion {
+    private final int number;
+    private final Instant createdAt;
+    private final List<DatasetFile> files;
+    private final Map<String, String> metadata;
+
+    public DatasetVersion(int number, Instant createdAt, List<DatasetFile> files, Map<String, String> metadata) {
+        this.number = number;
+        this.createdAt = createdAt;
+        this.files = List.copyOf(files);
+        this.metadata = Map.copyOf(metadata);
+    }
+
+    public int getNumber() {
+        return number;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public List<DatasetFile> getFiles() {
+        return files;
+    }
+
+    public Map<String, String> getMetadata() {
+        return metadata;
+    }
+}
+
+// File: DownloadEvent.java
+import java.time.Instant;
+
+public final class DownloadEvent {
+    private final String datasetId;
+    private final Instant occurredAt;
+    private final String country;
+    private final String sector;
+
+    public DownloadEvent(String datasetId, Instant occurredAt, String country, String sector) {
+        this.datasetId = datasetId;
+        this.occurredAt = occurredAt;
+        this.country = country;
+        this.sector = sector;
+    }
+
+    public String getDatasetId() {
+        return datasetId;
+    }
+
+    public Instant getOccurredAt() {
+        return occurredAt;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public String getSector() {
+        return sector;
+    }
+}
+
+// File: Dataset.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public final class Dataset {
+    private final String id;
+    private final String ownerId;
+    private final DepositChannel depositChannel;
+    private final Instant createdAt;
+    private String title;
+    private String description;
+    private String license;
+    private String doi;
+    private String externalUrl;
+    private String persistentUrl;
+    private String language = "en";
+    private Instant embargoUntil;
+    private Instant disposalDate;
+    private DatasetStatus status = DatasetStatus.DRAFT;
+    private final Map<String, String> metadata = new LinkedHashMap<>();
+    private final List<DatasetFile> files = new ArrayList<>();
+    private final List<DatasetVersion> versions = new ArrayList<>();
+    private final Map<String, AccessRole> collaborators = new LinkedHashMap<>();
+    private final Set<String> publicationLinks = new LinkedHashSet<>();
+
+    public Dataset(String id, String ownerId, String title, String description, DepositChannel depositChannel) {
+        this.id = id;
+        this.ownerId = ownerId;
+        this.title = title;
+        this.description = description;
+        this.depositChannel = depositChannel;
+        this.createdAt = Instant.now();
+        this.persistentUrl = "https://data.example.edu/datasets/" + id;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public DepositChannel getDepositChannel() {
+        return depositChannel;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getLicense() {
+        return license;
+    }
+
+    public String getDoi() {
+        return doi;
+    }
+
+    public String getExternalUrl() {
+        return externalUrl;
+    }
+
+    public String getPersistentUrl() {
+        return persistentUrl;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public Instant getEmbargoUntil() {
+        return embargoUntil;
+    }
+
+    public Instant getDisposalDate() {
+        return disposalDate;
+    }
+
+    public DatasetStatus getStatus() {
+        return status;
+    }
+
+    public Map<String, String> getMetadata() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(metadata));
+    }
+
+    public List<DatasetFile> getFiles() {
+        return List.copyOf(files);
+    }
+
+    public List<DatasetVersion> getVersions() {
+        return List.copyOf(versions);
+    }
+
+    public Map<String, AccessRole> getCollaborators() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(collaborators));
+    }
+
+    public Set<String> getPublicationLinks() {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(publicationLinks));
+    }
+
+    void setTitle(String title) {
+        this.title = title;
+    }
+
+    void setDescription(String description) {
+        this.description = description;
+    }
+
+    void setLicense(String license) {
+        this.license = license;
+    }
+
+    void setDoi(String doi) {
+        this.doi = doi;
+    }
+
+    void setExternalUrl(String externalUrl) {
+        this.externalUrl = externalUrl;
+    }
+
+    void setLanguage(String language) {
+        this.language = language;
+    }
+
+    void setEmbargoUntil(Instant embargoUntil) {
+        this.embargoUntil = embargoUntil;
+    }
+
+    void setDisposalDate(Instant disposalDate) {
+        this.disposalDate = disposalDate;
+    }
+
+    void setStatus(DatasetStatus status) {
+        this.status = status;
+    }
+
+    void setMetadata(String key, String value) {
+        if (value == null || value.isBlank()) {
+            metadata.remove(key);
+        } else {
+            metadata.put(key, value);
+        }
+    }
+
+    void addFile(DatasetFile file) {
+        files.add(file);
+    }
+
+    void addCollaborator(String userId, AccessRole role) {
+        collaborators.put(userId, role);
+    }
+
+    void removeCollaborator(String userId) {
+        collaborators.remove(userId);
+    }
+
+    void addPublicationLink(String publicationId) {
+        publicationLinks.add(publicationId);
+    }
+
+    void addVersion() {
+        versions.add(new DatasetVersion(versions.size() + 1, Instant.now(), files, metadata));
+    }
+}
+
+// File: ArchiveService.java
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+public final class ArchiveService {
+    private final Map<String, Dataset> datasets = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, String>> rememberedMetadata = new ConcurrentHashMap<>();
+    private final Map<String, java.util.Set<String>> delegates = new ConcurrentHashMap<>();
+    private final Map<String, LongAdder> citationCounts = new ConcurrentHashMap<>();
+    private final List<DownloadEvent> downloads = new CopyOnWriteArrayList<>();
+    private final List<String> requiredMetadata = new CopyOnWriteArrayList<>(
+            List.of("creator", "description", "license"));
+    private final StorageBackend storage;
+    private final IdentifierProvider identifiers;
+    private final IdentityProvider identities;
+
+    public ArchiveService(StorageBackend storage, IdentifierProvider identifiers, IdentityProvider identities) {
+        this.storage = storage;
+        this.identifiers = identifiers;
+        this.identities = identities;
+    }
+
+    public Dataset createDataset(
+            String depositorId,
+            String ownerId,
+            String title,
+            String description,
+            DepositChannel channel) {
+        requireKnownUser(depositorId);
+        requireKnownUser(ownerId);
+        if (!depositorId.equals(ownerId)
+                && !delegates.getOrDefault(ownerId, java.util.Set.of()).contains(depositorId)) {
+            throw new SecurityException("Depositor is not authorized to act for this owner");
+        }
+
+        Dataset dataset = new Dataset(UUID.randomUUID().toString(), ownerId, title, description, channel);
+        Map<String, String> remembered = rememberedMetadata.get(ownerId);
+        if (remembered != null) {
+            remembered.forEach(dataset::setMetadata);
+        }
+        datasets.put(dataset.getId(), dataset);
+        return dataset;
+    }
+
+    public void authorizeDelegate(String ownerId, String delegateId) {
+        requireKnownUser(ownerId);
+        requireKnownUser(delegateId);
+        delegates.computeIfAbsent(ownerId, ignored -> ConcurrentHashMap.newKeySet()).add(delegateId);
+    }
+
+    public void updateMetadata(String actorId, String datasetId, String key, String value) {
+        Dataset dataset = getDataset(datasetId);
+        requireCanDeposit(actorId, dataset);
+        synchronized (dataset) {
+            if ("title".equalsIgnoreCase(key)) {
+                dataset.setTitle(value);
+            } else if ("description".equalsIgnoreCase(key)) {
+                dataset.setDescription(value);
+            } else if ("license".equalsIgnoreCase(key)) {
+                dataset.setLicense(value);
+                dataset.setMetadata("license", value);
+            } else if ("language".equalsIgnoreCase(key)) {
+                dataset.setLanguage(value);
+            } else {
+                dataset.setMetadata(key, value);
+            }
+        }
+    }
+
+    public void rememberMetadata(String userId, Map<String, String> metadata) {
+        requireKnownUser(userId);
+        rememberedMetadata.computeIfAbsent(userId, ignored -> new ConcurrentHashMap<>()).putAll(metadata);
+    }
+
+    public Map<String, String> getRememberedMetadata(String userId) {
+        return Map.copyOf(rememberedMetadata.getOrDefault(userId, Map.of()));
+    }
+
+    public DatasetFile uploadFile(
+            String actorId,
+            String datasetId,
+            String fileName,
+            String mediaType,
+            InputStream input) throws IOException {
+        Dataset dataset = getDataset(datasetId);
+        requireCanDeposit(actorId, dataset);
+
+        MessageDigest digest = sha256();
+        StoredObject stored;
+        try (DigestInputStream digestInput = new DigestInputStream(input, digest)) {
+            stored = storage.store(digestInput, fileName);
+        }
+        DatasetFile file = new DatasetFile(
+                fileName,
+                mediaType == null ? "application/octet-stream" : mediaType,
+                stored.getKey(),
+                stored.getSize(),
+                HexFormat.of().formatHex(digest.digest()));
+
+        synchronized (dataset) {
+            dataset.addFile(file);
+        }
+        return file;
+    }
+
+    public void addExternalRepositoryLink(String actorId, String datasetId, String url) {
+        Dataset dataset = getDataset(datasetId);
+        requireCanDeposit(actorId, dataset);
+        if (url == null || !(url.startsWith("https://") || url.startsWith("http://"))) {
+            throw new IllegalArgumentException("A valid HTTP(S) repository URL is required");
+        }
+        dataset.setExternalUrl(url);
+    }
+
+    public void setEmbargo(String actorId, String datasetId, Instant until) {
+        Dataset dataset = getDataset(datasetId);
+        requireCanDeposit(actorId, dataset);
+        if (until != null && !until.isAfter(Instant.now())) {
+            throw new IllegalArgumentException("Embargo date must be in the future");
+        }
+        dataset.setEmbargoUntil(until);
+    }
+
+    public void grantCollaboratorAccess(String actorId, String datasetId, String collaboratorId, AccessRole role) {
+        Dataset dataset = getDataset(datasetId);
+        requireOwner(actorId, dataset);
+        requireKnownUser(collaboratorId);
+        dataset.addCollaborator(collaboratorId, role);
+    }
+
+    public void revokeCollaboratorAccess(String actorId, String datasetId, String collaboratorId) {
+        Dataset dataset = getDataset(datasetId);
+        requireOwner(actorId, dataset);
+        dataset.removeCollaborator(collaboratorId);
+    }
+
+    public void linkPublication(String actorId, String datasetId, String publicationId) {
+        Dataset dataset = getDataset(datasetId);
+        requireCanDeposit(actorId, dataset);
+        dataset.addPublicationLink(publicationId);
+    }
+
+    public void linkProjectDmp(String actorId, String datasetId, String projectId, String dmpUrl) {
+        Dataset dataset = getDataset(datasetId);
+        requireCanDeposit(actorId, dataset);
+        dataset.setMetadata("projectId", projectId);
+        dataset.setMetadata("dmpUrl", dmpUrl);
+    }
+
+    public void submitForReview(String actorId, String datasetId) {
+        Dataset dataset = getDataset(datasetId);
+        requireCanDeposit(actorId, dataset);
+        synchronized (dataset) {
+            if (dataset.getStatus() == DatasetStatus.DISPOSED) {
+                throw new IllegalStateException("Disposed datasets cannot be submitted");
+            }
+            List<String> missing = new ArrayList<>();
+            for (String required : requiredMetadata) {
+                String value = "license".equals(required)
+                        ? dataset.getLicense()
+                        : dataset.getMetadata().get(required);
+                if (value == null || value.isBlank()) {
+                    missing.add(required);
+                }
+            }
+            if ((dataset.getTitle() == null || dataset.getTitle().isBlank()) && !missing.contains("title")) {
+                missing.add("title");
+            }
+            if (!missing.isEmpty()) {
+                throw new IllegalStateException("Missing required metadata: " + String.join(", ", missing));
+            }
+            dataset.setStatus(DatasetStatus.IN_REVIEW);
+        }
+    }
+
+    public void setRequiredMetadata(List<String> fields) {
+        requiredMetadata.clear();
+        requiredMetadata.addAll(fields);
+    }
+
+    public void approvePublication(String administratorId, String datasetId) {
+        requireKnownUser(administratorId);
+        Dataset dataset = getDataset(datasetId);
+        synchronized (dataset) {
+            if (dataset.getStatus() != DatasetStatus.IN_REVIEW) {
+                throw new IllegalStateException("Dataset is not awaiting review");
+            }
+            if (dataset.getDoi() == null) {
+                dataset.setDoi(identifiers.mint(dataset.getId()));
+            }
+            dataset.addVersion();
+            dataset.setStatus(DatasetStatus.PUBLISHED);
+            rememberMetadata(dataset.getOwnerId(), dataset.getMetadata());
+        }
+    }
+
+    public void rejectPublication(String administratorId, String datasetId, String reason) {
+        requireKnownUser(administratorId);
+        Dataset dataset = getDataset(datasetId);
+        if (dataset.getStatus() != DatasetStatus.IN_REVIEW) {
+            throw new IllegalStateException("Dataset is not awaiting review");
+        }
+        dataset.setMetadata("reviewRejectionReason", reason);
+        dataset.setStatus(DatasetStatus.DRAFT);
+    }
+
+    public void scheduleDisposal(String actorId, String datasetId, Instant disposalDate) {
+        Dataset dataset = getDataset(datasetId);
+        requireCanDeposit(actorId, dataset);
+        if (disposalDate == null || !disposalDate.isAfter(Instant.now())) {
+            throw new IllegalArgumentException("Disposal date must be in the future");
+        }
+        dataset.setDisposalDate(disposalDate);
+    }
+
+    public void approveScheduledDisposal(String administratorId, String datasetId) {
+        requireKnownUser(administratorId);
+        Dataset dataset = getDataset(datasetId);
+        if (dataset.getDisposalDate() == null) {
+            throw new IllegalStateException("No disposal is scheduled");
+        }
+        dataset.setMetadata("disposalApproved", "true");
+    }
+
+    public void disposeDueDatasets(Instant now) throws IOException {
+        for (Dataset dataset : datasets.values()) {
+            if (dataset.getDisposalDate() != null
+                    && !dataset.getDisposalDate().isAfter(now)
+                    && "true".equals(dataset.getMetadata().get("disposalApproved"))) {
+                synchronized (dataset) {
+                    for (DatasetFile file : dataset.getFiles()) {
+                        storage.delete(file.getStorageKey());
+                    }
+                    dataset.setStatus(DatasetStatus.DISPOSED);
+                }
+            }
+        }
+    }
+
+    public Dataset registerExternalDataset(
+            String actorId,
+            String title,
+            String description,
+            String repositoryUrl,
+            Map<String, String> metadata) {
+        Dataset dataset = createDataset(actorId, actorId, title, description, DepositChannel.ADMIN_IMPORT);
+        metadata.forEach(dataset::setMetadata);
+        dataset.setExternalUrl(repositoryUrl);
+        dataset.setLicense(metadata.get("license"));
+        dataset.setStatus(DatasetStatus.PUBLISHED);
+        dataset.setDoi(identifiers.mint(dataset.getId()));
+        dataset.addVersion();
+        return dataset;
+    }
+
+    public Dataset getDataset(String datasetId) {
+        Dataset dataset = datasets.get(datasetId);
+        if (dataset == null) {
+            throw new IllegalArgumentException("Unknown dataset: " + datasetId);
+        }
+        return dataset;
+    }
+
+    public List<Dataset> queryArchive(String administratorId) {
+        requireKnownUser(administratorId);
+        return datasets.values().stream()
+                .sorted(Comparator.comparing(Dataset::getCreatedAt))
+                .toList();
+    }
+
+    public List<Dataset> search(String query, String language) {
+        String term = query == null ? "" : query.toLowerCase();
+        return datasets.values().stream()
+                .filter(this::isPubliclyAvailable)
+                .filter(dataset -> language == null || language.isBlank()
+                        || language.equalsIgnoreCase(dataset.getLanguage()))
+                .filter(dataset -> searchableText(dataset).contains(term))
+                .sorted(Comparator.comparing(Dataset::getTitle, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
+    public List<Dataset> searchViaPrimo(String query, String language) {
+        return search(query, language);
+    }
+
+    public List<DatasetFile> examineFiles(String userId, String datasetId) {
+        Dataset dataset = getDataset(datasetId);
+        requireCanRead(userId, dataset);
+        return dataset.getFiles();
+    }
+
+    public InputStream downloadFile(
+            String userId,
+            String datasetId,
+            String storageKey,
+            String country,
+            String sector) throws IOException {
+        Dataset dataset = getDataset(datasetId);
+        requireCanRead(userId, dataset);
+        DatasetFile file = dataset.getFiles().stream()
+                .filter(candidate -> candidate.getStorageKey().equals(storageKey))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("File is not part of this dataset"));
+        downloads.add(new DownloadEvent(datasetId, Instant.now(), country, sector));
+        return storage.open(file.getStorageKey());
+    }
+
+    public boolean verifyIntegrity(String datasetId) throws IOException {
+        Dataset dataset = getDataset(datasetId);
+        for (DatasetFile file : dataset.getFiles()) {
+            MessageDigest digest = sha256();
+            try (InputStream input = storage.open(file.getStorageKey())) {
+                byte[] buffer = new byte[8192];
+                int read;
+                while ((read = input.read(buffer)) != -1) {
+                    digest.update(buffer, 0, read);
+                }
+            }
+            if (!HexFormat.of().formatHex(digest.digest()).equalsIgnoreCase(file.getSha256())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void recordCitation(String datasetId) {
+        getDataset(datasetId);
+        citationCounts.computeIfAbsent(datasetId, ignored -> new LongAdder()).increment();
+    }
+
+    public long getCitationCount(String datasetId) {
+        LongAdder count = citationCounts.get(datasetId);
+        return count == null ? 0 : count.sum();
+    }
+
+    public long getDownloadCount(String datasetId) {
+        return downloads.stream().filter(event -> event.getDatasetId().equals(datasetId)).count();
+    }
+
+    public Map<String, Long> downloadStatisticsByCountry(String datasetId) {
+        return downloads.stream()
+                .filter(event -> event.getDatasetId().equals(datasetId))
+                .collect(java.util.stream.Collectors.groupingBy(
+                        event -> normalize(event.getCountry()),
+                        java.util.stream.Collectors.counting()));
+    }
+
+    public Map<String, Long> downloadStatisticsBySector(String datasetId) {
+        return downloads.stream()
+                .filter(event -> event.getDatasetId().equals(datasetId))
+                .collect(java.util.stream.Collectors.groupingBy(
+                        event -> normalize(event.getSector()),
+                        java.util.stream.Collectors.counting()));
+    }
+
+    public String getExampleCitation(String datasetId) {
+        Dataset dataset = getDataset(datasetId);
+        String year = String.valueOf(dataset.getCreatedAt().atZone(java.time.ZoneOffset.UTC).getYear());
+        return dataset.getOwnerId() + " (" + year + "). " + dataset.getTitle() + ". "
+                + (dataset.getDoi() == null ? dataset.getPersistentUrl() : "https://doi.org/" + dataset.getDoi());
+    }
+
+    public void exportAll(OutputStream output) throws IOException {
+        try (ZipOutputStream zip = new ZipOutputStream(output)) {
+            for (Dataset dataset : datasets.values()) {
+                String manifestName = "datasets/" + dataset.getId() + "/metadata.tsv";
+                zip.putNextEntry(new ZipEntry(manifestName));
+                String metadata = "id\ttitle\towner\tstatus\tdoi\texternalUrl\n"
+                        + tsv(dataset.getId()) + "\t" + tsv(dataset.getTitle()) + "\t"
+                        + tsv(dataset.getOwnerId()) + "\t" + dataset.getStatus() + "\t"
+                        + tsv(dataset.getDoi()) + "\t" + tsv(dataset.getExternalUrl()) + "\n";
+                zip.write(metadata.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                zip.closeEntry();
+
+                for (DatasetFile file : dataset.getFiles()) {
+                    zip.putNextEntry(new ZipEntry(
+                            "datasets/" + dataset.getId() + "/files/" + safeFileName(file.getFileName())));
+                    storage.copyTo(file.getStorageKey(), zip);
+                    zip.closeEntry();
+                }
+            }
+            zip.finish();
+        }
+    }
+
+    private boolean isPubliclyAvailable(Dataset dataset) {
+        return dataset.getStatus() == DatasetStatus.PUBLISHED
+                && (dataset.getEmbargoUntil() == null || !dataset.getEmbargoUntil().isAfter(Instant.now()));
+    }
+
+    private String searchableText(Dataset dataset) {
+        return (String.valueOf(dataset.getTitle()) + " " + String.valueOf(dataset.getDescription()) + " "
+                + dataset.getMetadata().toString()).toLowerCase();
+    }
+
+    private void requireCanRead(String userId, Dataset dataset) {
+        requireKnownUser(userId);
+        if (isPubliclyAvailable(dataset)
+                || dataset.getOwnerId().equals(userId)
+                || dataset.getCollaborators().containsKey(userId)) {
+            return;
+        }
+        throw new SecurityException("User is not authorized to access this dataset");
+    }
+
+    private void requireCanDeposit(String userId, Dataset dataset) {
+        requireKnownUser(userId);
+        if (dataset.getOwnerId().equals(userId)
+                || dataset.getCollaborators().get(userId) == AccessRole.DEPOSIT) {
+            return;
+        }
+        throw new SecurityException("User is not authorized to modify this dataset");
+    }
+
+    private void requireOwner(String userId, Dataset dataset) {
+        requireKnownUser(userId);
+        if (!dataset.getOwnerId().equals(userId)) {
+            throw new SecurityException("Only the dataset owner may perform this action");
+        }
+    }
+
+    private void requireKnownUser(String userId) {
+        if (!identities.isKnownUser(userId)) {
+            throw new SecurityException("Unknown user");
+        }
+    }
+
+    private static MessageDigest sha256() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? "unknown" : value;
+    }
+
+    private static String tsv(String value) {
+        return value == null ? "" : value.replace('\t', ' ').replace('\n', ' ');
+    }
+
+    private static String safeFileName(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return "unnamed";
+        }
+        return fileName.replace("/", "_").replace("\\", "_").replace("..", "_");
+    }
+}
+
+// File: Main.java
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.Map;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        ArchiveService archive = new ArchiveService(
+                new LocalFileStorage(Path.of("archive-storage")),
+                new SimpleIdentifierProvider("10.12345"),
+                new PermissiveIdentityProvider());
+
+        Dataset dataset = archive.createDataset(
+                "researcher1",
+                "researcher1",
+                "Example climate dataset",
+                "Measurements collected during a field study.",
+                DepositChannel.WEB);
+
+        archive.updateMetadata("researcher1", dataset.getId(), "creator", "A. Researcher");
+        archive.updateMetadata("researcher1", dataset.getId(), "license", "CC BY 4.0");
+        archive.updateMetadata("researcher1", dataset.getId(), "subject", "climate science");
+        archive.uploadFile(
+                "researcher1",
+                dataset.getId(),
+                "measurements.csv",
+                "text/csv",
+                new ByteArrayInputStream("date,temperature\n2025-01-01,12.4\n"
+                        .getBytes(StandardCharsets.UTF_8)));
+
+        archive.submitForReview("researcher1", dataset.getId());
+        archive.approvePublication("archive-admin", dataset.getId());
+
+        System.out.println("DOI: " + dataset.getDoi());
+        System.out.println("Citation: " + archive.getExampleCitation(dataset.getId()));
+        System.out.println("Search results: " + archive.search("climate", "en").size());
+        System.out.println("Integrity verified: " + archive.verifyIntegrity(dataset.getId()));
+    }
+}

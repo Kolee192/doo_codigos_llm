@@ -1,0 +1,1628 @@
+// File: UserRole.java
+public enum UserRole {
+    MEMBER,
+    PUBLISHER,
+    MODERATOR,
+    ADMINISTRATOR
+}
+
+// File: NetworkType.java
+public enum NetworkType {
+    INTERNET,
+    VUB_NETWORK
+}
+
+// File: DocumentFormat.java
+public enum DocumentFormat {
+    PDF,
+    PS,
+    ODT;
+
+    public static DocumentFormat fromFileName(String filename) {
+        if (filename == null || !filename.contains(".")) {
+            throw new IllegalArgumentException("Invalid file name: " + filename);
+        }
+        String ext = filename.substring(filename.lastIndexOf('.') + 1).toUpperCase();
+        try {
+            return DocumentFormat.valueOf(ext);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Unsupported document format: " + ext + ". Supported formats: PDF, PS, ODT");
+        }
+    }
+}
+
+// File: Author.java
+import java.util.Objects;
+
+public class Author {
+    private String id;
+    private String name;
+    private String affiliation;
+    private String email;
+
+    public Author(String id, String name, String affiliation, String email) {
+        this.id = id;
+        this.name = name;
+        this.affiliation = affiliation;
+        this.email = email;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAffiliation() {
+        return affiliation;
+    }
+
+    public void setAffiliation(String affiliation) {
+        this.affiliation = affiliation;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Author author)) return false;
+        return Objects.equals(name, author.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + affiliation + ", " + email + ")";
+    }
+}
+
+// File: Reference.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Reference {
+    private String id;
+    private String title;
+    private List<Author> authors;
+    private int publicationYear;
+    private String abstractText;
+    private List<String> citedReferences;
+    private String targetPublicationId; // null if not linked to publication in system
+
+    public Reference(String id, String title, List<Author> authors, int publicationYear,
+                     String abstractText, List<String> citedReferences, String targetPublicationId) {
+        this.id = id;
+        this.title = title;
+        this.authors = authors != null ? new ArrayList<>(authors) : new ArrayList<>();
+        this.publicationYear = publicationYear;
+        this.abstractText = abstractText;
+        this.citedReferences = citedReferences != null ? new ArrayList<>(citedReferences) : new ArrayList<>();
+        this.targetPublicationId = targetPublicationId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public List<Author> getAuthors() {
+        return authors;
+    }
+
+    public int getPublicationYear() {
+        return publicationYear;
+    }
+
+    public String getAbstractText() {
+        return abstractText;
+    }
+
+    public List<String> getCitedReferences() {
+        return citedReferences;
+    }
+
+    public String getTargetPublicationId() {
+        return targetPublicationId;
+    }
+
+    public void setTargetPublicationId(String targetPublicationId) {
+        this.targetPublicationId = targetPublicationId;
+    }
+
+    @Override
+    public String toString() {
+        String mainAuthor = authors.isEmpty() ? "Unknown" : authors.get(0).getName();
+        return "[" + id + "] " + title + " (" + publicationYear + ") by " + mainAuthor;
+    }
+}
+
+// File: Publication.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Publication {
+    private String id;
+    private String title;
+    private List<Author> authors;
+    private int publicationYear;
+    private String abstractText;
+    private String fullText;
+    private DocumentFormat format;
+    private byte[] documentData;
+    private List<Reference> references;
+    private String ownerUsername;
+
+    public Publication(String id, String title, List<Author> authors, int publicationYear,
+                       String abstractText, String fullText, DocumentFormat format,
+                       byte[] documentData, List<Reference> references, String ownerUsername) {
+        this.id = id;
+        this.title = title;
+        this.authors = authors != null ? new ArrayList<>(authors) : new ArrayList<>();
+        this.publicationYear = publicationYear;
+        this.abstractText = abstractText;
+        this.fullText = fullText;
+        this.format = format;
+        this.documentData = documentData != null ? documentData.clone() : new byte[0];
+        this.references = references != null ? new ArrayList<>(references) : new ArrayList<>();
+        this.ownerUsername = ownerUsername;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public List<Author> getAuthors() {
+        return authors;
+    }
+
+    public void setAuthors(List<Author> authors) {
+        this.authors = authors != null ? new ArrayList<>(authors) : new ArrayList<>();
+    }
+
+    public Author getMainAuthor() {
+        return authors.isEmpty() ? null : authors.get(0);
+    }
+
+    public int getPublicationYear() {
+        return publicationYear;
+    }
+
+    public void setPublicationYear(int publicationYear) {
+        this.publicationYear = publicationYear;
+    }
+
+    public String getAbstractText() {
+        return abstractText;
+    }
+
+    public void setAbstractText(String abstractText) {
+        this.abstractText = abstractText;
+    }
+
+    public String getFullText() {
+        return fullText;
+    }
+
+    public void setFullText(String fullText) {
+        this.fullText = fullText;
+    }
+
+    public DocumentFormat getFormat() {
+        return format;
+    }
+
+    public void setFormat(DocumentFormat format) {
+        this.format = format;
+    }
+
+    public byte[] getDocumentData() {
+        return documentData != null ? documentData.clone() : new byte[0];
+    }
+
+    public void setDocumentData(byte[] documentData) {
+        this.documentData = documentData != null ? documentData.clone() : new byte[0];
+    }
+
+    public List<Reference> getReferences() {
+        return references;
+    }
+
+    public void setReferences(List<Reference> references) {
+        this.references = references != null ? new ArrayList<>(references) : new ArrayList<>();
+    }
+
+    public String getOwnerUsername() {
+        return ownerUsername;
+    }
+
+    public void setOwnerUsername(String ownerUsername) {
+        this.ownerUsername = ownerUsername;
+    }
+
+    @Override
+    public String toString() {
+        String authorName = getMainAuthor() != null ? getMainAuthor().getName() : "Unknown";
+        return "[" + id + "] \"" + title + "\" by " + authorName + " (" + publicationYear + ")";
+    }
+}
+
+// File: User.java
+public class User {
+    private String username;
+    private String password;
+    private String name;
+    private String email;
+    private String university;
+    private String department;
+    private UserRole role;
+    private String groupName;
+
+    public User(String username, String password, String name, String email,
+                String university, String department, UserRole role, String groupName) {
+        this.username = username;
+        this.password = password;
+        this.name = name;
+        this.email = email;
+        this.university = university;
+        this.department = department;
+        this.role = role;
+        this.groupName = groupName;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getUniversity() {
+        return university;
+    }
+
+    public void setUniversity(String university) {
+        this.university = university;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+
+    public String getGroupName() {
+        return groupName;
+    }
+
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "username='" + username + '\'' +
+                ", name='" + name + '\'' +
+                ", email='" + email + '\'' +
+                ", role=" + role +
+                ", group='" + groupName + '\'' +
+                '}';
+    }
+}
+
+// File: Group.java
+import java.util.HashSet;
+import java.util.Set;
+
+public class Group {
+    private String name;
+    private String description;
+    private Set<String> memberUsernames;
+
+    public Group(String name, String description) {
+        this.name = name;
+        this.description = description;
+        this.memberUsernames = new HashSet<>();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Set<String> getMemberUsernames() {
+        return memberUsernames;
+    }
+
+    public void addMember(String username) {
+        this.memberUsernames.add(username);
+    }
+
+    public void removeMember(String username) {
+        this.memberUsernames.remove(username);
+    }
+
+    public boolean isEmpty() {
+        return memberUsernames.isEmpty();
+    }
+
+    @Override
+    public String toString() {
+        return "Group{" +
+                "name='" + name + '\'' +
+                ", description='" + description + '\'' +
+                ", membersCount=" + memberUsernames.size() +
+                '}';
+    }
+}
+
+// File: EmailNotification.java
+import java.time.LocalDateTime;
+
+public class EmailNotification {
+    private String recipient;
+    private String subject;
+    private String message;
+    private LocalDateTime timestamp;
+
+    public EmailNotification(String recipient, String subject, String message) {
+        this.recipient = recipient;
+        this.subject = subject;
+        this.message = message;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getRecipient() {
+        return recipient;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "[Email to: " + recipient + " | Subject: " + subject + "] " + message;
+    }
+}
+
+// File: EmailService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class EmailService {
+    private final List<EmailNotification> sentEmails = new ArrayList<>();
+
+    public void sendEmail(String recipient, String subject, String body) {
+        EmailNotification notification = new EmailNotification(recipient, subject, body);
+        sentEmails.add(notification);
+    }
+
+    public List<EmailNotification> getSentEmails() {
+        return Collections.unmodifiableList(sentEmails);
+    }
+
+    public EmailNotification getLastSentEmail() {
+        if (sentEmails.isEmpty()) {
+            return null;
+        }
+        return sentEmails.get(sentEmails.size() - 1);
+    }
+}
+
+// File: SystemConfiguration.java
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+public class SystemConfiguration {
+    private final Map<String, String> settings = new HashMap<>();
+
+    public SystemConfiguration() {
+        settings.put("site.name", "VUB Academic Publication Portal");
+        settings.put("admin.email", "admin@vub.be");
+        settings.put("max.upload.size.mb", "50");
+        settings.put("pagination.default.size", "5");
+        settings.put("maintenance.mode", "false");
+    }
+
+    public String get(String key) {
+        return settings.get(key);
+    }
+
+    public void set(String key, String value) {
+        settings.put(key, value);
+    }
+
+    public Map<String, String> getAllSettings() {
+        return Collections.unmodifiableMap(settings);
+    }
+}
+
+// File: PublicationSearchCriteria.java
+public class PublicationSearchCriteria {
+    private String keyword;
+    private String authorName;
+    private Integer startYear;
+    private Integer endYear;
+    private String referenceKeyword;
+
+    public PublicationSearchCriteria() {}
+
+    public String getKeyword() {
+        return keyword;
+    }
+
+    public void setKeyword(String keyword) {
+        this.keyword = keyword;
+    }
+
+    public String getAuthorName() {
+        return authorName;
+    }
+
+    public void setAuthorName(String authorName) {
+        this.authorName = authorName;
+    }
+
+    public Integer getStartYear() {
+        return startYear;
+    }
+
+    public void setStartYear(Integer startYear) {
+        this.startYear = startYear;
+    }
+
+    public Integer getEndYear() {
+        return endYear;
+    }
+
+    public void setEndYear(Integer endYear) {
+        this.endYear = endYear;
+    }
+
+    public String getReferenceKeyword() {
+        return referenceKeyword;
+    }
+
+    public void setReferenceKeyword(String referenceKeyword) {
+        this.referenceKeyword = referenceKeyword;
+    }
+}
+
+// File: UserSearchCriteria.java
+public class UserSearchCriteria {
+    private String username;
+    private String name;
+    private String email;
+    private UserRole role;
+
+    public UserSearchCriteria() {}
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+}
+
+// File: PagedResult.java
+import java.util.Collections;
+import java.util.List;
+
+public class PagedResult<T> {
+    private final List<T> allItems;
+    private final int pageSize;
+    private int currentPage;
+
+    public PagedResult(List<T> allItems, int pageSize) {
+        this.allItems = allItems != null ? allItems : Collections.emptyList();
+        this.pageSize = Math.max(pageSize, 1);
+        this.currentPage = 0;
+    }
+
+    public int getTotalPages() {
+        if (allItems.isEmpty()) {
+            return 1;
+        }
+        return (int) Math.ceil((double) allItems.size() / pageSize);
+    }
+
+    public int getCurrentPage() {
+        return currentPage;
+    }
+
+    public boolean hasNextPage() {
+        return currentPage < getTotalPages() - 1;
+    }
+
+    public boolean hasPreviousPage() {
+        return currentPage > 0;
+    }
+
+    public void nextPage() {
+        if (hasNextPage()) {
+            currentPage++;
+        }
+    }
+
+    public void previousPage() {
+        if (hasPreviousPage()) {
+            currentPage--;
+        }
+    }
+
+    public List<T> getCurrentPageItems() {
+        if (allItems.isEmpty()) {
+            return Collections.emptyList();
+        }
+        int fromIndex = currentPage * pageSize;
+        int toIndex = Math.min(fromIndex + pageSize, allItems.size());
+        if (fromIndex >= allItems.size()) {
+            return Collections.emptyList();
+        }
+        return allItems.subList(fromIndex, toIndex);
+    }
+
+    public List<T> getAllItems() {
+        return Collections.unmodifiableList(allItems);
+    }
+
+    public int getTotalResults() {
+        return allItems.size();
+    }
+}
+
+// File: UserRepository.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class UserRepository {
+    private final Map<String, User> users = new ConcurrentHashMap<>();
+
+    public boolean exists(String username) {
+        return username != null && users.containsKey(username.toLowerCase());
+    }
+
+    public void save(User user) {
+        if (user != null && user.getUsername() != null) {
+            users.put(user.getUsername().toLowerCase(), user);
+        }
+    }
+
+    public Optional<User> findByUsername(String username) {
+        if (username == null) return Optional.empty();
+        return Optional.ofNullable(users.get(username.toLowerCase()));
+    }
+
+    public boolean delete(String username) {
+        if (username == null) return false;
+        return users.remove(username.toLowerCase()) != null;
+    }
+
+    public List<User> findAll() {
+        return new ArrayList<>(users.values());
+    }
+}
+
+// File: GroupRepository.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class GroupRepository {
+    private final Map<String, Group> groups = new ConcurrentHashMap<>();
+
+    public boolean exists(String groupName) {
+        return groupName != null && groups.containsKey(groupName.toLowerCase());
+    }
+
+    public void save(Group group) {
+        if (group != null && group.getName() != null) {
+            groups.put(group.getName().toLowerCase(), group);
+        }
+    }
+
+    public Optional<Group> findByName(String groupName) {
+        if (groupName == null) return Optional.empty();
+        return Optional.ofNullable(groups.get(groupName.toLowerCase()));
+    }
+
+    public boolean delete(String groupName) {
+        if (groupName == null) return false;
+        return groups.remove(groupName.toLowerCase()) != null;
+    }
+
+    public List<Group> findAll() {
+        return new ArrayList<>(groups.values());
+    }
+}
+
+// File: PublicationRepository.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class PublicationRepository {
+    private final Map<String, Publication> publications = new ConcurrentHashMap<>();
+
+    public void save(Publication publication) {
+        if (publication != null && publication.getId() != null) {
+            publications.put(publication.getId(), publication);
+        }
+    }
+
+    public Optional<Publication> findById(String id) {
+        if (id == null) return Optional.empty();
+        return Optional.ofNullable(publications.get(id));
+    }
+
+    public List<Publication> findAll() {
+        return new ArrayList<>(publications.values());
+    }
+
+    public boolean delete(String id) {
+        if (id == null) return false;
+        return publications.remove(id) != null;
+    }
+}
+
+// File: DocumentParser.java
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+public class DocumentParser {
+
+    public static class ParsedDocument {
+        private String title;
+        private List<Author> authors;
+        private int publicationYear;
+        private String abstractText;
+        private String fullText;
+        private List<Reference> references;
+
+        public ParsedDocument(String title, List<Author> authors, int publicationYear,
+                              String abstractText, String fullText, List<Reference> references) {
+            this.title = title;
+            this.authors = authors;
+            this.publicationYear = publicationYear;
+            this.abstractText = abstractText;
+            this.fullText = fullText;
+            this.references = references;
+        }
+
+        public String getTitle() { return title; }
+        public List<Author> getAuthors() { return authors; }
+        public int getPublicationYear() { return publicationYear; }
+        public String getAbstractText() { return abstractText; }
+        public String getFullText() { return fullText; }
+        public List<Reference> getReferences() { return references; }
+    }
+
+    public ParsedDocument parse(String filename, byte[] documentData, String defaultAuthor) {
+        DocumentFormat format = DocumentFormat.fromFileName(filename);
+        String rawContent = new String(documentData, StandardCharsets.UTF_8);
+
+        String title = filename.substring(0, filename.lastIndexOf('.')).replace("_", " ");
+        String abstractText = "Abstract extracted from " + format + " file.";
+        String fullText = rawContent;
+        int year = 2023;
+
+        // Try to parse structured content if available
+        for (String line : rawContent.split("\n")) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("Title:")) {
+                title = trimmed.substring("Title:".length()).trim();
+            } else if (trimmed.startsWith("Abstract:")) {
+                abstractText = trimmed.substring("Abstract:".length()).trim();
+            } else if (trimmed.startsWith("Year:")) {
+                try {
+                    year = Integer.parseInt(trimmed.substring("Year:".length()).trim());
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        List<Author> authors = new ArrayList<>();
+        authors.add(new Author("auth-" + defaultAuthor, defaultAuthor, "VUB Department of Computer Science", defaultAuthor + "@vub.be"));
+
+        List<Reference> references = new ArrayList<>();
+        return new ParsedDocument(title, authors, year, abstractText, fullText, references);
+    }
+}
+
+// File: ReferenceExporter.java
+import java.util.List;
+
+public class ReferenceExporter {
+
+    public static String exportToBib(List<Reference> references) {
+        StringBuilder sb = new StringBuilder();
+        for (Reference ref : references) {
+            String authorStr = ref.getAuthors().isEmpty() ? "Unknown" : ref.getAuthors().get(0).getName();
+            String citeKey = (authorStr.replaceAll("\\s+", "") + ref.getPublicationYear()).toLowerCase();
+            sb.append("@article{").append(citeKey).append(",\n")
+              .append("  title = {").append(ref.getTitle()).append("},\n")
+              .append("  author = {").append(authorStr).append("},\n")
+              .append("  year = {").append(ref.getPublicationYear()).append("},\n")
+              .append("  abstract = {").append(ref.getAbstractText()).append("}\n")
+              .append("}\n\n");
+        }
+        return sb.toString();
+    }
+
+    public static String exportToRis(List<Reference> references) {
+        StringBuilder sb = new StringBuilder();
+        for (Reference ref : references) {
+            sb.append("TY  - JOUR\n");
+            sb.append("TI  - ").append(ref.getTitle()).append("\n");
+            for (Author a : ref.getAuthors()) {
+                sb.append("AU  - ").append(a.getName()).append("\n");
+            }
+            sb.append("PY  - ").append(ref.getPublicationYear()).append("\n");
+            sb.append("AB  - ").append(ref.getAbstractText()).append("\n");
+            sb.append("ER  - \n\n");
+        }
+        return sb.toString();
+    }
+}
+
+// File: UserSession.java
+public class UserSession {
+    private final NetworkType networkType;
+    private User currentUser;
+
+    public UserSession(NetworkType networkType) {
+        this.networkType = networkType;
+        this.currentUser = null;
+    }
+
+    public NetworkType getNetworkType() {
+        return networkType;
+    }
+
+    public User getCurrentUser() {
+        return currentUser;
+    }
+
+    public void setCurrentUser(User currentUser) {
+        this.currentUser = currentUser;
+    }
+
+    public boolean isLoggedIn() {
+        return currentUser != null;
+    }
+
+    public boolean isVubNetwork() {
+        return networkType == NetworkType.VUB_NETWORK;
+    }
+
+    public boolean canSearchWithoutLogin() {
+        return isVubNetwork();
+    }
+
+    public void logout() {
+        this.currentUser = null;
+    }
+}
+
+// File: UserService.java
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+public class UserService {
+    private final UserRepository userRepository;
+    private final EmailService emailService;
+    private final SystemConfiguration systemConfiguration;
+
+    public UserService(UserRepository userRepository, EmailService emailService, SystemConfiguration systemConfiguration) {
+        this.userRepository = userRepository;
+        this.emailService = emailService;
+        this.systemConfiguration = systemConfiguration;
+    }
+
+    public User login(String username, String password, UserSession session) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid username or password."));
+        if (!user.getPassword().equals(password)) {
+            throw new IllegalArgumentException("Invalid username or password.");
+        }
+        session.setCurrentUser(user);
+        return user;
+    }
+
+    public void register(String username, String password, String name, String email,
+                         String university, String department) {
+        if (userRepository.exists(username)) {
+            throw new IllegalArgumentException("Username already exists in the system: " + username);
+        }
+        User newUser = new User(username, password, name, email, university, department, UserRole.MEMBER, "Default");
+        userRepository.save(newUser);
+
+        String adminEmail = systemConfiguration.get("admin.email");
+        emailService.sendEmail(
+                adminEmail,
+                "New User Registration Request",
+                "New user registered: " + username + " (" + name + ", " + email + ", " + university + ", " + department + ")"
+        );
+    }
+
+    public void requestPasswordChange(String username, String newPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("No valid username found on the system: " + username));
+        user.setPassword(newPassword);
+        userRepository.save(user);
+
+        String adminEmail = systemConfiguration.get("admin.email");
+        emailService.sendEmail(
+                adminEmail,
+                "Password Change Notification",
+                "User " + username + " has requested and updated their password."
+        );
+    }
+
+    public void editPersonalData(UserSession session, String newPassword, String university, String department, String name) {
+        if (!session.isLoggedIn()) {
+            throw new IllegalStateException("Must be logged in to edit personal data.");
+        }
+        User current = session.getCurrentUser();
+        if (newPassword != null && !newPassword.isBlank()) {
+            current.setPassword(newPassword);
+        }
+        if (university != null && !university.isBlank()) {
+            current.setUniversity(university);
+        }
+        if (department != null && !department.isBlank()) {
+            current.setDepartment(department);
+        }
+        if (name != null && !name.isBlank()) {
+            current.setName(name);
+        }
+        userRepository.save(current);
+    }
+
+    public List<User> searchUsers(UserSession session, UserSearchCriteria criteria) {
+        ensureModeratorOrAdmin(session);
+        return userRepository.findAll().stream()
+                .filter(u -> criteria.getUsername() == null || u.getUsername().toLowerCase().contains(criteria.getUsername().toLowerCase()))
+                .filter(u -> criteria.getName() == null || u.getName().toLowerCase().contains(criteria.getName().toLowerCase()))
+                .filter(u -> criteria.getEmail() == null || u.getEmail().toLowerCase().contains(criteria.getEmail().toLowerCase()))
+                .filter(u -> criteria.getRole() == null || u.getRole() == criteria.getRole())
+                .collect(Collectors.toList());
+    }
+
+    public void editUserSettings(UserSession session, String username, UserRole newRole, String newGroupName, String newEmail) {
+        ensureModeratorOrAdmin(session);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+        if (newRole != null) {
+            user.setRole(newRole);
+        }
+        if (newGroupName != null) {
+            user.setGroupName(newGroupName);
+        }
+        if (newEmail != null) {
+            user.setEmail(newEmail);
+        }
+        userRepository.save(user);
+    }
+
+    public User createUser(UserSession session, String username, String password, String email, String groupName, UserRole role) {
+        ensureAdmin(session);
+        if (userRepository.exists(username)) {
+            throw new IllegalArgumentException("Username already exists: " + username);
+        }
+        User newUser = new User(username, password, username, email, "VUB", "Computer Science", role, groupName);
+        userRepository.save(newUser);
+        return newUser;
+    }
+
+    public void deleteUser(UserSession session, String username) {
+        ensureAdmin(session);
+        if (!userRepository.exists(username)) {
+            throw new IllegalArgumentException("Username does not exist: " + username);
+        }
+        userRepository.delete(username);
+    }
+
+    private void ensureModeratorOrAdmin(UserSession session) {
+        if (!session.isLoggedIn() ||
+                (session.getCurrentUser().getRole() != UserRole.MODERATOR &&
+                 session.getCurrentUser().getRole() != UserRole.ADMINISTRATOR)) {
+            throw new SecurityException("Access denied: Moderator or Administrator privileges required.");
+        }
+    }
+
+    private void ensureAdmin(UserSession session) {
+        if (!session.isLoggedIn() || session.getCurrentUser().getRole() != UserRole.ADMINISTRATOR) {
+            throw new SecurityException("Access denied: Administrator privileges required.");
+        }
+    }
+}
+
+// File: GroupService.java
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class GroupService {
+    private final GroupRepository groupRepository;
+
+    public GroupService(GroupRepository groupRepository) {
+        this.groupRepository = groupRepository;
+    }
+
+    public Group createGroup(UserSession session, String groupName, String description, List<String> initialUsers) {
+        ensureAdmin(session);
+        if (groupRepository.exists(groupName)) {
+            throw new IllegalArgumentException("Group name already exists: " + groupName);
+        }
+        Group group = new Group(groupName, description);
+        if (initialUsers != null) {
+            initialUsers.forEach(group::addMember);
+        }
+        groupRepository.save(group);
+        return group;
+    }
+
+    public List<Group> searchGroups(UserSession session, String nameFilter) {
+        ensureAdmin(session);
+        return groupRepository.findAll().stream()
+                .filter(g -> nameFilter == null || g.getName().toLowerCase().contains(nameFilter.toLowerCase()))
+                .collect(Collectors.toList());
+    }
+
+    public void deleteGroup(UserSession session, String groupName) {
+        ensureAdmin(session);
+        Group group = groupRepository.findByName(groupName)
+                .orElseThrow(() -> new IllegalArgumentException("Group does not exist: " + groupName));
+        if (!group.isEmpty()) {
+            throw new IllegalStateException("Group is not empty: cannot delete group with existing members.");
+        }
+        groupRepository.delete(groupName);
+    }
+
+    public void editGroupSettings(UserSession session, String groupName, String newDescription) {
+        ensureAdmin(session);
+        Group group = groupRepository.findByName(groupName)
+                .orElseThrow(() -> new IllegalArgumentException("Group does not exist: " + groupName));
+        if (newDescription != null) {
+            group.setDescription(newDescription);
+        }
+        groupRepository.save(group);
+    }
+
+    private void ensureAdmin(UserSession session) {
+        if (!session.isLoggedIn() || session.getCurrentUser().getRole() != UserRole.ADMINISTRATOR) {
+            throw new SecurityException("Access denied: Administrator privileges required.");
+        }
+    }
+}
+
+// File: ConfigurationService.java
+import java.util.Map;
+
+public class ConfigurationService {
+    private final SystemConfiguration configuration;
+
+    public ConfigurationService(SystemConfiguration configuration) {
+        this.configuration = configuration;
+    }
+
+    public Map<String, String> getConfiguration(UserSession session) {
+        ensureAdmin(session);
+        return configuration.getAllSettings();
+    }
+
+    public void updateConfiguration(UserSession session, String key, String value) {
+        ensureAdmin(session);
+        configuration.set(key, value);
+    }
+
+    private void ensureAdmin(UserSession session) {
+        if (!session.isLoggedIn() || session.getCurrentUser().getRole() != UserRole.ADMINISTRATOR) {
+            throw new SecurityException("Access denied: Administrator privileges required.");
+        }
+    }
+}
+
+// File: PublicationService.java
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+public class PublicationService {
+    private final PublicationRepository publicationRepository;
+    private final DocumentParser documentParser;
+
+    public PublicationService(PublicationRepository publicationRepository, DocumentParser documentParser) {
+        this.publicationRepository = publicationRepository;
+        this.documentParser = documentParser;
+    }
+
+    public PagedResult<Publication> search(UserSession session, PublicationSearchCriteria criteria, int pageSize) {
+        ensureCanAccessPublications(session);
+        List<Publication> filtered = publicationRepository.findAll().stream()
+                .filter(p -> criteria.getKeyword() == null ||
+                        p.getTitle().toLowerCase().contains(criteria.getKeyword().toLowerCase()) ||
+                        p.getAbstractText().toLowerCase().contains(criteria.getKeyword().toLowerCase()))
+                .filter(p -> criteria.getAuthorName() == null ||
+                        p.getAuthors().stream().anyMatch(a -> a.getName().toLowerCase().contains(criteria.getAuthorName().toLowerCase())))
+                .filter(p -> criteria.getStartYear() == null || p.getPublicationYear() >= criteria.getStartYear())
+                .filter(p -> criteria.getEndYear() == null || p.getPublicationYear() <= criteria.getEndYear())
+                .filter(p -> criteria.getReferenceKeyword() == null ||
+                        p.getReferences().stream().anyMatch(r -> r.getTitle().toLowerCase().contains(criteria.getReferenceKeyword().toLowerCase())))
+                .collect(Collectors.toList());
+
+        return new PagedResult<>(filtered, pageSize);
+    }
+
+    public Publication viewDetails(UserSession session, String publicationId) {
+        ensureCanAccessPublications(session);
+        return publicationRepository.findById(publicationId)
+                .orElseThrow(() -> new IllegalArgumentException("Publication not found: " + publicationId));
+    }
+
+    public List<Publication> viewMultipleDetails(UserSession session, List<String> publicationIds) {
+        ensureCanAccessPublications(session);
+        List<Publication> result = new ArrayList<>();
+        for (String id : publicationIds) {
+            publicationRepository.findById(id).ifPresent(result::add);
+        }
+        return result;
+    }
+
+    public byte[] downloadPublication(UserSession session, String publicationId) {
+        ensureCanAccessPublications(session);
+        Publication p = viewDetails(session, publicationId);
+        return p.getDocumentData();
+    }
+
+    public List<byte[]> downloadMultiplePublications(UserSession session, List<String> publicationIds) {
+        ensureCanAccessPublications(session);
+        List<byte[]> files = new ArrayList<>();
+        for (String id : publicationIds) {
+            files.add(downloadPublication(session, id));
+        }
+        return files;
+    }
+
+    public List<Reference> consultReferences(UserSession session, String publicationId) {
+        ensureCanAccessPublications(session);
+        Publication p = viewDetails(session, publicationId);
+        return p.getReferences();
+    }
+
+    public List<Reference> consultReferencesForMultiple(UserSession session, List<String> publicationIds) {
+        ensureCanAccessPublications(session);
+        Set<Reference> references = new LinkedHashSet<>();
+        for (String id : publicationIds) {
+            references.addAll(consultReferences(session, id));
+        }
+        return new ArrayList<>(references);
+    }
+
+    public String displayFullText(UserSession session, String publicationId) {
+        ensureCanAccessPublications(session);
+        Publication p = viewDetails(session, publicationId);
+        if (p.getFullText() == null || p.getFullText().isBlank()) {
+            throw new IllegalStateException("Full text is not available in the system for this publication.");
+        }
+        return p.getFullText();
+    }
+
+    public Publication viewReferenceDetails(UserSession session, String publicationId, String referenceId) {
+        ensureCanAccessPublications(session);
+        Publication parent = viewDetails(session, publicationId);
+        Reference reference = parent.getReferences().stream()
+                .filter(r -> r.getId().equals(referenceId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Reference not found in publication: " + referenceId));
+
+        if (reference.getTargetPublicationId() == null) {
+            throw new IllegalArgumentException("Reference is not registered as a publication in the system.");
+        }
+
+        return publicationRepository.findById(reference.getTargetPublicationId())
+                .orElseThrow(() -> new IllegalArgumentException("Referenced publication does not exist in the system."));
+    }
+
+    public String exportReferencesBib(UserSession session, String publicationId) {
+        List<Reference> references = consultReferences(session, publicationId);
+        return ReferenceExporter.exportToBib(references);
+    }
+
+    public String exportReferencesRis(UserSession session, String publicationId) {
+        List<Reference> references = consultReferences(session, publicationId);
+        return ReferenceExporter.exportToRis(references);
+    }
+
+    public Author viewAuthor(UserSession session, String publicationId, String authorName) {
+        ensureCanAccessPublications(session);
+        Publication p = viewDetails(session, publicationId);
+        return p.getAuthors().stream()
+                .filter(a -> a.getName().equalsIgnoreCase(authorName))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Author not found on publication: " + authorName));
+    }
+
+    public List<Publication> getMyPublications(UserSession session) {
+        ensurePublisherOrAbove(session);
+        String username = session.getCurrentUser().getUsername();
+        return publicationRepository.findAll().stream()
+                .filter(p -> p.getOwnerUsername() != null && p.getOwnerUsername().equalsIgnoreCase(username))
+                .collect(Collectors.toList());
+    }
+
+    public void editOwnPublication(UserSession session, String publicationId, String newTitle, String newAbstract, int newYear) {
+        ensurePublisherOrAbove(session);
+        Publication publication = publicationRepository.findById(publicationId)
+                .orElseThrow(() -> new IllegalArgumentException("Publication not found: " + publicationId));
+
+        boolean isOwner = session.getCurrentUser().getUsername().equalsIgnoreCase(publication.getOwnerUsername());
+        boolean isAdminOrMod = session.getCurrentUser().getRole() == UserRole.ADMINISTRATOR ||
+                              session.getCurrentUser().getRole() == UserRole.MODERATOR;
+
+        if (!isOwner && !isAdminOrMod) {
+            throw new SecurityException("Only owner or Moderator/Admin can edit this publication.");
+        }
+
+        if (newTitle != null) publication.setTitle(newTitle);
+        if (newAbstract != null) publication.setAbstractText(newAbstract);
+        if (newYear > 0) publication.setPublicationYear(newYear);
+
+        publicationRepository.save(publication);
+    }
+
+    public DocumentParser.ParsedDocument inspectDocumentForUpload(UserSession session, String filename, byte[] documentData) {
+        ensurePublisherOrAbove(session);
+        return documentParser.parse(filename, documentData, session.getCurrentUser().getUsername());
+    }
+
+    public Publication confirmUploadPublication(UserSession session, String filename, byte[] documentData,
+                                                String title, String abstractText, int publicationYear) {
+        ensurePublisherOrAbove(session);
+        DocumentFormat format = DocumentFormat.fromFileName(filename);
+        DocumentParser.ParsedDocument parsed = documentParser.parse(filename, documentData, session.getCurrentUser().getUsername());
+
+        String pubId = "PUB-" + UUID.randomUUID().toString().substring(0, 8);
+        String finalTitle = (title != null && !title.isBlank()) ? title : parsed.getTitle();
+        String finalAbstract = (abstractText != null && !abstractText.isBlank()) ? abstractText : parsed.getAbstractText();
+        int finalYear = (publicationYear > 0) ? publicationYear : parsed.getPublicationYear();
+
+        Publication publication = new Publication(
+                pubId,
+                finalTitle,
+                parsed.getAuthors(),
+                finalYear,
+                finalAbstract,
+                parsed.getFullText(),
+                format,
+                documentData,
+                parsed.getReferences(),
+                session.getCurrentUser().getUsername()
+        );
+
+        publicationRepository.save(publication);
+        return publication;
+    }
+
+    private void ensureCanAccessPublications(UserSession session) {
+        if (!session.isLoggedIn() && !session.canSearchWithoutLogin()) {
+            throw new SecurityException("Access denied: Please login from the internet or connect via VUB-network.");
+        }
+    }
+
+    private void ensurePublisherOrAbove(UserSession session) {
+        if (!session.isLoggedIn() ||
+                (session.getCurrentUser().getRole() != UserRole.PUBLISHER &&
+                 session.getCurrentUser().getRole() != UserRole.MODERATOR &&
+                 session.getCurrentUser().getRole() != UserRole.ADMINISTRATOR)) {
+            throw new SecurityException("Access denied: Publisher, Moderator or Administrator role required.");
+        }
+    }
+}
+
+// File: PublicationSystem.java
+public class PublicationSystem {
+    private final UserRepository userRepository;
+    private final GroupRepository groupRepository;
+    private final PublicationRepository publicationRepository;
+    private final EmailService emailService;
+    private final SystemConfiguration configuration;
+    private final DocumentParser documentParser;
+
+    private final UserService userService;
+    private final GroupService groupService;
+    private final ConfigurationService configurationService;
+    private final PublicationService publicationService;
+
+    public PublicationSystem() {
+        this.userRepository = new UserRepository();
+        this.groupRepository = new GroupRepository();
+        this.publicationRepository = new PublicationRepository();
+        this.emailService = new EmailService();
+        this.configuration = new SystemConfiguration();
+        this.documentParser = new DocumentParser();
+
+        this.userService = new UserService(userRepository, emailService, configuration);
+        this.groupService = new GroupService(groupRepository);
+        this.configurationService = new ConfigurationService(configuration);
+        this.publicationService = new PublicationService(publicationRepository, documentParser);
+
+        seedInitialData();
+    }
+
+    private void seedInitialData() {
+        User admin = new User("admin", "admin123", "System Administrator", "admin@vub.be", "VUB", "IT", UserRole.ADMINISTRATOR, "Administrators");
+        User mod = new User("moderator", "mod123", "System Moderator", "mod@vub.be", "VUB", "CS", UserRole.MODERATOR, "Moderators");
+        User pub = new User("publisher1", "pub123", "Dr. Jane Doe", "jdoe@vub.be", "VUB", "Software Languages Lab", UserRole.PUBLISHER, "Researchers");
+        User member = new User("member1", "mem123", "John Student", "jstudent@vub.be", "VUB", "Computer Science", UserRole.MEMBER, "Students");
+
+        userRepository.save(admin);
+        userRepository.save(mod);
+        userRepository.save(pub);
+        userRepository.save(member);
+
+        Group adminGroup = new Group("Administrators", "System administrators group");
+        adminGroup.addMember("admin");
+        Group modGroup = new Group("Moderators", "Moderation staff");
+        modGroup.addMember("moderator");
+        Group researchGroup = new Group("Researchers", "Publishing researchers");
+        researchGroup.addMember("publisher1");
+        Group emptyGroup = new Group("ArchivedGroup", "An empty group for testing deletion");
+
+        groupRepository.save(adminGroup);
+        groupRepository.save(modGroup);
+        groupRepository.save(researchGroup);
+        groupRepository.save(emptyGroup);
+    }
+
+    public UserSession createSession(NetworkType networkType) {
+        return new UserSession(networkType);
+    }
+
+    public UserService getUserService() {
+        return userService;
+    }
+
+    public GroupService getGroupService() {
+        return groupService;
+    }
+
+    public ConfigurationService getConfigurationService() {
+        return configurationService;
+    }
+
+    public PublicationService getPublicationService() {
+        return publicationService;
+    }
+
+    public PublicationRepository getPublicationRepository() {
+        return publicationRepository;
+    }
+
+    public EmailService getEmailService() {
+        return emailService;
+    }
+}
+
+// File: Main.java
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=== Starting VUB Academic Publication Portal Demo ===\n");
+        PublicationSystem system = new PublicationSystem();
+
+        // 3.2.1 Log in from Internet
+        System.out.println("-- 3.2.1 & 3.2.4: Internet access and login/logout --");
+        UserSession internetSession = system.createSession(NetworkType.INTERNET);
+        try {
+            // Cannot search before login from Internet
+            system.getPublicationService().search(internetSession, new PublicationSearchCriteria(), 5);
+        } catch (SecurityException e) {
+            System.out.println("Expected rejection: " + e.getMessage());
+        }
+        User publisherUser = system.getUserService().login("publisher1", "pub123", internetSession);
+        System.out.println("Logged in user: " + publisherUser.getName() + " [Role: " + publisherUser.getRole() + "]");
+        internetSession.logout();
+        System.out.println("Logged off successfully. Logged in: " + internetSession.isLoggedIn());
+
+        // 3.2.2 Log in via VUB-Network (can search immediately without logging in)
+        System.out.println("\n-- 3.2.2: Access via VUB-network --");
+        UserSession vubSession = system.createSession(NetworkType.VUB_NETWORK);
+        PagedResult<Publication> preSearch = system.getPublicationService().search(vubSession, new PublicationSearchCriteria(), 5);
+        System.out.println("Can search immediately without login on VUB-network. Initial publications count: " + preSearch.getTotalResults());
+
+        // 3.2.3 Register for an account
+        System.out.println("\n-- 3.2.3: Register new user --");
+        system.getUserService().register("alice_smith", "pass123", "Alice Smith", "alice@vub.be", "VUB", "Engineering");
+        System.out.println("Admin notified email count: " + system.getEmailService().getSentEmails().size());
+        System.out.println("Last email: " + system.getEmailService().getLastSentEmail());
+
+        // 3.2.5 Change password
+        System.out.println("\n-- 3.2.5: Change forgotten password --");
+        system.getUserService().requestPasswordChange("alice_smith", "newpass456");
+        System.out.println("Password change request email: " + system.getEmailService().getLastSentEmail());
+
+        // Login as publisher to upload publications (3.2.22)
+        vubSession.setCurrentUser(publisherUser);
+        System.out.println("\n-- 3.2.22: Upload publication (PDF/PS/ODT) --");
+        String sampleDocument = "Title: Actor Systems in Distributed Computing\n" +
+                               "Abstract: A comprehensive study on actor paradigms.\n" +
+                               "Year: 2022\n" +
+                               "Body: Actors provide an elegant foundation for concurrent systems.";
+        byte[] docBytes = sampleDocument.getBytes(StandardCharsets.UTF_8);
+
+        // Preview / inspection step
+        DocumentParser.ParsedDocument preview = system.getPublicationService().inspectDocumentForUpload(vubSession, "actor_systems.pdf", docBytes);
+        System.out.println("Document inspected. Retrieved title: " + preview.getTitle() + ", Year: " + preview.getPublicationYear());
+
+        // Confirm publication upload
+        Publication pub1 = system.getPublicationService().confirmUploadPublication(
+                vubSession,
+                "actor_systems.pdf",
+                docBytes,
+                preview.getTitle(),
+                preview.getAbstractText(),
+                preview.getPublicationYear()
+        );
+        System.out.println("Uploaded publication: " + pub1);
+
+        // Upload a second publication that references the first one
+        String doc2Content = "Title: Microservice Orchestration\n" +
+                             "Abstract: Patterns for resilient microservices.\n" +
+                             "Year: 2023\n" +
+                             "Body: Full text content of microservice orchestration analysis.";
+        Publication pub2 = system.getPublicationService().confirmUploadPublication(
+                vubSession,
+                "microservices.odt",
+                doc2Content.getBytes(StandardCharsets.UTF_8),
+                "Microservice Orchestration",
+                "Patterns for resilient microservices.",
+                2023
+        );
+
+        // Add a cited reference to pub2 that targets pub1
+        Reference refToPub1 = new Reference(
+                "REF-001",
+                pub1.getTitle(),
+                pub1.getAuthors(),
+                pub1.getPublicationYear(),
+                pub1.getAbstractText(),
+                List.of(),
+                pub1.getId()
+        );
+        pub2.getReferences().add(refToPub1);
+        system.getPublicationRepository().save(pub2);
+
+        // 3.2.6 & 3.2.7 Search and Paginated Results
+        System.out.println("\n-- 3.2.6 & 3.2.7: Search publications & view results pagination --");
+        PublicationSearchCriteria criteria = new PublicationSearchCriteria();
+        criteria.setKeyword("Systems");
+        PagedResult<Publication> searchResults = system.getPublicationService().search(vubSession, criteria, 1);
+        System.out.println("Search found: " + searchResults.getTotalResults() + " results, total pages: " + searchResults.getTotalPages());
+        System.out.println("Page 0 items:");
+        searchResults.getCurrentPageItems().forEach(p -> System.out.println(" - " + p.getTitle() + " by " + p.getMainAuthor().getName()));
+
+        // 3.2.8 View publication details
+        System.out.println("\n-- 3.2.8: View publication details --");
+        Publication details = system.getPublicationService().viewDetails(vubSession, pub2.getId());
+        System.out.println("Title: " + details.getTitle());
+        System.out.println("Main Author: " + details.getMainAuthor());
+        System.out.println("Abstract: " + details.getAbstractText());
+        System.out.println("References count: " + details.getReferences().size());
+
+        // 3.2.9 View detailed info for multiple publications
+        System.out.println("\n-- 3.2.9: View multiple publication details --");
+        List<Publication> multipleDetails = system.getPublicationService().viewMultipleDetails(vubSession, List.of(pub1.getId(), pub2.getId()));
+        System.out.println("Retrieved details for: " + multipleDetails.size() + " publications.");
+
+        // 3.2.10 & 3.2.11 Download single and multiple publications
+        System.out.println("\n-- 3.2.10 & 3.2.11: Download single & multiple publications --");
+        byte[] fileData = system.getPublicationService().downloadPublication(vubSession, pub1.getId());
+        System.out.println("Downloaded " + pub1.getTitle() + ", bytes: " + fileData.length);
+        List<byte[]> multipleFiles = system.getPublicationService().downloadMultiplePublications(vubSession, List.of(pub1.getId(), pub2.getId()));
+        System.out.println("Downloaded " + multipleFiles.size() + " files successfully.");
+
+        // 3.2.12 & 3.2.13 Consult references
+        System.out.println("\n-- 3.2.12 & 3.2.13: Consult references single & multiple --");
+        List<Reference> singleRefs = system.getPublicationService().consultReferences(vubSession, pub2.getId());
+        System.out.println("References for pub2: " + singleRefs);
+        List<Reference> allRefs = system.getPublicationService().consultReferencesForMultiple(vubSession, List.of(pub1.getId(), pub2.getId()));
+        System.out.println("Total combined references: " + allRefs.size());
+
+        // 3.2.14 Display full text
+        System.out.println("\n-- 3.2.14: Display full text of publication --");
+        String fullText = system.getPublicationService().displayFullText(vubSession, pub1.getId());
+        System.out.println("Full text excerpt:\n" + fullText);
+
+        // 3.2.15 View details of a cited reference
+        System.out.println("\n-- 3.2.15: View details of a cited reference --");
+        Publication targetPub = system.getPublicationService().viewReferenceDetails(vubSession, pub2.getId(), "REF-001");
+        System.out.println("Referenced publication resolved: " + targetPub.getTitle() + " (" + targetPub.getPublicationYear() + ")");
+
+        // 3.2.16 & 3.2.17 Export references in BIB and RIS format
+        System.out.println("\n-- 3.2.16 & 3.2.17: Export references (BibTeX and RIS) --");
+        String bibExport = system.getPublicationService().exportReferencesBib(vubSession, pub2.getId());
+        System.out.println("BibTeX Export:\n" + bibExport);
+        String risExport = system.getPublicationService().exportReferencesRis(vubSession, pub2.getId());
+        System.out.println("RIS Export:\n" + risExport);
+
+        // 3.2.18 View Author
+        System.out.println("-- 3.2.18: View Author information --");
+        Author author = system.getPublicationService().viewAuthor(vubSession, pub1.getId(), "publisher1");
+        System.out.println("Author details: " + author);
+
+        // 3.2.19 Editing personal data
+        System.out.println("\n-- 3.2.19: Editing personal data --");
+        system.getUserService().editPersonalData(vubSession, "newPubPassword", "VUB - Vrije Universiteit Brussel", "DINF", "Dr. Jane Doe Updated");
+        System.out.println("Updated user name: " + vubSession.getCurrentUser().getName() + ", Department: " + vubSession.getCurrentUser().getDepartment());
+
+        // 3.2.20 & 3.2.21 Access and Edit own publications
+        System.out.println("\n-- 3.2.20 & 3.2.21: Access and edit own publications --");
+        List<Publication> myPubs = system.getPublicationService().getMyPublications(vubSession);
+        System.out.println("My publications count: " + myPubs.size());
+        system.getPublicationService().editOwnPublication(vubSession, pub1.getId(), "Actor Systems in Distributed Computing (2nd Edition)", null, 2024);
+        Publication updatedPub = system.getPublicationService().viewDetails(vubSession, pub1.getId());
+        System.out.println("Updated publication title: " + updatedPub.getTitle() + " (" + updatedPub.getPublicationYear() + ")");
+
+        // Switch to Admin Session for Administration requirements (3.2.23 - 3.2.31)
+        UserSession adminSession = system.createSession(NetworkType.VUB_NETWORK);
+        system.getUserService().login("admin", "admin123", adminSession);
+
+        // 3.2.23 & 3.2.24 Search users and edit user settings
+        System.out.println("\n-- 3.2.23 & 3.2.24: Search users and edit user settings --");
+        UserSearchCriteria uCriteria = new UserSearchCriteria();
+        uCriteria.setRole(UserRole.MEMBER);
+        List<User> members = system.getUserService().searchUsers(adminSession, uCriteria);
+        System.out.println("Found " + members.size() + " member users.");
+        system.getUserService().editUserSettings(adminSession, "alice_smith", UserRole.PUBLISHER, "Researchers", "alice.smith@vub.be");
+        System.out.println("Promoted alice_smith to PUBLISHER.");
+
+        // 3.2.25 & 3.2.26 Create and Delete user
+        System.out.println("\n-- 3.2.25 & 3.2.26: Create User & Delete User --");
+        User createdUser = system.getUserService().createUser(adminSession, "temp_user", "temp123", "temp@vub.be", "Default", UserRole.MEMBER);
+        System.out.println("Created temporary user: " + createdUser.getUsername());
+        system.getUserService().deleteUser(adminSession, "temp_user");
+        System.out.println("Deleted temporary user successfully.");
+
+        // 3.2.27, 3.2.28, 3.2.29, 3.2.30 Group Management
+        System.out.println("\n-- 3.2.27 - 3.2.30: Group management (Create, Search, Edit, Delete) --");
+        Group createdGroup = system.getGroupService().createGroup(adminSession, "SpecialInterestGroup", "Temporary interest group", List.of());
+        System.out.println("Created group: " + createdGroup.getName());
+        List<Group> foundGroups = system.getGroupService().searchGroups(adminSession, "SpecialInterest");
+        System.out.println("Search groups found: " + foundGroups.size() + " group(s).");
+        system.getGroupService().editGroupSettings(adminSession, "SpecialInterestGroup", "Updated group description.");
+        system.getGroupService().deleteGroup(adminSession, "SpecialInterestGroup");
+        System.out.println("Deleted empty group successfully.");
+
+        // 3.2.31 Edit system configuration settings
+        System.out.println("\n-- 3.2.31: Edit system configuration settings --");
+        System.out.println("Initial configuration: " + system.getConfigurationService().getConfiguration(adminSession));
+        system.getConfigurationService().updateConfiguration(adminSession, "max.upload.size.mb", "100");
+        system.getConfigurationService().updateConfiguration(adminSession, "pagination.default.size", "10");
+        System.out.println("Updated max upload size: " + system.getConfigurationService().getConfiguration(adminSession).get("max.upload.size.mb") + " MB");
+
+        System.out.println("\n=== Demo completed successfully. All requirements verified. ===");
+    }
+}

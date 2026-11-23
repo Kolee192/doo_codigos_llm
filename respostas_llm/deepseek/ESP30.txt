@@ -1,0 +1,1412 @@
+// File: Role.java
+public enum Role {
+    MEMBER,
+    PUBLISHER,
+    MODERATOR,
+    ADMINISTRATOR
+}
+
+// File: PublicationFormat.java
+public enum PublicationFormat {
+    PDF,
+    PS,
+    ODT
+}
+
+// File: ExportFormat.java
+public enum ExportFormat {
+    BIB,
+    RIS
+}
+
+// File: Author.java
+public class Author {
+    private String name;
+    private String email;
+    private String affiliation;
+    private String biography;
+
+    public Author(String name, String email, String affiliation, String biography) {
+        this.name = name;
+        this.email = email;
+        this.affiliation = affiliation;
+        this.biography = biography;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getAffiliation() {
+        return affiliation;
+    }
+
+    public String getBiography() {
+        return biography;
+    }
+
+    public String getDetails() {
+        return "Author: " + name + "\nEmail: " + email + "\nAffiliation: " + affiliation + "\nBiography: " + biography;
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+}
+
+// File: User.java
+public class User {
+    private final String username;
+    private String password;
+    private String name;
+    private String email;
+    private String university;
+    private String department;
+    private Role role;
+    private boolean active;
+
+    public User(String username, String password, String name, String email, String university, String department, Role role) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username is required");
+        }
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+        if (role == null) {
+            throw new IllegalArgumentException("Role is required");
+        }
+        this.username = username;
+        this.password = password;
+        this.name = name;
+        this.email = email;
+        this.university = university;
+        this.department = department;
+        this.role = role;
+        this.active = true;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public boolean checkPassword(String candidate) {
+        return password != null && password.equals(candidate);
+    }
+
+    public void setPassword(String password) {
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+        this.password = password;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getUniversity() {
+        return university;
+    }
+
+    public void setUniversity(String university) {
+        this.university = university;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        if (role == null) {
+            throw new IllegalArgumentException("Role is required");
+        }
+        this.role = role;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public void updatePersonalData(String name, String email, String university, String department) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (email != null) {
+            this.email = email;
+        }
+        if (university != null) {
+            this.university = university;
+        }
+        if (department != null) {
+            this.department = department;
+        }
+    }
+
+    public String getDetails() {
+        return "Username: " + username + "\nName: " + name + "\nEmail: " + email
+                + "\nUniversity: " + university + "\nDepartment: " + department
+                + "\nRole: " + role + "\nActive: " + active;
+    }
+
+    @Override
+    public String toString() {
+        return username + " (" + role + ")";
+    }
+}
+
+// File: Group.java
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+public class Group {
+    private String name;
+    private final Set<User> users = new LinkedHashSet<>();
+
+    public Group(String name) {
+        setName(name);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Group name is required");
+        }
+        this.name = name;
+    }
+
+    public void addUser(User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("User is required");
+        }
+        users.add(user);
+    }
+
+    public void removeUser(User user) {
+        users.remove(user);
+    }
+
+    public void clearUsers() {
+        users.clear();
+    }
+
+    public boolean isEmpty() {
+        return users.isEmpty();
+    }
+
+    public Set<User> getUsers() {
+        return new LinkedHashSet<>(users);
+    }
+
+    public boolean contains(User user) {
+        return users.contains(user);
+    }
+
+    public String getDetails() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Group: ").append(name).append("\nUsers: ");
+        if (users.isEmpty()) {
+            sb.append("none");
+        } else {
+            boolean first = true;
+            for (User user : users) {
+                if (!first) {
+                    sb.append(", ");
+                }
+                sb.append(user.getUsername());
+                first = false;
+            }
+        }
+        return sb.toString();
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+}
+
+// File: Publication.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Publication {
+    private final int id;
+    private String title;
+    private List<Author> authors = new ArrayList<>();
+    private LocalDate publicationDate;
+    private String abstractText;
+    private final List<Publication> citedReferences = new ArrayList<>();
+    private final List<String> keywords = new ArrayList<>();
+    private boolean fullTextAvailable;
+    private String fullText;
+    private final String uploaderUsername;
+    private final PublicationFormat format;
+    private final String fileName;
+
+    public Publication(int id, String title, List<Author> authors, LocalDate publicationDate,
+                       String abstractText, String fullText, String uploaderUsername,
+                       PublicationFormat format, String fileName) {
+        this.id = id;
+        setTitle(title);
+        setAuthors(authors);
+        this.publicationDate = publicationDate;
+        this.abstractText = abstractText;
+        this.fullText = fullText;
+        this.fullTextAvailable = fullText != null && !fullText.isBlank();
+        this.uploaderUsername = uploaderUsername;
+        this.format = format;
+        this.fileName = fileName;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("Title is required");
+        }
+        this.title = title;
+    }
+
+    public List<Author> getAuthors() {
+        return new ArrayList<>(authors);
+    }
+
+    public void setAuthors(List<Author> authors) {
+        this.authors = authors == null ? new ArrayList<>() : new ArrayList<>(authors);
+    }
+
+    public Author getMainAuthor() {
+        return authors.isEmpty() ? null : authors.get(0);
+    }
+
+    public List<String> getAuthorNames() {
+        List<String> names = new ArrayList<>();
+        for (Author author : authors) {
+            names.add(author.getName());
+        }
+        return names;
+    }
+
+    public LocalDate getPublicationDate() {
+        return publicationDate;
+    }
+
+    public void setPublicationDate(LocalDate publicationDate) {
+        this.publicationDate = publicationDate;
+    }
+
+    public String getAbstractText() {
+        return abstractText;
+    }
+
+    public void setAbstractText(String abstractText) {
+        this.abstractText = abstractText;
+    }
+
+    public List<Publication> getCitedReferences() {
+        return new ArrayList<>(citedReferences);
+    }
+
+    public void setCitedReferences(List<Publication> references) {
+        citedReferences.clear();
+        if (references != null) {
+            for (Publication reference : references) {
+                addReference(reference);
+            }
+        }
+    }
+
+    public void addReference(Publication reference) {
+        if (reference != null && reference != this) {
+            citedReferences.add(reference);
+        }
+    }
+
+    public List<String> getKeywords() {
+        return new ArrayList<>(keywords);
+    }
+
+    public void addKeyword(String keyword) {
+        if (keyword != null && !keyword.isBlank()) {
+            keywords.add(keyword);
+        }
+    }
+
+    public boolean isFullTextAvailable() {
+        return fullTextAvailable;
+    }
+
+    public String getFullText() {
+        return fullText;
+    }
+
+    public void setFullText(String fullText) {
+        this.fullText = fullText;
+        this.fullTextAvailable = fullText != null && !fullText.isBlank();
+    }
+
+    public String getUploaderUsername() {
+        return uploaderUsername;
+    }
+
+    public PublicationFormat getFormat() {
+        return format;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public String toDetailedString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Title: ").append(title).append("\n");
+        sb.append("Authors: ");
+        if (authors.isEmpty()) {
+            sb.append("Unknown");
+        } else {
+            sb.append(String.join(", ", getAuthorNames()));
+        }
+        sb.append("\n");
+        sb.append("Publication date: ").append(publicationDate == null ? "Unknown" : publicationDate).append("\n");
+        sb.append("Abstract: ").append(abstractText == null ? "" : abstractText).append("\n");
+        sb.append("Cited references: ");
+        if (citedReferences.isEmpty()) {
+            sb.append("none");
+        } else {
+            for (int i = 0; i < citedReferences.size(); i++) {
+                if (i > 0) {
+                    sb.append("; ");
+                }
+                sb.append(citedReferences.get(i).getTitle());
+            }
+        }
+        sb.append("\n");
+        sb.append("Full text available: ").append(fullTextAvailable ? "yes" : "no").append("\n");
+        sb.append("Uploaded by: ").append(uploaderUsername).append("\n");
+        return sb.toString();
+    }
+
+    public String toBibEntry() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("@article{").append(id).append(",\n");
+        sb.append("  title = {").append(title).append("},\n");
+        sb.append("  author = {").append(String.join(" and ", getAuthorNames())).append("},\n");
+        sb.append("  year = {").append(publicationDate == null ? "n.d." : publicationDate.getYear()).append("},\n");
+        sb.append("  abstract = {").append(abstractText == null ? "" : abstractText).append("},\n");
+        sb.append("}\n");
+        return sb.toString();
+    }
+
+    public String toRisEntry() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("TY  - JOUR\n");
+        sb.append("TI  - ").append(title).append("\n");
+        for (String authorName : getAuthorNames()) {
+            sb.append("AU  - ").append(authorName).append("\n");
+        }
+        sb.append("PY  - ").append(publicationDate == null ? "" : publicationDate.getYear()).append("\n");
+        sb.append("AB  - ").append(abstractText == null ? "" : abstractText).append("\n");
+        sb.append("ER  -\n");
+        return sb.toString();
+    }
+
+    @Override
+    public String toString() {
+        return id + ": " + title;
+    }
+}
+
+// File: SearchCriteria.java
+import java.time.LocalDate;
+
+public class SearchCriteria {
+    private final String keyword;
+    private final String author;
+    private final LocalDate fromDate;
+    private final LocalDate toDate;
+    private final String advancedKeyword;
+    private final String reference;
+
+    public SearchCriteria(String keyword, String author, LocalDate fromDate, LocalDate toDate,
+                          String advancedKeyword, String reference) {
+        this.keyword = keyword;
+        this.author = author;
+        this.fromDate = fromDate;
+        this.toDate = toDate;
+        this.advancedKeyword = advancedKeyword;
+        this.reference = reference;
+    }
+
+    public boolean matches(Publication publication) {
+        if (publication == null) {
+            return false;
+        }
+
+        if ((fromDate != null || toDate != null) && publication.getPublicationDate() == null) {
+            return false;
+        }
+        if (fromDate != null && publication.getPublicationDate().isBefore(fromDate)) {
+            return false;
+        }
+        if (toDate != null && publication.getPublicationDate().isAfter(toDate)) {
+            return false;
+        }
+
+        if (!isBlank(keyword) && !publicationContains(publication, keyword)) {
+            return false;
+        }
+
+        if (!isBlank(author)) {
+            boolean authorFound = false;
+            for (Author publicationAuthor : publication.getAuthors()) {
+                if (containsIgnoreCase(publicationAuthor.getName(), author)) {
+                    authorFound = true;
+                    break;
+                }
+            }
+            if (!authorFound) {
+                return false;
+            }
+        }
+
+        if (!isBlank(advancedKeyword) && !publicationContains(publication, advancedKeyword)) {
+            return false;
+        }
+
+        if (!isBlank(reference)) {
+            boolean referenceFound = false;
+            for (Publication cited : publication.getCitedReferences()) {
+                if (containsIgnoreCase(cited.getTitle(), reference)) {
+                    referenceFound = true;
+                    break;
+                }
+                for (Author citedAuthor : cited.getAuthors()) {
+                    if (containsIgnoreCase(citedAuthor.getName(), reference)) {
+                        referenceFound = true;
+                        break;
+                    }
+                }
+                if (referenceFound) {
+                    break;
+                }
+            }
+            if (!referenceFound) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean publicationContains(Publication publication, String query) {
+        if (containsIgnoreCase(publication.getTitle(), query)) {
+            return true;
+        }
+        if (containsIgnoreCase(publication.getAbstractText(), query)) {
+            return true;
+        }
+        for (String keyword : publication.getKeywords()) {
+            if (containsIgnoreCase(keyword, query)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean containsIgnoreCase(String text, String query) {
+        return text != null && query != null && text.toLowerCase().contains(query.toLowerCase());
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+}
+
+// File: UserSearchCriteria.java
+public class UserSearchCriteria {
+    private final String username;
+    private final String name;
+    private final String email;
+    private final Role role;
+    private final String university;
+
+    public UserSearchCriteria(String username, String name, String email, Role role, String university) {
+        this.username = username;
+        this.name = name;
+        this.email = email;
+        this.role = role;
+        this.university = university;
+    }
+
+    public boolean matches(User user) {
+        if (user == null) {
+            return false;
+        }
+        if (!isBlank(username) && !containsIgnoreCase(user.getUsername(), username)) {
+            return false;
+        }
+        if (!isBlank(name) && !containsIgnoreCase(user.getName(), name)) {
+            return false;
+        }
+        if (!isBlank(email) && !containsIgnoreCase(user.getEmail(), email)) {
+            return false;
+        }
+        if (role != null && user.getRole() != role) {
+            return false;
+        }
+        if (!isBlank(university) && !containsIgnoreCase(user.getUniversity(), university)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean containsIgnoreCase(String text, String query) {
+        return text != null && query != null && text.toLowerCase().contains(query.toLowerCase());
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+}
+
+// File: GroupSearchCriteria.java
+public class GroupSearchCriteria {
+    private final String name;
+
+    public GroupSearchCriteria(String name) {
+        this.name = name;
+    }
+
+    public boolean matches(Group group) {
+        if (group == null) {
+            return false;
+        }
+        return isBlank(name) || containsIgnoreCase(group.getName(), name);
+    }
+
+    private boolean containsIgnoreCase(String text, String query) {
+        return text != null && query != null && text.toLowerCase().contains(query.toLowerCase());
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+}
+
+// File: SearchResult.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class SearchResult {
+    private final List<Publication> results;
+    private final int pageSize;
+
+    public SearchResult(List<Publication> results, int pageSize) {
+        if (pageSize <= 0) {
+            throw new IllegalArgumentException("Page size must be positive");
+        }
+        this.results = results == null ? new ArrayList<>() : new ArrayList<>(results);
+        this.pageSize = pageSize;
+    }
+
+    public int getTotalCount() {
+        return results.size();
+    }
+
+    public int getPageCount() {
+        if (results.isEmpty()) {
+            return 1;
+        }
+        return (int) Math.ceil((double) results.size() / pageSize);
+    }
+
+    public List<Publication> getPage(int pageNumber) {
+        if (results.isEmpty()) {
+            if (pageNumber == 1) {
+                return new ArrayList<>();
+            }
+            throw new IllegalArgumentException("Page out of range");
+        }
+        if (pageNumber < 1 || pageNumber > getPageCount()) {
+            throw new IllegalArgumentException("Page out of range");
+        }
+        int fromIndex = (pageNumber - 1) * pageSize;
+        int toIndex = Math.min(fromIndex + pageSize, results.size());
+        return new ArrayList<>(results.subList(fromIndex, toIndex));
+    }
+
+    public boolean hasNext(int currentPage) {
+        return currentPage < getPageCount();
+    }
+
+    public boolean hasPrevious(int currentPage) {
+        return currentPage > 1;
+    }
+
+    public List<Publication> getAllResults() {
+        return new ArrayList<>(results);
+    }
+}
+
+// File: EmailService.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class EmailService {
+    private final List<String> sentEmails = new ArrayList<>();
+
+    public void send(String to, String subject, String body) {
+        sentEmails.add("To: " + to + "\nSubject: " + subject + "\n" + body);
+    }
+
+    public List<String> getSentEmails() {
+        return new ArrayList<>(sentEmails);
+    }
+
+    public String getLastEmail() {
+        if (sentEmails.isEmpty()) {
+            return "";
+        }
+        return sentEmails.get(sentEmails.size() - 1);
+    }
+}
+
+// File: Session.java
+public class Session {
+    private User user;
+    private boolean vubNetwork;
+
+    public Session(User user, boolean vubNetwork) {
+        this.user = user;
+        this.vubNetwork = vubNetwork;
+    }
+
+    public boolean isAuthenticated() {
+        return user != null;
+    }
+
+    public boolean isVubNetwork() {
+        return vubNetwork;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void logout() {
+        user = null;
+        vubNetwork = false;
+    }
+}
+
+// File: SystemConfiguration.java
+public class SystemConfiguration {
+    private String systemName = "VUB Publication System";
+    private String adminEmail = "admin@vub.be";
+    private int searchPageSize = 10;
+    private boolean guestSearchEnabled = true;
+    private int maxBatchDownload = 100;
+
+    public String getSystemName() {
+        return systemName;
+    }
+
+    public void setSystemName(String systemName) {
+        this.systemName = systemName;
+    }
+
+    public String getAdminEmail() {
+        return adminEmail;
+    }
+
+    public void setAdminEmail(String adminEmail) {
+        this.adminEmail = adminEmail;
+    }
+
+    public int getSearchPageSize() {
+        return searchPageSize;
+    }
+
+    public void setSearchPageSize(int searchPageSize) {
+        if (searchPageSize <= 0) {
+            throw new IllegalArgumentException("Search page size must be positive");
+        }
+        this.searchPageSize = searchPageSize;
+    }
+
+    public boolean isGuestSearchEnabled() {
+        return guestSearchEnabled;
+    }
+
+    public void setGuestSearchEnabled(boolean guestSearchEnabled) {
+        this.guestSearchEnabled = guestSearchEnabled;
+    }
+
+    public int getMaxBatchDownload() {
+        return maxBatchDownload;
+    }
+
+    public void setMaxBatchDownload(int maxBatchDownload) {
+        if (maxBatchDownload <= 0) {
+            throw new IllegalArgumentException("Maximum batch download must be positive");
+        }
+        this.maxBatchDownload = maxBatchDownload;
+    }
+
+    @Override
+    public String toString() {
+        return "SystemConfiguration{systemName='" + systemName + "', adminEmail='" + adminEmail
+                + "', searchPageSize=" + searchPageSize + ", guestSearchEnabled=" + guestSearchEnabled
+                + ", maxBatchDownload=" + maxBatchDownload + "}";
+    }
+}
+
+// File: LibrarySystem.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+
+public class LibrarySystem {
+    private final Map<String, User> users = new LinkedHashMap<>();
+    private final Map<String, Group> groups = new LinkedHashMap<>();
+    private final Map<Integer, Publication> publications = new LinkedHashMap<>();
+    private final EmailService emailService = new EmailService();
+    private SystemConfiguration configuration = new SystemConfiguration();
+    private Session currentSession;
+    private int nextPublicationId = 1;
+
+    public LibrarySystem() {
+        User admin = new User("admin", "admin", "System Administrator", "admin@vub.be",
+                "VUB", "Administration", Role.ADMINISTRATOR);
+        users.put(admin.getUsername(), admin);
+    }
+
+    public EmailService getEmailService() {
+        return emailService;
+    }
+
+    public SystemConfiguration getConfiguration() {
+        return configuration;
+    }
+
+    public Session getCurrentSession() {
+        return currentSession;
+    }
+
+    public User getCurrentUser() {
+        return currentSession == null ? null : currentSession.getUser();
+    }
+
+    public User findUser(String username) {
+        return users.get(username);
+    }
+
+    public User getUser(String username) {
+        User user = users.get(username);
+        if (user == null) {
+            throw new IllegalArgumentException("User does not exist: " + username);
+        }
+        return user;
+    }
+
+    public Group findGroup(String name) {
+        return groups.get(name);
+    }
+
+    public Group getGroup(String name) {
+        Group group = groups.get(name);
+        if (group == null) {
+            throw new IllegalArgumentException("Group does not exist: " + name);
+        }
+        return group;
+    }
+
+    public Publication getPublication(int id) {
+        Publication publication = publications.get(id);
+        if (publication == null) {
+            throw new IllegalArgumentException("Publication does not exist: " + id);
+        }
+        return publication;
+    }
+
+    public List<User> getAllUsers() {
+        return new ArrayList<>(users.values());
+    }
+
+    public List<Group> getAllGroups() {
+        return new ArrayList<>(groups.values());
+    }
+
+    public List<Publication> getAllPublications() {
+        return new ArrayList<>(publications.values());
+    }
+
+    public Session loginFromInternet(String username, String password) {
+        User user = authenticate(username, password);
+        currentSession = new Session(user, false);
+        return currentSession;
+    }
+
+    public Session loginFromVubNetwork(String username, String password) {
+        User user = authenticate(username, password);
+        currentSession = new Session(user, true);
+        return currentSession;
+    }
+
+    public Session startVubNetworkGuestSession() {
+        currentSession = new Session(null, true);
+        return currentSession;
+    }
+
+    public void logout() {
+        if (currentSession != null) {
+            currentSession.logout();
+        }
+        currentSession = null;
+    }
+
+    private User authenticate(String username, String password) {
+        User user = users.get(username);
+        if (user == null || !user.checkPassword(password)) {
+            throw new IllegalArgumentException("Invalid username or password");
+        }
+        if (!user.isActive()) {
+            throw new IllegalStateException("User is not active");
+        }
+        return user;
+    }
+
+    public User registerForAccount(String username, String password, String name, String email,
+                                   String university, String department) {
+        if (users.containsKey(username)) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+        User user = new User(username, password, name, email, university, department, Role.MEMBER);
+        users.put(username, user);
+        emailService.send(configuration.getAdminEmail(), "Account registration request",
+                "New registration request for username: " + username);
+        return user;
+    }
+
+    public void requestPasswordChange(String username, String newPassword) {
+        User user = users.get(username);
+        if (user == null) {
+            throw new IllegalArgumentException("No valid username on the system");
+        }
+        user.setPassword(newPassword);
+        emailService.send(configuration.getAdminEmail(), "Password change request",
+                "Password changed for username: " + username);
+    }
+
+    private void requireSession() {
+        if (currentSession == null) {
+            throw new IllegalStateException("No active session");
+        }
+    }
+
+    private void requireLoggedIn() {
+        requireSession();
+        if (!currentSession.isAuthenticated()) {
+            throw new IllegalStateException("Login required");
+        }
+    }
+
+    private User requireRole(Role... allowedRoles) {
+        requireLoggedIn();
+        User user = currentSession.getUser();
+        for (Role allowedRole : allowedRoles) {
+            if (user.getRole() == allowedRole) {
+                return user;
+            }
+        }
+        throw new SecurityException("Insufficient permissions");
+    }
+
+    private void requireSearchAccess() {
+        requireSession();
+        if (currentSession.isAuthenticated()) {
+            return;
+        }
+        if (currentSession.isVubNetwork() && configuration.isGuestSearchEnabled()) {
+            return;
+        }
+        throw new SecurityException("Search access is not allowed");
+    }
+
+    private void requirePublisherRole() {
+        requireRole(Role.PUBLISHER, Role.MODERATOR, Role.ADMINISTRATOR);
+    }
+
+    public SearchResult searchPublications(SearchCriteria criteria) {
+        requireSearchAccess();
+        List<Publication> found = new ArrayList<>();
+        for (Publication publication : publications.values()) {
+            if (criteria == null || criteria.matches(publication)) {
+                found.add(publication);
+            }
+        }
+        return new SearchResult(found, configuration.getSearchPageSize());
+    }
+
+    public List<Publication> viewResults(SearchResult result, int pageNumber) {
+        requireSearchAccess();
+        if (result == null) {
+            throw new IllegalArgumentException("Search result is required");
+        }
+        return result.getPage(pageNumber);
+    }
+
+    public String viewPublicationDetails(int publicationId) {
+        requireSearchAccess();
+        return getPublication(publicationId).toDetailedString();
+    }
+
+    public List<String> viewPublicationDetailsMultiple(List<Integer> publicationIds) {
+        requireSearchAccess();
+        List<String> details = new ArrayList<>();
+        if (publicationIds != null) {
+            for (Integer id : publicationIds) {
+                details.add(getPublication(id).toDetailedString());
+            }
+        }
+        return details;
+    }
+
+    public String downloadPublication(int publicationId) {
+        requireSearchAccess();
+        Publication publication = getPublication(publicationId);
+        if (!publication.isFullTextAvailable()) {
+            throw new IllegalStateException("Full text is not available in the system");
+        }
+        return publication.getFullText();
+    }
+
+    public List<String> downloadPublications(List<Integer> publicationIds) {
+        requireSearchAccess();
+        if (publicationIds == null) {
+            return new ArrayList<>();
+        }
+        if (publicationIds.size() > configuration.getMaxBatchDownload()) {
+            throw new IllegalArgumentException("Too many publications requested for one download");
+        }
+        List<String> downloads = new ArrayList<>();
+        for (Integer id : publicationIds) {
+            Publication publication = getPublication(id);
+            if (!publication.isFullTextAvailable()) {
+                throw new IllegalStateException("Full text is not available for publication " + id);
+            }
+            downloads.add(publication.getFullText());
+        }
+        return downloads;
+    }
+
+    public List<Publication> consultReferences(int publicationId) {
+        requireSearchAccess();
+        return getPublication(publicationId).getCitedReferences();
+    }
+
+    public List<Publication> consultReferencesMultiple(List<Integer> publicationIds) {
+        requireSearchAccess();
+        LinkedHashSet<Publication> references = new LinkedHashSet<>();
+        if (publicationIds != null) {
+            for (Integer id : publicationIds) {
+                references.addAll(getPublication(id).getCitedReferences());
+            }
+        }
+        return new ArrayList<>(references);
+    }
+
+    public String displayFullText(int publicationId) {
+        requireSearchAccess();
+        Publication publication = getPublication(publicationId);
+        if (!publication.isFullTextAvailable()) {
+            throw new IllegalStateException("Full text is not available in the system");
+        }
+        return publication.getFullText();
+    }
+
+    public String viewReferenceDetails(int referenceId) {
+        requireSearchAccess();
+        return getPublication(referenceId).toDetailedString();
+    }
+
+    public String exportReferences(int publicationId, ExportFormat format) {
+        requireSearchAccess();
+        if (format == null) {
+            throw new IllegalArgumentException("Export format is required");
+        }
+        Publication publication = getPublication(publicationId);
+        StringBuilder sb = new StringBuilder();
+        for (Publication reference : publication.getCitedReferences()) {
+            if (format == ExportFormat.BIB) {
+                sb.append(reference.toBibEntry());
+            } else {
+                sb.append(reference.toRisEntry());
+            }
+        }
+        return sb.toString();
+    }
+
+    public String viewAuthorDetails(Author author) {
+        requireSearchAccess();
+        if (author == null) {
+            throw new IllegalArgumentException("Author is required");
+        }
+        return author.getDetails();
+    }
+
+    public void editPersonalData(String password, String name, String email, String university, String department) {
+        requireLoggedIn();
+        User user = currentSession.getUser();
+        if (password != null && !password.isBlank()) {
+            user.setPassword(password);
+        }
+        user.updatePersonalData(name, email, university, department);
+    }
+
+    public List<Publication> getMyPublications() {
+        requirePublisherRole();
+        String username = currentSession.getUser().getUsername();
+        List<Publication> ownPublications = new ArrayList<>();
+        for (Publication publication : publications.values()) {
+            if (username.equals(publication.getUploaderUsername())) {
+                ownPublications.add(publication);
+            }
+        }
+        return ownPublications;
+    }
+
+    public void editOwnPublication(int publicationId, String title, String abstractText,
+                                   LocalDate publicationDate, List<Integer> citedReferenceIds) {
+        requirePublisherRole();
+        Publication publication = getPublication(publicationId);
+        String username = currentSession.getUser().getUsername();
+        if (!username.equals(publication.getUploaderUsername())) {
+            throw new SecurityException("Only the owner can edit this publication");
+        }
+        if (title != null && !title.isBlank()) {
+            publication.setTitle(title);
+        }
+        if (abstractText != null) {
+            publication.setAbstractText(abstractText);
+        }
+        if (publicationDate != null) {
+            publication.setPublicationDate(publicationDate);
+        }
+        if (citedReferenceIds != null) {
+            List<Publication> references = new ArrayList<>();
+            for (Integer referenceId : citedReferenceIds) {
+                references.add(getPublication(referenceId));
+            }
+            publication.setCitedReferences(references);
+        }
+    }
+
+    public Publication uploadPublication(PublicationFormat format, String fileName, String fullText,
+                                         String title, List<Author> authors, LocalDate publicationDate,
+                                         String abstractText, List<Integer> citedReferenceIds,
+                                         List<String> keywords) {
+        requirePublisherRole();
+        if (format == null) {
+            throw new IllegalArgumentException("Publication format is required");
+        }
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("Title is required");
+        }
+        User uploader = currentSession.getUser();
+        int publicationId = nextPublicationId++;
+        Publication publication = new Publication(publicationId, title, authors, publicationDate,
+                abstractText, fullText, uploader.getUsername(), format, fileName);
+        if (citedReferenceIds != null) {
+            for (Integer referenceId : citedReferenceIds) {
+                publication.addReference(getPublication(referenceId));
+            }
+        }
+        if (keywords != null) {
+            for (String keyword : keywords) {
+                publication.addKeyword(keyword);
+            }
+        }
+        publications.put(publicationId, publication);
+        return publication;
+    }
+
+    public List<User> searchUsers(UserSearchCriteria criteria) {
+        requireRole(Role.MODERATOR, Role.ADMINISTRATOR);
+        List<User> found = new ArrayList<>();
+        for (User user : users.values()) {
+            if (criteria == null || criteria.matches(user)) {
+                found.add(user);
+            }
+        }
+        return found;
+    }
+
+    public void editUserSettings(String username, String newPassword, String email, String university,
+                                 String department, Role role, Boolean active) {
+        User actor = requireRole(Role.MODERATOR, Role.ADMINISTRATOR);
+        User target = users.get(username);
+        if (target == null) {
+            throw new IllegalArgumentException("User does not exist");
+        }
+        if (actor.getRole() == Role.MODERATOR && target.getRole() == Role.ADMINISTRATOR) {
+            throw new SecurityException("Moderators cannot edit administrators");
+        }
+        if (newPassword != null && !newPassword.isBlank()) {
+            target.setPassword(newPassword);
+        }
+        if (email != null) {
+            target.setEmail(email);
+        }
+        if (university != null) {
+            target.setUniversity(university);
+        }
+        if (department != null) {
+            target.setDepartment(department);
+        }
+        if (role != null) {
+            target.setRole(role);
+        }
+        if (active != null) {
+            target.setActive(active);
+        }
+    }
+
+    public User createUser(String username, String password, String name, String email,
+                           String university, String department, Role role) {
+        requireRole(Role.ADMINISTRATOR);
+        if (users.containsKey(username)) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+        User user = new User(username, password, name, email, university, department, role);
+        users.put(username, user);
+        return user;
+    }
+
+    public void deleteUser(String username) {
+        requireRole(Role.ADMINISTRATOR);
+        User user = users.get(username);
+        if (user == null) {
+            throw new IllegalArgumentException("Username does not exist");
+        }
+        users.remove(username);
+        for (Group group : groups.values()) {
+            group.removeUser(user);
+        }
+    }
+
+    public Group createGroup(String groupName, List<String> usernames) {
+        requireRole(Role.ADMINISTRATOR);
+        if (groups.containsKey(groupName)) {
+            throw new IllegalArgumentException("Group name already exists");
+        }
+        Group group = new Group(groupName);
+        if (usernames != null) {
+            for (String username : usernames) {
+                User user = users.get(username);
+                if (user == null) {
+                    throw new IllegalArgumentException("User does not exist: " + username);
+                }
+                group.addUser(user);
+            }
+        }
+        groups.put(groupName, group);
+        return group;
+    }
+
+    public List<Group> searchGroups(GroupSearchCriteria criteria) {
+        requireRole(Role.ADMINISTRATOR);
+        List<Group> found = new ArrayList<>();
+        for (Group group : groups.values()) {
+            if (criteria == null || criteria.matches(group)) {
+                found.add(group);
+            }
+        }
+        return found;
+    }
+
+    public void deleteGroup(String groupName) {
+        requireRole(Role.ADMINISTRATOR);
+        Group group = groups.get(groupName);
+        if (group == null) {
+            throw new IllegalArgumentException("Group name does not exist");
+        }
+        if (!group.isEmpty()) {
+            throw new IllegalStateException("Group is not empty");
+        }
+        groups.remove(groupName);
+    }
+
+    public void editGroupSettings(String oldName, String newName, List<String> usernames) {
+        requireRole(Role.ADMINISTRATOR);
+        Group group = groups.get(oldName);
+        if (group == null) {
+            throw new IllegalArgumentException("Group name does not exist");
+        }
+        if (newName != null && !newName.isBlank() && !newName.equals(oldName)) {
+            if (groups.containsKey(newName)) {
+                throw new IllegalArgumentException("New group name already exists");
+            }
+            groups.remove(oldName);
+            group.setName(newName);
+            groups.put(newName, group);
+        }
+        if (usernames != null) {
+            for (String username : usernames) {
+                if (!users.containsKey(username)) {
+                    throw new IllegalArgumentException("User does not exist: " + username);
+                }
+            }
+            group.clearUsers();
+            for (String username : usernames) {
+                group.addUser(users.get(username));
+            }
+        }
+    }
+
+    public void editSystemConfiguration(SystemConfiguration newConfiguration) {
+        requireRole(Role.ADMINISTRATOR);
+        if (newConfiguration == null) {
+            throw new IllegalArgumentException("Configuration is required");
+        }
+        configuration = newConfiguration;
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        LibrarySystem system = new LibrarySystem();
+        System.out.println("=== VUB Publication System Demo ===");
+
+        system.loginFromVubNetwork("admin", "admin");
+        system.createUser("publisher1", "pubpass", "Publisher One", "pub1@vub.be",
+                "VUB", "Computer Science", Role.PUBLISHER);
+        system.createUser("member1", "memberpass", "Member One", "member1@vub.be",
+                "VUB", "Mathematics", Role.MEMBER);
+        system.createUser("moderator1", "modpass", "Moderator One", "mod1@vub.be",
+                "VUB", "Library", Role.MODERATOR);
+        system.createGroup("Researchers", Arrays.asList("publisher1", "moderator1"));
+        System.out.println("Admin created users and a group.");
+        system.logout();
+
+        system.loginFromInternet("publisher1", "pubpass");
+        Author alice = new Author("Alice Author", "alice@vub.be", "VUB", "Researcher");
+        Author bob = new Author("Bob Writer", "bob@vub.be", "VUB", "Researcher");
+
+        Publication p1 = system.uploadPublication(PublicationFormat.PDF, "paper1.pdf",
+                "FULLTEXT-1", "Java OOP Design", List.of(alice), LocalDate.of(2020, 1, 15),
+                "Designing systems with objects.", List.of(), List.of("Java", "OOP"));
+
+        Publication p2 = system.uploadPublication(PublicationFormat.PDF, "paper2.pdf",
+                "FULLTEXT-2", "Search Algorithms", List.of(bob), LocalDate.of(2021, 3, 10),
+                "Algorithms for search.", List.of(p1.getId()), List.of("Search", "Algorithms"));
+
+        Publication p3 = system.uploadPublication(PublicationFormat.ODT, "paper3.odt",
+                "FULLTEXT-3", "Publication Systems", List.of(alice, bob), LocalDate.of(2022, 5, 20),
+                "Managing publications.", List.of(p1.getId(), p2.getId()),
+                List.of("Publication", "System"));
+
+        System.out.println("Uploaded publications: " + p1.getId() + ", " + p2.getId() + ", " + p3.getId());
+
+        SearchCriteria criteria = new SearchCriteria("publication", null, null, null, null, null);
+        SearchResult result = system.searchPublications(criteria);
+        System.out.println("Search results: " + result.getTotalCount());
+        for (Publication publication : system.viewResults(result, 1)) {
+            Author mainAuthor = publication.getMainAuthor();
+            System.out.println("- " + publication.getTitle() + " by "
+                    + (mainAuthor == null ? "Unknown" : mainAuthor.getName()));
+        }
+
+        System.out.println(system.viewPublicationDetails(p3.getId()));
+
+        System.out.println("References of p3:");
+        for (Publication reference : system.consultReferences(p3.getId())) {
+            System.out.println("  " + reference.getTitle());
+        }
+
+        System.out.println("BIB export:");
+        System.out.println(system.exportReferences(p3.getId(), ExportFormat.BIB));
+
+        System.out.println("Download p1: " + system.downloadPublication(p1.getId()));
+
+        system.editOwnPublication(p1.getId(), "Java OOP Design (Revised)",
+                "Revised abstract.", LocalDate.of(2020, 1, 15), List.of());
+        System.out.println("My publications: " + system.getMyPublications().size());
+        system.logout();
+
+        system.registerForAccount("newmember", "newpass", "New Member", "new@vub.be",
+                "VUB", "Physics");
+        system.requestPasswordChange("newmember", "newpass2");
+        System.out.println("Email notifications sent: " + system.getEmailService().getSentEmails().size());
+
+        system.startVubNetworkGuestSession();
+        SearchResult guestResult = system.searchPublications(
+                new SearchCriteria(null, null, null, null, "Java", null));
+        System.out.println("Guest search results: " + guestResult.getTotalCount());
+        system.logout();
+
+        system.loginFromInternet("admin", "admin");
+        UserSearchCriteria userCriteria = new UserSearchCriteria(null, null, null, Role.PUBLISHER, null);
+        System.out.println("Publishers found: " + system.searchUsers(userCriteria).size());
+
+        system.editUserSettings("member1", null, "member1-new@vub.be", "VUB",
+                "Statistics", Role.MEMBER, true);
+
+        GroupSearchCriteria groupCriteria = new GroupSearchCriteria("Research");
+        System.out.println("Groups found: " + system.searchGroups(groupCriteria).size());
+
+        SystemConfiguration configuration = new SystemConfiguration();
+        configuration.setSearchPageSize(5);
+        configuration.setSystemName("VUB Publication System (Demo)");
+        system.editSystemConfiguration(configuration);
+        System.out.println("Configuration: " + system.getConfiguration());
+        system.logout();
+    }
+}

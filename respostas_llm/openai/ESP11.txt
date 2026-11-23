@@ -1,0 +1,1234 @@
+// File: Role.java
+public enum Role {
+    SYSTEM_ADMINISTRATOR,
+    APPLICATION_ADMINISTRATOR,
+    REPOSITORY_MANAGER,
+    ADVANCED_DATA_ENTRY,
+    BASIC_DATA_ENTRY,
+    READ_ONLY
+}
+
+// File: ArchiveRecord.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public abstract class ArchiveRecord {
+    private final String id;
+    private String repositoryId;
+    private long version;
+    private String sourceRecordId;
+    private final List<String> notes = new ArrayList<>();
+
+    protected ArchiveRecord(String repositoryId) {
+        this(UUID.randomUUID().toString(), repositoryId);
+    }
+
+    protected ArchiveRecord(String id, String repositoryId) {
+        this.id = id;
+        this.repositoryId = repositoryId;
+    }
+
+    public String getId() { return id; }
+    public String getRepositoryId() { return repositoryId; }
+    public void setRepositoryId(String repositoryId) { this.repositoryId = repositoryId; }
+    public long getVersion() { return version; }
+    public void incrementVersion() { version++; }
+    public String getSourceRecordId() { return sourceRecordId; }
+    public void setSourceRecordId(String sourceRecordId) { this.sourceRecordId = sourceRecordId; }
+    public List<String> getNotes() { return notes; }
+    public void addNote(String note) { notes.add(note); }
+}
+
+// File: Resource.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Resource extends ArchiveRecord {
+    private String title;
+    private String levelOfDescription = "collection";
+    private String customLevelOfDescription;
+    private String findingAidTitle;
+    private String findingAidDate;
+    private String findingAidNote;
+    private final List<String> dates = new ArrayList<>();
+    private final List<String> extents = new ArrayList<>();
+    private final List<String> subjectIds = new ArrayList<>();
+    private final List<String> agentIds = new ArrayList<>();
+    private final List<ResourceComponent> components = new ArrayList<>();
+    private CollectionManagement collectionManagement;
+
+    public Resource(String repositoryId, String title) {
+        super(repositoryId);
+        this.title = title;
+    }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public String getLevelOfDescription() { return levelOfDescription; }
+    public void setLevelOfDescription(String value) { levelOfDescription = value; }
+    public String getCustomLevelOfDescription() { return customLevelOfDescription; }
+    public void setCustomLevelOfDescription(String value) { customLevelOfDescription = value; }
+    public String getFindingAidTitle() { return findingAidTitle; }
+    public void setFindingAidTitle(String value) { findingAidTitle = value; }
+    public String getFindingAidDate() { return findingAidDate; }
+    public void setFindingAidDate(String value) { findingAidDate = value; }
+    public String getFindingAidNote() { return findingAidNote; }
+    public void setFindingAidNote(String value) { findingAidNote = value; }
+    public List<String> getDates() { return dates; }
+    public List<String> getExtents() { return extents; }
+    public List<String> getSubjectIds() { return subjectIds; }
+    public List<String> getAgentIds() { return agentIds; }
+    public List<ResourceComponent> getComponents() { return components; }
+    public CollectionManagement getCollectionManagement() { return collectionManagement; }
+    public void setCollectionManagement(CollectionManagement value) { collectionManagement = value; }
+}
+
+// File: ResourceComponent.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public class ResourceComponent {
+    private final String id = UUID.randomUUID().toString();
+    private String title;
+    private String componentIdentifier;
+    private String levelOfDescription;
+    private String customLevelOfDescription;
+    private final List<String> dates = new ArrayList<>();
+    private final List<String> extents = new ArrayList<>();
+    private final List<String> agentIds = new ArrayList<>();
+    private final List<Instance> instances = new ArrayList<>();
+    private final List<ResourceComponent> children = new ArrayList<>();
+
+    public ResourceComponent(String title) { this.title = title; }
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public String getComponentIdentifier() { return componentIdentifier; }
+    public void setComponentIdentifier(String value) { componentIdentifier = value; }
+    public String getLevelOfDescription() { return levelOfDescription; }
+    public void setLevelOfDescription(String value) { levelOfDescription = value; }
+    public String getCustomLevelOfDescription() { return customLevelOfDescription; }
+    public void setCustomLevelOfDescription(String value) { customLevelOfDescription = value; }
+    public List<String> getDates() { return dates; }
+    public List<String> getExtents() { return extents; }
+    public List<String> getAgentIds() { return agentIds; }
+    public List<Instance> getInstances() { return instances; }
+    public List<ResourceComponent> getChildren() { return children; }
+}
+
+// File: Accession.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Accession extends ArchiveRecord {
+    private String title;
+    private final List<String> dates = new ArrayList<>();
+    private final List<String> extents = new ArrayList<>();
+    private final List<String> agentIds = new ArrayList<>();
+    private final List<Instance> instances = new ArrayList<>();
+    private CollectionManagement collectionManagement;
+
+    public Accession(String repositoryId, String title) {
+        super(repositoryId);
+        this.title = title;
+    }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public List<String> getDates() { return dates; }
+    public List<String> getExtents() { return extents; }
+    public List<String> getAgentIds() { return agentIds; }
+    public List<Instance> getInstances() { return instances; }
+    public CollectionManagement getCollectionManagement() { return collectionManagement; }
+    public void setCollectionManagement(CollectionManagement value) { collectionManagement = value; }
+}
+
+// File: Agent.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Agent extends ArchiveRecord {
+    private String name;
+    private String agentType;
+    private String nameFormSource;
+    private final List<String> sourceNames = new ArrayList<>();
+
+    public Agent(String repositoryId, String name, String agentType) {
+        super(repositoryId);
+        this.name = name;
+        this.agentType = agentType;
+    }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getAgentType() { return agentType; }
+    public void setAgentType(String value) { agentType = value; }
+    public String getNameFormSource() { return nameFormSource; }
+    public void setNameFormSource(String value) { nameFormSource = value; }
+    public List<String> getSourceNames() { return sourceNames; }
+}
+
+// File: Subject.java
+public class Subject extends ArchiveRecord {
+    private String term;
+    private String standardIdentifier;
+
+    public Subject(String repositoryId, String term) {
+        super(repositoryId);
+        this.term = term;
+    }
+
+    public String getTerm() { return term; }
+    public void setTerm(String term) { this.term = term; }
+    public String getStandardIdentifier() { return standardIdentifier; }
+    public void setStandardIdentifier(String value) { standardIdentifier = value; }
+}
+
+// File: Repository.java
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public class Repository {
+    private final String id = UUID.randomUUID().toString();
+    private String name;
+    private final Map<String, String> additionalProperties = new HashMap<>();
+    private final Map<String, Role> userRoles = new HashMap<>();
+
+    public Repository(String name) { this.name = name; }
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public Map<String, String> getAdditionalProperties() { return additionalProperties; }
+    public Map<String, Role> getUserRoles() { return userRoles; }
+}
+
+// File: User.java
+import java.util.EnumSet;
+import java.util.Set;
+import java.util.UUID;
+
+public class User {
+    private final String id = UUID.randomUUID().toString();
+    private final String username;
+    private String passwordHash;
+    private String email;
+    private final Set<Role> roles = EnumSet.noneOf(Role.class);
+    private boolean ldapAccount;
+
+    public User(String username, String passwordHash, String email) {
+        this.username = username;
+        this.passwordHash = passwordHash;
+        this.email = email;
+    }
+
+    public String getId() { return id; }
+    public String getUsername() { return username; }
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String value) { passwordHash = value; }
+    public String getEmail() { return email; }
+    public void setEmail(String value) { email = value; }
+    public Set<Role> getRoles() { return roles; }
+    public boolean isLdapAccount() { return ldapAccount; }
+    public void setLdapAccount(boolean value) { ldapAccount = value; }
+}
+
+// File: Instance.java
+import java.util.UUID;
+
+public class Instance {
+    private final String id = UUID.randomUUID().toString();
+    private String type;
+    private Container container;
+
+    public Instance(String type) { this.type = type; }
+    public String getId() { return id; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+    public Container getContainer() { return container; }
+    public void setContainer(Container container) { this.container = container; }
+}
+
+// File: Container.java
+import java.util.UUID;
+
+public class Container {
+    private final String id = UUID.randomUUID().toString();
+    private String indicator;
+    private String location;
+
+    public Container(String indicator, String location) {
+        this.indicator = indicator;
+        this.location = location;
+    }
+
+    public String getId() { return id; }
+    public String getIndicator() { return indicator; }
+    public void setIndicator(String value) { indicator = value; }
+    public String getLocation() { return location; }
+    public void setLocation(String value) { location = value; }
+}
+
+// File: CollectionManagement.java
+public class CollectionManagement {
+    private String processingStatus;
+    private String processingPriority;
+    private String materialsSpecification;
+    private String retentionRule;
+
+    public String getProcessingStatus() { return processingStatus; }
+    public void setProcessingStatus(String value) { processingStatus = value; }
+    public String getProcessingPriority() { return processingPriority; }
+    public void setProcessingPriority(String value) { processingPriority = value; }
+    public String getMaterialsSpecification() { return materialsSpecification; }
+    public void setMaterialsSpecification(String value) { materialsSpecification = value; }
+    public String getRetentionRule() { return retentionRule; }
+    public void setRetentionRule(String value) { retentionRule = value; }
+}
+
+// File: EventRecord.java
+import java.time.Instant;
+import java.util.UUID;
+
+public class EventRecord {
+    private final String id = UUID.randomUUID().toString();
+    private String eventType;
+    private String linkedRecordId;
+    private Instant date = Instant.now();
+    private String outcome;
+
+    public EventRecord(String eventType, String linkedRecordId) {
+        this.eventType = eventType;
+        this.linkedRecordId = linkedRecordId;
+    }
+
+    public String getId() { return id; }
+    public String getEventType() { return eventType; }
+    public void setEventType(String value) { eventType = value; }
+    public String getLinkedRecordId() { return linkedRecordId; }
+    public void setLinkedRecordId(String value) { linkedRecordId = value; }
+    public Instant getDate() { return date; }
+    public void setDate(Instant value) { date = value; }
+    public String getOutcome() { return outcome; }
+    public void setOutcome(String value) { outcome = value; }
+}
+
+// File: RightsStatement.java
+import java.util.UUID;
+
+public class RightsStatement {
+    private final String id = UUID.randomUUID().toString();
+    private String basis;
+    private String status;
+    private String note;
+
+    public RightsStatement(String basis, String status, String note) {
+        this.basis = basis;
+        this.status = status;
+        this.note = note;
+    }
+
+    public String getId() { return id; }
+    public String getBasis() { return basis; }
+    public void setBasis(String value) { basis = value; }
+    public String getStatus() { return status; }
+    public void setStatus(String value) { status = value; }
+    public String getNote() { return note; }
+    public void setNote(String value) { note = value; }
+}
+
+// File: DigitalObject.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public class DigitalObject {
+    private final String id = UUID.randomUUID().toString();
+    private String title;
+    private final List<DigitalObject> children = new ArrayList<>();
+
+    public DigitalObject(String title) { this.title = title; }
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public void setTitle(String value) { title = value; }
+    public List<DigitalObject> getChildren() { return children; }
+}
+
+// File: LdapAuthenticator.java
+public interface LdapAuthenticator {
+    boolean authenticate(String username, String password);
+}
+
+// File: ImportResult.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class ImportResult<T> {
+    private final List<T> imported = new ArrayList<>();
+    private final List<String> errors = new ArrayList<>();
+
+    public List<T> getImported() { return imported; }
+    public List<String> getErrors() { return errors; }
+    public boolean isSuccessful() { return errors.isEmpty(); }
+}
+
+// File: HelpConfiguration.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class HelpConfiguration {
+    private String baseUrl;
+    private final Map<String, String> topicMappings = new HashMap<>();
+
+    public String getBaseUrl() { return baseUrl; }
+    public void setBaseUrl(String value) { baseUrl = value; }
+    public Map<String, String> getTopicMappings() { return topicMappings; }
+
+    public String linkFor(String topic) {
+        if (baseUrl == null || baseUrl.isBlank()) return null;
+        String path = topicMappings.getOrDefault(topic, topic);
+        return baseUrl.endsWith("/") ? baseUrl + path : baseUrl + "/" + path;
+    }
+}
+
+// File: CustomImporter.java
+public interface CustomImporter<T extends ArchiveRecord> {
+    ImportResult<T> importData(String data, ArchiveSystem system, String repositoryId);
+}
+
+// File: ArchiveSystem.java
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+
+public class ArchiveSystem {
+    private final Map<String, Repository> repositories = new LinkedHashMap<>();
+    private final Map<String, User> users = new LinkedHashMap<>();
+    private final Map<String, Resource> resources = new LinkedHashMap<>();
+    private final Map<String, Accession> accessions = new LinkedHashMap<>();
+    private final Map<String, Agent> agents = new LinkedHashMap<>();
+    private final Map<String, Subject> subjects = new LinkedHashMap<>();
+    private final Map<String, EventRecord> events = new LinkedHashMap<>();
+    private final Map<String, RightsStatement> rightsStatements = new LinkedHashMap<>();
+    private final Map<String, DigitalObject> digitalObjects = new LinkedHashMap<>();
+    private final Map<String, List<String>> enumLists = new HashMap<>();
+    private final HelpConfiguration helpConfiguration = new HelpConfiguration();
+    private final List<String> supportedLevels = List.of(
+            "collection", "series", "file", "item", "fonds", "subfonds", "record group");
+
+    public Repository createRepository(String name) {
+        Repository repository = new Repository(name);
+        repositories.put(repository.getId(), repository);
+        return repository;
+    }
+
+    public User createUser(String username, String password, String email, User administrator) {
+        requireRole(administrator, Role.APPLICATION_ADMINISTRATOR, Role.SYSTEM_ADMINISTRATOR);
+        if (users.containsKey(username)) throw new IllegalArgumentException("Username already exists");
+        User user = new User(username, hash(password), email);
+        users.put(username, user);
+        return user;
+    }
+
+    public User createInitialUser(String username, String password, String email, Role role) {
+        if (users.containsKey(username)) throw new IllegalArgumentException("Username already exists");
+        User user = new User(username, hash(password), email);
+        user.getRoles().add(role);
+        users.put(username, user);
+        return user;
+    }
+
+    public void resetPassword(User administrator, String username, String newPassword) {
+        requireRole(administrator, Role.APPLICATION_ADMINISTRATOR, Role.SYSTEM_ADMINISTRATOR);
+        User user = Optional.ofNullable(users.get(username))
+                .orElseThrow(() -> new IllegalArgumentException("Unknown user: " + username));
+        user.setPasswordHash(hash(newPassword));
+    }
+
+    public boolean authenticateLocally(String username, String password) {
+        User user = users.get(username);
+        return user != null && !user.isLdapAccount()
+                && constantTimeEquals(user.getPasswordHash(), hash(password));
+    }
+
+    public boolean authenticateLdap(String username, String password, LdapAuthenticator authenticator) {
+        User user = users.get(username);
+        if (user == null || !user.isLdapAccount() || authenticator == null) return false;
+        return authenticator.authenticate(username, password);
+    }
+
+    public void enableLdap(User administrator, String username) {
+        requireRole(administrator, Role.APPLICATION_ADMINISTRATOR, Role.SYSTEM_ADMINISTRATOR);
+        User user = getUser(username);
+        user.setLdapAccount(true);
+    }
+
+    public User getUser(String username) {
+        return Optional.ofNullable(users.get(username))
+                .orElseThrow(() -> new IllegalArgumentException("Unknown user: " + username));
+    }
+
+    public void assignRepositoryRole(User administrator, String username,
+                                     String repositoryId, Role role) {
+        requireRole(administrator, Role.SYSTEM_ADMINISTRATOR, Role.APPLICATION_ADMINISTRATOR);
+        getRepository(repositoryId).getUserRoles().put(username, role);
+    }
+
+    public void assignAdvancedDataEntry(User administrator, String username, String repositoryId) {
+        assignRepositoryRole(administrator, username, repositoryId, Role.ADVANCED_DATA_ENTRY);
+    }
+
+    public Repository getRepository(String id) {
+        return Optional.ofNullable(repositories.get(id))
+                .orElseThrow(() -> new IllegalArgumentException("Unknown repository: " + id));
+    }
+
+    public Resource createResource(User user, String repositoryId, String title) {
+        requireWriteAccess(user, repositoryId, false);
+        Resource resource = new Resource(repositoryId, title);
+        resources.put(resource.getId(), resource);
+        return resource;
+    }
+
+    public Accession createAccession(User user, String repositoryId, String title) {
+        requireWriteAccess(user, repositoryId, false);
+        Accession accession = new Accession(repositoryId, title);
+        accessions.put(accession.getId(), accession);
+        return accession;
+    }
+
+    public Agent createAgent(User user, String repositoryId, String name, String type) {
+        requireWriteAccess(user, repositoryId, true);
+        Agent agent = new Agent(repositoryId, name, type);
+        agents.put(agent.getId(), agent);
+        return agent;
+    }
+
+    public Subject createSubject(User user, String repositoryId, String term) {
+        requireWriteAccess(user, repositoryId, true);
+        Subject subject = new Subject(repositoryId, term);
+        subjects.put(subject.getId(), subject);
+        return subject;
+    }
+
+    public Resource getResource(User user, String id) {
+        Resource resource = requireRecord(resources, id);
+        requireReadAccess(user, resource.getRepositoryId());
+        return resource;
+    }
+
+    public Accession getAccession(User user, String id) {
+        Accession accession = requireRecord(accessions, id);
+        requireReadAccess(user, accession.getRepositoryId());
+        return accession;
+    }
+
+    public void updateResource(User user, String id, long expectedVersion, String title) {
+        Resource resource = getResource(user, id);
+        requireWriteAccess(user, resource.getRepositoryId(), false);
+        verifyVersion(resource, expectedVersion);
+        resource.setTitle(title);
+        resource.incrementVersion();
+    }
+
+    public void deleteResource(User user, String id) {
+        Resource resource = getResource(user, id);
+        requireManager(user, resource.getRepositoryId());
+        resources.remove(id);
+    }
+
+    public void deleteAccession(User user, String id) {
+        Accession accession = getAccession(user, id);
+        requireManager(user, accession.getRepositoryId());
+        accessions.remove(id);
+    }
+
+    public void addNote(User user, ArchiveRecord record, String note) {
+        requireWriteAccess(user, record.getRepositoryId(), true);
+        record.addNote(note);
+        record.incrementVersion();
+    }
+
+    public void assignSourceRecordId(ArchiveRecord record, String sourceId) {
+        record.setSourceRecordId(sourceId);
+        record.incrementVersion();
+    }
+
+    public ResourceComponent addComponent(User user, String resourceId, String parentId, String title) {
+        Resource resource = getResource(user, resourceId);
+        requireWriteAccess(user, resource.getRepositoryId(), false);
+        ResourceComponent component = new ResourceComponent(title);
+        if (parentId == null) {
+            resource.getComponents().add(component);
+        } else {
+            findComponent(resource.getComponents(), parentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Component not found"))
+                    .getChildren().add(component);
+        }
+        resource.incrementVersion();
+        return component;
+    }
+
+    public void setComponentIdentifier(User user, String resourceId, String componentId, String value) {
+        Resource resource = getResource(user, resourceId);
+        requireWriteAccess(user, resource.getRepositoryId(), false);
+        if (value != null && !value.isBlank()
+                && findComponentByIdentifier(resource.getComponents(), value).isPresent()) {
+            throw new IllegalArgumentException("Component identifier must be unique within the resource");
+        }
+        ResourceComponent component = findComponent(resource.getComponents(), componentId)
+                .orElseThrow(() -> new IllegalArgumentException("Component not found"));
+        component.setComponentIdentifier(value);
+        resource.incrementVersion();
+    }
+
+    public void setComponentLevel(User user, String resourceId, String componentId, String level) {
+        Resource resource = getResource(user, resourceId);
+        requireWriteAccess(user, resource.getRepositoryId(), false);
+        ResourceComponent component = findComponent(resource.getComponents(), componentId)
+                .orElseThrow(() -> new IllegalArgumentException("Component not found"));
+        if (supportedLevels.contains(level.toLowerCase(Locale.ROOT))) {
+            component.setLevelOfDescription(level);
+            component.setCustomLevelOfDescription(null);
+        } else {
+            component.setLevelOfDescription("otherlevel");
+            component.setCustomLevelOfDescription(level);
+        }
+        resource.incrementVersion();
+    }
+
+    public void setResourceLevel(User user, String resourceId, String level) {
+        Resource resource = getResource(user, resourceId);
+        requireWriteAccess(user, resource.getRepositoryId(), false);
+        if (supportedLevels.contains(level.toLowerCase(Locale.ROOT))) {
+            resource.setLevelOfDescription(level);
+            resource.setCustomLevelOfDescription(null);
+        } else {
+            resource.setLevelOfDescription("otherlevel");
+            resource.setCustomLevelOfDescription(level);
+        }
+        resource.incrementVersion();
+    }
+
+    public void moveComponent(User user, String resourceId, String componentId,
+                              String newParentId, int position) {
+        Resource resource = getResource(user, resourceId);
+        requireWriteAccess(user, resource.getRepositoryId(), false);
+        List<ResourceComponent> oldList = findContainingList(resource.getComponents(), componentId);
+        if (oldList == null) throw new IllegalArgumentException("Component not found");
+        ResourceComponent component = oldList.stream()
+                .filter(c -> c.getId().equals(componentId)).findFirst().orElseThrow();
+        List<ResourceComponent> destination;
+        if (newParentId == null) {
+            destination = resource.getComponents();
+        } else {
+            ResourceComponent parent = findComponent(resource.getComponents(), newParentId)
+                    .orElseThrow(() -> new IllegalArgumentException("Parent component not found"));
+            if (contains(component, parent.getId())) {
+                throw new IllegalArgumentException("Cannot move a component into its own descendant");
+            }
+            destination = parent.getChildren();
+        }
+        oldList.remove(component);
+        destination.add(Math.max(0, Math.min(position, destination.size())), component);
+        resource.incrementVersion();
+    }
+
+    public void associateSubject(User user, String resourceId, String subjectId) {
+        Resource resource = getResource(user, resourceId);
+        requireWriteAccess(user, resource.getRepositoryId(), false);
+        requireRecord(subjects, subjectId);
+        if (!resource.getSubjectIds().contains(subjectId)) resource.getSubjectIds().add(subjectId);
+        resource.incrementVersion();
+    }
+
+    public void associateAgent(User user, ArchiveRecord record, String agentId, String relationship) {
+        requireWriteAccess(user, record.getRepositoryId(), false);
+        Agent agent = requireRecord(agents, agentId);
+        if (!Objects.equals(agent.getRepositoryId(), record.getRepositoryId())) {
+            throw new IllegalArgumentException("Agent belongs to another repository");
+        }
+        if (record instanceof Resource r && !r.getAgentIds().contains(agentId)) r.getAgentIds().add(agentId);
+        if (record instanceof Accession a && !a.getAgentIds().contains(agentId)) a.getAgentIds().add(agentId);
+        if (record instanceof ResourceComponent c && !c.getAgentIds().contains(agentId)) c.getAgentIds().add(agentId);
+        record.addNote("Agent relationship (" + relationship + "): " + agentId);
+        record.incrementVersion();
+    }
+
+    public void addInstance(User user, Resource resource, ResourceComponent component, Instance instance) {
+        requireWriteAccess(user, resource.getRepositoryId(), false);
+        if (component == null) resource.addNote("Instance associated: " + instance.getId());
+        else component.getInstances().add(instance);
+        resource.incrementVersion();
+    }
+
+    public void addInstance(User user, Accession accession, Instance instance) {
+        requireWriteAccess(user, accession.getRepositoryId(), false);
+        accession.getInstances().add(instance);
+        accession.incrementVersion();
+    }
+
+    public void setCollectionManagement(User user, ArchiveRecord record,
+                                        CollectionManagement details) {
+        requireWriteAccess(user, record.getRepositoryId(), false);
+        if (record instanceof Resource resource) resource.setCollectionManagement(details);
+        else if (record instanceof Accession accession) accession.setCollectionManagement(details);
+        else throw new IllegalArgumentException("Collection management is supported for resources and accessions");
+        record.incrementVersion();
+    }
+
+    public EventRecord createEvent(User user, String repositoryId, String type, String recordId) {
+        requireWriteAccess(user, repositoryId, true);
+        EventRecord event = new EventRecord(type, recordId);
+        events.put(event.getId(), event);
+        return event;
+    }
+
+    public RightsStatement createRightsStatement(User user, String repositoryId,
+                                                  String basis, String status, String note) {
+        requireWriteAccess(user, repositoryId, true);
+        RightsStatement statement = new RightsStatement(basis, status, note);
+        rightsStatements.put(statement.getId(), statement);
+        return statement;
+    }
+
+    public DigitalObject createDigitalObject(User user, String repositoryId, String title) {
+        requireWriteAccess(user, repositoryId, false);
+        DigitalObject object = new DigitalObject(title);
+        digitalObjects.put(object.getId(), object);
+        return object;
+    }
+
+    public void setRepositoryProperty(User user, String repositoryId, String key, String value) {
+        requireManager(user, repositoryId);
+        getRepository(repositoryId).getAdditionalProperties().put(key, value);
+    }
+
+    public void setEnumValues(User user, String listName, Collection<String> values) {
+        requireRole(user, Role.APPLICATION_ADMINISTRATOR, Role.SYSTEM_ADMINISTRATOR);
+        enumLists.put(listName, new ArrayList<>(values));
+    }
+
+    public List<String> getEnumValues(String listName) {
+        return List.copyOf(enumLists.getOrDefault(listName, List.of()));
+    }
+
+    public void replaceEnumValue(User user, String listName, String oldValue, String newValue) {
+        requireRole(user, Role.APPLICATION_ADMINISTRATOR, Role.SYSTEM_ADMINISTRATOR);
+        List<String> values = enumLists.get(listName);
+        if (values == null) throw new IllegalArgumentException("Unknown enum list: " + listName);
+        for (int i = 0; i < values.size(); i++) {
+            if (values.get(i).equals(oldValue)) values.set(i, newValue);
+        }
+    }
+
+    public HelpConfiguration getHelpConfiguration() { return helpConfiguration; }
+
+    public List<ArchiveRecord> search(User user, String repositoryId, String query) {
+        requireReadAccess(user, repositoryId);
+        String q = query.toLowerCase(Locale.ROOT);
+        List<ArchiveRecord> found = new ArrayList<>();
+        resources.values().stream().filter(r -> r.getRepositoryId().equals(repositoryId)
+                && safe(r.getTitle()).contains(q)).forEach(found::add);
+        accessions.values().stream().filter(a -> a.getRepositoryId().equals(repositoryId)
+                && safe(a.getTitle()).contains(q)).forEach(found::add);
+        digitalObjects.values().forEach(d -> {
+            if (safe(d.getTitle()).contains(q)) {
+                // Digital objects are returned separately by getDigitalObjects; they have no archival-record base.
+            }
+        });
+        return found;
+    }
+
+    public List<DigitalObject> getDigitalObjects() { return List.copyOf(digitalObjects.values()); }
+
+    public String findingAid(User user, String resourceId) {
+        Resource resource = getResource(user, resourceId);
+        StringBuilder out = new StringBuilder();
+        out.append("Finding Aid: ").append(resource.getFindingAidTitle() == null
+                ? resource.getTitle() : resource.getFindingAidTitle()).append('\n');
+        if (resource.getFindingAidDate() != null) out.append("Date: ").append(resource.getFindingAidDate()).append('\n');
+        out.append("Collection: ").append(resource.getTitle()).append('\n');
+        out.append("Dates: ").append(String.join(", ", resource.getDates())).append('\n');
+        out.append("Extents: ").append(String.join(", ", resource.getExtents())).append('\n');
+        for (String subjectId : resource.getSubjectIds()) {
+            Subject subject = subjects.get(subjectId);
+            if (subject != null) out.append("Subject: ").append(subject.getTerm()).append('\n');
+        }
+        if (resource.getFindingAidNote() != null) out.append(resource.getFindingAidNote()).append('\n');
+        appendComponentText(out, resource.getComponents(), 0);
+        return out.toString();
+    }
+
+    public String exportEad(User user, String resourceId) {
+        Resource resource = getResource(user, resourceId);
+        StringBuilder xml = new StringBuilder();
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+                .append("<ead><archdesc level=\"").append(xmlEscape(resource.getLevelOfDescription()))
+                .append("\"><did><unittitle>").append(xmlEscape(resource.getTitle()))
+                .append("</unittitle>");
+        for (String date : resource.getDates()) xml.append("<unitdate>").append(xmlEscape(date)).append("</unitdate>");
+        for (String extent : resource.getExtents()) xml.append("<extent>").append(xmlEscape(extent)).append("</extent>");
+        xml.append("</did>");
+        appendEadComponents(xml, resource.getComponents());
+        xml.append("</archdesc></ead>");
+        return xml.toString();
+    }
+
+    public ImportResult<Resource> importEad(User user, String repositoryId, String xml) {
+        requireWriteAccess(user, repositoryId, false);
+        ImportResult<Resource> result = new ImportResult<>();
+        try {
+            Document doc = parseXml(xml);
+            Element archdesc = firstElement(doc, "archdesc");
+            String title = textOfFirst(archdesc, "unittitle");
+            if (title.isBlank()) title = "Untitled imported resource";
+            Resource resource = new Resource(repositoryId, title);
+            String level = archdesc.getAttribute("level");
+            if (!level.isBlank()) resource.setLevelOfDescription(level);
+            for (Element date : descendants(archdesc, "unitdate")) resource.getDates().add(date.getTextContent().trim());
+            for (Element extent : descendants(archdesc, "extent")) resource.getExtents().add(extent.getTextContent().trim());
+            importComponents(archdesc, resource.getComponents());
+            resource.setSourceRecordId(findAttribute(doc.getDocumentElement(), "id"));
+            resources.put(resource.getId(), resource);
+            result.getImported().add(resource);
+        } catch (Exception e) {
+            result.getErrors().add("Unable to import EAD: " + usefulMessage(e));
+        }
+        return result;
+    }
+
+    public ImportResult<Resource> importArchonEad(User user, String repositoryId, String xml) {
+        return importEad(user, repositoryId, xml);
+    }
+
+    public ImportResult<Resource> importArchivistsToolkitEad(User user, String repositoryId, String xml) {
+        return importEad(user, repositoryId, xml);
+    }
+
+    public ImportResult<Accession> importAccessionsCsv(User user, String repositoryId, String csv) {
+        requireWriteAccess(user, repositoryId, false);
+        ImportResult<Accession> result = new ImportResult<>();
+        String[] lines = csv.split("\\R");
+        if (lines.length == 0 || lines[0].isBlank()) {
+            result.getErrors().add("CSV is empty");
+            return result;
+        }
+        List<String> headers = parseCsvLine(lines[0]);
+        int titleColumn = headers.indexOf("title");
+        if (titleColumn < 0) {
+            result.getErrors().add("CSV must contain a 'title' column");
+            return result;
+        }
+        for (int line = 1; line < lines.length; line++) {
+            if (lines[line].isBlank()) continue;
+            try {
+                List<String> row = parseCsvLine(lines[line]);
+                if (titleColumn >= row.size() || row.get(titleColumn).isBlank()) {
+                    throw new IllegalArgumentException("title is missing");
+                }
+                Accession accession = new Accession(repositoryId, row.get(titleColumn));
+                int dateColumn = headers.indexOf("date");
+                int extentColumn = headers.indexOf("extent");
+                if (dateColumn >= 0 && dateColumn < row.size()) accession.getDates().add(row.get(dateColumn));
+                if (extentColumn >= 0 && extentColumn < row.size()) accession.getExtents().add(row.get(extentColumn));
+                int sourceColumn = headers.indexOf("source_id");
+                if (sourceColumn >= 0 && sourceColumn < row.size()) accession.setSourceRecordId(row.get(sourceColumn));
+                accessions.put(accession.getId(), accession);
+                result.getImported().add(accession);
+            } catch (RuntimeException e) {
+                result.getErrors().add("CSV line " + (line + 1) + ": " + usefulMessage(e));
+            }
+        }
+        return result;
+    }
+
+    public ImportResult<Resource> importMarcXml(User user, String repositoryId, String xml) {
+        requireWriteAccess(user, repositoryId, false);
+        ImportResult<Resource> result = new ImportResult<>();
+        try {
+            Document doc = parseXml(xml);
+            NodeList records = doc.getElementsByTagNameNS("*", "record");
+            if (records.getLength() == 0) records = doc.getElementsByTagName("record");
+            if (records.getLength() == 0) throw new IllegalArgumentException("No MARC record elements found");
+            for (int i = 0; i < records.getLength(); i++) {
+                Element record = (Element) records.item(i);
+                String title = "";
+                NodeList datafields = record.getElementsByTagNameNS("*", "datafield");
+                if (datafields.getLength() == 0) datafields = record.getElementsByTagName("datafield");
+                for (int j = 0; j < datafields.getLength() && title.isBlank(); j++) {
+                    Element field = (Element) datafields.item(j);
+                    if (!"245".equals(field.getAttribute("tag"))) continue;
+                    NodeList subs = field.getElementsByTagNameNS("*", "subfield");
+                    if (subs.getLength() == 0) subs = field.getElementsByTagName("subfield");
+                    for (int k = 0; k < subs.getLength(); k++) {
+                        Element sub = (Element) subs.item(k);
+                        if ("a".equals(sub.getAttribute("code"))) title += sub.getTextContent().trim();
+                    }
+                }
+                if (title.isBlank()) title = "Untitled MARC resource";
+                Resource resource = new Resource(repositoryId, title);
+                resource.setSourceRecordId(findMarcControlNumber(record));
+                resources.put(resource.getId(), resource);
+                result.getImported().add(resource);
+            }
+        } catch (Exception e) {
+            result.getErrors().add("Unable to import MARCXML: " + usefulMessage(e));
+        }
+        return result;
+    }
+
+    public ImportResult<ArchiveRecord> importMarcAgentsAndSubjects(User user, String repositoryId, String xml) {
+        requireWriteAccess(user, repositoryId, true);
+        ImportResult<ArchiveRecord> result = new ImportResult<>();
+        try {
+            Document doc = parseXml(xml);
+            NodeList records = doc.getElementsByTagNameNS("*", "record");
+            if (records.getLength() == 0) records = doc.getElementsByTagName("record");
+            if (records.getLength() == 0) throw new IllegalArgumentException("No MARC record elements found");
+            for (int i = 0; i < records.getLength(); i++) {
+                Element record = (Element) records.item(i);
+                NodeList fields = record.getElementsByTagNameNS("*", "datafield");
+                if (fields.getLength() == 0) fields = record.getElementsByTagName("datafield");
+                for (int j = 0; j < fields.getLength(); j++) {
+                    Element field = (Element) fields.item(j);
+                    String tag = field.getAttribute("tag");
+                    String value = concatenateSubfields(field);
+                    if (value.isBlank()) continue;
+                    if (tag.startsWith("1")) {
+                        Agent agent = new Agent(repositoryId, value, "person");
+                        agent.setSourceRecordId(findMarcControlNumber(record));
+                        agents.put(agent.getId(), agent);
+                        result.getImported().add(agent);
+                    } else if (tag.startsWith("6") || tag.startsWith("65")) {
+                        Subject subject = new Subject(repositoryId, value);
+                        subject.setSourceRecordId(findMarcControlNumber(record));
+                        subjects.put(subject.getId(), subject);
+                        result.getImported().add(subject);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            result.getErrors().add("Unable to import MARC agent/subject data: " + usefulMessage(e));
+        }
+        return result;
+    }
+
+    public ImportResult<Agent> importEacCpf(User user, String repositoryId, String xml) {
+        requireWriteAccess(user, repositoryId, true);
+        ImportResult<Agent> result = new ImportResult<>();
+        try {
+            Document doc = parseXml(xml);
+            NodeList names = doc.getElementsByTagNameNS("*", "part");
+            StringBuilder name = new StringBuilder();
+            for (int i = 0; i < names.getLength(); i++) {
+                String part = names.item(i).getTextContent().trim();
+                if (!part.isBlank()) {
+                    if (name.length() > 0) name.append(' ');
+                    name.append(part);
+                }
+            }
+            if (name.length() == 0) name.append(textOfFirst(doc.getDocumentElement(), "nameEntry"));
+            if (name.length() == 0) throw new IllegalArgumentException("No agent name found");
+            Agent agent = new Agent(repositoryId, name.toString(), "person");
+            agent.setSourceRecordId(findAttribute(doc.getDocumentElement(), "id"));
+            agents.put(agent.getId(), agent);
+            result.getImported().add(agent);
+        } catch (Exception e) {
+            result.getErrors().add("Unable to import EAC-CPF: " + usefulMessage(e));
+        }
+        return result;
+    }
+
+    public String exportEacCpf(User user, String agentId) {
+        Agent agent = requireRecord(agents, agentId);
+        requireReadAccess(user, agent.getRepositoryId());
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<eac-cpf><cpfDescription><identity><nameEntry><part>"
+                + xmlEscape(agent.getName())
+                + "</part></nameEntry></identity></cpfDescription></eac-cpf>";
+    }
+
+    private void requireReadAccess(User user, String repositoryId) {
+        if (user == null) throw new SecurityException("Authentication required");
+        if (hasGlobal(user, Role.SYSTEM_ADMINISTRATOR, Role.APPLICATION_ADMINISTRATOR)) return;
+        Role role = getRepository(repositoryId).getUserRoles().get(user.getUsername());
+        if (role == null) role = highestApplicableGlobalRole(user);
+        if (role == null) throw new SecurityException("No access to repository");
+    }
+
+    private void requireWriteAccess(User user, String repositoryId, boolean advanced) {
+        requireReadAccess(user, repositoryId);
+        if (hasGlobal(user, Role.SYSTEM_ADMINISTRATOR, Role.APPLICATION_ADMINISTRATOR)) return;
+        Role role = getRepository(repositoryId).getUserRoles().get(user.getUsername());
+        if (role == null) role = highestApplicableGlobalRole(user);
+        if (role == Role.REPOSITORY_MANAGER) return;
+        if (advanced && role == Role.ADVANCED_DATA_ENTRY) return;
+        if (!advanced && (role == Role.BASIC_DATA_ENTRY || role == Role.ADVANCED_DATA_ENTRY)) return;
+        throw new SecurityException("Insufficient permission to modify this record");
+    }
+
+    private void requireManager(User user, String repositoryId) {
+        requireReadAccess(user, repositoryId);
+        if (hasGlobal(user, Role.SYSTEM_ADMINISTRATOR, Role.APPLICATION_ADMINISTRATOR)) return;
+        Role role = getRepository(repositoryId).getUserRoles().get(user.getUsername());
+        if (role == null) role = highestApplicableGlobalRole(user);
+        if (role != Role.REPOSITORY_MANAGER) throw new SecurityException("Repository Manager permission required");
+    }
+
+    private void requireRole(User user, Role... allowed) {
+        if (user == null) throw new SecurityException("Authentication required");
+        if (!hasGlobal(user, allowed)) throw new SecurityException("Administrator permission required");
+    }
+
+    private boolean hasGlobal(User user, Role... roles) {
+        if (user == null) return false;
+        for (Role role : roles) if (user.getRoles().contains(role)) return true;
+        return false;
+    }
+
+    private Role highestApplicableGlobalRole(User user) {
+        if (user.getRoles().contains(Role.REPOSITORY_MANAGER)) return Role.REPOSITORY_MANAGER;
+        if (user.getRoles().contains(Role.ADVANCED_DATA_ENTRY)) return Role.ADVANCED_DATA_ENTRY;
+        if (user.getRoles().contains(Role.BASIC_DATA_ENTRY)) return Role.BASIC_DATA_ENTRY;
+        if (user.getRoles().contains(Role.READ_ONLY)) return Role.READ_ONLY;
+        return null;
+    }
+
+    private static <T> T requireRecord(Map<String, T> records, String id) {
+        return Optional.ofNullable(records.get(id))
+                .orElseThrow(() -> new IllegalArgumentException("Record not found: " + id));
+    }
+
+    private static void verifyVersion(ArchiveRecord record, long expectedVersion) {
+        if (record.getVersion() != expectedVersion) {
+            throw new IllegalStateException("Record was changed by another user; reload before saving");
+        }
+    }
+
+    private static Optional<ResourceComponent> findComponent(List<ResourceComponent> components, String id) {
+        for (ResourceComponent component : components) {
+            if (component.getId().equals(id)) return Optional.of(component);
+            Optional<ResourceComponent> nested = findComponent(component.getChildren(), id);
+            if (nested.isPresent()) return nested;
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<ResourceComponent> findComponentByIdentifier(
+            List<ResourceComponent> components, String identifier) {
+        for (ResourceComponent component : components) {
+            if (identifier.equals(component.getComponentIdentifier())) return Optional.of(component);
+            Optional<ResourceComponent> nested = findComponentByIdentifier(component.getChildren(), identifier);
+            if (nested.isPresent()) return nested;
+        }
+        return Optional.empty();
+    }
+
+    private static List<ResourceComponent> findContainingList(List<ResourceComponent> list, String id) {
+        for (ResourceComponent component : list) {
+            if (component.getId().equals(id)) return list;
+            List<ResourceComponent> nested = findContainingList(component.getChildren(), id);
+            if (nested != null) return nested;
+        }
+        return null;
+    }
+
+    private static boolean contains(ResourceComponent root, String id) {
+        if (root.getId().equals(id)) return true;
+        for (ResourceComponent child : root.getChildren()) if (contains(child, id)) return true;
+        return false;
+    }
+
+    private static void appendComponentText(StringBuilder out, List<ResourceComponent> components, int depth) {
+        for (ResourceComponent component : components) {
+            out.append("  ".repeat(depth)).append(component.getTitle()).append('\n');
+            if (!component.getDates().isEmpty()) out.append("  ".repeat(depth + 1))
+                    .append("Dates: ").append(String.join(", ", component.getDates())).append('\n');
+            if (!component.getExtents().isEmpty()) out.append("  ".repeat(depth + 1))
+                    .append("Extents: ").append(String.join(", ", component.getExtents())).append('\n');
+            appendComponentText(out, component.getChildren(), depth + 1);
+        }
+    }
+
+    private static void appendEadComponents(StringBuilder xml, List<ResourceComponent> components) {
+        for (ResourceComponent component : components) {
+            xml.append("<c level=\"").append(xmlEscape(component.getLevelOfDescription() == null
+                    ? "otherlevel" : component.getLevelOfDescription())).append("\"><did><unittitle>")
+                    .append(xmlEscape(component.getTitle())).append("</unittitle></did>");
+            appendEadComponents(xml, component.getChildren());
+            xml.append("</c>");
+        }
+    }
+
+    private static void importComponents(Element parent, List<ResourceComponent> destination) {
+        NodeList children = parent.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node node = children.item(i);
+            if (!(node instanceof Element element) || !element.getTagName().toLowerCase(Locale.ROOT).startsWith("c")) continue;
+            String title = textOfFirst(element, "unittitle");
+            if (title.isBlank()) title = "Untitled component";
+            ResourceComponent component = new ResourceComponent(title);
+            String level = element.getAttribute("level");
+            if (!level.isBlank()) component.setLevelOfDescription(level);
+            for (Element date : descendants(element, "unitdate")) component.getDates().add(date.getTextContent().trim());
+            for (Element extent : descendants(element, "extent")) component.getExtents().add(extent.getTextContent().trim());
+            destination.add(component);
+            importComponents(element, component.getChildren());
+        }
+    }
+
+    private static Document parseXml(String xml) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+        return factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
+    }
+
+    private static Element firstElement(Document doc, String name) {
+        NodeList list = doc.getElementsByTagNameNS("*", name);
+        if (list.getLength() == 0) list = doc.getElementsByTagName(name);
+        if (list.getLength() == 0) throw new IllegalArgumentException("Missing <" + name + "> element");
+        return (Element) list.item(0);
+    }
+
+    private static List<Element> descendants(Element parent, String name) {
+        NodeList list = parent.getElementsByTagNameNS("*", name);
+        if (list.getLength() == 0) list = parent.getElementsByTagName(name);
+        List<Element> result = new ArrayList<>();
+        for (int i = 0; i < list.getLength(); i++) result.add((Element) list.item(i));
+        return result;
+    }
+
+    private static String textOfFirst(Element parent, String name) {
+        NodeList list = parent.getElementsByTagNameNS("*", name);
+        if (list.getLength() == 0) list = parent.getElementsByTagName(name);
+        return list.getLength() == 0 ? "" : list.item(0).getTextContent().trim();
+    }
+
+    private static String findAttribute(Element element, String attribute) {
+        if (element.hasAttribute(attribute)) return element.getAttribute(attribute);
+        return "";
+    }
+
+    private static String findMarcControlNumber(Element record) {
+        NodeList controls = record.getElementsByTagNameNS("*", "controlfield");
+        if (controls.getLength() == 0) controls = record.getElementsByTagName("controlfield");
+        for (int i = 0; i < controls.getLength(); i++) {
+            Element control = (Element) controls.item(i);
+            if ("001".equals(control.getAttribute("tag"))) return control.getTextContent().trim();
+        }
+        return "";
+    }
+
+    private static String concatenateSubfields(Element field) {
+        NodeList subs = field.getElementsByTagNameNS("*", "subfield");
+        if (subs.getLength() == 0) subs = field.getElementsByTagName("subfield");
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < subs.getLength(); i++) {
+            String value = subs.item(i).getTextContent().trim();
+            if (!value.isBlank()) {
+                if (out.length() > 0) out.append(' ');
+                out.append(value);
+            }
+        }
+        return out.toString();
+    }
+
+    private static List<String> parseCsvLine(String line) {
+        List<String> values = new ArrayList<>();
+        StringBuilder value = new StringBuilder();
+        boolean quoted = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                if (quoted && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    value.append('"');
+                    i++;
+                } else quoted = !quoted;
+            } else if (c == ',' && !quoted) {
+                values.add(value.toString().trim());
+                value.setLength(0);
+            } else value.append(c);
+        }
+        values.add(value.toString().trim());
+        return values;
+    }
+
+    private static String xmlEscape(String value) {
+        if (value == null) return "";
+        return value.replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT);
+    }
+
+    private static String usefulMessage(Exception e) {
+        return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+    }
+
+    private static String hash(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder out = new StringBuilder();
+            for (byte b : bytes) out.append(String.format("%02x", b));
+            return out.toString();
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to hash password", e);
+        }
+    }
+
+    private static boolean constantTimeEquals(String left, String right) {
+        return MessageDigest.isEqual(left.getBytes(StandardCharsets.UTF_8),
+                right.getBytes(StandardCharsets.UTF_8));
+    }
+}
+
+// File: Main.java
+public class Main {
+    public static void main(String[] args) {
+        ArchiveSystem system = new ArchiveSystem();
+        User admin = system.createInitialUser("admin", "admin-password", "admin@example.org",
+                Role.APPLICATION_ADMINISTRATOR);
+        Repository repository = system.createRepository("Special Collections");
+        User archivist = system.createInitialUser("archivist", "secret", "archivist@example.org",
+                Role.BASIC_DATA_ENTRY);
+        system.assignRepositoryRole(admin, archivist.getUsername(), repository.getId(), Role.REPOSITORY_MANAGER);
+
+        Resource resource = system.createResource(archivist, repository.getId(), "Example Collection");
+        resource.getDates().add("1900–1950");
+        resource.getExtents().add("2 linear feet");
+        ResourceComponent component = system.addComponent(archivist, resource.getId(), null, "Correspondence");
+        system.setComponentIdentifier(archivist, resource.getId(), component.getId(), "Series 1");
+
+        System.out.println(system.findingAid(archivist, resource.getId()));
+        System.out.println(system.exportEad(archivist, resource.getId()));
+    }
+}

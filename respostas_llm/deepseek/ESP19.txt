@@ -1,0 +1,1243 @@
+// File: Main.java
+import java.time.LocalDate;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        NotificationService notificationService = new ConsoleNotificationService();
+        LibrarySystem library = new LibrarySystem(notificationService);
+        LocalDate today = LocalDate.of(2025, 1, 15);
+        library.setToday(today);
+
+        Address aliceAddress = new Address("Main Street", "10", "12345", "Town");
+        UserAccount alice = new UserAccount("U001", UserClassification.STUDENT, "Alice", aliceAddress, today.plusYears(1));
+        alice.setEmail("alice@example.com");
+        UserAccount bob = new UserAccount("U002", UserClassification.STUDENT, "Bob", new Address("Second Street", "20", "12345", "Town"), today.plusYears(1));
+
+        try {
+            library.addUserAccount(alice);
+            library.addUserAccount(bob);
+
+            Book book = new Book("ST 230", List.of("James Gosling", "Bill Joy"), "Java Programming", "A comprehensive guide", 2024, List.of("Java", "Programming"), "Tech Press", "Berlin", "Editor X", "978-3-16-148410-0");
+            library.addMedium(book);
+            Instance instance = new Instance("100/ST 230 B198-1(2)+9", book);
+            library.addInstance(instance);
+
+            SearchCriteria criteria = new SearchCriteria();
+            criteria.setTitleContains("Java");
+            List<Medium> results = library.searchMedia(criteria);
+            System.out.println("Search results: " + results.size());
+
+            library.reserveInstance("100/ST 230 B198-1(2)+9", "U001");
+            System.out.println("Reserved by Alice. Status: " + instance.getStatus());
+            String receipt = library.borrowInstance("100/ST 230 B198-1(2)+9", "U001");
+            System.out.println(receipt);
+            System.out.println("Status after borrow: " + instance.getStatus());
+
+            library.reserveInstance("100/ST 230 B198-1(2)+9", "U002");
+            System.out.println("Reserved by Bob. Status: " + instance.getStatus());
+
+            try {
+                library.extendLoan("100/ST 230 B198-1(2)+9", "U001");
+            } catch (LibraryException e) {
+                System.out.println("Extension rejected: " + e.getMessage());
+            }
+
+            library.returnInstance("100/ST 230 B198-1(2)+9");
+            System.out.println("Returned. Status: " + instance.getStatus());
+
+            library.borrowInstance("100/ST 230 B198-1(2)+9", "U002");
+            System.out.println("Bob borrowed. Status: " + instance.getStatus());
+
+            library.setToday(today.plusDays(45));
+            library.checkOverdue();
+        } catch (LibraryException e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+}
+
+// File: LibraryException.java
+public class LibraryException extends Exception {
+    public LibraryException(String message) {
+        super(message);
+    }
+}
+
+// File: UserClassification.java
+public enum UserClassification {
+    STAFF,
+    STUDENT,
+    PUPIL,
+    GUEST
+}
+
+// File: Address.java
+public class Address {
+    private String street;
+    private String number;
+    private String postcode;
+    private String city;
+
+    public Address(String street, String number, String postcode, String city) {
+        this.street = street;
+        this.number = number;
+        this.postcode = postcode;
+        this.city = city;
+    }
+
+    public String getStreet() {
+        return street;
+    }
+
+    public void setStreet(String street) {
+        this.street = street;
+    }
+
+    public String getNumber() {
+        return number;
+    }
+
+    public void setNumber(String number) {
+        this.number = number;
+    }
+
+    public String getPostcode() {
+        return postcode;
+    }
+
+    public void setPostcode(String postcode) {
+        this.postcode = postcode;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    @Override
+    public String toString() {
+        return street + " " + number + ", " + postcode + " " + city;
+    }
+}
+
+// File: UnpaidFee.java
+public class UnpaidFee {
+    private final double amount;
+    private final String reason;
+
+    public UnpaidFee(double amount, String reason) {
+        this.amount = amount;
+        this.reason = reason;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    @Override
+    public String toString() {
+        return amount + " (" + reason + ")";
+    }
+}
+
+// File: Article.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Article {
+    private final String title;
+    private final List<String> authors;
+
+    public Article(String title, List<String> authors) {
+        this.title = title;
+        this.authors = new ArrayList<>(authors);
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public List<String> getAuthors() {
+        return List.copyOf(authors);
+    }
+
+    @Override
+    public String toString() {
+        return title + " by " + authors;
+    }
+}
+
+// File: MediumType.java
+public enum MediumType {
+    BOOK,
+    MAGAZINE,
+    VIDEO,
+    CD
+}
+
+// File: SearchCriteria.java
+public class SearchCriteria {
+    private String titleContains;
+    private MediumType type;
+    private String authorContains;
+    private String keyword;
+
+    public SearchCriteria() {
+    }
+
+    public String getTitleContains() {
+        return titleContains;
+    }
+
+    public void setTitleContains(String titleContains) {
+        this.titleContains = titleContains;
+    }
+
+    public MediumType getType() {
+        return type;
+    }
+
+    public void setType(MediumType type) {
+        this.type = type;
+    }
+
+    public String getAuthorContains() {
+        return authorContains;
+    }
+
+    public void setAuthorContains(String authorContains) {
+        this.authorContains = authorContains;
+    }
+
+    public String getKeyword() {
+        return keyword;
+    }
+
+    public void setKeyword(String keyword) {
+        this.keyword = keyword;
+    }
+}
+
+// File: Medium.java
+import java.util.ArrayList;
+import java.util.List;
+
+public abstract class Medium {
+    private final String partialShelfmark;
+    private final MediumType type;
+    private final List<String> authors;
+    private final String title;
+    private final String additionalTitle;
+    private final int publicationYear;
+    private final List<String> keywords;
+
+    protected Medium(String partialShelfmark, MediumType type, List<String> authors, String title, String additionalTitle, int publicationYear, List<String> keywords) {
+        this.partialShelfmark = partialShelfmark;
+        this.type = type;
+        this.authors = new ArrayList<>(authors);
+        this.title = title;
+        this.additionalTitle = additionalTitle;
+        this.publicationYear = publicationYear;
+        this.keywords = new ArrayList<>(keywords);
+    }
+
+    public String getPartialShelfmark() {
+        return partialShelfmark;
+    }
+
+    public MediumType getType() {
+        return type;
+    }
+
+    public List<String> getAuthors() {
+        return List.copyOf(authors);
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getAdditionalTitle() {
+        return additionalTitle;
+    }
+
+    public int getPublicationYear() {
+        return publicationYear;
+    }
+
+    public List<String> getKeywords() {
+        return List.copyOf(keywords);
+    }
+
+    public boolean matches(SearchCriteria criteria) {
+        if (criteria.getTitleContains() != null && !title.toLowerCase().contains(criteria.getTitleContains().toLowerCase())) {
+            return false;
+        }
+        if (criteria.getType() != null && criteria.getType() != type) {
+            return false;
+        }
+        if (criteria.getAuthorContains() != null) {
+            boolean found = authors.stream().anyMatch(a -> a.toLowerCase().contains(criteria.getAuthorContains().toLowerCase()));
+            if (!found) {
+                return false;
+            }
+        }
+        if (criteria.getKeyword() != null) {
+            boolean found = keywords.stream().anyMatch(k -> k.toLowerCase().contains(criteria.getKeyword().toLowerCase()));
+            if (!found) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return type + ": " + title + " by " + authors + " (" + publicationYear + ") [" + partialShelfmark + "]";
+    }
+}
+
+// File: Book.java
+import java.util.List;
+
+public class Book extends Medium {
+    private final String publisher;
+    private final String placeOfPublication;
+    private final String editor;
+    private final String isbn;
+
+    public Book(String partialShelfmark, List<String> authors, String title, String additionalTitle, int publicationYear, List<String> keywords, String publisher, String placeOfPublication, String editor, String isbn) {
+        super(partialShelfmark, MediumType.BOOK, authors, title, additionalTitle, publicationYear, keywords);
+        this.publisher = publisher;
+        this.placeOfPublication = placeOfPublication;
+        this.editor = editor;
+        this.isbn = isbn;
+    }
+
+    public String getPublisher() {
+        return publisher;
+    }
+
+    public String getPlaceOfPublication() {
+        return placeOfPublication;
+    }
+
+    public String getEditor() {
+        return editor;
+    }
+
+    public String getIsbn() {
+        return isbn;
+    }
+}
+
+// File: Magazine.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Magazine extends Medium {
+    private final String publisher;
+    private final List<Article> articles;
+
+    public Magazine(String partialShelfmark, List<String> authors, String title, String additionalTitle, int publicationYear, List<String> keywords, String publisher, List<Article> articles) {
+        super(partialShelfmark, MediumType.MAGAZINE, authors, title, additionalTitle, publicationYear, keywords);
+        this.publisher = publisher;
+        this.articles = new ArrayList<>(articles);
+    }
+
+    public String getPublisher() {
+        return publisher;
+    }
+
+    public List<Article> getArticles() {
+        return List.copyOf(articles);
+    }
+}
+
+// File: Video.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Video extends Medium {
+    private final String genre;
+    private final List<String> actors;
+
+    public Video(String partialShelfmark, List<String> authors, String title, String additionalTitle, int publicationYear, List<String> keywords, String genre, List<String> actors) {
+        super(partialShelfmark, MediumType.VIDEO, authors, title, additionalTitle, publicationYear, keywords);
+        this.genre = genre;
+        this.actors = new ArrayList<>(actors);
+    }
+
+    public String getGenre() {
+        return genre;
+    }
+
+    public List<String> getActors() {
+        return List.copyOf(actors);
+    }
+}
+
+// File: CD.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class CD extends Medium {
+    private final String genre;
+    private final List<String> titles;
+    private final List<String> artists;
+
+    public CD(String partialShelfmark, List<String> authors, String title, String additionalTitle, int publicationYear, List<String> keywords, String genre, List<String> titles, List<String> artists) {
+        super(partialShelfmark, MediumType.CD, authors, title, additionalTitle, publicationYear, keywords);
+        this.genre = genre;
+        this.titles = new ArrayList<>(titles);
+        this.artists = new ArrayList<>(artists);
+    }
+
+    public String getGenre() {
+        return genre;
+    }
+
+    public List<String> getTitles() {
+        return List.copyOf(titles);
+    }
+
+    public List<String> getArtists() {
+        return List.copyOf(artists);
+    }
+}
+
+// File: Component.java
+public class Component {
+    private final String description;
+
+    public Component(String description) {
+        this.description = description;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return description;
+    }
+}
+
+// File: InstanceStatus.java
+public enum InstanceStatus {
+    NEWLY_ACQUIRED,
+    ACQUISITION_PROCESS,
+    READING_ROOM,
+    AVAILABLE,
+    RESERVED_AND_AVAILABLE,
+    BORROWED,
+    RESERVED_AND_BORROWED,
+    MISSING,
+    SORTED_OUT
+}
+
+// File: Shelfmark.java
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class Shelfmark {
+    private static final Pattern PATTERN = Pattern.compile("^(\\d{1,4})/([A-Z]{2}\\s?\\d{3,5})\\s+([A-Z]\\d{3})(?:-(\\d+))?(?:\\((\\d+)\\))?(?:\\+(\\d+))?$");
+
+    private final String value;
+    private final String location;
+    private final String notation;
+    private final String cutter;
+    private final String volume;
+    private final String edition;
+    private final String multipleInstance;
+
+    public Shelfmark(String value) {
+        this.value = value;
+        Matcher matcher = PATTERN.matcher(value);
+        if (!matcher.matches()) {
+            throw new IllegalArgumentException("Invalid shelfmark: " + value);
+        }
+        this.location = matcher.group(1);
+        this.notation = matcher.group(2);
+        this.cutter = matcher.group(3);
+        this.volume = matcher.group(4);
+        this.edition = matcher.group(5);
+        this.multipleInstance = matcher.group(6);
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public String getNotation() {
+        return notation;
+    }
+
+    public String getCutter() {
+        return cutter;
+    }
+
+    public String getVolume() {
+        return volume;
+    }
+
+    public String getEdition() {
+        return edition;
+    }
+
+    public String getMultipleInstance() {
+        return multipleInstance;
+    }
+
+    @Override
+    public String toString() {
+        return value;
+    }
+}
+
+// File: BorrowHistoryEntry.java
+import java.time.LocalDate;
+
+public class BorrowHistoryEntry {
+    private final UserAccount user;
+    private final LocalDate borrowDate;
+    private LocalDate dueDate;
+    private LocalDate returnDate;
+    private int extensionDays;
+
+    public BorrowHistoryEntry(UserAccount user, LocalDate borrowDate, LocalDate dueDate) {
+        this.user = user;
+        this.borrowDate = borrowDate;
+        this.dueDate = dueDate;
+    }
+
+    public UserAccount getUser() {
+        return user;
+    }
+
+    public LocalDate getBorrowDate() {
+        return borrowDate;
+    }
+
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public LocalDate getReturnDate() {
+        return returnDate;
+    }
+
+    public int getExtensionDays() {
+        return extensionDays;
+    }
+
+    public boolean isReturned() {
+        return returnDate != null;
+    }
+
+    public void markReturned(LocalDate returnDate) {
+        this.returnDate = returnDate;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public void setExtensionDays(int extensionDays) {
+        this.extensionDays = extensionDays;
+    }
+
+    @Override
+    public String toString() {
+        return user.getUserNumber() + " borrowed " + borrowDate + " due " + dueDate + (returnDate != null ? " returned " + returnDate : "");
+    }
+}
+
+// File: Loan.java
+import java.time.LocalDate;
+
+public class Loan {
+    private final UserAccount user;
+    private final Instance instance;
+    private final LocalDate borrowDate;
+    private LocalDate dueDate;
+    private int extensionDays;
+    private final BorrowHistoryEntry historyEntry;
+
+    public Loan(UserAccount user, Instance instance, LocalDate borrowDate, LocalDate dueDate, BorrowHistoryEntry historyEntry) {
+        this.user = user;
+        this.instance = instance;
+        this.borrowDate = borrowDate;
+        this.dueDate = dueDate;
+        this.historyEntry = historyEntry;
+    }
+
+    public UserAccount getUser() {
+        return user;
+    }
+
+    public Instance getInstance() {
+        return instance;
+    }
+
+    public LocalDate getBorrowDate() {
+        return borrowDate;
+    }
+
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public int getExtensionDays() {
+        return extensionDays;
+    }
+
+    public BorrowHistoryEntry getHistoryEntry() {
+        return historyEntry;
+    }
+
+    public void extend(int days) {
+        this.extensionDays += days;
+        this.dueDate = this.dueDate.plusDays(days);
+        this.historyEntry.setDueDate(this.dueDate);
+        this.historyEntry.setExtensionDays(this.extensionDays);
+    }
+
+    @Override
+    public String toString() {
+        return "Loan{" + instance.getShelfmark() + " -> " + user.getUserNumber() + ", due " + dueDate + "}";
+    }
+}
+
+// File: Instance.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Instance {
+    private final Shelfmark shelfmark;
+    private final Medium medium;
+    private InstanceStatus status;
+    private LocalDate returnDate;
+    private final List<BorrowHistoryEntry> borrowHistory = new ArrayList<>();
+    private final List<UserAccount> reservationList = new ArrayList<>();
+    private final List<Component> components = new ArrayList<>();
+    private String comment;
+    private Loan currentLoan;
+    private boolean locked;
+    private LocalDate reservationAvailableDate;
+
+    public Instance(String shelfmark, Medium medium) {
+        this.shelfmark = new Shelfmark(shelfmark);
+        this.medium = medium;
+        this.status = InstanceStatus.NEWLY_ACQUIRED;
+    }
+
+    public String getShelfmark() {
+        return shelfmark.getValue();
+    }
+
+    public Medium getMedium() {
+        return medium;
+    }
+
+    public InstanceStatus getStatus() {
+        return status;
+    }
+
+    public LocalDate getReturnDate() {
+        return returnDate;
+    }
+
+    public List<BorrowHistoryEntry> getBorrowHistory() {
+        return List.copyOf(borrowHistory);
+    }
+
+    public List<UserAccount> getReservationList() {
+        return List.copyOf(reservationList);
+    }
+
+    public List<Component> getComponents() {
+        return List.copyOf(components);
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public Loan getCurrentLoan() {
+        return currentLoan;
+    }
+
+    public boolean isLocked() {
+        return locked;
+    }
+
+    public LocalDate getReservationAvailableDate() {
+        return reservationAvailableDate;
+    }
+
+    public void setStatus(InstanceStatus status) {
+        this.status = status;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
+    }
+
+    public void addComponent(Component component) {
+        components.add(component);
+    }
+
+    public void setLocked(boolean locked) {
+        this.locked = locked;
+    }
+
+    public void reserve(UserAccount user, LocalDate today) throws LibraryException {
+        if (status == InstanceStatus.SORTED_OUT || status == InstanceStatus.MISSING || status == InstanceStatus.NEWLY_ACQUIRED || status == InstanceStatus.ACQUISITION_PROCESS || status == InstanceStatus.READING_ROOM) {
+            throw new LibraryException("Instance cannot be reserved in status " + status);
+        }
+        if (reservationList.contains(user)) {
+            throw new LibraryException("User has already reserved this instance");
+        }
+        reservationList.add(user);
+        user.addReserved(this);
+        if (status == InstanceStatus.AVAILABLE) {
+            status = InstanceStatus.RESERVED_AND_AVAILABLE;
+            reservationAvailableDate = today;
+        } else if (status == InstanceStatus.BORROWED) {
+            status = InstanceStatus.RESERVED_AND_BORROWED;
+        }
+    }
+
+    public void borrow(UserAccount user, LocalDate today, int loanDays) throws LibraryException {
+        if (currentLoan != null) {
+            throw new LibraryException("Instance is already borrowed");
+        }
+        if (status != InstanceStatus.AVAILABLE && status != InstanceStatus.RESERVED_AND_AVAILABLE) {
+            throw new LibraryException("Instance is not available for borrowing");
+        }
+        if (!reservationList.isEmpty() && !reservationList.get(0).equals(user)) {
+            throw new LibraryException("User is not first on the reservation list");
+        }
+        if (reservationList.contains(user)) {
+            reservationList.remove(user);
+            user.removeReserved(this);
+        }
+        LocalDate dueDate = today.plusDays(loanDays);
+        BorrowHistoryEntry entry = new BorrowHistoryEntry(user, today, dueDate);
+        borrowHistory.add(entry);
+        currentLoan = new Loan(user, this, today, dueDate, entry);
+        user.addLoan(currentLoan);
+        status = reservationList.isEmpty() ? InstanceStatus.BORROWED : InstanceStatus.RESERVED_AND_BORROWED;
+        reservationAvailableDate = null;
+        locked = false;
+    }
+
+    public boolean extendLoan(LocalDate today, int extensionDays, int maxRentalDays) throws LibraryException {
+        if (currentLoan == null) {
+            throw new LibraryException("Instance is not borrowed");
+        }
+        if (status != InstanceStatus.BORROWED && status != InstanceStatus.RESERVED_AND_BORROWED) {
+            throw new LibraryException("Instance is not in a borrowed status");
+        }
+        for (UserAccount reserver : reservationList) {
+            if (!reserver.equals(currentLoan.getUser())) {
+                throw new LibraryException("Instance is reserved by another user");
+            }
+        }
+        LocalDate newDueDate = currentLoan.getDueDate().plusDays(extensionDays);
+        if (newDueDate.isAfter(currentLoan.getBorrowDate().plusDays(maxRentalDays))) {
+            throw new LibraryException("Maximum rental period exceeded");
+        }
+        currentLoan.extend(extensionDays);
+        return true;
+    }
+
+    public UserAccount returnInstance(LocalDate today) throws LibraryException {
+        if (currentLoan == null) {
+            throw new LibraryException("Instance is not borrowed");
+        }
+        if (status != InstanceStatus.BORROWED && status != InstanceStatus.RESERVED_AND_BORROWED) {
+            throw new LibraryException("Instance is not in a borrowed status");
+        }
+        UserAccount user = currentLoan.getUser();
+        currentLoan.getHistoryEntry().markReturned(today);
+        user.removeLoan(currentLoan);
+        currentLoan = null;
+        returnDate = today;
+        if (!reservationList.isEmpty()) {
+            status = InstanceStatus.RESERVED_AND_AVAILABLE;
+            reservationAvailableDate = today;
+        } else {
+            status = InstanceStatus.AVAILABLE;
+            reservationAvailableDate = null;
+        }
+        locked = false;
+        return user;
+    }
+
+    public UserAccount releaseFirstReservation(LocalDate today) {
+        if (reservationList.isEmpty()) {
+            return null;
+        }
+        UserAccount removed = reservationList.remove(0);
+        removed.removeReserved(this);
+        if (reservationList.isEmpty()) {
+            status = InstanceStatus.AVAILABLE;
+            reservationAvailableDate = null;
+        } else {
+            status = InstanceStatus.RESERVED_AND_AVAILABLE;
+            reservationAvailableDate = today;
+        }
+        return removed;
+    }
+
+    @Override
+    public String toString() {
+        return shelfmark.getValue() + " [" + status + "] " + medium.getTitle();
+    }
+}
+
+// File: UserAccount.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+public class UserAccount {
+    private final String userNumber;
+    private UserClassification classification;
+    private String name;
+    private Address address;
+    private String telephone;
+    private String email;
+    private LocalDate validUntil;
+    private boolean locked;
+    private final List<UnpaidFee> unpaidFees = new ArrayList<>();
+    private final List<Loan> borrowedLoans = new ArrayList<>();
+    private final List<Instance> reservedInstances = new ArrayList<>();
+
+    public UserAccount(String userNumber, UserClassification classification, String name, Address address, LocalDate validUntil) {
+        this.userNumber = userNumber;
+        this.classification = classification;
+        this.name = name;
+        this.address = address;
+        this.validUntil = validUntil;
+    }
+
+    public String getUserNumber() {
+        return userNumber;
+    }
+
+    public UserClassification getClassification() {
+        return classification;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public String getTelephone() {
+        return telephone;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public LocalDate getValidUntil() {
+        return validUntil;
+    }
+
+    public boolean isLocked() {
+        return locked;
+    }
+
+    public List<UnpaidFee> getUnpaidFees() {
+        return List.copyOf(unpaidFees);
+    }
+
+    public List<Loan> getBorrowedLoans() {
+        return List.copyOf(borrowedLoans);
+    }
+
+    public List<Instance> getReservedInstances() {
+        return List.copyOf(reservedInstances);
+    }
+
+    public double getUnpaidFeesTotal() {
+        return unpaidFees.stream().mapToDouble(UnpaidFee::getAmount).sum();
+    }
+
+    public boolean isValid(LocalDate today) {
+        return !today.isAfter(validUntil);
+    }
+
+    public boolean isActive(LocalDate today) {
+        return isValid(today) && !locked;
+    }
+
+    public boolean canBorrow(LocalDate today, int maxBorrowed, double maxUnpaidFees) {
+        return isActive(today) && borrowedLoans.size() < maxBorrowed && getUnpaidFeesTotal() <= maxUnpaidFees;
+    }
+
+    public void setClassification(UserClassification classification) {
+        this.classification = classification;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
+    }
+
+    public void setTelephone(String telephone) {
+        this.telephone = telephone;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setValidUntil(LocalDate validUntil) {
+        this.validUntil = validUntil;
+    }
+
+    public void setLocked(boolean locked) {
+        this.locked = locked;
+    }
+
+    public void addUnpaidFee(UnpaidFee fee) {
+        unpaidFees.add(fee);
+    }
+
+    public void payUnpaidFees(double amount) {
+        double remaining = amount;
+        while (remaining > 0 && !unpaidFees.isEmpty()) {
+            UnpaidFee fee = unpaidFees.get(0);
+            if (fee.getAmount() <= remaining) {
+                unpaidFees.remove(0);
+                remaining -= fee.getAmount();
+            } else {
+                break;
+            }
+        }
+    }
+
+    public void addLoan(Loan loan) {
+        borrowedLoans.add(loan);
+    }
+
+    public void removeLoan(Loan loan) {
+        borrowedLoans.remove(loan);
+    }
+
+    public void addReserved(Instance instance) {
+        if (!reservedInstances.contains(instance)) {
+            reservedInstances.add(instance);
+        }
+    }
+
+    public void removeReserved(Instance instance) {
+        reservedInstances.remove(instance);
+    }
+
+    public List<String> getBorrowedShelfmarks() {
+        List<String> result = new ArrayList<>();
+        for (Loan loan : borrowedLoans) {
+            result.add(loan.getInstance().getShelfmark());
+        }
+        return result;
+    }
+
+    public List<String> getReservedShelfmarks() {
+        List<String> result = new ArrayList<>();
+        for (Instance instance : reservedInstances) {
+            result.add(instance.getShelfmark());
+        }
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return userNumber + " - " + name;
+    }
+}
+
+// File: NotificationService.java
+public interface NotificationService {
+    void notifyOverdue(UserAccount user, Instance instance);
+    void notifyReservedAvailable(UserAccount user, Instance instance);
+}
+
+// File: ConsoleNotificationService.java
+public class ConsoleNotificationService implements NotificationService {
+    @Override
+    public void notifyOverdue(UserAccount user, Instance instance) {
+        System.out.println("NOTICE to " + user.getUserNumber() + ": Instance " + instance.getShelfmark() + " is overdue.");
+    }
+
+    @Override
+    public void notifyReservedAvailable(UserAccount user, Instance instance) {
+        System.out.println("NOTICE to " + user.getUserNumber() + ": Reserved instance " + instance.getShelfmark() + " is available.");
+    }
+}
+
+// File: LibrarySystem.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class LibrarySystem {
+    private final Map<String, UserAccount> users = new HashMap<>();
+    private final List<Medium> media = new ArrayList<>();
+    private final Map<String, Instance> instances = new HashMap<>();
+    private final NotificationService notificationService;
+    private LocalDate today = LocalDate.now();
+
+    private static final int DEFAULT_LOAN_DAYS = 30;
+    private static final int EXTENSION_DAYS = 14;
+    private static final int MAX_RENTAL_DAYS = 60;
+    private static final int MAX_BORROWED = 30;
+    private static final double MAX_UNPAID_FEES = 10.0;
+    private static final int RESERVATION_HOLD_DAYS = 7;
+
+    public LibrarySystem(NotificationService notificationService) {
+        this.notificationService = notificationService;
+    }
+
+    public void setToday(LocalDate today) {
+        this.today = today;
+    }
+
+    public LocalDate getToday() {
+        return today;
+    }
+
+    public void addUserAccount(UserAccount user) throws LibraryException {
+        if (users.containsKey(user.getUserNumber())) {
+            throw new LibraryException("User number already exists: " + user.getUserNumber());
+        }
+        users.put(user.getUserNumber(), user);
+    }
+
+    public void editUserAccount(String userNumber, UserClassification classification, String name, Address address, String telephone, String email, LocalDate validUntil, boolean locked) throws LibraryException {
+        UserAccount user = getUserAccount(userNumber);
+        user.setClassification(classification);
+        user.setName(name);
+        user.setAddress(address);
+        user.setTelephone(telephone);
+        user.setEmail(email);
+        user.setValidUntil(validUntil);
+        user.setLocked(locked);
+    }
+
+    public void deleteUserAccount(String userNumber) throws LibraryException {
+        UserAccount user = getUserAccount(userNumber);
+        if (!user.getBorrowedLoans().isEmpty() || !user.getReservedInstances().isEmpty()) {
+            throw new LibraryException("Cannot delete user with active loans or reservations");
+        }
+        users.remove(userNumber);
+    }
+
+    public UserAccount getUserAccount(String userNumber) throws LibraryException {
+        UserAccount user = users.get(userNumber);
+        if (user == null) {
+            throw new LibraryException("User not found: " + userNumber);
+        }
+        return user;
+    }
+
+    public void addMedium(Medium medium) throws LibraryException {
+        if (findMedium(medium.getPartialShelfmark()) != null) {
+            throw new LibraryException("Medium already exists: " + medium.getPartialShelfmark());
+        }
+        media.add(medium);
+    }
+
+    public void editMedium(Medium updated) throws LibraryException {
+        Medium existing = findMedium(updated.getPartialShelfmark());
+        if (existing == null) {
+            throw new LibraryException("Medium not found: " + updated.getPartialShelfmark());
+        }
+        int index = media.indexOf(existing);
+        media.set(index, updated);
+    }
+
+    public void deleteMedium(String partialShelfmark) throws LibraryException {
+        Medium medium = findMedium(partialShelfmark);
+        if (medium == null) {
+            throw new LibraryException("Medium not found: " + partialShelfmark);
+        }
+        for (Instance instance : instances.values()) {
+            if (instance.getMedium().getPartialShelfmark().equals(partialShelfmark)) {
+                throw new LibraryException("Cannot delete medium with instances");
+            }
+        }
+        media.remove(medium);
+    }
+
+    public Medium findMedium(String partialShelfmark) {
+        for (Medium medium : media) {
+            if (medium.getPartialShelfmark().equals(partialShelfmark)) {
+                return medium;
+            }
+        }
+        return null;
+    }
+
+    public void addInstance(Instance instance) throws LibraryException {
+        if (instances.containsKey(instance.getShelfmark())) {
+            throw new LibraryException("Instance already exists: " + instance.getShelfmark());
+        }
+        if (findMedium(instance.getMedium().getPartialShelfmark()) == null) {
+            throw new LibraryException("Medium not registered: " + instance.getMedium().getPartialShelfmark());
+        }
+        instances.put(instance.getShelfmark(), instance);
+    }
+
+    public void changeInstanceStatus(String shelfmark, InstanceStatus status) throws LibraryException {
+        Instance instance = getInstance(shelfmark);
+        instance.setStatus(status);
+    }
+
+    public void removeInstance(String shelfmark) throws LibraryException {
+        Instance instance = getInstance(shelfmark);
+        if (instance.getCurrentLoan() != null) {
+            throw new LibraryException("Cannot remove a borrowed instance");
+        }
+        instances.remove(shelfmark);
+    }
+
+    public Instance getInstance(String shelfmark) throws LibraryException {
+        Instance instance = instances.get(shelfmark);
+        if (instance == null) {
+            throw new LibraryException("Instance not found: " + shelfmark);
+        }
+        return instance;
+    }
+
+    public List<Medium> searchMedia(SearchCriteria criteria) {
+        List<Medium> result = new ArrayList<>();
+        for (Medium medium : media) {
+            if (medium.matches(criteria)) {
+                result.add(medium);
+            }
+        }
+        return result;
+    }
+
+    public List<Instance> getInstancesForMedium(String partialShelfmark) throws LibraryException {
+        Medium medium = findMedium(partialShelfmark);
+        if (medium == null) {
+            throw new LibraryException("Medium not found: " + partialShelfmark);
+        }
+        List<Instance> result = new ArrayList<>();
+        for (Instance instance : instances.values()) {
+            if (instance.getMedium().getPartialShelfmark().equals(partialShelfmark)) {
+                result.add(instance);
+            }
+        }
+        return result;
+    }
+
+    public void reserveInstance(String shelfmark, String userNumber) throws LibraryException {
+        UserAccount user = getUserAccount(userNumber);
+        if (!user.isActive(today)) {
+            throw new LibraryException("User account is not valid or is locked");
+        }
+        Instance instance = getInstance(shelfmark);
+        instance.reserve(user, today);
+        if (instance.getStatus() == InstanceStatus.RESERVED_AND_AVAILABLE && !instance.getReservationList().isEmpty()) {
+            UserAccount first = instance.getReservationList().get(0);
+            if (first.equals(user)) {
+                notificationService.notifyReservedAvailable(first, instance);
+            }
+        }
+    }
+
+    public String borrowInstance(String shelfmark, String userNumber) throws LibraryException {
+        UserAccount user = getUserAccount(userNumber);
+        if (!user.canBorrow(today, MAX_BORROWED, MAX_UNPAID_FEES)) {
+            throw new LibraryException("User account is not eligible for borrowing");
+        }
+        Instance instance = getInstance(shelfmark);
+        instance.borrow(user, today, DEFAULT_LOAN_DAYS);
+        return "Receipt: User " + userNumber + " borrowed " + shelfmark + " until " + instance.getCurrentLoan().getDueDate();
+    }
+
+    public void extendLoan(String shelfmark, String userNumber) throws LibraryException {
+        UserAccount user = getUserAccount(userNumber);
+        if (!user.isActive(today)) {
+            throw new LibraryException("User account is not valid or is locked");
+        }
+        Instance instance = getInstance(shelfmark);
+        if (instance.getCurrentLoan() == null || !instance.getCurrentLoan().getUser().equals(user)) {
+            throw new LibraryException("Instance is not borrowed by this user");
+        }
+        instance.extendLoan(today, EXTENSION_DAYS, MAX_RENTAL_DAYS);
+    }
+
+    public void returnInstance(String shelfmark) throws LibraryException {
+        Instance instance = getInstance(shelfmark);
+        instance.setLocked(true);
+        try {
+            UserAccount user = instance.returnInstance(today);
+            if (instance.getStatus() == InstanceStatus.RESERVED_AND_AVAILABLE && !instance.getReservationList().isEmpty()) {
+                UserAccount first = instance.getReservationList().get(0);
+                notificationService.notifyReservedAvailable(first, instance);
+            }
+        } finally {
+            instance.setLocked(false);
+        }
+    }
+
+    public void checkOverdue() {
+        for (UserAccount user : users.values()) {
+            boolean hasOverdue = false;
+            for (Loan loan : user.getBorrowedLoans()) {
+                if (loan.getDueDate().isBefore(today)) {
+                    notificationService.notifyOverdue(user, loan.getInstance());
+                    hasOverdue = true;
+                }
+            }
+            if (hasOverdue || user.getBorrowedLoans().size() > MAX_BORROWED || user.getUnpaidFeesTotal() > MAX_UNPAID_FEES) {
+                user.setLocked(true);
+            }
+        }
+    }
+
+    public void processReservations() {
+        for (Instance instance : instances.values()) {
+            if (instance.getStatus() == InstanceStatus.RESERVED_AND_AVAILABLE
+                    && instance.getReservationAvailableDate() != null
+                    && instance.getReservationAvailableDate().plusDays(RESERVATION_HOLD_DAYS).isBefore(today)) {
+                instance.releaseFirstReservation(today);
+                if (instance.getStatus() == InstanceStatus.RESERVED_AND_AVAILABLE && !instance.getReservationList().isEmpty()) {
+                    notificationService.notifyReservedAvailable(instance.getReservationList().get(0), instance);
+                }
+            }
+        }
+    }
+}

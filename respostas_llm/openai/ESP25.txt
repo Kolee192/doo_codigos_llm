@@ -1,0 +1,856 @@
+// File: StaffRole.java
+public enum StaffRole {
+    FRONTLINE,
+    LOCAL_SYSTEM_ADMINISTRATOR,
+    LIBRARY_MANAGER,
+    LIBRARY_DIRECTOR,
+    GLOBAL_SYSTEM_ADMINISTRATOR
+}
+
+// File: Permission.java
+public enum Permission {
+    RUN_REPORT,
+    RUN_AD_HOC_REPORT,
+    CREATE_REPORT,
+    CLONE_REPORT,
+    ADMINISTER_PERMISSIONS,
+    QUERY_TABLES,
+    VIEW_FINANCIAL_DATA
+}
+
+// File: StaffMember.java
+import java.util.Objects;
+import java.util.Set;
+
+public final class StaffMember {
+    private final String id;
+    private final String username;
+    private final String password;
+    private final String cardId;
+    private final StaffRole role;
+    private final Set<String> branchIds;
+
+    public StaffMember(String id, String username, String password, String cardId,
+                       StaffRole role, Set<String> branchIds) {
+        this.id = Objects.requireNonNull(id);
+        this.username = Objects.requireNonNull(username);
+        this.password = Objects.requireNonNull(password);
+        this.cardId = cardId;
+        this.role = Objects.requireNonNull(role);
+        this.branchIds = Set.copyOf(branchIds);
+    }
+
+    public String id() { return id; }
+    public String username() { return username; }
+    public StaffRole role() { return role; }
+    public Set<String> branchIds() { return branchIds; }
+
+    boolean matchesPassword(String candidate) {
+        return password.equals(candidate);
+    }
+
+    boolean matchesCard(String candidate) {
+        return cardId != null && cardId.equals(candidate);
+    }
+}
+
+// File: StaffLoginService.java
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class StaffLoginService {
+    private final Map<String, StaffMember> users = new ConcurrentHashMap<>();
+    private final Map<String, StaffMember> cards = new ConcurrentHashMap<>();
+
+    public void register(StaffMember staff) {
+        users.put(staff.username(), staff);
+    }
+
+    public void registerCard(String cardId, StaffMember staff) {
+        cards.put(cardId, staff);
+    }
+
+    public Optional<StaffMember> login(String username, String password) {
+        StaffMember staff = users.get(username);
+        return staff != null && staff.matchesPassword(password)
+                ? Optional.of(staff) : Optional.empty();
+    }
+
+    public Optional<StaffMember> loginByCard(String cardId) {
+        return Optional.ofNullable(cards.get(cardId));
+    }
+}
+
+// File: AccessControl.java
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class AccessControl {
+    private final Map<StaffRole, Set<Permission>> rolePermissions = new ConcurrentHashMap<>();
+    private final Map<StaffRole, Set<String>> accessibleTables = new ConcurrentHashMap<>();
+    private final Map<StaffRole, Map<String, Set<String>>> accessibleFields = new ConcurrentHashMap<>();
+
+    public AccessControl() {
+        rolePermissions.put(StaffRole.FRONTLINE, EnumSet.of(Permission.RUN_REPORT));
+        rolePermissions.put(StaffRole.LOCAL_SYSTEM_ADMINISTRATOR,
+                EnumSet.allOf(Permission.class));
+        rolePermissions.put(StaffRole.LIBRARY_MANAGER,
+                EnumSet.of(Permission.RUN_REPORT, Permission.RUN_AD_HOC_REPORT,
+                        Permission.QUERY_TABLES, Permission.VIEW_FINANCIAL_DATA));
+        rolePermissions.put(StaffRole.LIBRARY_DIRECTOR,
+                EnumSet.of(Permission.RUN_REPORT, Permission.RUN_AD_HOC_REPORT,
+                        Permission.QUERY_TABLES, Permission.VIEW_FINANCIAL_DATA));
+        rolePermissions.put(StaffRole.GLOBAL_SYSTEM_ADMINISTRATOR,
+                EnumSet.allOf(Permission.class));
+    }
+
+    public boolean hasPermission(StaffMember staff, Permission permission) {
+        return rolePermissions.getOrDefault(staff.role(), Set.of()).contains(permission);
+    }
+
+    public void grant(StaffRole role, Permission permission) {
+        rolePermissions.computeIfAbsent(role, ignored -> EnumSet.noneOf(Permission.class))
+                .add(permission);
+    }
+
+    public void revoke(StaffRole role, Permission permission) {
+        rolePermissions.computeIfAbsent(role, ignored -> EnumSet.noneOf(Permission.class))
+                .remove(permission);
+    }
+
+    public void allowTable(StaffRole role, String table, Set<String> fields) {
+        accessibleTables.computeIfAbsent(role, ignored -> ConcurrentHashMap.newKeySet())
+                .add(table);
+        accessibleFields.computeIfAbsent(role, ignored -> new ConcurrentHashMap<>())
+                .put(table, Set.copyOf(fields));
+    }
+
+    public boolean canQueryTable(StaffMember staff, String table) {
+        return hasPermission(staff, Permission.QUERY_TABLES)
+                && accessibleTables.getOrDefault(staff.role(), Set.of()).contains(table);
+    }
+
+    public boolean canQueryField(StaffMember staff, String table, String field) {
+        return canQueryTable(staff, table)
+                && accessibleFields.getOrDefault(staff.role(), Map.of())
+                .getOrDefault(table, Set.of()).contains(field);
+    }
+
+    public void require(StaffMember staff, Permission permission) {
+        if (!hasPermission(staff, permission)) {
+            throw new SecurityException("Staff member lacks permission: " + permission);
+        }
+    }
+}
+
+// File: LibraryBranch.java
+import java.util.Objects;
+
+public record LibraryBranch(String id, String name, String county, String systemId,
+                            int shelfCapacity) {
+    public LibraryBranch {
+        Objects.requireNonNull(id);
+        Objects.requireNonNull(name);
+        Objects.requireNonNull(county);
+        Objects.requireNonNull(systemId);
+        if (shelfCapacity < 0) throw new IllegalArgumentException("Shelf capacity cannot be negative");
+    }
+}
+
+// File: Patron.java
+import java.util.Objects;
+
+public record Patron(String id, boolean hasLibraryCard, String homeBranchId,
+                     String county, String zipCode, int age, String patronType,
+                     String preferredLanguage) {
+    public Patron {
+        Objects.requireNonNull(id);
+        Objects.requireNonNull(homeBranchId);
+        Objects.requireNonNull(county);
+        Objects.requireNonNull(zipCode);
+        Objects.requireNonNull(patronType);
+        Objects.requireNonNull(preferredLanguage);
+        if (age < 0) throw new IllegalArgumentException("Age cannot be negative");
+    }
+
+    public String ageRange() {
+        if (age < 13) return "0-12";
+        if (age < 18) return "13-17";
+        if (age < 26) return "18-25";
+        if (age < 65) return "26-64";
+        return "65+";
+    }
+}
+
+// File: LibraryItem.java
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Objects;
+
+public final class LibraryItem {
+    public enum Status {
+        AVAILABLE, CHECKED_OUT, HOLD, IN_TRANSIT, MISSING, DAMAGED, DISCARD_WEED
+    }
+
+    private final String id;
+    private final String title;
+    private final String genre;
+    private final String format;
+    private final String callNumber;
+    private final BigDecimal value;
+    private final boolean cataloged;
+    private String branchId;
+    private Status status;
+    private Instant statusSince;
+    private String originalBranchId;
+    private Instant revertAt;
+
+    public LibraryItem(String id, String title, String genre, String format,
+                       String callNumber, BigDecimal value, boolean cataloged,
+                       String branchId, Status status, Instant statusSince) {
+        this.id = Objects.requireNonNull(id);
+        this.title = Objects.requireNonNull(title);
+        this.genre = Objects.requireNonNull(genre);
+        this.format = Objects.requireNonNull(format);
+        this.callNumber = Objects.requireNonNull(callNumber);
+        this.value = Objects.requireNonNull(value);
+        this.cataloged = cataloged;
+        this.branchId = Objects.requireNonNull(branchId);
+        this.status = Objects.requireNonNull(status);
+        this.statusSince = Objects.requireNonNull(statusSince);
+    }
+
+    public String id() { return id; }
+    public String title() { return title; }
+    public String genre() { return genre; }
+    public String format() { return format; }
+    public String callNumber() { return callNumber; }
+    public BigDecimal value() { return value; }
+    public boolean cataloged() { return cataloged; }
+    public String branchId() { return branchId; }
+    public Status status() { return status; }
+    public Instant statusSince() { return statusSince; }
+
+    public synchronized void transferTo(String newBranchId, Instant revertAt) {
+        if (originalBranchId == null) originalBranchId = branchId;
+        branchId = Objects.requireNonNull(newBranchId);
+        this.revertAt = revertAt;
+    }
+
+    public synchronized boolean revertIfDue(Instant now) {
+        if (originalBranchId != null && revertAt != null && !now.isBefore(revertAt)) {
+            branchId = originalBranchId;
+            originalBranchId = null;
+            revertAt = null;
+            return true;
+        }
+        return false;
+    }
+
+    public synchronized void setStatus(Status status, Instant since) {
+        this.status = Objects.requireNonNull(status);
+        this.statusSince = Objects.requireNonNull(since);
+    }
+}
+
+// File: TransactionType.java
+public enum TransactionType {
+    CHECK_IN,
+    CHECK_OUT,
+    RENEWAL,
+    HOLD_PLACED,
+    HOLD_FILLED,
+    FINE_COLLECTED,
+    PATRON_REGISTRATION,
+    ITEM_TRANSFER
+}
+
+// File: LibraryTransaction.java
+import java.time.Instant;
+import java.util.Objects;
+
+public record LibraryTransaction(String id, String patronId, String itemId,
+                                 String branchId, String terminalId,
+                                 TransactionType type, String subtype,
+                                 Instant occurredAt, boolean electronicActivity,
+                                 String holdStatus) {
+    public LibraryTransaction {
+        Objects.requireNonNull(id);
+        Objects.requireNonNull(branchId);
+        Objects.requireNonNull(terminalId);
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(subtype);
+        Objects.requireNonNull(occurredAt);
+        holdStatus = holdStatus == null ? "" : holdStatus;
+    }
+}
+
+// File: ReportRequest.java
+import java.util.Map;
+import java.util.Set;
+
+public record ReportRequest(Map<String, Object> filters, Set<String> displayFields) {
+    public ReportRequest {
+        filters = Map.copyOf(filters);
+        displayFields = Set.copyOf(displayFields);
+    }
+}
+
+// File: ReportTemplate.java
+import java.util.Map;
+import java.util.Set;
+
+public final class ReportTemplate {
+    private final String id;
+    private final String name;
+    private final String table;
+    private final Set<String> allowedFilters;
+    private final Set<String> allowedFields;
+    private final Set<String> fixedFilters;
+
+    public ReportTemplate(String id, String name, String table, Set<String> allowedFilters,
+                          Set<String> allowedFields, Map<String, Object> fixedFilters) {
+        this.id = id;
+        this.name = name;
+        this.table = table;
+        this.allowedFilters = Set.copyOf(allowedFilters);
+        this.allowedFields = Set.copyOf(allowedFields);
+        this.fixedFilters = Map.copyOf(fixedFilters.keySet());
+    }
+
+    public String id() { return id; }
+    public String name() { return name; }
+    public String table() { return table; }
+    public Set<String> allowedFilters() { return allowedFilters; }
+    public Set<String> allowedFields() { return allowedFields; }
+    public Set<String> fixedFilters() { return fixedFilters; }
+
+    public void validate(ReportRequest request) {
+        if (!allowedFilters.containsAll(request.filters().keySet())) {
+            throw new IllegalArgumentException("Request contains a filter not allowed by this template");
+        }
+        if (!allowedFields.containsAll(request.displayFields())) {
+            throw new IllegalArgumentException("Request contains a display field not allowed by this template");
+        }
+    }
+}
+
+// File: ReportResult.java
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+
+public record ReportResult(String reportId, String templateId, String requestedBy,
+                           Instant generatedAt, Map<String, Object> selections,
+                           List<Map<String, Object>> rows) {
+    public ReportResult {
+        selections = Map.copyOf(selections);
+        rows = rows.stream().map(Map::copyOf).toList();
+    }
+}
+
+// File: ReportService.java
+import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class ReportService {
+    public enum JobStatus { QUEUED, RUNNING, COMPLETED, FAILED }
+
+    private static final class Job {
+        final String id;
+        final StaffMember requester;
+        final ReportTemplate template;
+        final ReportRequest request;
+        JobStatus status = JobStatus.QUEUED;
+        ReportResult result;
+        RuntimeException failure;
+
+        Job(String id, StaffMember requester, ReportTemplate template, ReportRequest request) {
+            this.id = id;
+            this.requester = requester;
+            this.template = template;
+            this.request = request;
+        }
+    }
+
+    private final AccessControl accessControl;
+    private final Map<String, ReportTemplate> templates = new ConcurrentHashMap<>();
+    private final Map<String, List<Map<String, Object>>> tables = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> sharedFolders = new ConcurrentHashMap<>();
+    private final Queue<Job> queue = new ArrayDeque<>();
+    private final Map<String, Job> jobs = new HashMap<>();
+
+    public ReportService(AccessControl accessControl) {
+        this.accessControl = accessControl;
+    }
+
+    public synchronized void addTable(String name, List<Map<String, Object>> rows) {
+        tables.put(name, rows.stream().map(Map::copyOf).toList());
+    }
+
+    public void createTemplate(StaffMember staff, ReportTemplate template) {
+        accessControl.require(staff, Permission.CREATE_REPORT);
+        templates.put(template.id(), template);
+    }
+
+    public void cloneTemplate(StaffMember staff, String sourceId, String newId, String newName) {
+        accessControl.require(staff, Permission.CLONE_REPORT);
+        ReportTemplate source = requireTemplate(sourceId);
+        templates.put(newId, new ReportTemplate(newId, newName, source.table(),
+                source.allowedFilters(), source.allowedFields(), Map.of()));
+    }
+
+    public void createSharedFolder(StaffMember staff, String folder, Set<String> reportIds) {
+        accessControl.require(staff, Permission.ADMINISTER_PERMISSIONS);
+        sharedFolders.put(folder, Set.copyOf(reportIds));
+    }
+
+    public synchronized String enqueue(StaffMember staff, String templateId, ReportRequest request) {
+        accessControl.require(staff, Permission.RUN_REPORT);
+        ReportTemplate template = requireTemplate(templateId);
+        if (!template.allowedFields().containsAll(request.displayFields())
+                || !template.allowedFilters().containsAll(request.filters().keySet())) {
+            throw new IllegalArgumentException("Request exceeds template permissions");
+        }
+        String id = UUID.randomUUID().toString();
+        Job job = new Job(id, staff, template, request);
+        queue.add(job);
+        jobs.put(id, job);
+        return id;
+    }
+
+    public synchronized int queuePosition(String jobId) {
+        Job job = jobs.get(jobId);
+        if (job == null) throw new IllegalArgumentException("Unknown report job");
+        if (job.status != JobStatus.QUEUED) return 0;
+        int position = 1;
+        for (Job queued : queue) {
+            if (queued == job) return position;
+            position++;
+        }
+        return 0;
+    }
+
+    public synchronized JobStatus status(String jobId) {
+        return requireJob(jobId).status;
+    }
+
+    public synchronized ReportResult result(String jobId) {
+        Job job = requireJob(jobId);
+        if (job.status == JobStatus.FAILED) throw job.failure;
+        if (job.status != JobStatus.COMPLETED) throw new IllegalStateException("Report is not complete");
+        return job.result;
+    }
+
+    public synchronized boolean runNext() {
+        Job job = queue.poll();
+        if (job == null) return false;
+        job.status = JobStatus.RUNNING;
+        try {
+            List<Map<String, Object>> source = tables.getOrDefault(job.template.table(), List.of());
+            List<Map<String, Object>> output = new ArrayList<>();
+            for (Map<String, Object> row : source) {
+                if (!matches(row, job.request.filters())) continue;
+                Map<String, Object> selected = new HashMap<>();
+                for (String field : job.request.displayFields()) {
+                    if (row.containsKey(field)) selected.put(field, row.get(field));
+                }
+                output.add(selected);
+            }
+            job.result = new ReportResult(job.id, job.template.id(), job.requester.id(),
+                    Instant.now(), job.request.filters(), output);
+            job.status = JobStatus.COMPLETED;
+        } catch (RuntimeException exception) {
+            job.failure = exception;
+            job.status = JobStatus.FAILED;
+        }
+        return true;
+    }
+
+    private boolean matches(Map<String, Object> row, Map<String, Object> filters) {
+        for (Map.Entry<String, Object> filter : filters.entrySet()) {
+            if (!java.util.Objects.equals(row.get(filter.getKey()), filter.getValue())) return false;
+        }
+        return true;
+    }
+
+    private ReportTemplate requireTemplate(String id) {
+        ReportTemplate template = templates.get(id);
+        if (template == null) throw new IllegalArgumentException("Unknown report template: " + id);
+        return template;
+    }
+
+    private Job requireJob(String id) {
+        Job job = jobs.get(id);
+        if (job == null) throw new IllegalArgumentException("Unknown report job: " + id);
+        return job;
+    }
+}
+
+// File: QuerySelection.java
+import java.util.List;
+import java.util.Map;
+
+public record QuerySelection(String table, Map<String, Object> filters, List<String> fields) {
+    public QuerySelection {
+        filters = Map.copyOf(filters);
+        fields = List.copyOf(fields);
+    }
+}
+
+// File: QueryResult.java
+import java.util.List;
+import java.util.Map;
+
+public record QueryResult(QuerySelection selection, List<Map<String, Object>> rows) {
+    public QueryResult {
+        rows = rows.stream().map(Map::copyOf).toList();
+    }
+}
+
+// File: QueryService.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+public final class QueryService {
+    private final AccessControl access;
+    private final Map<String, List<Map<String, Object>>> tables = new HashMap<>();
+
+    public QueryService(AccessControl access) {
+        this.access = access;
+    }
+
+    public synchronized void setTable(String table, List<Map<String, Object>> rows) {
+        tables.put(table, rows.stream().map(Map::copyOf).toList());
+    }
+
+    public synchronized QueryResult query(StaffMember staff, QuerySelection selection) {
+        if (!access.canQueryTable(staff, selection.table())) {
+            throw new SecurityException("Table access denied");
+        }
+        for (String field : selection.fields()) {
+            if (!access.canQueryField(staff, selection.table(), field)) {
+                throw new SecurityException("Field access denied: " + field);
+            }
+        }
+        for (String field : selection.filters().keySet()) {
+            if (!access.canQueryField(staff, selection.table(), field)) {
+                throw new SecurityException("Filter field access denied: " + field);
+            }
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map<String, Object> row : tables.getOrDefault(selection.table(), List.of())) {
+            boolean matches = selection.filters().entrySet().stream()
+                    .allMatch(e -> Objects.equals(row.get(e.getKey()), e.getValue()));
+            if (!matches) continue;
+            Map<String, Object> projected = new HashMap<>();
+            for (String field : selection.fields()) {
+                if (row.containsKey(field)) projected.put(field, row.get(field));
+            }
+            result.add(projected);
+        }
+        return new QueryResult(selection, result);
+    }
+}
+
+// File: TransactionArchive.java
+import java.time.Instant;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public final class TransactionArchive {
+    public record DemographicAggregate(YearMonth month, String branchId, String ageRange,
+                                      String patronType, String transactionType, long count) {}
+
+    private final List<LibraryTransaction> retainedTransactions = new ArrayList<>();
+    private final Map<String, Patron> patrons = new HashMap<>();
+    private final Map<String, Long> indefiniteMonthlyTotals = new HashMap<>();
+
+    public synchronized void registerPatron(Patron patron) {
+        patrons.put(patron.id(), patron);
+    }
+
+    public synchronized void archive(LibraryTransaction transaction) {
+        retainedTransactions.add(transaction);
+        String key = YearMonth.from(transaction.occurredAt().atZone(java.time.ZoneOffset.UTC))
+                + "|" + transaction.branchId() + "|" + transaction.type();
+        indefiniteMonthlyTotals.merge(key, 1L, Long::sum);
+    }
+
+    public synchronized void purgeDetailedHistoryBefore(Instant cutoff) {
+        retainedTransactions.removeIf(t -> t.occurredAt().isBefore(cutoff));
+    }
+
+    public synchronized List<LibraryTransaction> detailedHistory(Instant from, Instant to) {
+        return retainedTransactions.stream()
+                .filter(t -> !t.occurredAt().isBefore(from) && !t.occurredAt().isAfter(to))
+                .toList();
+    }
+
+    public synchronized List<DemographicAggregate> demographicStatistics() {
+        Map<String, Long> counts = new HashMap<>();
+        for (LibraryTransaction transaction : retainedTransactions) {
+            Patron patron = patrons.get(transaction.patronId());
+            if (patron == null) continue;
+            String month = YearMonth.from(transaction.occurredAt()
+                    .atZone(java.time.ZoneOffset.UTC)).toString();
+            String key = month + "|" + transaction.branchId() + "|" + patron.ageRange()
+                    + "|" + patron.patronType() + "|" + transaction.type();
+            counts.merge(key, 1L, Long::sum);
+        }
+        List<DemographicAggregate> result = new ArrayList<>();
+        counts.forEach((key, count) -> {
+            String[] parts = key.split("\\|", -1);
+            result.add(new DemographicAggregate(YearMonth.parse(parts[0]), parts[1],
+                    parts[2], parts[3], parts[4], count));
+        });
+        return List.copyOf(result);
+    }
+
+    public synchronized Map<String, Long> indefiniteMonthlyTotals() {
+        return Map.copyOf(indefiniteMonthlyTotals);
+    }
+
+    public synchronized int retainedTransactionCount() {
+        return retainedTransactions.size();
+    }
+}
+
+// File: InventoryService.java
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
+
+public final class InventoryService {
+    private final Map<String, LibraryItem> items = new HashMap<>();
+
+    public synchronized void addItem(LibraryItem item) {
+        items.put(item.id(), item);
+    }
+
+    public synchronized List<LibraryItem> query(Predicate<LibraryItem> criteria) {
+        return items.values().stream().filter(criteria).toList();
+    }
+
+    public synchronized int transfer(Collection<String> itemIds, String destination,
+                                     Instant revertAt) {
+        int transferred = 0;
+        for (String id : itemIds) {
+            LibraryItem item = items.get(id);
+            if (item != null) {
+                item.transferTo(destination, revertAt);
+                transferred++;
+            }
+        }
+        return transferred;
+    }
+
+    public synchronized int revertDueTransfers(Instant now) {
+        int reverted = 0;
+        for (LibraryItem item : items.values()) {
+            if (item.revertIfDue(now)) reverted++;
+        }
+        return reverted;
+    }
+
+    public synchronized Map<String, Long> materialVolume(String branchId) {
+        Map<String, Long> counts = new HashMap<>();
+        for (LibraryItem item : items.values()) {
+            if (branchId == null || item.branchId().equals(branchId)) {
+                counts.merge(item.genre() + "/" + item.format(), 1L, Long::sum);
+            }
+        }
+        return Map.copyOf(counts);
+    }
+
+    public synchronized BigDecimal collectionValue(Predicate<LibraryItem> criteria) {
+        return items.values().stream().filter(criteria)
+                .map(LibraryItem::value).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public synchronized List<LibraryItem> inTransitLongerThan(Duration duration, Instant now) {
+        return query(item -> item.status() == LibraryItem.Status.IN_TRANSIT
+                && item.statusSince().isBefore(now.minus(duration)));
+    }
+
+    public synchronized List<LibraryItem> missingOrDamaged(String branchId) {
+        return query(item -> item.branchId().equals(branchId)
+                && (item.status() == LibraryItem.Status.MISSING
+                || item.status() == LibraryItem.Status.DAMAGED));
+    }
+
+    public synchronized List<LibraryItem> purgeCandidates(Duration missingAge, Instant now) {
+        return query(item -> item.status() == LibraryItem.Status.DISCARD_WEED
+                || (item.status() == LibraryItem.Status.MISSING
+                && item.statusSince().isBefore(now.minus(missingAge))));
+    }
+
+    public synchronized List<LibraryItem> allItems() {
+        return new ArrayList<>(items.values());
+    }
+}
+
+// File: FinancialLedger.java
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+public final class FinancialLedger {
+    public enum EntryType { CHARGE, PAYMENT, WAIVER }
+    public record Entry(String id, String patronId, String itemId, String branchId,
+                        String chargeId, EntryType type, String category,
+                        BigDecimal amount, String paymentMethod, Instant occurredAt) {
+        public Entry {
+            Objects.requireNonNull(id);
+            Objects.requireNonNull(patronId);
+            Objects.requireNonNull(branchId);
+            Objects.requireNonNull(type);
+            Objects.requireNonNull(category);
+            Objects.requireNonNull(amount);
+            Objects.requireNonNull(occurredAt);
+        }
+    }
+
+    private final List<Entry> entries = new ArrayList<>();
+
+    public synchronized void record(Entry entry) {
+        entries.add(entry);
+    }
+
+    public synchronized List<Entry> entries() {
+        return List.copyOf(entries);
+    }
+
+    public synchronized BigDecimal patronBalance(String patronId) {
+        return entries.stream().filter(e -> e.patronId().equals(patronId))
+                .map(e -> e.type() == EntryType.CHARGE ? e.amount() : e.amount().negate())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public synchronized List<Entry> paymentsAppliedTo(String chargeId) {
+        return entries.stream().filter(e -> e.type() == EntryType.PAYMENT
+                && chargeId.equals(e.chargeId())).toList();
+    }
+
+    public synchronized BigDecimal total(EntryType type) {
+        return entries.stream().filter(e -> e.type() == type).map(Entry::amount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+}
+
+// File: PinesLibrarySystem.java
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
+public final class PinesLibrarySystem {
+    private final AccessControl accessControl = new AccessControl();
+    private final StaffLoginService loginService = new StaffLoginService();
+    private final ReportService reportService = new ReportService(accessControl);
+    private final QueryService queryService = new QueryService(accessControl);
+    private final InventoryService inventoryService = new InventoryService();
+    private final TransactionArchive transactionArchive = new TransactionArchive();
+    private final FinancialLedger financialLedger = new FinancialLedger();
+    private final Map<String, LibraryBranch> branches = new HashMap<>();
+
+    public AccessControl accessControl() { return accessControl; }
+    public StaffLoginService loginService() { return loginService; }
+    public ReportService reportService() { return reportService; }
+    public QueryService queryService() { return queryService; }
+    public InventoryService inventoryService() { return inventoryService; }
+    public TransactionArchive transactionArchive() { return transactionArchive; }
+    public FinancialLedger financialLedger() { return financialLedger; }
+
+    public void addBranch(LibraryBranch branch) {
+        branches.put(branch.id(), branch);
+    }
+
+    public Collection<LibraryBranch> branches() {
+        return java.util.List.copyOf(branches.values());
+    }
+
+    public Map<String, Double> branchCapacityUtilization() {
+        Map<String, Double> result = new HashMap<>();
+        for (LibraryBranch branch : branches.values()) {
+            long count = inventoryService.allItems().stream()
+                    .filter(item -> item.branchId().equals(branch.id())).count();
+            result.put(branch.id(), branch.shelfCapacity() == 0 ? 0.0
+                    : (double) count / branch.shelfCapacity());
+        }
+        return Map.copyOf(result);
+    }
+
+    public void retainHistoryForDays(int days, Instant now) {
+        if (days < 0) throw new IllegalArgumentException("Days cannot be negative");
+        transactionArchive.purgeDetailedHistoryBefore(now.minus(Duration.ofDays(days)));
+    }
+}
+
+// File: Main.java
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Main {
+    public static void main(String[] args) {
+        PinesLibrarySystem system = new PinesLibrarySystem();
+
+        StaffMember admin = new StaffMember("staff-1", "admin", "secret", "CARD-1",
+                StaffRole.GLOBAL_SYSTEM_ADMINISTRATOR, Set.of("ATL"));
+        system.loginService().register(admin);
+        system.loginService().registerCard("CARD-1", admin);
+
+        system.addBranch(new LibraryBranch("ATL", "Central Library", "Fulton",
+                "PINES", 1000));
+        system.inventoryService().addItem(new LibraryItem("item-1", "Georgia History",
+                "Adult Nonfiction", "Book", "975.8 G", new BigDecimal("24.99"),
+                true, "ATL", LibraryItem.Status.AVAILABLE, Instant.now()));
+
+        ReportTemplate template = new ReportTemplate("inventory", "Inventory by branch",
+                "items", Set.of("branchId"), Set.of("title", "genre", "format", "branchId"),
+                Map.of());
+        system.reportService().addTable("items", List.of(
+                Map.of("title", "Georgia History", "genre", "Adult Nonfiction",
+                        "format", "Book", "branchId", "ATL")));
+        system.reportService().createTemplate(admin, template);
+
+        String jobId = system.reportService().enqueue(admin, "inventory",
+                new ReportRequest(Map.of("branchId", "ATL"), Set.of("title", "genre")));
+        System.out.println("Report queue position: "
+                + system.reportService().queuePosition(jobId));
+        system.reportService().runNext();
+        System.out.println("Report results: " + system.reportService().result(jobId).rows());
+        System.out.println("Branch capacity utilization: "
+                + system.branchCapacityUtilization());
+    }
+}

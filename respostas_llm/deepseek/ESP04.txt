@@ -1,0 +1,1361 @@
+// File: Main.java
+import java.time.LocalDate;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        ScrumAllianceSite site = new ScrumAllianceSite();
+
+        User admin = site.registerUser("Admin", "admin@example.com", "admin");
+        site.addRole(admin, Role.ADMIN);
+
+        User editor = site.registerUser("Editor", "editor@example.com", "editor");
+        site.addRole(editor, Role.EDITOR);
+
+        User member = site.registerUser("Alice", "alice@example.com", "alice");
+        site.setMembershipActive(member, true, LocalDate.now().plusYears(1));
+        site.setProfile(member, "Agile enthusiast", "I like Scrum.", "5 years", null, "https://alice.example", "London");
+
+        member.setProfilePrivate(true);
+        System.out.println("Private profile:\n" + site.viewProfile(null, member));
+
+        member.setProfilePrivate(false);
+        member.setEmailPrivate(true);
+        System.out.println("Email private profile:\n" + site.viewProfile(null, member));
+
+        Application practitionerApp = site.applyForPractitioner(member, Map.of("experience", "5 years", "why", "want CSP"));
+        site.reviewApplication(admin, practitionerApp, true, "Qualified");
+        System.out.println("Member certifications: " + member.getCertifications().size());
+
+        User trainer = site.registerUser("Bob Trainer", "bob@example.com", "bob");
+        site.setProfile(trainer, "Certified Scrum Trainer", "Training for 10 years.", "10 years", "CST since 2015", null, "Berlin");
+        Application trainerApp = site.applyForTrainer(trainer, Map.of("courses", "many", "certification", "CST"));
+        site.reviewApplication(admin, trainerApp, true, "Approved");
+        System.out.println("Trainer CST: " + trainer.hasCertification(Certification.CST));
+
+        Article article = site.writeArticle(member, "My Scrum Journey", "A teaser", "The full article body about Scrum.",
+                LocalDate.now().minusDays(1), LocalDate.now().plusDays(10), LocalDate.now().plusDays(30),
+                true, true, 5);
+        site.addComment(article, "Visitor", "Great article!");
+        System.out.println("Article badge: " + article.badgeGraphic());
+        System.out.println("Article search: " + site.searchArticles("Scrum").size());
+
+        NewsItem news = site.addNews(editor, "Agile News", "Latest news", LocalDate.now().minusDays(1),
+                LocalDate.now().plusDays(7), LocalDate.now().plusDays(30), 10, true);
+        System.out.println("Home news: " + site.homeNews(LocalDate.now()).size());
+        System.out.println("News RSS: " + site.newsRss().toXml());
+
+        CourseEvent certCourse = site.createCourse(trainer, "CSM Course", "Certification course",
+                CourseKind.CERTIFICATION, LocalDate.now().plusDays(10), LocalDate.now().plusDays(12),
+                "Berlin", "https://courses.example/csm", false);
+        CourseEvent otherCourse = site.createCourse(trainer, "Agile Event", "Other course",
+                CourseKind.OTHER, LocalDate.now().plusDays(20), LocalDate.now().plusDays(20),
+                "Online", "https://courses.example/event", true);
+        System.out.println("Upcoming certification courses: " + site.upcomingCourses(CourseKind.CERTIFICATION, LocalDate.now(), 0, 10).size());
+        CourseEvent copy = site.copyCourse(trainer, certCourse);
+        site.toggleCourseKind(trainer, copy);
+        site.deleteCourse(trainer, otherCourse);
+
+        User recruiter = site.registerUser("Recruiter", "recruiter@example.com", "pass");
+        site.addRole(recruiter, Role.RECRUITER);
+        JobAd job = site.postJob(recruiter, "Scrum Master", "Help wanted", "jobs@example.com", admin.getEmail());
+        site.approveJob(admin, job);
+        site.extendJob(job, LocalDate.now());
+        site.sendJobReminders(LocalDate.now().plusDays(25));
+        System.out.println("Active jobs: " + site.activeJobs().size());
+
+        site.addFaq(editor, "What is Scrum?", "Scrum is an agile framework.");
+        System.out.println("FAQ search: " + site.searchFaqs("Scrum").size());
+
+        site.addTrainingMaterial(admin, "Scrum Guide", "https://example.com/scrum.pdf", false);
+        site.addTrainingMaterial(admin, "Methodology PDF", "https://example.com/method.pdf", true);
+        System.out.println("Materials for member: " + site.listTrainingMaterials(true).size());
+
+        site.loadParticipants(trainer, certCourse, "Carol,carol@example.com\nDave,dave@example.com");
+        site.approveClassParticipants(admin, certCourse);
+        System.out.println("CSM registry: " + site.listCertified(Certification.CSM).size());
+
+        site.submitRating(certCourse, "carol@example.com", 5, "Excellent");
+        try {
+            site.submitRating(certCourse, "carol@example.com", 4, "Duplicate");
+        } catch (IllegalStateException e) {
+            System.out.println("Duplicate survey blocked");
+        }
+        System.out.println(site.getSurveyResults(trainer));
+
+        site.setFees(admin, 100, 200, 300, 50, 1000);
+        CorporateSponsor sponsor = site.joinCorporateSponsor("Acme", "https://acme.example/logo.png");
+        System.out.println("Random sponsor: " + (site.randomHomeSponsor() != null ? site.randomHomeSponsor().getName() : "none"));
+
+        site.addTrainerOnlyInfo(editor, "Trainer meeting next week.");
+        System.out.println("Trainer info: " + site.readTrainerOnlyInfo(trainer));
+
+        site.setWhatIsScrumContent(editor, "Scrum is a framework for developing and sustaining complex products.");
+        site.addAnnouncement(editor, "New CSP program launched.");
+        site.addPopularItem("Scrum Guide");
+        System.out.println("What is Scrum: " + site.getWhatIsScrumContent());
+        System.out.println("Announcements: " + site.getAnnouncements().size());
+        System.out.println("Popular items: " + site.getPopularItems().size());
+
+        site.sendEmailToMember(member, trainer, "Question", "Can I join your next class?");
+        site.sendRenewalReminder(member);
+        site.requestPasswordReset(member);
+        System.out.println("Emails sent: " + site.getEmailService().getOutbox().size());
+    }
+}
+
+// File: Role.java
+public enum Role {
+    VISITOR, MEMBER, PRACTITIONER, TRAINER, ADMIN, EDITOR, RECRUITER, ADVERTISER, CORPORATE_SPONSOR
+}
+
+// File: Certification.java
+public enum Certification {
+    CSM, CSPO, CSP, CST;
+
+    public boolean isPractitioner() {
+        return this == CSP || this == CSM || this == CSPO;
+    }
+
+    public boolean isTrainer() {
+        return this == CST;
+    }
+
+    public String badge() {
+        switch (this) {
+            case CSP: return "CSP badge";
+            case CST: return "CST badge";
+            case CSM: return "CSM badge";
+            case CSPO: return "CSPO badge";
+            default: return "";
+        }
+    }
+}
+
+// File: ApplicationType.java
+public enum ApplicationType {
+    PRACTITIONER, TRAINER
+}
+
+// File: ApplicationStatus.java
+public enum ApplicationStatus {
+    PENDING, APPROVED, REJECTED
+}
+
+// File: CourseKind.java
+public enum CourseKind {
+    CERTIFICATION, OTHER, EVENT
+}
+
+// File: CourseStatus.java
+public enum CourseStatus {
+    PENDING, PUBLISHED, CANCELLED
+}
+
+// File: JobStatus.java
+public enum JobStatus {
+    PENDING, APPROVED, REJECTED, ACTIVE, EXPIRED
+}
+
+// File: Privacy.java
+public enum Privacy {
+    PUBLIC, PRIVATE
+}
+
+// File: User.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Set;
+
+public class User {
+    private final int id;
+    private final String name;
+    private String email;
+    private String password;
+    private final Set<Role> roles = EnumSet.noneOf(Role.class);
+    private boolean profilePrivate;
+    private boolean emailPrivate;
+    private Profile profile = new Profile();
+    private final List<CertificationRecord> certifications = new ArrayList<>();
+    private final List<CourseEvent> courses = new ArrayList<>();
+    private final List<Article> articles = new ArrayList<>();
+    private boolean memberActive;
+    private LocalDate renewalDate;
+
+    public User(int id, String name, String email, String password) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.password = password;
+    }
+
+    public int getId() { return id; }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+
+    public void addRole(Role role) { roles.add(role); }
+    public boolean hasRole(Role role) { return roles.contains(role); }
+    public Set<Role> getRoles() { return Collections.unmodifiableSet(roles); }
+
+    public boolean isProfilePrivate() { return profilePrivate; }
+    public void setProfilePrivate(boolean profilePrivate) { this.profilePrivate = profilePrivate; }
+    public boolean isEmailPrivate() { return emailPrivate; }
+    public void setEmailPrivate(boolean emailPrivate) { this.emailPrivate = emailPrivate; }
+
+    public Profile getProfile() { return profile; }
+    public void setProfile(Profile profile) { this.profile = profile; }
+
+    public void addCertification(CertificationRecord record) { certifications.add(record); }
+    public boolean hasCertification(Certification certification) {
+        for (CertificationRecord r : certifications) {
+            if (r.getCertification() == certification && r.isActive()) return true;
+        }
+        return false;
+    }
+    public List<CertificationRecord> getCertifications() { return Collections.unmodifiableList(certifications); }
+
+    public void addCourse(CourseEvent course) { courses.add(course); }
+    public List<CourseEvent> getCourses() { return Collections.unmodifiableList(courses); }
+
+    public void addArticle(Article article) { articles.add(article); }
+    public List<Article> getArticles() { return Collections.unmodifiableList(articles); }
+
+    public boolean isMemberActive() { return memberActive; }
+    public void setMemberActive(boolean memberActive) { this.memberActive = memberActive; }
+    public LocalDate getRenewalDate() { return renewalDate; }
+    public void setRenewalDate(LocalDate renewalDate) { this.renewalDate = renewalDate; }
+
+    @Override
+    public String toString() { return name; }
+}
+
+// File: Profile.java
+public class Profile {
+    private String headline;
+    private String bio;
+    private String experience;
+    private String trainerDetails;
+    private String website;
+    private String location;
+
+    public Profile() {}
+
+    public Profile(String headline, String bio, String experience, String trainerDetails, String website, String location) {
+        this.headline = headline;
+        this.bio = bio;
+        this.experience = experience;
+        this.trainerDetails = trainerDetails;
+        this.website = website;
+        this.location = location;
+    }
+
+    public String getHeadline() { return headline; }
+    public void setHeadline(String headline) { this.headline = headline; }
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
+    public String getExperience() { return experience; }
+    public void setExperience(String experience) { this.experience = experience; }
+    public String getTrainerDetails() { return trainerDetails; }
+    public void setTrainerDetails(String trainerDetails) { this.trainerDetails = trainerDetails; }
+    public String getWebsite() { return website; }
+    public void setWebsite(String website) { this.website = website; }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+}
+
+// File: CertificationRecord.java
+import java.time.LocalDate;
+
+public class CertificationRecord {
+    private final Certification certification;
+    private final LocalDate approvedDate;
+    private boolean active = true;
+    private boolean feePaid;
+
+    public CertificationRecord(Certification certification, LocalDate approvedDate) {
+        this.certification = certification;
+        this.approvedDate = approvedDate;
+    }
+
+    public Certification getCertification() { return certification; }
+    public LocalDate getApprovedDate() { return approvedDate; }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
+    public boolean isFeePaid() { return feePaid; }
+    public void setFeePaid(boolean feePaid) { this.feePaid = feePaid; }
+}
+
+// File: Application.java
+import java.time.LocalDate;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class Application {
+    private final int id;
+    private final User applicant;
+    private final ApplicationType type;
+    private final Map<String, String> answers;
+    private ApplicationStatus status = ApplicationStatus.PENDING;
+    private final LocalDate submittedDate;
+    private User reviewer;
+    private String reviewComment = "";
+
+    public Application(int id, User applicant, ApplicationType type, Map<String, String> answers) {
+        this.id = id;
+        this.applicant = applicant;
+        this.type = type;
+        this.answers = new LinkedHashMap<>(answers);
+        this.submittedDate = LocalDate.now();
+    }
+
+    public int getId() { return id; }
+    public User getApplicant() { return applicant; }
+    public ApplicationType getType() { return type; }
+    public Map<String, String> getAnswers() { return Collections.unmodifiableMap(answers); }
+    public ApplicationStatus getStatus() { return status; }
+    public void setStatus(ApplicationStatus status) { this.status = status; }
+    public LocalDate getSubmittedDate() { return submittedDate; }
+    public User getReviewer() { return reviewer; }
+    public void setReviewer(User reviewer) { this.reviewer = reviewer; }
+    public String getReviewComment() { return reviewComment; }
+    public void setReviewComment(String reviewComment) { this.reviewComment = reviewComment; }
+}
+
+// File: Comment.java
+import java.time.LocalDateTime;
+
+public class Comment {
+    private final String authorName;
+    private final String text;
+    private final LocalDateTime createdAt;
+
+    public Comment(String authorName, String text) {
+        this.authorName = authorName;
+        this.text = text;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    public String getAuthorName() { return authorName; }
+    public String getText() { return text; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+}
+
+// File: Article.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Article {
+    private final int id;
+    private final String title;
+    private final String teaser;
+    private final String body;
+    private final User author;
+    private final LocalDate startPublish;
+    private final LocalDate oldDate;
+    private final LocalDate stopPublish;
+    private final boolean publicAccess;
+    private final boolean featuredHome;
+    private final int priority;
+    private final List<Comment> comments = new ArrayList<>();
+
+    public Article(int id, String title, String teaser, String body, User author,
+                   LocalDate startPublish, LocalDate oldDate, LocalDate stopPublish,
+                   boolean publicAccess, boolean featuredHome, int priority) {
+        this.id = id;
+        this.title = title;
+        this.teaser = teaser;
+        this.body = body;
+        this.author = author;
+        this.startPublish = startPublish;
+        this.oldDate = oldDate;
+        this.stopPublish = stopPublish;
+        this.publicAccess = publicAccess;
+        this.featuredHome = featuredHome;
+        this.priority = priority;
+    }
+
+    public boolean isVisible(LocalDate date) {
+        return !date.isBefore(startPublish) && !date.isAfter(stopPublish);
+    }
+
+    public boolean isOld(LocalDate date) {
+        return !date.isBefore(oldDate) && !date.isAfter(stopPublish);
+    }
+
+    public boolean canRead(User viewer) {
+        if (!isVisible(LocalDate.now())) return false;
+        if (publicAccess) return true;
+        return viewer != null && viewer.hasRole(Role.MEMBER) && viewer.isMemberActive();
+    }
+
+    public String badgeGraphic() {
+        if (author.hasCertification(Certification.CST)) return Certification.CST.badge();
+        if (author.hasCertification(Certification.CSP)) return Certification.CSP.badge();
+        return "";
+    }
+
+    public void addComment(Comment comment) { comments.add(comment); }
+
+    public int getId() { return id; }
+    public String getTitle() { return title; }
+    public String getTeaser() { return teaser; }
+    public String getBody() { return body; }
+    public User getAuthor() { return author; }
+    public LocalDate getStartPublish() { return startPublish; }
+    public LocalDate getOldDate() { return oldDate; }
+    public LocalDate getStopPublish() { return stopPublish; }
+    public boolean isPublicAccess() { return publicAccess; }
+    public boolean isFeaturedHome() { return featuredHome; }
+    public int getPriority() { return priority; }
+    public List<Comment> getComments() { return Collections.unmodifiableList(comments); }
+}
+
+// File: NewsItem.java
+import java.time.LocalDate;
+
+public class NewsItem {
+    private final int id;
+    private final String title;
+    private final String body;
+    private final LocalDate startPublish;
+    private final LocalDate oldNewsDate;
+    private final LocalDate stopPublish;
+    private final int priority;
+    private final boolean featured;
+
+    public NewsItem(int id, String title, String body, LocalDate startPublish, LocalDate oldNewsDate,
+                    LocalDate stopPublish, int priority, boolean featured) {
+        this.id = id;
+        this.title = title;
+        this.body = body;
+        this.startPublish = startPublish;
+        this.oldNewsDate = oldNewsDate;
+        this.stopPublish = stopPublish;
+        this.priority = priority;
+        this.featured = featured;
+    }
+
+    public boolean isVisible(LocalDate date) {
+        return !date.isBefore(startPublish) && !date.isAfter(stopPublish);
+    }
+
+    public boolean isOnHome(LocalDate date) {
+        return !date.isBefore(startPublish) && date.isBefore(oldNewsDate) && !date.isAfter(stopPublish);
+    }
+
+    public boolean isOldNews(LocalDate date) {
+        return !date.isBefore(oldNewsDate) && !date.isAfter(stopPublish);
+    }
+
+    public int getId() { return id; }
+    public String getTitle() { return title; }
+    public String getBody() { return body; }
+    public LocalDate getStartPublish() { return startPublish; }
+    public LocalDate getOldNewsDate() { return oldNewsDate; }
+    public LocalDate getStopPublish() { return stopPublish; }
+    public int getPriority() { return priority; }
+    public boolean isFeatured() { return featured; }
+}
+
+// File: CourseEvent.java
+import java.time.LocalDate;
+
+public class CourseEvent {
+    private final int id;
+    private String title;
+    private String description;
+    private User trainer;
+    private CourseKind kind;
+    private CourseStatus status = CourseStatus.PUBLISHED;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private String location;
+    private String detailsLink;
+    private boolean listingFeePaid;
+    private final LocalDate createdDate = LocalDate.now();
+
+    public CourseEvent(int id, String title, String description, User trainer, CourseKind kind,
+                       LocalDate startDate, LocalDate endDate, String location, String detailsLink) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.trainer = trainer;
+        this.kind = kind;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.location = location;
+        this.detailsLink = detailsLink;
+    }
+
+    public boolean isUpcoming(LocalDate date) {
+        return status == CourseStatus.PUBLISHED && !endDate.isBefore(date);
+    }
+
+    public void cancel() { status = CourseStatus.CANCELLED; }
+    public void publish() { status = CourseStatus.PUBLISHED; }
+
+    public CourseEvent copy(int newId) {
+        CourseEvent c = new CourseEvent(newId, title + " (copy)", description, trainer, kind, startDate, endDate, location, detailsLink);
+        c.listingFeePaid = listingFeePaid;
+        return c;
+    }
+
+    public void toggleKind() {
+        if (kind == CourseKind.EVENT) kind = CourseKind.CERTIFICATION;
+        else if (kind == CourseKind.CERTIFICATION) kind = CourseKind.EVENT;
+        else kind = CourseKind.CERTIFICATION;
+    }
+
+    public int getId() { return id; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public User getTrainer() { return trainer; }
+    public void setTrainer(User trainer) { this.trainer = trainer; }
+    public CourseKind getKind() { return kind; }
+    public CourseStatus getStatus() { return status; }
+    public LocalDate getStartDate() { return startDate; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+    public LocalDate getEndDate() { return endDate; }
+    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+    public String getDetailsLink() { return detailsLink; }
+    public void setDetailsLink(String detailsLink) { this.detailsLink = detailsLink; }
+    public boolean isListingFeePaid() { return listingFeePaid; }
+    public void setListingFeePaid(boolean listingFeePaid) { this.listingFeePaid = listingFeePaid; }
+    public LocalDate getCreatedDate() { return createdDate; }
+}
+
+// File: JobAd.java
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+
+public class JobAd {
+    private final int id;
+    private String title;
+    private String description;
+    private final String recruiterName;
+    private final String contactEmail;
+    private final LocalDate postedDate;
+    private JobStatus status = JobStatus.PENDING;
+    private LocalDate expiryDate;
+    private int extensions = 0;
+    private LocalDate lastReminderSent;
+
+    public JobAd(int id, String title, String description, String recruiterName, String contactEmail) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.recruiterName = recruiterName;
+        this.contactEmail = contactEmail;
+        this.postedDate = LocalDate.now();
+        this.expiryDate = postedDate.plusDays(30);
+    }
+
+    public void approve(LocalDate date) {
+        status = JobStatus.ACTIVE;
+        expiryDate = date.plusDays(30);
+    }
+
+    public void reject() { status = JobStatus.REJECTED; }
+
+    public void extend(LocalDate date) {
+        if (status == JobStatus.ACTIVE || status == JobStatus.EXPIRED) {
+            expiryDate = date.plusDays(30);
+            status = JobStatus.ACTIVE;
+            extensions++;
+        }
+    }
+
+    public void expireIfNeeded(LocalDate date) {
+        if (status == JobStatus.ACTIVE && date.isAfter(expiryDate)) {
+            status = JobStatus.EXPIRED;
+        }
+    }
+
+    public long daysUntilExpiry(LocalDate date) {
+        return ChronoUnit.DAYS.between(date, expiryDate);
+    }
+
+    public boolean reminderDue(LocalDate date) {
+        long days = daysUntilExpiry(date);
+        return status == JobStatus.ACTIVE && days >= 0 && days <= 7 &&
+               (lastReminderSent == null || lastReminderSent.isBefore(date.minusDays(6)));
+    }
+
+    public void markReminderSent(LocalDate date) { lastReminderSent = date; }
+
+    public int getId() { return id; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public String getRecruiterName() { return recruiterName; }
+    public String getContactEmail() { return contactEmail; }
+    public LocalDate getPostedDate() { return postedDate; }
+    public JobStatus getStatus() { return status; }
+    public LocalDate getExpiryDate() { return expiryDate; }
+    public int getExtensions() { return extensions; }
+}
+
+// File: FAQ.java
+public class FAQ {
+    private final int id;
+    private final String question;
+    private final String answer;
+
+    public FAQ(int id, String question, String answer) {
+        this.id = id;
+        this.question = question;
+        this.answer = answer;
+    }
+
+    public boolean matches(String query) {
+        String q = query.toLowerCase();
+        return question.toLowerCase().contains(q) || answer.toLowerCase().contains(q);
+    }
+
+    public int getId() { return id; }
+    public String getQuestion() { return question; }
+    public String getAnswer() { return answer; }
+}
+
+// File: Email.java
+import java.time.LocalDateTime;
+
+public class Email {
+    private final String to;
+    private final String subject;
+    private final String body;
+    private final LocalDateTime sentAt;
+
+    public Email(String to, String subject, String body) {
+        this.to = to;
+        this.subject = subject;
+        this.body = body;
+        this.sentAt = LocalDateTime.now();
+    }
+
+    public String getTo() { return to; }
+    public String getSubject() { return subject; }
+    public String getBody() { return body; }
+    public LocalDateTime getSentAt() { return sentAt; }
+}
+
+// File: EmailService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class EmailService {
+    private final List<Email> outbox = new ArrayList<>();
+
+    public void send(String to, String subject, String body) {
+        outbox.add(new Email(to, subject, body));
+    }
+
+    public List<Email> getOutbox() {
+        return Collections.unmodifiableList(outbox);
+    }
+}
+
+// File: FeeSchedule.java
+public class FeeSchedule {
+    private double memberFee;
+    private double practitionerFee;
+    private double trainerAnnualFee;
+    private double otherCourseListingFee;
+    private double corporateMembershipFee;
+
+    public double getMemberFee() { return memberFee; }
+    public void setMemberFee(double memberFee) { this.memberFee = memberFee; }
+    public double getPractitionerFee() { return practitionerFee; }
+    public void setPractitionerFee(double practitionerFee) { this.practitionerFee = practitionerFee; }
+    public double getTrainerAnnualFee() { return trainerAnnualFee; }
+    public void setTrainerAnnualFee(double trainerAnnualFee) { this.trainerAnnualFee = trainerAnnualFee; }
+    public double getOtherCourseListingFee() { return otherCourseListingFee; }
+    public void setOtherCourseListingFee(double otherCourseListingFee) { this.otherCourseListingFee = otherCourseListingFee; }
+    public double getCorporateMembershipFee() { return corporateMembershipFee; }
+    public void setCorporateMembershipFee(double corporateMembershipFee) { this.corporateMembershipFee = corporateMembershipFee; }
+}
+
+// File: RegistryEntry.java
+import java.time.LocalDate;
+
+public class RegistryEntry {
+    private final String name;
+    private final String email;
+    private final Certification certification;
+    private final LocalDate date;
+    private final int classId;
+    private boolean active;
+
+    public RegistryEntry(String name, String email, Certification certification, LocalDate date, int classId, boolean active) {
+        this.name = name;
+        this.email = email;
+        this.certification = certification;
+        this.date = date;
+        this.classId = classId;
+        this.active = active;
+    }
+
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+    public Certification getCertification() { return certification; }
+    public LocalDate getDate() { return date; }
+    public int getClassId() { return classId; }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
+}
+
+// File: CorporateSponsor.java
+public class CorporateSponsor {
+    private final String name;
+    private final String logoUrl;
+    private boolean active = true;
+
+    public CorporateSponsor(String name, String logoUrl) {
+        this.name = name;
+        this.logoUrl = logoUrl;
+    }
+
+    public String getName() { return name; }
+    public String getLogoUrl() { return logoUrl; }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
+}
+
+// File: Rating.java
+import java.time.LocalDate;
+
+public class Rating {
+    private final int trainerId;
+    private final int courseId;
+    private final String participantEmail;
+    private final int score;
+    private final String comment;
+    private final LocalDate date;
+
+    public Rating(int trainerId, int courseId, String participantEmail, int score, String comment) {
+        this.trainerId = trainerId;
+        this.courseId = courseId;
+        this.participantEmail = participantEmail;
+        this.score = score;
+        this.comment = comment;
+        this.date = LocalDate.now();
+    }
+
+    public int getTrainerId() { return trainerId; }
+    public int getCourseId() { return courseId; }
+    public String getParticipantEmail() { return participantEmail; }
+    public int getScore() { return score; }
+    public String getComment() { return comment; }
+    public LocalDate getDate() { return date; }
+}
+
+// File: TrainingMaterial.java
+public class TrainingMaterial {
+    private final String title;
+    private final String url;
+    private final boolean memberOnly;
+
+    public TrainingMaterial(String title, String url, boolean memberOnly) {
+        this.title = title;
+        this.url = url;
+        this.memberOnly = memberOnly;
+    }
+
+    public String getTitle() { return title; }
+    public String getUrl() { return url; }
+    public boolean isMemberOnly() { return memberOnly; }
+}
+
+// File: RssFeed.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class RssFeed {
+    private final String title;
+    private final List<String> items = new ArrayList<>();
+
+    public RssFeed(String title) {
+        this.title = title;
+    }
+
+    public void addItem(String item) { items.add(item); }
+
+    public String toXml() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<rss><channel><title>").append(escape(title)).append("</title>");
+        for (String item : items) {
+            sb.append("<item><title>").append(escape(item)).append("</title></item>");
+        }
+        sb.append("</channel></rss>");
+        return sb.toString();
+    }
+
+    private String escape(String text) {
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    public List<String> getItems() { return Collections.unmodifiableList(items); }
+}
+
+// File: SearchCriteria.java
+public class SearchCriteria {
+    private String name;
+    private Certification certification;
+    private String location;
+    private Role role;
+
+    public SearchCriteria() {}
+
+    public SearchCriteria(String name, Certification certification, String location, Role role) {
+        this.name = name;
+        this.certification = certification;
+        this.location = location;
+        this.role = role;
+    }
+
+    public boolean matches(User user) {
+        if (name != null && !user.getName().toLowerCase().contains(name.toLowerCase())) return false;
+        if (certification != null && !user.hasCertification(certification)) return false;
+        if (location != null && (user.getProfile() == null || user.getProfile().getLocation() == null ||
+                !user.getProfile().getLocation().toLowerCase().contains(location.toLowerCase()))) return false;
+        if (role != null && !user.hasRole(role)) return false;
+        return true;
+    }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public Certification getCertification() { return certification; }
+    public void setCertification(Certification certification) { this.certification = certification; }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+    public Role getRole() { return role; }
+    public void setRole(Role role) { this.role = role; }
+}
+
+// File: ScrumAllianceSite.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+public class ScrumAllianceSite {
+    private int nextId = 1;
+    private final List<User> users = new ArrayList<>();
+    private final List<Application> applications = new ArrayList<>();
+    private final List<Article> articles = new ArrayList<>();
+    private final List<NewsItem> newsItems = new ArrayList<>();
+    private final List<CourseEvent> courses = new ArrayList<>();
+    private final List<JobAd> jobs = new ArrayList<>();
+    private final List<FAQ> faqs = new ArrayList<>();
+    private final List<CorporateSponsor> sponsors = new ArrayList<>();
+    private final List<TrainingMaterial> materials = new ArrayList<>();
+    private final List<RegistryEntry> registry = new ArrayList<>();
+    private final List<Rating> ratings = new ArrayList<>();
+    private final FeeSchedule fees = new FeeSchedule();
+    private final EmailService emailService = new EmailService();
+    private final Map<String, String> trainerOnlyInfo = new HashMap<>();
+    private final List<String> announcements = new ArrayList<>();
+    private final List<String> popularItems = new ArrayList<>();
+    private final Random random = new Random(1);
+    private String whatIsScrum = "";
+    private String welcomeEmailTemplate = "Register or activate your membership.";
+
+    private int id() { return nextId++; }
+
+    public User registerUser(String name, String email, String password) {
+        User user = new User(id(), name, email, password);
+        user.addRole(Role.MEMBER);
+        users.add(user);
+        return user;
+    }
+
+    public void addRole(User user, Role role) { user.addRole(role); }
+
+    public Profile setProfile(User user, String headline, String bio, String experience, String trainerDetails, String website, String location) {
+        Profile p = new Profile(headline, bio, experience, trainerDetails, website, location);
+        user.setProfile(p);
+        return p;
+    }
+
+    public String viewProfile(User viewer, User target) {
+        boolean self = viewer != null && viewer.getId() == target.getId();
+        boolean admin = viewer != null && viewer.hasRole(Role.ADMIN);
+        if (target.isProfilePrivate() && !self && !admin) {
+            return target.getName();
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("Name: ").append(target.getName()).append("\n");
+        if (!target.isEmailPrivate() || self || admin) {
+            sb.append("Email: ").append(target.getEmail()).append("\n");
+        }
+        Profile p = target.getProfile();
+        if (p != null) {
+            if (p.getHeadline() != null) sb.append("Headline: ").append(p.getHeadline()).append("\n");
+            if (p.getBio() != null) sb.append("Bio: ").append(p.getBio()).append("\n");
+            if (p.getExperience() != null) sb.append("Experience: ").append(p.getExperience()).append("\n");
+            if (p.getTrainerDetails() != null) sb.append("Trainer Details: ").append(p.getTrainerDetails()).append("\n");
+            if (p.getWebsite() != null) sb.append("Website: ").append(p.getWebsite()).append("\n");
+            if (p.getLocation() != null) sb.append("Location: ").append(p.getLocation()).append("\n");
+        }
+        if (!target.getCertifications().isEmpty()) {
+            sb.append("Certifications: ");
+            for (CertificationRecord r : target.getCertifications()) {
+                if (r.isActive()) sb.append(r.getCertification()).append(" ");
+            }
+            sb.append("\n");
+        }
+        if (target.hasRole(Role.TRAINER)) {
+            sb.append("Rating: ").append(String.format("%.2f", getTrainerRating(target))).append("\n");
+        }
+        return sb.toString();
+    }
+
+    public Application applyForPractitioner(User applicant, Map<String, String> answers) {
+        Application app = new Application(id(), applicant, ApplicationType.PRACTITIONER, answers);
+        applications.add(app);
+        return app;
+    }
+
+    public Application applyForTrainer(User applicant, Map<String, String> answers) {
+        Application app = new Application(id(), applicant, ApplicationType.TRAINER, answers);
+        applications.add(app);
+        return app;
+    }
+
+    public void reviewApplication(User admin, Application app, boolean approve, String comment) {
+        if (!admin.hasRole(Role.ADMIN)) throw new IllegalStateException("Admin required");
+        app.setReviewer(admin);
+        app.setReviewComment(comment == null ? "" : comment);
+        if (approve) {
+            app.setStatus(ApplicationStatus.APPROVED);
+            User applicant = app.getApplicant();
+            if (app.getType() == ApplicationType.PRACTITIONER) {
+                applicant.addRole(Role.PRACTITIONER);
+                applicant.addCertification(new CertificationRecord(Certification.CSP, LocalDate.now()));
+                applicant.setMemberActive(true);
+            } else if (app.getType() == ApplicationType.TRAINER) {
+                applicant.addRole(Role.TRAINER);
+                applicant.addCertification(new CertificationRecord(Certification.CST, LocalDate.now()));
+                applicant.setMemberActive(true);
+            }
+            emailService.send(applicant.getEmail(), "Application Approved", "Your " + app.getType() + " application was approved.");
+        } else {
+            app.setStatus(ApplicationStatus.REJECTED);
+            emailService.send(app.getApplicant().getEmail(), "Application Rejected", "Your application was rejected. " + comment);
+        }
+    }
+
+    public Article writeArticle(User author, String title, String teaser, String body,
+                                LocalDate start, LocalDate oldDate, LocalDate stop,
+                                boolean publicAccess, boolean featuredHome, int priority) {
+        Article article = new Article(id(), title, teaser, body, author, start, oldDate, stop, publicAccess, featuredHome, priority);
+        articles.add(article);
+        author.addArticle(article);
+        return article;
+    }
+
+    public void addComment(Article article, String authorName, String text) {
+        article.addComment(new Comment(authorName, text));
+    }
+
+    public boolean canReadArticle(User viewer, Article article) {
+        return article.canRead(viewer);
+    }
+
+    public List<Article> searchArticles(String query) {
+        List<Article> result = new ArrayList<>();
+        String q = query.toLowerCase();
+        for (Article a : articles) {
+            if (a.getTitle().toLowerCase().contains(q) || a.getBody().toLowerCase().contains(q) || a.getAuthor().getName().toLowerCase().contains(q)) {
+                result.add(a);
+            }
+        }
+        return result;
+    }
+
+    public NewsItem addNews(User editor, String title, String body, LocalDate start, LocalDate oldDate,
+                            LocalDate stop, int priority, boolean featured) {
+        if (!editor.hasRole(Role.EDITOR) && !editor.hasRole(Role.ADMIN)) throw new IllegalStateException("Editor required");
+        NewsItem item = new NewsItem(id(), title, body, start, oldDate, stop, priority, featured);
+        newsItems.add(item);
+        return item;
+    }
+
+    public List<NewsItem> homeNews(LocalDate date) {
+        List<NewsItem> result = new ArrayList<>();
+        for (NewsItem n : newsItems) if (n.isOnHome(date)) result.add(n);
+        result.sort(Comparator.comparingInt(NewsItem::getPriority).reversed());
+        return result;
+    }
+
+    public List<NewsItem> oldNews(LocalDate date) {
+        List<NewsItem> result = new ArrayList<>();
+        for (NewsItem n : newsItems) if (n.isOldNews(date)) result.add(n);
+        result.sort(Comparator.comparingInt(NewsItem::getPriority).reversed());
+        return result;
+    }
+
+    public void emailNewsToEditor(String editorEmail, NewsItem item) {
+        emailService.send(editorEmail, "News submission", item.getTitle());
+    }
+
+    public RssFeed newsRss() {
+        RssFeed feed = new RssFeed("Scrum Alliance News");
+        for (NewsItem n : newsItems) feed.addItem(n.getTitle());
+        return feed;
+    }
+
+    public RssFeed courseRss(LocalDate date) {
+        RssFeed feed = new RssFeed("Upcoming Courses and Events");
+        for (CourseEvent c : courses) if (c.isUpcoming(date)) feed.addItem(c.getTitle());
+        return feed;
+    }
+
+    public RssFeed articleRss() {
+        RssFeed feed = new RssFeed("Articles");
+        for (Article a : articles) feed.addItem(a.getTitle());
+        return feed;
+    }
+
+    public RssFeed jobRss() {
+        RssFeed feed = new RssFeed("Jobs");
+        for (JobAd j : activeJobs()) feed.addItem(j.getTitle());
+        return feed;
+    }
+
+    public CourseEvent createCourse(User trainer, String title, String description, CourseKind kind,
+                                    LocalDate start, LocalDate end, String location, String detailsLink,
+                                    boolean chargedListingFee) {
+        if (!trainer.hasRole(Role.TRAINER) && !trainer.hasRole(Role.ADMIN)) throw new IllegalStateException("Trainer required");
+        CourseEvent course = new CourseEvent(id(), title, description, trainer, kind, start, end, location, detailsLink);
+        if (kind == CourseKind.OTHER && chargedListingFee) {
+            course.setListingFeePaid(true);
+            emailService.send(trainer.getEmail(), "Listing Fee", "Charged listing fee: " + fees.getOtherCourseListingFee());
+        }
+        courses.add(course);
+        trainer.addCourse(course);
+        return course;
+    }
+
+    public CourseEvent createCourseAsAdmin(User admin, String title, String description, CourseKind kind,
+                                           LocalDate start, LocalDate end, String location, String detailsLink) {
+        if (!admin.hasRole(Role.ADMIN)) throw new IllegalStateException("Admin required");
+        CourseEvent course = new CourseEvent(id(), title, description, admin, kind, start, end, location, detailsLink);
+        course.setListingFeePaid(true);
+        courses.add(course);
+        return course;
+    }
+
+    public void updateCourse(User actor, CourseEvent course, String title, String description,
+                             LocalDate start, LocalDate end, String location, String detailsLink) {
+        if (!canManageCourse(actor, course)) throw new IllegalStateException("Not allowed");
+        course.setTitle(title);
+        course.setDescription(description);
+        course.setStartDate(start);
+        course.setEndDate(end);
+        course.setLocation(location);
+        course.setDetailsLink(detailsLink);
+    }
+
+    private boolean canManageCourse(User actor, CourseEvent course) {
+        return actor.hasRole(Role.ADMIN) || actor.hasRole(Role.EDITOR) ||
+               (course.getTrainer() != null && course.getTrainer().getId() == actor.getId());
+    }
+
+    public void deleteCourse(User actor, CourseEvent course) {
+        if (!canManageCourse(actor, course)) throw new IllegalStateException("Not allowed");
+        course.cancel();
+    }
+
+    public CourseEvent copyCourse(User trainer, CourseEvent course) {
+        if (course.getTrainer() == null || course.getTrainer().getId() != trainer.getId()) throw new IllegalStateException("Not owner");
+        CourseEvent copy = course.copy(id());
+        copy.setTrainer(trainer);
+        courses.add(copy);
+        trainer.addCourse(copy);
+        return copy;
+    }
+
+    public void toggleCourseKind(User trainer, CourseEvent course) {
+        if (course.getTrainer() == null || course.getTrainer().getId() != trainer.getId()) throw new IllegalStateException("Not owner");
+        course.toggleKind();
+    }
+
+    public List<CourseEvent> upcomingCourses(CourseKind kind, LocalDate date, int page, int pageSize) {
+        List<CourseEvent> filtered = new ArrayList<>();
+        for (CourseEvent c : courses) {
+            if (c.isUpcoming(date) && (kind == null || c.getKind() == kind)) filtered.add(c);
+        }
+        filtered.sort(Comparator.comparing(CourseEvent::getStartDate));
+        int from = Math.max(0, page * pageSize);
+        int to = Math.min(filtered.size(), from + pageSize);
+        if (from >= filtered.size()) return Collections.emptyList();
+        return new ArrayList<>(filtered.subList(from, to));
+    }
+
+    public List<CourseEvent> advancedCourseSearch(CourseKind kind, String trainerName, String location, LocalDate fromDate) {
+        List<CourseEvent> result = new ArrayList<>();
+        for (CourseEvent c : courses) {
+            if (kind != null && c.getKind() != kind) continue;
+            if (trainerName != null && (c.getTrainer() == null || !c.getTrainer().getName().toLowerCase().contains(trainerName.toLowerCase()))) continue;
+            if (location != null && (c.getLocation() == null || !c.getLocation().toLowerCase().contains(location.toLowerCase()))) continue;
+            if (fromDate != null && c.getStartDate().isBefore(fromDate)) continue;
+            result.add(c);
+        }
+        return result;
+    }
+
+    public JobAd postJob(User recruiter, String title, String description, String contactEmail, String adminEmail) {
+        JobAd job = new JobAd(id(), title, description, recruiter.getName(), contactEmail);
+        jobs.add(job);
+        emailService.send(adminEmail, "Job submitted", title);
+        return job;
+    }
+
+    public void approveJob(User admin, JobAd job) {
+        if (!admin.hasRole(Role.ADMIN)) throw new IllegalStateException("Admin required");
+        job.approve(LocalDate.now());
+    }
+
+    public void editJob(User admin, JobAd job, String title, String description) {
+        if (!admin.hasRole(Role.ADMIN)) throw new IllegalStateException("Admin required");
+        job.setTitle(title);
+        job.setDescription(description);
+    }
+
+    public void deleteJob(User admin, JobAd job) {
+        if (!admin.hasRole(Role.ADMIN)) throw new IllegalStateException("Admin required");
+        jobs.remove(job);
+    }
+
+    public void extendJob(JobAd job, LocalDate date) {
+        job.extend(date);
+    }
+
+    public void processExpiredJobs(LocalDate date) {
+        for (JobAd j : jobs) j.expireIfNeeded(date);
+    }
+
+    public List<JobAd> activeJobs() {
+        List<JobAd> result = new ArrayList<>();
+        for (JobAd j : jobs) if (j.getStatus() == JobStatus.ACTIVE) result.add(j);
+        return result;
+    }
+
+    public void sendJobReminders(LocalDate date) {
+        for (JobAd j : jobs) {
+            if (j.reminderDue(date)) {
+                emailService.send(j.getContactEmail(), "Job ad expiring soon", "Your ad expires in " + j.daysUntilExpiry(date) + " days.");
+                j.markReminderSent(date);
+            }
+        }
+    }
+
+    public FAQ addFaq(User editor, String question, String answer) {
+        if (!editor.hasRole(Role.EDITOR) && !editor.hasRole(Role.ADMIN)) throw new IllegalStateException("Editor required");
+        FAQ faq = new FAQ(id(), question, answer);
+        faqs.add(faq);
+        return faq;
+    }
+
+    public List<FAQ> searchFaqs(String query) {
+        List<FAQ> result = new ArrayList<>();
+        for (FAQ f : faqs) if (f.matches(query)) result.add(f);
+        return result;
+    }
+
+    public void addTrainingMaterial(User admin, String title, String url, boolean memberOnly) {
+        if (!admin.hasRole(Role.ADMIN) && !admin.hasRole(Role.EDITOR)) throw new IllegalStateException("Admin/Editor required");
+        materials.add(new TrainingMaterial(title, url, memberOnly));
+    }
+
+    public List<TrainingMaterial> listTrainingMaterials(boolean member) {
+        List<TrainingMaterial> result = new ArrayList<>();
+        for (TrainingMaterial m : materials) if (!m.isMemberOnly() || member) result.add(m);
+        return result;
+    }
+
+    public void loadParticipants(User trainer, CourseEvent course, String csv) {
+        if (course.getTrainer() == null || course.getTrainer().getId() != trainer.getId()) throw new IllegalStateException("Not owner");
+        String[] lines = csv.split("\\R");
+        for (String line : lines) {
+            if (line.trim().isEmpty()) continue;
+            String[] parts = line.split(",");
+            String name = parts[0].trim();
+            String email = parts.length > 1 ? parts[1].trim() : "";
+            RegistryEntry entry = new RegistryEntry(name, email, Certification.CSM, LocalDate.now(), course.getId(), false);
+            registry.add(entry);
+        }
+    }
+
+    public void approveClassParticipants(User admin, CourseEvent course) {
+        if (!admin.hasRole(Role.ADMIN)) throw new IllegalStateException("Admin required");
+        for (RegistryEntry entry : registry) {
+            if (entry.getClassId() == course.getId() && !entry.isActive()) {
+                entry.setActive(true);
+                emailService.send(entry.getEmail(), "Welcome to Scrum Alliance", welcomeEmailTemplate);
+            }
+        }
+    }
+
+    public List<RegistryEntry> listCertified(Certification certification) {
+        List<RegistryEntry> result = new ArrayList<>();
+        for (RegistryEntry e : registry) if (e.getCertification() == certification && e.isActive()) result.add(e);
+        return result;
+    }
+
+    public void setFees(User admin, double memberFee, double practitionerFee, double trainerAnnualFee,
+                        double otherCourseListingFee, double corporateMembershipFee) {
+        if (!admin.hasRole(Role.ADMIN)) throw new IllegalStateException("Admin required");
+        fees.setMemberFee(memberFee);
+        fees.setPractitionerFee(practitionerFee);
+        fees.setTrainerAnnualFee(trainerAnnualFee);
+        fees.setOtherCourseListingFee(otherCourseListingFee);
+        fees.setCorporateMembershipFee(corporateMembershipFee);
+    }
+
+    public CorporateSponsor joinCorporateSponsor(String companyName, String logoUrl) {
+        CorporateSponsor sponsor = new CorporateSponsor(companyName, logoUrl);
+        sponsors.add(sponsor);
+        return sponsor;
+    }
+
+    public CorporateSponsor randomHomeSponsor() {
+        List<CorporateSponsor> active = new ArrayList<>();
+        for (CorporateSponsor s : sponsors) if (s.isActive()) active.add(s);
+        if (active.isEmpty()) return null;
+        return active.get(random.nextInt(active.size()));
+    }
+
+    public double submitRating(CourseEvent course, String participantEmail, int score, String comment) {
+        for (Rating r : ratings) {
+            if (r.getCourseId() == course.getId() && r.getParticipantEmail().equalsIgnoreCase(participantEmail)) {
+                throw new IllegalStateException("Duplicate survey submission");
+            }
+        }
+        ratings.add(new Rating(course.getTrainer().getId(), course.getId(), participantEmail, score, comment));
+        return getTrainerRating(course.getTrainer());
+    }
+
+    public double getTrainerRating(User trainer) {
+        int sum = 0;
+        int count = 0;
+        for (Rating r : ratings) {
+            if (r.getTrainerId() == trainer.getId()) {
+                sum += r.getScore();
+                count++;
+            }
+        }
+        return count == 0 ? 0.0 : (double) sum / count;
+    }
+
+    public String getSurveyResults(User trainer) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Survey results for ").append(trainer.getName()).append("\n");
+        for (Rating r : ratings) {
+            if (r.getTrainerId() == trainer.getId()) {
+                sb.append("Course ").append(r.getCourseId()).append(": ").append(r.getScore()).append(" ").append(r.getComment()).append("\n");
+            }
+        }
+        sb.append("Average: ").append(String.format("%.2f", getTrainerRating(trainer)));
+        return sb.toString();
+    }
+
+    public void addTrainerOnlyInfo(User editor, String text) {
+        if (!editor.hasRole(Role.EDITOR) && !editor.hasRole(Role.ADMIN)) throw new IllegalStateException("Editor required");
+        trainerOnlyInfo.put("info", text);
+    }
+
+    public String readTrainerOnlyInfo(User user) {
+        if (!user.hasRole(Role.TRAINER) && !user.hasRole(Role.ADMIN)) throw new IllegalStateException("Trainer/Admin required");
+        return trainerOnlyInfo.getOrDefault("info", "");
+    }
+
+    public void requestPasswordReset(User user) {
+        String temp = "temp" + user.getId();
+        emailService.send(user.getEmail(), "Password reset", "Your temporary password is " + temp);
+    }
+
+    public void sendRenewalReminder(User user) {
+        emailService.send(user.getEmail(), "Renewal Reminder", "Please renew your membership.");
+    }
+
+    public void sendEmailToMember(User from, User to, String subject, String body) {
+        emailService.send(to.getEmail(), subject, "From " + from.getName() + ": " + body);
+    }
+
+    public void setWhatIsScrumContent(User editor, String content) {
+        if (!editor.hasRole(Role.EDITOR) && !editor.hasRole(Role.ADMIN)) throw new IllegalStateException("Editor required");
+        whatIsScrum = content;
+    }
+
+    public String getWhatIsScrumContent() { return whatIsScrum; }
+
+    public void addAnnouncement(User editor, String text) {
+        if (!editor.hasRole(Role.EDITOR) && !editor.hasRole(Role.ADMIN)) throw new IllegalStateException("Editor required");
+        announcements.add(text);
+    }
+
+    public List<String> getAnnouncements() { return Collections.unmodifiableList(announcements); }
+
+    public void addPopularItem(String item) { popularItems.add(item); }
+
+    public List<String> getPopularItems() { return Collections.unmodifiableList(popularItems); }
+
+    public void setWelcomeEmailTemplate(User editor, String template) {
+        if (!editor.hasRole(Role.EDITOR) && !editor.hasRole(Role.ADMIN)) throw new IllegalStateException("Editor required");
+        welcomeEmailTemplate = template;
+    }
+
+    public String getWelcomeEmailTemplate() { return welcomeEmailTemplate; }
+
+    public List<User> searchProfiles(SearchCriteria criteria, User viewer) {
+        List<User> result = new ArrayList<>();
+        for (User u : users) {
+            if (criteria.matches(u)) {
+                boolean self = viewer != null && viewer.getId() == u.getId();
+                boolean admin = viewer != null && viewer.hasRole(Role.ADMIN);
+                if (!u.isProfilePrivate() || self || admin) result.add(u);
+            }
+        }
+        return result;
+    }
+
+    public void setMembershipActive(User user, boolean active, LocalDate renewalDate) {
+        user.setMemberActive(active);
+        user.setRenewalDate(renewalDate);
+    }
+
+    public void addCertification(User user, Certification c) {
+        user.addCertification(new CertificationRecord(c, LocalDate.now()));
+    }
+
+    public EmailService getEmailService() { return emailService; }
+    public FeeSchedule getFees() { return fees; }
+    public List<CourseEvent> getCourses() { return Collections.unmodifiableList(courses); }
+    public List<JobAd> getJobs() { return Collections.unmodifiableList(jobs); }
+    public List<Article> getArticles() { return Collections.unmodifiableList(articles); }
+    public List<NewsItem> getNewsItems() { return Collections.unmodifiableList(newsItems); }
+    public List<RegistryEntry> getRegistry() { return Collections.unmodifiableList(registry); }
+    public List<CorporateSponsor> getSponsors() { return Collections.unmodifiableList(sponsors); }
+}

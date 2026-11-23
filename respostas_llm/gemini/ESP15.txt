@@ -1,0 +1,1059 @@
+// File: UserRole.java
+public enum UserRole {
+    PATRON,
+    STUDENT,
+    FACULTY,
+    LIBRARY_STAFF,
+    REPOSITORY_SUPPORT,
+    DATA_CURATOR,
+    DB_IR_ADMINISTRATOR,
+    EXTENSION_ADMINISTRATOR,
+    ASSET_MANAGER
+}
+
+// File: AccessLevel.java
+public enum AccessLevel {
+    PUBLIC,
+    CAMPUS_ONLY,
+    INTERNAL_GROUP,
+    PRIVATE
+}
+
+// File: LicenseType.java
+public enum LicenseType {
+    ALL_RIGHTS_RESERVED("All Rights Reserved", "No reuse without explicit permission."),
+    CC_BY("Creative Commons Attribution (CC-BY 4.0)", "Allows distribution, remixing, tweaking, and building upon work, even commercially, as long as credited."),
+    CC0("Creative Commons Zero (CC0 1.0)", "Public Domain Dedication - no rights reserved worldwide."),
+    OPEN_GOVERNMENT("Open Government License", "Reuse public sector information freely."),
+    CUSTOM("Custom Institutional License", "Institutional reuse governed by specific agreement.");
+
+    private final String displayName;
+    private final String description;
+
+    LicenseType(String displayName, String description) {
+        this.displayName = displayName;
+        this.description = description;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+}
+
+// File: DocumentType.java
+public enum DocumentType {
+    HISTORICAL_REPORT_STILL_PUBLISHED,
+    EXPIRED_HISTORICAL_REPORT,
+    SINGLE_TOPIC_DATASET,
+    BROAD_TOPIC_DATASET,
+    REPORT_WITH_SUBTOPIC,
+    DISSERTATION_THESIS,
+    SCHOLARLY_ARTICLE,
+    EXTENSION_BROCHURE_FAQ,
+    RARE_ARCHIVAL_MATERIAL,
+    STREAMING_MEDIA,
+    COMPUTER_FILE
+}
+
+// File: ItemStatus.java
+public enum ItemStatus {
+    DRAFT,
+    PUBLISHED,
+    EMBARGOED,
+    UNPUBLISHED_BY_AGENCY,
+    FLAGGED_ERROR_HIDDEN,
+    HISTORICAL_ARCHIVED,
+    SCHEDULED_FOR_DISPOSITION
+}
+
+// File: User.java
+import java.util.*;
+
+public class User {
+    private final String userId;
+    private String username;
+    private String email;
+    private String password;
+    private String fullName;
+    private String department;
+    private String orcid;
+    private final Set<UserRole> roles = new HashSet<>();
+    private boolean cornellAffiliated;
+    private boolean active = true;
+
+    public User(String userId, String username, String email, String password, String fullName, String department, String orcid, boolean cornellAffiliated) {
+        this.userId = userId;
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.fullName = fullName;
+        this.department = department;
+        this.orcid = orcid;
+        this.cornellAffiliated = cornellAffiliated;
+    }
+
+    public String getUserId() { return userId; }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+    public String getOrcid() { return orcid; }
+    public void setOrcid(String orcid) { this.orcid = orcid; }
+    public Set<UserRole> getRoles() { return Collections.unmodifiableSet(roles); }
+    public void addRole(UserRole role) { this.roles.add(role); }
+    public void removeRole(UserRole role) { this.roles.remove(role); }
+    public boolean hasRole(UserRole role) { return this.roles.contains(role); }
+    public boolean isCornellAffiliated() { return cornellAffiliated; }
+    public void setCornellAffiliated(boolean cornellAffiliated) { this.cornellAffiliated = cornellAffiliated; }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
+
+    @Override
+    public String toString() {
+        return fullName + " <" + email + "> [" + roles + "]";
+    }
+}
+
+// File: FileAsset.java
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
+
+public class FileAsset {
+    private final String fileId;
+    private final String filename;
+    private final String mimeType;
+    private final long sizeBytes;
+    private final boolean streamingMedia;
+    private final String doi;
+    private final Map<String, byte[]> storageReplicas = new HashMap<>(); // Node -> Content
+    private String verifiedChecksum;
+    private final Map<String, String> technicalMetadata = new HashMap<>();
+
+    public FileAsset(String fileId, String filename, String mimeType, long sizeBytes, byte[] content, boolean streamingMedia, String doi) {
+        this.fileId = fileId;
+        this.filename = filename;
+        this.mimeType = mimeType;
+        this.sizeBytes = sizeBytes;
+        this.streamingMedia = streamingMedia;
+        this.doi = doi;
+        this.verifiedChecksum = calculateChecksum(content);
+        // Redundant replication across distinct storage locations
+        storageReplicas.put("Primary-Cornell-IR", Arrays.copyOf(content, content.length));
+        storageReplicas.put("Replica-Lockss-Preservation", Arrays.copyOf(content, content.length));
+        storageReplicas.put("Replica-Geographic-Secondary", Arrays.copyOf(content, content.length));
+    }
+
+    private String calculateChecksum(byte[] data) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(data);
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
+    }
+
+    public boolean verifyIntegrityAndFix() {
+        boolean allGood = true;
+        byte[] goldenMaster = null;
+        for (Map.Entry<String, byte[]> entry : storageReplicas.entrySet()) {
+            String check = calculateChecksum(entry.getValue());
+            if (check.equals(verifiedChecksum)) {
+                goldenMaster = entry.getValue();
+            } else {
+                allGood = false;
+            }
+        }
+        if (!allGood && goldenMaster != null) {
+            // Restore corrupted replicas from golden master
+            for (String key : new ArrayList<>(storageReplicas.keySet())) {
+                storageReplicas.put(key, Arrays.copyOf(goldenMaster, goldenMaster.length));
+            }
+            return false; // had corruption, but restored
+        }
+        return allGood;
+    }
+
+    public void simulateCorruptionOnNode(String nodeName) {
+        if (storageReplicas.containsKey(nodeName)) {
+            byte[] corrupted = new byte[] {0, 1, 2, 3};
+            storageReplicas.put(nodeName, corrupted);
+        }
+    }
+
+    public byte[] retrieveContent() {
+        return storageReplicas.get("Primary-Cornell-IR");
+    }
+
+    public String getFileId() { return fileId; }
+    public String getFilename() { return filename; }
+    public String getMimeType() { return mimeType; }
+    public long getSizeBytes() { return sizeBytes; }
+    public boolean isStreamingMedia() { return streamingMedia; }
+    public String getDoi() { return doi; }
+    public String getVerifiedChecksum() { return verifiedChecksum; }
+    public Map<String, String> getTechnicalMetadata() { return technicalMetadata; }
+    public void addTechnicalMetadata(String key, String value) { technicalMetadata.put(key, value); }
+}
+
+// File: RevisionRecord.java
+import java.time.LocalDateTime;
+
+public class RevisionRecord {
+    private final String revisionId;
+    private final int version;
+    private final String modifiedByUserId;
+    private final String modifiedByUserName;
+    private final LocalDateTime timestamp;
+    private final String reason;
+    private final String summaryOfChanges;
+
+    public RevisionRecord(String revisionId, int version, String modifiedByUserId, String modifiedByUserName, String reason, String summaryOfChanges) {
+        this.revisionId = revisionId;
+        this.version = version;
+        this.modifiedByUserId = modifiedByUserId;
+        this.modifiedByUserName = modifiedByUserName;
+        this.timestamp = LocalDateTime.now();
+        this.reason = reason;
+        this.summaryOfChanges = summaryOfChanges;
+    }
+
+    public String getRevisionId() { return revisionId; }
+    public int getVersion() { return version; }
+    public String getModifiedByUserId() { return modifiedByUserId; }
+    public String getModifiedByUserName() { return modifiedByUserName; }
+    public LocalDateTime getTimestamp() { return timestamp; }
+    public String getReason() { return reason; }
+    public String getSummaryOfChanges() { return summaryOfChanges; }
+
+    @Override
+    public String toString() {
+        return String.format("[Rev v%d on %s by %s] Reason: %s | Changes: %s",
+                version, timestamp, modifiedByUserName, reason, summaryOfChanges);
+    }
+}
+
+// File: ItemVersion.java
+import java.time.LocalDateTime;
+import java.util.*;
+
+public class ItemVersion {
+    private final int versionNumber;
+    private final LocalDateTime createdDate;
+    private final String title;
+    private final String description;
+    private final List<FileAsset> files = new ArrayList<>();
+    private final Map<String, String> metadata = new HashMap<>();
+
+    public ItemVersion(int versionNumber, String title, String description) {
+        this.versionNumber = versionNumber;
+        this.createdDate = LocalDateTime.now();
+        this.title = title;
+        this.description = description;
+    }
+
+    public int getVersionNumber() { return versionNumber; }
+    public LocalDateTime getCreatedDate() { return createdDate; }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public List<FileAsset> getFiles() { return Collections.unmodifiableList(files); }
+    public void addFile(FileAsset asset) { files.add(asset); }
+    public Map<String, String> getMetadata() { return metadata; }
+}
+
+// File: RepositoryItem.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+
+public class RepositoryItem {
+    private final String itemId;
+    private final String persistentHandleUrl;
+    private String primaryTitle;
+    private final List<String> historicalNames = new ArrayList<>();
+    private String description;
+    private final List<String> authors = new ArrayList<>();
+    private final List<String> authorOrcids = new ArrayList<>();
+    private final List<String> thesisCommitteeMembers = new ArrayList<>();
+    private DocumentType documentType;
+    private ItemStatus status;
+    private AccessLevel accessLevel;
+    private LicenseType licenseType;
+    private String associatedPublicationDoi;
+    private String primaryDoi;
+    private boolean subscribable = true;
+    private String subjectArea;
+    private String releaseFrequency;
+    private final Set<String> keywords = new HashSet<>();
+    private final Set<String> tags = new HashSet<>();
+    private final Map<String, String> customMetadata = new HashMap<>();
+    private final List<ItemVersion> versions = new ArrayList<>();
+    private final List<RevisionRecord> auditTrail = new ArrayList<>();
+    private final Set<String> collectionIds = new HashSet<>();
+    private final Set<String> seeAlsoItemIds = new HashSet<>();
+    private LocalDate embargoUntilDate = null;
+    private LocalDate retentionScheduleEndDate = null;
+    private final LocalDateTime dateCreated;
+    private LocalDateTime dateUpdated;
+    private String geographicRegion;
+    private double geographicLatitude;
+    private double geographicLongitude;
+    private int intellectualValueRating = 3; // Scale 1-5 for collection assessment
+
+    // Analytics
+    private int viewCount = 0;
+    private int downloadCount = 0;
+    private int altmetricScore = 0;
+
+    public RepositoryItem(String itemId, String primaryTitle, DocumentType documentType, String primaryAuthor, String authorOrcid) {
+        this.itemId = itemId;
+        this.persistentHandleUrl = "https://hdl.handle.net/1813/" + itemId;
+        this.primaryTitle = primaryTitle;
+        this.historicalNames.add(primaryTitle);
+        this.documentType = documentType;
+        this.authors.add(primaryAuthor);
+        if (authorOrcid != null) this.authorOrcids.add(authorOrcid);
+        this.status = ItemStatus.PUBLISHED;
+        this.accessLevel = AccessLevel.PUBLIC;
+        this.licenseType = LicenseType.CC_BY;
+        this.dateCreated = LocalDateTime.now();
+        this.dateUpdated = LocalDateTime.now();
+    }
+
+    public void changeTitle(String newTitle, String reason, User modifier) {
+        this.historicalNames.add(this.primaryTitle);
+        this.primaryTitle = newTitle;
+        this.dateUpdated = LocalDateTime.now();
+        addRevision("Title change", "Renamed to: " + newTitle + ". Reason: " + reason, modifier);
+    }
+
+    public void addRevision(String reason, String summary, User modifier) {
+        int vNum = versions.size() + 1;
+        RevisionRecord rec = new RevisionRecord(UUID.randomUUID().toString(), vNum, modifier.getUserId(), modifier.getFullName(), reason, summary);
+        this.auditTrail.add(rec);
+    }
+
+    public void addVersion(ItemVersion v, User modifier, String reason) {
+        this.versions.add(v);
+        this.dateUpdated = LocalDateTime.now();
+        addRevision(reason, "Uploaded version " + v.getVersionNumber(), modifier);
+    }
+
+    public String generateCitation() {
+        String authorList = String.join(", ", authors);
+        int year = dateCreated.getYear();
+        return String.format("%s (%d). \"%s\". Cornell University Institutional Repository. DOI/Handle: %s. License: %s.",
+                authorList, year, primaryTitle, (primaryDoi != null ? primaryDoi : persistentHandleUrl), licenseType.getDisplayName());
+    }
+
+    public boolean isEmbargoActive() {
+        return embargoUntilDate != null && LocalDate.now().isBefore(embargoUntilDate);
+    }
+
+    public void applyEmbargo(LocalDate untilDate, User user) {
+        this.embargoUntilDate = untilDate;
+        this.status = ItemStatus.EMBARGOED;
+        addRevision("Embargo applied", "Access embargo set until: " + untilDate, user);
+    }
+
+    public void liftEmbargo(User user) {
+        this.embargoUntilDate = null;
+        this.status = ItemStatus.PUBLISHED;
+        addRevision("Embargo lifted", "Access embargo removed", user);
+    }
+
+    public void recordView() { this.viewCount++; this.altmetricScore += 1; }
+    public void recordDownload() { this.downloadCount++; this.altmetricScore += 3; }
+
+    // Getters and Setters
+    public String getItemId() { return itemId; }
+    public String getPersistentHandleUrl() { return persistentHandleUrl; }
+    public String getPrimaryTitle() { return primaryTitle; }
+    public void setPrimaryTitle(String primaryTitle) { this.primaryTitle = primaryTitle; }
+    public List<String> getHistoricalNames() { return Collections.unmodifiableList(historicalNames); }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public List<String> getAuthors() { return authors; }
+    public void addAuthor(String author) { this.authors.add(author); }
+    public List<String> getAuthorOrcids() { return authorOrcids; }
+    public void addAuthorOrcid(String orcid) { this.authorOrcids.add(orcid); }
+    public List<String> getThesisCommitteeMembers() { return thesisCommitteeMembers; }
+    public void addThesisCommitteeMember(String memberName) { this.thesisCommitteeMembers.add(memberName); }
+    public DocumentType getDocumentType() { return documentType; }
+    public void setDocumentType(DocumentType documentType) { this.documentType = documentType; }
+    public ItemStatus getStatus() { return status; }
+    public void setStatus(ItemStatus status) { this.status = status; }
+    public AccessLevel getAccessLevel() { return accessLevel; }
+    public void setAccessLevel(AccessLevel accessLevel) { this.accessLevel = accessLevel; }
+    public LicenseType getLicenseType() { return licenseType; }
+    public void setLicenseType(LicenseType licenseType) { this.licenseType = licenseType; }
+    public String getAssociatedPublicationDoi() { return associatedPublicationDoi; }
+    public void setAssociatedPublicationDoi(String associatedPublicationDoi) { this.associatedPublicationDoi = associatedPublicationDoi; }
+    public String getPrimaryDoi() { return primaryDoi; }
+    public void setPrimaryDoi(String primaryDoi) { this.primaryDoi = primaryDoi; }
+    public boolean isSubscribable() { return subscribable; }
+    public void setSubscribable(boolean subscribable) { this.subscribable = subscribable; }
+    public String getSubjectArea() { return subjectArea; }
+    public void setSubjectArea(String subjectArea) { this.subjectArea = subjectArea; }
+    public String getReleaseFrequency() { return releaseFrequency; }
+    public void setReleaseFrequency(String releaseFrequency) { this.releaseFrequency = releaseFrequency; }
+    public Set<String> getKeywords() { return keywords; }
+    public Set<String> getTags() { return tags; }
+    public Map<String, String> getCustomMetadata() { return customMetadata; }
+    public List<ItemVersion> getVersions() { return Collections.unmodifiableList(versions); }
+    public List<RevisionRecord> getAuditTrail() { return Collections.unmodifiableList(auditTrail); }
+    public Set<String> getCollectionIds() { return collectionIds; }
+    public void assignCollection(String colId) { this.collectionIds.add(colId); }
+    public void removeCollection(String colId) { this.collectionIds.remove(colId); }
+    public Set<String> getSeeAlsoItemIds() { return seeAlsoItemIds; }
+    public void addSeeAlsoItem(String id) { this.seeAlsoItemIds.add(id); }
+    public LocalDate getEmbargoUntilDate() { return embargoUntilDate; }
+    public LocalDate getRetentionScheduleEndDate() { return retentionScheduleEndDate; }
+    public void setRetentionScheduleEndDate(LocalDate retentionScheduleEndDate) { this.retentionScheduleEndDate = retentionScheduleEndDate; }
+    public LocalDateTime getDateCreated() { return dateCreated; }
+    public LocalDateTime getDateUpdated() { return dateUpdated; }
+    public String getGeographicRegion() { return geographicRegion; }
+    public void setGeographicRegion(String geographicRegion) { this.geographicRegion = geographicRegion; }
+    public double getGeographicLatitude() { return geographicLatitude; }
+    public void setGeographicCoordinates(double lat, double lon) { this.geographicLatitude = lat; this.geographicLongitude = lon; }
+    public double getGeographicLongitude() { return geographicLongitude; }
+    public int getIntellectualValueRating() { return intellectualValueRating; }
+    public void setIntellectualValueRating(int val) { this.intellectualValueRating = val; }
+    public int getViewCount() { return viewCount; }
+    public int getDownloadCount() { return downloadCount; }
+    public int getAltmetricScore() { return altmetricScore; }
+}
+
+// File: CollectionSortOrder.java
+public enum CollectionSortOrder {
+    TITLE_ASC,
+    DATE_DESC,
+    DATE_ASC,
+    AUTHOR_ASC,
+    CUSTOM_ORDER
+}
+
+// File: RepositoryCollection.java
+import java.util.*;
+
+public class RepositoryCollection {
+    private final String collectionId;
+    private String name;
+    private String description;
+    private String brandingHeader;
+    private String logoUrl;
+    private String parentCollectionId;
+    private boolean rareOrArchival;
+    private CollectionSortOrder sortOrder = CollectionSortOrder.DATE_DESC;
+    private final Set<String> itemIds = new LinkedHashSet<>();
+    private final Map<String, Integer> customOrderRanks = new HashMap<>();
+    private final Set<String> customFieldDefinitions = new HashSet<>();
+    private String ownerUserId;
+
+    public RepositoryCollection(String collectionId, String name, String description, String ownerUserId) {
+        this.collectionId = collectionId;
+        this.name = name;
+        this.description = description;
+        this.ownerUserId = ownerUserId;
+    }
+
+    public void addItem(String itemId) {
+        itemIds.add(itemId);
+    }
+
+    public void removeItem(String itemId) {
+        itemIds.remove(itemId);
+        customOrderRanks.remove(itemId);
+    }
+
+    public void setCustomRank(String itemId, int rank) {
+        customOrderRanks.put(itemId, rank);
+    }
+
+    public Integer getCustomRank(String itemId) {
+        return customOrderRanks.getOrDefault(itemId, 9999);
+    }
+
+    public String getCollectionId() { return collectionId; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public String getBrandingHeader() { return brandingHeader; }
+    public void setBranding(String header, String logo) { this.brandingHeader = header; this.logoUrl = logo; }
+    public String getLogoUrl() { return logoUrl; }
+    public String getParentCollectionId() { return parentCollectionId; }
+    public void setParentCollectionId(String parentCollectionId) { this.parentCollectionId = parentCollectionId; }
+    public boolean isRareOrArchival() { return rareOrArchival; }
+    public void setRareOrArchival(boolean rareOrArchival) { this.rareOrArchival = rareOrArchival; }
+    public CollectionSortOrder getSortOrder() { return sortOrder; }
+    public void setSortOrder(CollectionSortOrder sortOrder) { this.sortOrder = sortOrder; }
+    public Set<String> getItemIds() { return Collections.unmodifiableSet(itemIds); }
+    public Set<String> getCustomFieldDefinitions() { return customFieldDefinitions; }
+    public void addCustomFieldDefinition(String fieldName) { this.customFieldDefinitions.add(fieldName); }
+    public String getOwnerUserId() { return ownerUserId; }
+    public void setOwnerUserId(String ownerUserId) { this.ownerUserId = ownerUserId; }
+}
+
+// File: ReleaseCalendarEvent.java
+import java.time.LocalDate;
+
+public class ReleaseCalendarEvent {
+    private final String eventId;
+    private final String reportTitle;
+    private final String subjectArea;
+    private final LocalDate scheduledReleaseDate;
+    private final String frequency;
+    private final String responsibleAgency;
+
+    public ReleaseCalendarEvent(String eventId, String reportTitle, String subjectArea, LocalDate scheduledReleaseDate, String frequency, String responsibleAgency) {
+        this.eventId = eventId;
+        this.reportTitle = reportTitle;
+        this.subjectArea = subjectArea;
+        this.scheduledReleaseDate = scheduledReleaseDate;
+        this.frequency = frequency;
+        this.responsibleAgency = responsibleAgency;
+    }
+
+    public String getEventId() { return eventId; }
+    public String getReportTitle() { return reportTitle; }
+    public String getSubjectArea() { return subjectArea; }
+    public LocalDate getScheduledReleaseDate() { return scheduledReleaseDate; }
+    public String getFrequency() { return frequency; }
+    public String getResponsibleAgency() { return responsibleAgency; }
+
+    public String toIcsFormat() {
+        return "BEGIN:VEVENT\n" +
+                "UID:" + eventId + "@cornell.edu\n" +
+                "SUMMARY:Release: " + reportTitle + "\n" +
+                "DESCRIPTION:Subject: " + subjectArea + " | Agency: " + responsibleAgency + "\n" +
+                "DTSTART;VALUE=DATE:" + scheduledReleaseDate.toString().replace("-", "") + "\n" +
+                "END:VEVENT\n";
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[%s] %s (Subject: %s, Agency: %s, Freq: %s)",
+                scheduledReleaseDate, reportTitle, subjectArea, responsibleAgency, frequency);
+    }
+}
+
+// File: NotificationService.java
+import java.util.*;
+
+public class NotificationService {
+    // Subscriber Email -> Subscribed Item / Collection / Author IDs
+    private final Map<String, Set<String>> patronSubscriptions = new HashMap<>();
+    private final List<String> sentEmailLog = new ArrayList<>();
+
+    public void subscribe(String email, String subscriptionTargetId) {
+        patronSubscriptions.computeIfAbsent(email, k -> new HashSet<>()).add(subscriptionTargetId);
+    }
+
+    public void unsubscribe(String email, String subscriptionTargetId) {
+        if (patronSubscriptions.containsKey(email)) {
+            patronSubscriptions.get(email).remove(subscriptionTargetId);
+        }
+    }
+
+    public Set<String> getSubscriptionsForEmail(String email) {
+        return patronSubscriptions.getOrDefault(email, Collections.emptySet());
+    }
+
+    public List<String> getSubscribersForTarget(String targetId) {
+        List<String> subscribers = new ArrayList<>();
+        for (Map.Entry<String, Set<String>> entry : patronSubscriptions.entrySet()) {
+            if (entry.getValue().contains(targetId)) {
+                subscribers.add(entry.getKey());
+            }
+        }
+        return subscribers;
+    }
+
+    public void notifySubscribers(String targetId, String itemTitle, String message) {
+        List<String> subscribers = getSubscribersForTarget(targetId);
+        for (String email : subscribers) {
+            String record = "EMAIL TO [" + email + "] Regarding [" + itemTitle + "]: " + message;
+            sentEmailLog.add(record);
+        }
+    }
+
+    public void notifyAuthorDownload(String authorEmail, String itemTitle, String downloaderInfo) {
+        String notice = "DOWNLOAD NOTICE TO [" + authorEmail + "]: Your item '" + itemTitle + "' was downloaded by " + downloaderInfo;
+        sentEmailLog.add(notice);
+    }
+
+    public List<String> getSentEmailLog() {
+        return Collections.unmodifiableList(sentEmailLog);
+    }
+}
+
+// File: InstitutionalSuccessionPlan.java
+import java.time.LocalDate;
+import java.util.*;
+
+public class InstitutionalSuccessionPlan {
+    private final String planId;
+    private final String governingInstitution;
+    private String designatedSuccessor;
+    private LocalDate lastReviewDate;
+    private final List<String> contractClauses = new ArrayList<>();
+    private boolean activeEndowmentFundingCommitted = true;
+
+    public InstitutionalSuccessionPlan(String planId, String governingInstitution, String designatedSuccessor) {
+        this.planId = planId;
+        this.governingInstitution = governingInstitution;
+        this.designatedSuccessor = designatedSuccessor;
+        this.lastReviewDate = LocalDate.now();
+        this.contractClauses.add("Perpetual access guarantee through Ivy Plus / HathiTrust partnership.");
+        this.contractClauses.add("Automatic repository transfer clause upon cessation of Cornell IR operations.");
+    }
+
+    public String getPlanId() { return planId; }
+    public String getGoverningInstitution() { return governingInstitution; }
+    public String getDesignatedSuccessor() { return designatedSuccessor; }
+    public void setDesignatedSuccessor(String successor) { this.designatedSuccessor = successor; }
+    public LocalDate getLastReviewDate() { return lastReviewDate; }
+    public void refreshReview() { this.lastReviewDate = LocalDate.now(); }
+    public List<String> getContractClauses() { return contractClauses; }
+    public void addClause(String clause) { this.contractClauses.add(clause); }
+    public boolean isActiveEndowmentFundingCommitted() { return activeEndowmentFundingCommitted; }
+    public void setActiveEndowmentFundingCommitted(boolean committed) { this.activeEndowmentFundingCommitted = committed; }
+}
+
+// File: ExternalSystemSyncService.java
+import java.util.*;
+
+public class ExternalSystemSyncService {
+    private final List<String> syncedElementsRecords = new ArrayList<>();
+    private final List<String> syncedActivityInsightRecords = new ArrayList<>();
+
+    public void syncWithSymplecticElements(RepositoryItem item) {
+        String record = "SYMPLECTIC_SYNC: Item=" + item.getItemId() + ", Authors=" + item.getAuthors() + ", Title=" + item.getPrimaryTitle();
+        syncedElementsRecords.add(record);
+    }
+
+    public void syncWithActivityInsight(RepositoryItem item) {
+        String record = "ACTIVITY_INSIGHT_SYNC: Item=" + item.getItemId() + ", Authors=" + item.getAuthors() + ", Title=" + item.getPrimaryTitle();
+        syncedActivityInsightRecords.add(record);
+    }
+
+    public List<String> getSyncedElementsRecords() { return syncedElementsRecords; }
+    public List<String> getSyncedActivityInsightRecords() { return syncedActivityInsightRecords; }
+}
+
+// File: RepositoryService.java
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class RepositoryService {
+    private final Map<String, User> users = new HashMap<>();
+    private final Map<String, RepositoryItem> items = new HashMap<>();
+    private final Map<String, RepositoryCollection> collections = new HashMap<>();
+    private final List<ReleaseCalendarEvent> releaseCalendar = new ArrayList<>();
+    private final Set<String> controlledSubjects = new TreeSet<>();
+    private final NotificationService notificationService = new NotificationService();
+    private final ExternalSystemSyncService syncService = new ExternalSystemSyncService();
+    private final InstitutionalSuccessionPlan successionPlan;
+    private final List<String> techSupportTickets = new ArrayList<>();
+    private final List<String> workflowReminders = new ArrayList<>();
+
+    public RepositoryService() {
+        this.successionPlan = new InstitutionalSuccessionPlan("CORNELL-PLAN-001", "Cornell University", "HathiTrust Digital Library");
+        initStandardSubjects();
+    }
+
+    private void initStandardSubjects() {
+        controlledSubjects.add("Agricultural and Life Sciences");
+        controlledSubjects.add("Law and Legal Scholarship");
+        controlledSubjects.add("Applied Economics and Management");
+        controlledSubjects.add("Computer and Information Science");
+        controlledSubjects.add("Engineering and Applied Physics");
+        controlledSubjects.add("Rural and Community Sociology");
+    }
+
+    // Security & Auth
+    public void registerUser(User user) { users.put(user.getUserId(), user); }
+    public User getUser(String userId) { return users.get(userId); }
+    public User login(String username, String password) {
+        return users.values().stream()
+                .filter(u -> u.getUsername().equalsIgnoreCase(username) && u.getPassword().equals(password) && u.isActive())
+                .findFirst().orElse(null);
+    }
+    public User loginViaShibboleth(String eppn) {
+        return users.values().stream()
+                .filter(u -> u.getEmail().equalsIgnoreCase(eppn) && u.isCornellAffiliated())
+                .findFirst().orElse(null);
+    }
+
+    // Collection Management
+    public RepositoryCollection createCollection(String id, String name, String description, String ownerId) {
+        RepositoryCollection c = new RepositoryCollection(id, name, description, ownerId);
+        collections.put(id, c);
+        return c;
+    }
+    public RepositoryCollection getCollection(String id) { return collections.get(id); }
+    public void renameCollection(String id, String newName) {
+        RepositoryCollection c = collections.get(id);
+        if (c != null) c.setName(newName);
+    }
+    public void moveCollection(String id, String newParentCollectionId) {
+        RepositoryCollection c = collections.get(id);
+        if (c != null) c.setParentCollectionId(newParentCollectionId);
+    }
+
+    // Item Management
+    public RepositoryItem depositItem(RepositoryItem item, String targetCollectionId, User depositor) {
+        items.put(item.getItemId(), item);
+        if (targetCollectionId != null && collections.containsKey(targetCollectionId)) {
+            collections.get(targetCollectionId).addItem(item.getItemId());
+            item.assignCollection(targetCollectionId);
+        }
+        item.addRevision("Initial Deposit", "Item deposited into repository by " + depositor.getFullName(), depositor);
+        syncService.syncWithSymplecticElements(item);
+        syncService.syncWithActivityInsight(item);
+
+        if (item.isSubscribable()) {
+            notificationService.notifySubscribers(item.getItemId(), item.getPrimaryTitle(), "New content deposited: " + item.getPrimaryTitle());
+            if (targetCollectionId != null) {
+                notificationService.notifySubscribers(targetCollectionId, item.getPrimaryTitle(), "New content added to collection " + targetCollectionId);
+            }
+        }
+        return item;
+    }
+
+    public void mapItemToCollection(String itemId, String targetCollectionId) {
+        RepositoryItem it = items.get(itemId);
+        RepositoryCollection col = collections.get(targetCollectionId);
+        if (it != null && col != null) {
+            col.addItem(itemId);
+            it.assignCollection(targetCollectionId);
+        }
+    }
+
+    public void markItemErrorHidden(String itemId, String reason, User admin) {
+        RepositoryItem item = items.get(itemId);
+        if (item != null) {
+            item.setStatus(ItemStatus.FLAGGED_ERROR_HIDDEN);
+            item.setSubscribable(false);
+            item.addRevision("Marked Error / Hidden", reason, admin);
+        }
+    }
+
+    public void unpublishItemByAgency(String itemId, String reason, User admin) {
+        RepositoryItem item = items.get(itemId);
+        if (item != null) {
+            item.setStatus(ItemStatus.UNPUBLISHED_BY_AGENCY);
+            item.addRevision("Unpublished per agency request", reason, admin);
+        }
+    }
+
+    // Access control evaluation
+    public boolean canUserAccessItem(User user, RepositoryItem item) {
+        if (item.getStatus() == ItemStatus.FLAGGED_ERROR_HIDDEN || item.getStatus() == ItemStatus.UNPUBLISHED_BY_AGENCY) {
+            return user != null && (user.hasRole(UserRole.DB_IR_ADMINISTRATOR) || user.hasRole(UserRole.LIBRARY_STAFF));
+        }
+        if (item.isEmbargoActive()) {
+            return user != null && (user.hasRole(UserRole.DB_IR_ADMINISTRATOR) || user.hasRole(UserRole.LIBRARY_STAFF) || item.getAuthors().contains(user.getFullName()));
+        }
+        if (item.getAccessLevel() == AccessLevel.PUBLIC) return true;
+        if (item.getAccessLevel() == AccessLevel.CAMPUS_ONLY) {
+            return user != null && user.isCornellAffiliated();
+        }
+        if (item.getAccessLevel() == AccessLevel.INTERNAL_GROUP) {
+            return user != null;
+        }
+        return false;
+    }
+
+    // View & Download Actions
+    public RepositoryItem viewItem(String itemId, User user) {
+        RepositoryItem it = items.get(itemId);
+        if (it != null && canUserAccessItem(user, it)) {
+            it.recordView();
+            return it;
+        }
+        return null;
+    }
+
+    public FileAsset downloadFile(String itemId, String fileId, User user) {
+        RepositoryItem it = viewItem(itemId, user);
+        if (it != null) {
+            for (ItemVersion ver : it.getVersions()) {
+                for (FileAsset fa : ver.getFiles()) {
+                    if (fa.getFileId().equals(fileId)) {
+                        it.recordDownload();
+                        // Notify author if faculty
+                        for (User u : users.values()) {
+                            if (it.getAuthors().contains(u.getFullName()) && u.hasRole(UserRole.FACULTY)) {
+                                notificationService.notifyAuthorDownload(u.getEmail(), it.getPrimaryTitle(), (user != null ? user.getFullName() : "Anonymous patron"));
+                            }
+                        }
+                        return fa;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    // Search and Browsing
+    public List<RepositoryItem> searchKeyword(String query, String collectionFilter, String subjectFilter) {
+        String q = query == null ? "" : query.toLowerCase();
+        return items.values().stream()
+                .filter(it -> it.getStatus() == ItemStatus.PUBLISHED || it.getStatus() == ItemStatus.HISTORICAL_ARCHIVED)
+                .filter(it -> collectionFilter == null || it.getCollectionIds().contains(collectionFilter))
+                .filter(it -> subjectFilter == null || subjectFilter.equalsIgnoreCase(it.getSubjectArea()))
+                .filter(it -> it.getPrimaryTitle().toLowerCase().contains(q)
+                        || (it.getDescription() != null && it.getDescription().toLowerCase().contains(q))
+                        || it.getKeywords().stream().anyMatch(k -> k.toLowerCase().contains(q))
+                        || it.getHistoricalNames().stream().anyMatch(hn -> hn.toLowerCase().contains(q))
+                        || it.getAuthors().stream().anyMatch(a -> a.toLowerCase().contains(q)))
+                .collect(Collectors.toList());
+    }
+
+    public List<RepositoryItem> searchByAuthorName(String authorQuery) {
+        String aq = authorQuery.toLowerCase();
+        return items.values().stream()
+                .filter(it -> it.getAuthors().stream().anyMatch(a -> a.toLowerCase().contains(aq)))
+                .sorted(Comparator.comparing(RepositoryItem::getDateCreated))
+                .collect(Collectors.toList());
+    }
+
+    public List<RepositoryItem> searchDissertationsByCommitteeMember(String facultyName) {
+        String fn = facultyName.toLowerCase();
+        return items.values().stream()
+                .filter(it -> it.getDocumentType() == DocumentType.DISSERTATION_THESIS)
+                .filter(it -> it.getThesisCommitteeMembers().stream().anyMatch(m -> m.toLowerCase().contains(fn)))
+                .collect(Collectors.toList());
+    }
+
+    public List<RepositoryItem> getItemsInCollectionSorted(String collectionId) {
+        RepositoryCollection c = collections.get(collectionId);
+        if (c == null) return Collections.emptyList();
+        List<RepositoryItem> list = c.getItemIds().stream().map(items::get).filter(Objects::nonNull).collect(Collectors.toList());
+        switch (c.getSortOrder()) {
+            case TITLE_ASC -> list.sort(Comparator.comparing(RepositoryItem::getPrimaryTitle));
+            case DATE_ASC -> list.sort(Comparator.comparing(RepositoryItem::getDateCreated));
+            case DATE_DESC -> list.sort(Comparator.comparing(RepositoryItem::getDateCreated).reversed());
+            case AUTHOR_ASC -> list.sort(Comparator.comparing(i -> i.getAuthors().isEmpty() ? "" : i.getAuthors().get(0)));
+            case CUSTOM_ORDER -> list.sort(Comparator.comparingInt(i -> c.getCustomRank(i.getItemId())));
+        }
+        return list;
+    }
+
+    // OAI-PMH Harvest Simulation
+    public String exportOaiPmhMetadataXml(String sinceDateIso) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<OAI-PMH xmlns=\"http://www.openarchives.org/OAI/2.0/\">\n");
+        sb.append("  <responseDate>").append(LocalDate.now()).append("</responseDate>\n");
+        sb.append("  <ListRecords>\n");
+        for (RepositoryItem it : items.values()) {
+            sb.append("    <record>\n");
+            sb.append("      <header><identifier>oai:cornell.edu:").append(it.getItemId()).append("</identifier></header>\n");
+            sb.append("      <metadata>\n");
+            sb.append("        <dc:title>").append(it.getPrimaryTitle()).append("</dc:title>\n");
+            sb.append("        <dc:creator>").append(String.join("; ", it.getAuthors())).append("</dc:creator>\n");
+            sb.append("        <dc:subject>").append(it.getSubjectArea()).append("</dc:subject>\n");
+            sb.append("        <dc:rights>").append(it.getLicenseType().getDisplayName()).append("</dc:rights>\n");
+            sb.append("        <dc:identifier>").append(it.getPersistentHandleUrl()).append("</dc:identifier>\n");
+            sb.append("      </metadata>\n");
+            sb.append("    </record>\n");
+        }
+        sb.append("  </ListRecords>\n");
+        sb.append("</OAI-PMH>");
+        return sb.toString();
+    }
+
+    // Google Discovery Metadata Generator
+    public String generateGoogleScholarMetaTags(String itemId) {
+        RepositoryItem it = items.get(itemId);
+        if (it == null) return "";
+        StringBuilder sb = new StringBuilder();
+        sb.append("<meta name=\"citation_title\" content=\"").append(it.getPrimaryTitle()).append("\">\n");
+        for (String a : it.getAuthors()) {
+            sb.append("<meta name=\"citation_author\" content=\"").append(a).append("\">\n");
+        }
+        sb.append("<meta name=\"citation_publication_date\" content=\"").append(it.getDateCreated().toLocalDate()).append("\">\n");
+        sb.append("<meta name=\"citation_pdf_url\" content=\"").append(it.getPersistentHandleUrl()).append("/download.pdf\">\n");
+        return sb.toString();
+    }
+
+    // Release Calendar
+    public void addCalendarEvent(ReleaseCalendarEvent evt) { releaseCalendar.add(evt); }
+    public List<ReleaseCalendarEvent> getReleaseCalendar() { return Collections.unmodifiableList(releaseCalendar); }
+    public String exportCalendarIcs() {
+        StringBuilder sb = new StringBuilder("BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Cornell IR//Calendar//EN\n");
+        for (ReleaseCalendarEvent e : releaseCalendar) {
+            sb.append(e.toIcsFormat());
+        }
+        sb.append("END:VCALENDAR\n");
+        return sb.toString();
+    }
+
+    // Tech Support & Reminders
+    public void submitTechSupportTicket(String patronEmail, String issueDescription) {
+        String ticket = "TICKET [" + UUID.randomUUID() + "] From: " + patronEmail + " | Issue: " + issueDescription;
+        techSupportTickets.add(ticket);
+    }
+    public void addWorkflowReminder(String reminder) { workflowReminders.add(reminder); }
+    public List<String> getWorkflowReminders() { return workflowReminders; }
+
+    // Controlled Vocabularies
+    public void addSubjectClassification(String subject) { controlledSubjects.add(subject); }
+    public Set<String> getControlledSubjects() { return Collections.unmodifiableSet(controlledSubjects); }
+
+    // Succession / Asset Management
+    public InstitutionalSuccessionPlan getSuccessionPlan() { return successionPlan; }
+    public NotificationService getNotificationService() { return notificationService; }
+    public ExternalSystemSyncService getSyncService() { return syncService; }
+    public Map<String, RepositoryItem> getAllItems() { return Collections.unmodifiableMap(items); }
+    public Map<String, User> getAllUsers() { return Collections.unmodifiableMap(users); }
+}
+
+// File: Main.java
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        RepositoryService repo = new RepositoryService();
+
+        // 1. Create Users with multiple roles
+        User fac1 = new User("usr_fac_01", "cfaculty", "faculty@cornell.edu", "pass123", "Prof. Jane Cornell", "Dept of Agriculture", "0000-0002-1825-0097", true);
+        fac1.addRole(UserRole.FACULTY);
+        repo.registerUser(fac1);
+
+        User libStaff = new User("usr_lib_01", "mlibrarian", "librarian@cornell.edu", "libPass!", "Marcus Librarian", "Mann Library", null, true);
+        libStaff.addRole(UserRole.LIBRARY_STAFF);
+        repo.registerUser(libStaff);
+
+        User admin = new User("usr_adm_01", "admin1", "admin@cornell.edu", "adminSecret", "Alice Administrator", "IR Administration", null, true);
+        admin.addRole(UserRole.DB_IR_ADMINISTRATOR);
+        repo.registerUser(admin);
+
+        User patron = new User("usr_pat_01", "jpatron", "researcher@nonprofit.org", "patron123", "David Patron", "Rural Policy Institute", null, false);
+        patron.addRole(UserRole.PATRON);
+        repo.registerUser(patron);
+
+        User student = new User("usr_stu_01", "astudent", "student@cornell.edu", "gradPass", "Sarah Student", "Law School", null, true);
+        student.addRole(UserRole.STUDENT);
+        repo.registerUser(student);
+
+        // 2. Remote Shibboleth login demonstration
+        User shibSession = repo.loginViaShibboleth("faculty@cornell.edu");
+        System.out.println("Shibboleth SSO Auth Success: " + (shibSession != null && shibSession.isCornellAffiliated()));
+
+        // 3. Create Branded Collections
+        RepositoryCollection cceCol = repo.createCollection("col_cce", "Cornell Cooperative Extension Publications", "Extension resources for NYS educators and communities", fac1.getUserId());
+        cceCol.setBranding("CCE - Knowledge for Real Life Impact", "https://cornell.edu/branding/cce.png");
+        cceCol.addCustomFieldDefinition("NYS_Target_County");
+
+        RepositoryCollection lawCol = repo.createCollection("col_law", "Cornell Law School Legal Archives", "Scholarship and historic judicial theses", libStaff.getUserId());
+        lawCol.setRareOrArchival(true);
+
+        // 4. Deposit Items with DOIs, multi-format attachments (including historic Lotus Works format)
+        RepositoryItem dataItem = new RepositoryItem("item_dat_001", "NYS Soil Organic Matter Survey 2010-2023", DocumentType.SINGLE_TOPIC_DATASET, fac1.getFullName(), fac1.getOrcid());
+        dataItem.setSubjectArea("Agricultural and Life Sciences");
+        dataItem.setLicenseType(LicenseType.CC_BY);
+        dataItem.setPrimaryDoi("10.5061/dryad.cornell01");
+        dataItem.setAssociatedPublicationDoi("10.1016/j.agee.2023.108543");
+        dataItem.getKeywords().addAll(Arrays.asList("soil", "carbon", "NYS", "agriculture"));
+        dataItem.setGeographicCoordinates(42.4440, -76.5019);
+        dataItem.setGeographicRegion("Tompkins County, NY");
+
+        ItemVersion v1 = new ItemVersion(1, "NYS Soil Survey v1", "Initial baseline survey");
+        byte[] lotusFileContent = "LOTUS_WORKS_V2.0_DATA_TABLE_DUMP".getBytes(StandardCharsets.UTF_8);
+        FileAsset lotusAsset = new FileAsset("f_001", "soildata_historic.123", "application/vnd.lotus-1-2-3", lotusFileContent.length, lotusFileContent, false, "10.5061/dryad.cornell01/file1");
+        v1.addFile(lotusAsset);
+        dataItem.addVersion(v1, fac1, "Initial survey dataset deposit");
+
+        repo.depositItem(dataItem, cceCol.getCollectionId(), fac1);
+
+        // 5. Versioning demonstration & Dataset Name Change Tracking
+        dataItem.changeTitle("NYS Soil Organic & Nitrogen Survey 2010-2024", "Expanded survey scope to include nitrogen", admin);
+        ItemVersion v2 = new ItemVersion(2, "NYS Soil Survey v2", "Updated dataset with 2024 additions");
+        byte[] csvData = "location,lat,lon,organic_matter,nitrogen\nIthaca,42.44,-76.50,4.2,0.18".getBytes(StandardCharsets.UTF_8);
+        v2.addFile(new FileAsset("f_002", "soil_nitrogen_2024.csv", "text/csv", csvData.length, csvData, false, "10.5061/dryad.cornell01/file2"));
+        dataItem.addVersion(v2, fac1, "Added 2024 data");
+
+        // 6. Historic Dissertations and Committee Member Discovery
+        RepositoryItem thesisItem = new RepositoryItem("item_th_001", "Constitutional Limits on Executive Emergency Powers", DocumentType.DISSERTATION_THESIS, "Hon. Marcus LegalThinker", "0000-0001-9988-7711");
+        thesisItem.setSubjectArea("Law and Legal Scholarship");
+        thesisItem.addThesisCommitteeMember("Prof. Jane Cornell");
+        thesisItem.applyEmbargo(LocalDate.now().plusMonths(6), libStaff);
+        repo.depositItem(thesisItem, lawCol.getCollectionId(), libStaff);
+
+        // 7. Subscriptions & Email notifications for releases
+        repo.getNotificationService().subscribe(patron.getEmail(), dataItem.getItemId());
+        repo.getNotificationService().subscribe(patron.getEmail(), cceCol.getCollectionId());
+
+        // 8. DB/IR Admin Release Calendar & ICS export
+        repo.addCalendarEvent(new ReleaseCalendarEvent("cal_01", "USDA NYS Crop & Soil Outlook", "Agricultural and Life Sciences", LocalDate.now().plusDays(14), "Quarterly", "USDA-ERS"));
+        String icsFeed = repo.exportCalendarIcs();
+
+        // 9. Searching by historical titles & keyword
+        List<RepositoryItem> searchByHistoricTitle = repo.searchKeyword("Soil Organic Matter Survey", null, null);
+        List<RepositoryItem> committeeTheses = repo.searchDissertationsByCommitteeMember("Prof. Jane Cornell");
+
+        // 10. Digital Preservation Integrity Check & Self-Healing Replica Simulation
+        lotusAsset.simulateCorruptionOnNode("Replica-Lockss-Preservation");
+        boolean preservedOk = lotusAsset.verifyIntegrityAndFix();
+
+        // 11. Custom Ordering within Collection
+        cceCol.setSortOrder(CollectionSortOrder.CUSTOM_ORDER);
+        cceCol.setCustomRank(dataItem.getItemId(), 1);
+        List<RepositoryItem> sortedItems = repo.getItemsInCollectionSorted(cceCol.getCollectionId());
+
+        // 12. Direct student link & Citation Generation
+        String directHandleLink = dataItem.getPersistentHandleUrl();
+        String formattedCitation = dataItem.generateCitation();
+
+        // 13. File Download & Author Notification
+        FileAsset downloaded = repo.downloadFile(dataItem.getItemId(), "f_002", patron);
+
+        // 14. OAI-PMH Harvesting Output
+        String oaiHarvestXml = repo.exportOaiPmhMetadataXml(LocalDate.now().minusDays(1).toString());
+
+        // 15. Google Scholar Indexing Tags
+        String googleMetaTags = repo.generateGoogleScholarMetaTags(dataItem.getItemId());
+
+        // 16. Technical Support Ticket Submission
+        repo.submitTechSupportTicket(patron.getEmail(), "Inquiry about bulk downloading large GIS layers");
+
+        // Print Demo Summary
+        System.out.println("\n=== CORNELL UNIVERSITY DIGITAL REPOSITORY DEMO ===");
+        System.out.println("Persistent Handle URL: " + directHandleLink);
+        System.out.println("Formatted Cut-and-Paste Citation:\n  " + formattedCitation);
+        System.out.println("\nHistorical Name Search Matches: " + searchByHistoricTitle.size() + " (" + searchByHistoricTitle.get(0).getPrimaryTitle() + ")");
+        System.out.println("Dissertations Directed by Prof. Cornell: " + committeeTheses.size() + " (" + committeeTheses.get(0).getPrimaryTitle() + " - Embargoed: " + committeeTheses.get(0).isEmbargoActive() + ")");
+        System.out.println("Bit-Level Preservation Self-Healing Check: " + (!preservedOk ? "CORRUPTION DETECTED & AUTOMATICALLY RESTORED FROM GOLDEN COPY" : "ALL REPLICAS IN SYNC"));
+        System.out.println("Symplectic Sync Count: " + repo.getSyncService().getSyncedElementsRecords().size());
+        System.out.println("Activity Insight Sync Count: " + repo.getSyncService().getSyncedActivityInsightRecords().size());
+        System.out.println("Sent Notification Emails: " + repo.getNotificationService().getSentEmailLog().size());
+        for (String log : repo.getNotificationService().getSentEmailLog()) {
+            System.out.println("  " + log);
+        }
+        System.out.println("\nSuccession Plan Destination: " + repo.getSuccessionPlan().getDesignatedSuccessor());
+        System.out.println("Demo completed successfully.");
+    }
+}

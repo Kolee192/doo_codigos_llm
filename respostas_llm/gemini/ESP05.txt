@@ -1,0 +1,2007 @@
+// File: EnrollmentStatus.java
+public enum EnrollmentStatus {
+    PENDING,
+    ADMITTED,
+    SUSPENDED,
+    INACTIVE
+}
+// File: AttendanceStatus.java
+public enum AttendanceStatus {
+    PRESENT,
+    ABSENT,
+    LATE,
+    EXCUSED
+}
+// File: StaffPosition.java
+public enum StaffPosition {
+    ADMINISTRATOR,
+    CAMP_DIRECTOR,
+    HEAD_COUNSELOR,
+    COUNSELOR,
+    ACTIVITY_LEADER,
+    MAINTENANCE,
+    MEDICAL_STAFF
+}
+// File: FormType.java
+public enum FormType {
+    CONSENT,
+    MEDICAL,
+    STAFF_REGISTRATION,
+    CAMPER_REGISTRATION,
+    LIABILITY_WAIVER
+}
+// File: EmergencyContact.java
+public class EmergencyContact {
+    private String name;
+    private String relationship;
+    private String phoneNumber;
+    private String alternatePhone;
+
+    public EmergencyContact(String name, String relationship, String phoneNumber, String alternatePhone) {
+        this.name = name;
+        this.relationship = relationship;
+        this.phoneNumber = phoneNumber;
+        this.alternatePhone = alternatePhone;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getRelationship() {
+        return relationship;
+    }
+
+    public void setRelationship(String relationship) {
+        this.relationship = relationship;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getAlternatePhone() {
+        return alternatePhone;
+    }
+
+    public void setAlternatePhone(String alternatePhone) {
+        this.alternatePhone = alternatePhone;
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + relationship + "): " + phoneNumber + (alternatePhone != null && !alternatePhone.isBlank() ? " / " + alternatePhone : "");
+    }
+}
+// File: MedicalInfo.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class MedicalInfo {
+    private List<String> allergies;
+    private List<String> medications;
+    private String dietaryRestrictions;
+    private String doctorName;
+    private String doctorPhone;
+    private String specialInstructions;
+
+    public MedicalInfo() {
+        this.allergies = new ArrayList<>();
+        this.medications = new ArrayList<>();
+        this.dietaryRestrictions = "None";
+        this.specialInstructions = "";
+    }
+
+    public MedicalInfo(List<String> allergies, List<String> medications, String dietaryRestrictions, String doctorName, String doctorPhone, String specialInstructions) {
+        this.allergies = allergies != null ? new ArrayList<>(allergies) : new ArrayList<>();
+        this.medications = medications != null ? new ArrayList<>(medications) : new ArrayList<>();
+        this.dietaryRestrictions = dietaryRestrictions != null ? dietaryRestrictions : "None";
+        this.doctorName = doctorName;
+        this.doctorPhone = doctorPhone;
+        this.specialInstructions = specialInstructions != null ? specialInstructions : "";
+    }
+
+    public List<String> getAllergies() {
+        return allergies;
+    }
+
+    public void addAllergy(String allergy) {
+        this.allergies.add(allergy);
+    }
+
+    public List<String> getMedications() {
+        return medications;
+    }
+
+    public void addMedication(String medication) {
+        this.medications.add(medication);
+    }
+
+    public String getDietaryRestrictions() {
+        return dietaryRestrictions;
+    }
+
+    public void setDietaryRestrictions(String dietaryRestrictions) {
+        this.dietaryRestrictions = dietaryRestrictions;
+    }
+
+    public String getDoctorName() {
+        return doctorName;
+    }
+
+    public void setDoctorName(String doctorName) {
+        this.doctorName = doctorName;
+    }
+
+    public String getDoctorPhone() {
+        return doctorPhone;
+    }
+
+    public void setDoctorPhone(String doctorPhone) {
+        this.doctorPhone = doctorPhone;
+    }
+
+    public String getSpecialInstructions() {
+        return specialInstructions;
+    }
+
+    public void setSpecialInstructions(String specialInstructions) {
+        this.specialInstructions = specialInstructions;
+    }
+
+    @Override
+    public String toString() {
+        return "MedicalInfo{allergies=" + allergies + ", medications=" + medications + ", dietary='" + dietaryRestrictions + "'}";
+    }
+}
+// File: Parent.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Parent {
+    private String id;
+    private String fullName;
+    private String email;
+    private String phoneNumber;
+    private String address;
+    private List<String> enrolledCamperIds;
+
+    public Parent(String id, String fullName, String email, String phoneNumber, String address) {
+        this.id = id;
+        this.fullName = fullName;
+        this.email = email;
+        this.phoneNumber = phoneNumber;
+        this.address = address;
+        this.enrolledCamperIds = new ArrayList<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public List<String> getEnrolledCamperIds() {
+        return enrolledCamperIds;
+    }
+
+    public void linkCamper(String camperId) {
+        if (!enrolledCamperIds.contains(camperId)) {
+            enrolledCamperIds.add(camperId);
+        }
+    }
+
+    public void unlinkCamper(String camperId) {
+        enrolledCamperIds.remove(camperId);
+    }
+
+    @Override
+    public String toString() {
+        return "Parent[ID=" + id + ", Name=" + fullName + ", Email=" + email + ", Phone=" + phoneNumber + "]";
+    }
+}
+// File: Camper.java
+import java.time.LocalDate;
+
+public class Camper {
+    private String id;
+    private String firstName;
+    private String lastName;
+    private LocalDate birthDate;
+    private int campYear;
+    private String parentId;
+    private EnrollmentStatus status;
+    private EmergencyContact emergencyContact;
+    private MedicalInfo medicalInfo;
+    private String assignedGroupId;
+    private String suspensionReason;
+
+    public Camper(String id, String firstName, String lastName, LocalDate birthDate, int campYear, String parentId) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.birthDate = birthDate;
+        this.campYear = campYear;
+        this.parentId = parentId;
+        this.status = EnrollmentStatus.PENDING;
+        this.medicalInfo = new MedicalInfo();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
+
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
+
+    public void setBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    public int getCampYear() {
+        return campYear;
+    }
+
+    public void setCampYear(int campYear) {
+        this.campYear = campYear;
+    }
+
+    public String getParentId() {
+        return parentId;
+    }
+
+    public void setParentId(String parentId) {
+        this.parentId = parentId;
+    }
+
+    public EnrollmentStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(EnrollmentStatus status) {
+        this.status = status;
+    }
+
+    public EmergencyContact getEmergencyContact() {
+        return emergencyContact;
+    }
+
+    public void setEmergencyContact(EmergencyContact emergencyContact) {
+        this.emergencyContact = emergencyContact;
+    }
+
+    public MedicalInfo getMedicalInfo() {
+        return medicalInfo;
+    }
+
+    public void setMedicalInfo(MedicalInfo medicalInfo) {
+        this.medicalInfo = medicalInfo;
+    }
+
+    public String getAssignedGroupId() {
+        return assignedGroupId;
+    }
+
+    public void setAssignedGroupId(String assignedGroupId) {
+        this.assignedGroupId = assignedGroupId;
+    }
+
+    public String getSuspensionReason() {
+        return suspensionReason;
+    }
+
+    public void suspend(String reason) {
+        this.status = EnrollmentStatus.SUSPENDED;
+        this.suspensionReason = reason;
+    }
+
+    public void reinstate() {
+        this.status = EnrollmentStatus.ADMITTED;
+        this.suspensionReason = null;
+    }
+
+    @Override
+    public String toString() {
+        return "Camper[ID=" + id + ", Name=" + getFullName() + ", Year=" + campYear + ", Status=" + status + ", Group=" + (assignedGroupId != null ? assignedGroupId : "None") + "]";
+    }
+}
+// File: StaffMember.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class StaffMember {
+    private String id;
+    private String fullName;
+    private String email;
+    private String phoneNumber;
+    private StaffPosition position;
+    private List<String> warnings;
+
+    public StaffMember(String id, String fullName, String email, String phoneNumber, StaffPosition position) {
+        this.id = id;
+        this.fullName = fullName;
+        this.email = email;
+        this.phoneNumber = phoneNumber;
+        this.position = position;
+        this.warnings = new ArrayList<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public StaffPosition getPosition() {
+        return position;
+    }
+
+    public void setPosition(StaffPosition position) {
+        this.position = position;
+    }
+
+    public List<String> getWarnings() {
+        return warnings;
+    }
+
+    public void addWarning(String warning) {
+        this.warnings.add(warning);
+    }
+
+    @Override
+    public String toString() {
+        return "Staff[ID=" + id + ", Name=" + fullName + ", Position=" + position + ", Warnings=" + warnings.size() + "]";
+    }
+}
+// File: CampGroup.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class CampGroup {
+    private String id;
+    private String name;
+    private String ageRange;
+    private List<String> counselorIds;
+    private List<String> camperIds;
+
+    public CampGroup(String id, String name, String ageRange) {
+        this.id = id;
+        this.name = name;
+        this.ageRange = ageRange;
+        this.counselorIds = new ArrayList<>();
+        this.camperIds = new ArrayList<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAgeRange() {
+        return ageRange;
+    }
+
+    public void setAgeRange(String ageRange) {
+        this.ageRange = ageRange;
+    }
+
+    public List<String> getCounselorIds() {
+        return counselorIds;
+    }
+
+    public void addCounselor(String counselorId) {
+        if (!counselorIds.contains(counselorId)) {
+            counselorIds.add(counselorId);
+        }
+    }
+
+    public void removeCounselor(String counselorId) {
+        counselorIds.remove(counselorId);
+    }
+
+    public List<String> getCamperIds() {
+        return camperIds;
+    }
+
+    public void addCamper(String camperId) {
+        if (!camperIds.contains(camperId)) {
+            camperIds.add(camperId);
+        }
+    }
+
+    public void removeCamper(String camperId) {
+        camperIds.remove(camperId);
+    }
+
+    @Override
+    public String toString() {
+        return "CampGroup[ID=" + id + ", Name=" + name + ", AgeRange=" + ageRange + ", Campers=" + camperIds.size() + ", Counselors=" + counselorIds.size() + "]";
+    }
+}
+// File: Facility.java
+public class Facility {
+    private String id;
+    private String name;
+    private int capacity;
+    private String locationDescription;
+
+    public Facility(String id, String name, int capacity, String locationDescription) {
+        this.id = id;
+        this.name = name;
+        this.capacity = capacity;
+        this.locationDescription = locationDescription;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
+    }
+
+    public String getLocationDescription() {
+        return locationDescription;
+    }
+
+    public void setLocationDescription(String locationDescription) {
+        this.locationDescription = locationDescription;
+    }
+
+    @Override
+    public String toString() {
+        return name + " (Capacity: " + capacity + ", Loc: " + locationDescription + ")";
+    }
+}
+// File: ScheduledActivity.java
+import java.time.LocalDateTime;
+
+public class ScheduledActivity {
+    private String id;
+    private String title;
+    private String description;
+    private String groupId;
+    private String facilityId;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+
+    public ScheduledActivity(String id, String title, String description, String groupId, String facilityId, LocalDateTime startTime, LocalDateTime endTime) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.groupId = groupId;
+        this.facilityId = facilityId;
+        this.startTime = startTime;
+        this.endTime = endTime;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getGroupId() {
+        return groupId;
+    }
+
+    public void setGroupId(String groupId) {
+        this.groupId = groupId;
+    }
+
+    public String getFacilityId() {
+        return facilityId;
+    }
+
+    public void setFacilityId(String facilityId) {
+        this.facilityId = facilityId;
+    }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
+
+    public boolean overlapsWith(String facilityId, LocalDateTime otherStart, LocalDateTime otherEnd) {
+        if (!this.facilityId.equals(facilityId)) {
+            return false;
+        }
+        return (startTime.isBefore(otherEnd) && endTime.isAfter(otherStart));
+    }
+
+    @Override
+    public String toString() {
+        return "Activity[" + id + ": " + title + " (Group: " + groupId + ", Facility: " + facilityId + ", " + startTime + " to " + endTime + ")]";
+    }
+}
+// File: FormTemplate.java
+public class FormTemplate {
+    private String id;
+    private String title;
+    private FormType type;
+    private String content;
+
+    public FormTemplate(String id, String title, FormType type, String content) {
+        this.id = id;
+        this.title = title;
+        this.type = type;
+        this.content = content;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public FormType getType() {
+        return type;
+    }
+
+    public void setType(FormType type) {
+        this.type = type;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    @Override
+    public String toString() {
+        return "FormTemplate[" + id + ": " + title + " (" + type + ")]";
+    }
+}
+// File: SubmittedForm.java
+import java.time.LocalDateTime;
+
+public class SubmittedForm {
+    private String id;
+    private String templateId;
+    private FormType formType;
+    private String camperId;
+    private String parentId;
+    private String signature;
+    private String submittedData;
+    private LocalDateTime submissionDate;
+
+    public SubmittedForm(String id, String templateId, FormType formType, String camperId, String parentId, String signature, String submittedData) {
+        this.id = id;
+        this.templateId = templateId;
+        this.formType = formType;
+        this.camperId = camperId;
+        this.parentId = parentId;
+        this.signature = signature;
+        this.submittedData = submittedData;
+        this.submissionDate = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTemplateId() {
+        return templateId;
+    }
+
+    public FormType getFormType() {
+        return formType;
+    }
+
+    public String getCamperId() {
+        return camperId;
+    }
+
+    public String getParentId() {
+        return parentId;
+    }
+
+    public String getSignature() {
+        return signature;
+    }
+
+    public String getSubmittedData() {
+        return submittedData;
+    }
+
+    public LocalDateTime getSubmissionDate() {
+        return submissionDate;
+    }
+
+    @Override
+    public String toString() {
+        return "SubmittedForm[" + id + ", Type=" + formType + ", Camper=" + camperId + ", SignedBy=" + signature + " at " + submissionDate + "]";
+    }
+}
+// File: CampRule.java
+public class CampRule {
+    private String id;
+    private String title;
+    private String description;
+    private String appliesTo;
+
+    public CampRule(String id, String title, String description, String appliesTo) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.appliesTo = appliesTo;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getAppliesTo() {
+        return appliesTo;
+    }
+
+    public void setAppliesTo(String appliesTo) {
+        this.appliesTo = appliesTo;
+    }
+
+    @Override
+    public String toString() {
+        return "Rule[" + id + ": " + title + " - AppliesTo: " + appliesTo + "] " + description;
+    }
+}
+// File: StaffTask.java
+import java.time.LocalDateTime;
+
+public class StaffTask {
+    private String id;
+    private String assignedStaffId;
+    private String title;
+    private String description;
+    private boolean completed;
+    private String completionReport;
+    private LocalDateTime completedTime;
+
+    public StaffTask(String id, String assignedStaffId, String title, String description) {
+        this.id = id;
+        this.assignedStaffId = assignedStaffId;
+        this.title = title;
+        this.description = description;
+        this.completed = false;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getAssignedStaffId() {
+        return assignedStaffId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public String getCompletionReport() {
+        return completionReport;
+    }
+
+    public LocalDateTime getCompletedTime() {
+        return completedTime;
+    }
+
+    public void submitCompletionReport(String report) {
+        this.completed = true;
+        this.completionReport = report;
+        this.completedTime = LocalDateTime.now();
+    }
+
+    @Override
+    public String toString() {
+        return "Task[" + id + ": " + title + ", Staff: " + assignedStaffId + ", Done: " + completed + "]";
+    }
+}
+// File: IncidentReport.java
+import java.time.LocalDateTime;
+
+public class IncidentReport {
+    private String id;
+    private String camperId;
+    private String reporterStaffId;
+    private String description;
+    private LocalDateTime timestamp;
+
+    public IncidentReport(String id, String camperId, String reporterStaffId, String description) {
+        this.id = id;
+        this.camperId = camperId;
+        this.reporterStaffId = reporterStaffId;
+        this.description = description;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getCamperId() {
+        return camperId;
+    }
+
+    public String getReporterStaffId() {
+        return reporterStaffId;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "IncidentReport[" + id + ", Camper=" + camperId + ", Reporter=" + reporterStaffId + ", Details=" + description + "]";
+    }
+}
+// File: SupplyReport.java
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class SupplyReport {
+    private String id;
+    private String reporterStaffId;
+    private List<String> neededSupplies;
+    private LocalDateTime timestamp;
+
+    public SupplyReport(String id, String reporterStaffId, List<String> neededSupplies) {
+        this.id = id;
+        this.reporterStaffId = reporterStaffId;
+        this.neededSupplies = neededSupplies;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getReporterStaffId() {
+        return reporterStaffId;
+    }
+
+    public List<String> getNeededSupplies() {
+        return neededSupplies;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "SupplyReport[" + id + " by Staff " + reporterStaffId + ": " + neededSupplies + "]";
+    }
+}
+// File: RepairReport.java
+import java.time.LocalDateTime;
+
+public class RepairReport {
+    private String id;
+    private String reporterStaffId;
+    private String facilityId;
+    private String issueDescription;
+    private LocalDateTime timestamp;
+
+    public RepairReport(String id, String reporterStaffId, String facilityId, String issueDescription) {
+        this.id = id;
+        this.reporterStaffId = reporterStaffId;
+        this.facilityId = facilityId;
+        this.issueDescription = issueDescription;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getReporterStaffId() {
+        return reporterStaffId;
+    }
+
+    public String getFacilityId() {
+        return facilityId;
+    }
+
+    public String getIssueDescription() {
+        return issueDescription;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "RepairReport[" + id + " for Facility " + facilityId + " by Staff " + reporterStaffId + ": " + issueDescription + "]";
+    }
+}
+// File: ParentFeedback.java
+import java.time.LocalDateTime;
+
+public class ParentFeedback {
+    private String id;
+    private String parentId;
+    private String topic;
+    private String comments;
+    private LocalDateTime timestamp;
+
+    public ParentFeedback(String id, String parentId, String topic, String comments) {
+        this.id = id;
+        this.parentId = parentId;
+        this.topic = topic;
+        this.comments = comments;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getParentId() {
+        return parentId;
+    }
+
+    public String getTopic() {
+        return topic;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "Feedback[" + id + " from Parent " + parentId + " - " + topic + ": " + comments + "]";
+    }
+}
+// File: BiWeeklyFeedback.java
+import java.time.LocalDate;
+
+public class BiWeeklyFeedback {
+    private String id;
+    private String camperId;
+    private LocalDate reportPeriodEnd;
+    private String behaviorNotes;
+    private String performanceNotes;
+
+    public BiWeeklyFeedback(String id, String camperId, LocalDate reportPeriodEnd, String behaviorNotes, String performanceNotes) {
+        this.id = id;
+        this.camperId = camperId;
+        this.reportPeriodEnd = reportPeriodEnd;
+        this.behaviorNotes = behaviorNotes;
+        this.performanceNotes = performanceNotes;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getCamperId() {
+        return camperId;
+    }
+
+    public LocalDate getReportPeriodEnd() {
+        return reportPeriodEnd;
+    }
+
+    public String getBehaviorNotes() {
+        return behaviorNotes;
+    }
+
+    public String getPerformanceNotes() {
+        return performanceNotes;
+    }
+
+    @Override
+    public String toString() {
+        return "BiWeeklyFeedback for Camper " + camperId + " (Period ending " + reportPeriodEnd + "): Behavior: " + behaviorNotes + " | Performance: " + performanceNotes;
+    }
+}
+// File: PaymentRecord.java
+import java.time.LocalDateTime;
+
+public class PaymentRecord {
+    private String id;
+    private String parentId;
+    private double amountDue;
+    private double amountPaid;
+    private LocalDateTime lastPaymentDate;
+
+    public PaymentRecord(String id, String parentId, double amountDue) {
+        this.id = id;
+        this.parentId = parentId;
+        this.amountDue = amountDue;
+        this.amountPaid = 0.0;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getParentId() {
+        return parentId;
+    }
+
+    public double getAmountDue() {
+        return amountDue;
+    }
+
+    public double getAmountPaid() {
+        return amountPaid;
+    }
+
+    public boolean isFullyPaid() {
+        return amountPaid >= amountDue;
+    }
+
+    public double getRemainingBalance() {
+        return Math.max(0.0, amountDue - amountPaid);
+    }
+
+    public void makePayment(double amount) {
+        if (amount > 0) {
+            this.amountPaid += amount;
+            this.lastPaymentDate = LocalDateTime.now();
+        }
+    }
+
+    public LocalDateTime getLastPaymentDate() {
+        return lastPaymentDate;
+    }
+
+    @Override
+    public String toString() {
+        return "PaymentRecord[Parent=" + parentId + ", Due=$" + amountDue + ", Paid=$" + amountPaid + ", Remaining=$" + getRemainingBalance() + ", Settled=" + isFullyPaid() + "]";
+    }
+}
+// File: CampPhoto.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+public class CampPhoto {
+    private String id;
+    private String photoUrl;
+    private String caption;
+    private List<String> taggedCamperIds;
+    private LocalDateTime timestamp;
+
+    public CampPhoto(String id, String photoUrl, String caption) {
+        this.id = id;
+        this.photoUrl = photoUrl;
+        this.caption = caption;
+        this.taggedCamperIds = new ArrayList<>();
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getPhotoUrl() {
+        return photoUrl;
+    }
+
+    public String getCaption() {
+        return caption;
+    }
+
+    public List<String> getTaggedCamperIds() {
+        return taggedCamperIds;
+    }
+
+    public void tagCamper(String camperId) {
+        if (!taggedCamperIds.contains(camperId)) {
+            taggedCamperIds.add(camperId);
+        }
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "CampPhoto[" + id + ": " + caption + ", Url=" + photoUrl + ", Tagged=" + taggedCamperIds + "]";
+    }
+}
+// File: Message.java
+import java.time.LocalDateTime;
+
+public class Message {
+    private String id;
+    private String senderId;
+    private String recipientId;
+    private String messageBody;
+    private boolean urgent;
+    private LocalDateTime timestamp;
+
+    public Message(String id, String senderId, String recipientId, String messageBody, boolean urgent) {
+        this.id = id;
+        this.senderId = senderId;
+        this.recipientId = recipientId;
+        this.messageBody = messageBody;
+        this.urgent = urgent;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getSenderId() {
+        return senderId;
+    }
+
+    public String getRecipientId() {
+        return recipientId;
+    }
+
+    public String getMessageBody() {
+        return messageBody;
+    }
+
+    public boolean isUrgent() {
+        return urgent;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + (urgent ? "EMERGENCY MSG" : "Message") + " from " + senderId + " to " + recipientId + "]: " + messageBody;
+    }
+}
+// File: AttendanceRecord.java
+import java.time.LocalDate;
+
+public class AttendanceRecord {
+    private String id;
+    private String camperId;
+    private LocalDate date;
+    private AttendanceStatus status;
+    private String loggedByStaffId;
+
+    public AttendanceRecord(String id, String camperId, LocalDate date, AttendanceStatus status, String loggedByStaffId) {
+        this.id = id;
+        this.camperId = camperId;
+        this.date = date;
+        this.status = status;
+        this.loggedByStaffId = loggedByStaffId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getCamperId() {
+        return camperId;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public AttendanceStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(AttendanceStatus status) {
+        this.status = status;
+    }
+
+    public String getLoggedByStaffId() {
+        return loggedByStaffId;
+    }
+
+    @Override
+    public String toString() {
+        return "Attendance[" + camperId + " on " + date + " = " + status + " by Staff " + loggedByStaffId + "]";
+    }
+}
+// File: TaskReminder.java
+import java.time.LocalDateTime;
+
+public class TaskReminder {
+    private String id;
+    private String title;
+    private String description;
+    private LocalDateTime reminderTime;
+    private boolean completed;
+
+    public TaskReminder(String id, String title, String description, LocalDateTime reminderTime) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.reminderTime = reminderTime;
+        this.completed = false;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public LocalDateTime getReminderTime() {
+        return reminderTime;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public void markCompleted() {
+        this.completed = true;
+    }
+
+    @Override
+    public String toString() {
+        return "Reminder[" + id + ": " + title + " at " + reminderTime + " (Done: " + completed + ")]";
+    }
+}
+// File: Nametag.java
+public class Nametag {
+    private String camperId;
+    private String camperFullName;
+    private String groupName;
+    private String emergencyContactPhone;
+    private String allergiesSummary;
+
+    public Nametag(String camperId, String camperFullName, String groupName, String emergencyContactPhone, String allergiesSummary) {
+        this.camperId = camperId;
+        this.camperFullName = camperFullName;
+        this.groupName = groupName;
+        this.emergencyContactPhone = emergencyContactPhone;
+        this.allergiesSummary = allergiesSummary;
+    }
+
+    public String getCamperId() {
+        return camperId;
+    }
+
+    public String getCamperFullName() {
+        return camperFullName;
+    }
+
+    public String getGroupName() {
+        return groupName;
+    }
+
+    public String getEmergencyContactPhone() {
+        return emergencyContactPhone;
+    }
+
+    public String getAllergiesSummary() {
+        return allergiesSummary;
+    }
+
+    public String formatCard() {
+        return "+--------------------------------+\n" +
+               "| NAME: " + camperFullName + "\n" +
+               "| GROUP: " + (groupName != null ? groupName : "N/A") + "\n" +
+               "| ALLERGIES: " + (allergiesSummary != null && !allergiesSummary.isBlank() ? allergiesSummary : "None") + "\n" +
+               "| EMERGENCY: " + (emergencyContactPhone != null ? emergencyContactPhone : "N/A") + "\n" +
+               "+--------------------------------+";
+    }
+
+    @Override
+    public String toString() {
+        return formatCard();
+    }
+}
+// File: CampManagementSystem.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class CampManagementSystem {
+    private Map<String, Camper> campers = new HashMap<>();
+    private Map<String, Parent> parents = new HashMap<>();
+    private Map<String, StaffMember> staffMembers = new HashMap<>();
+    private Map<String, CampGroup> campGroups = new HashMap<>();
+    private Map<String, Facility> facilities = new HashMap<>();
+    private Map<String, ScheduledActivity> scheduledActivities = new HashMap<>();
+    private Map<String, FormTemplate> formTemplates = new HashMap<>();
+    private List<SubmittedForm> submittedForms = new ArrayList<>();
+    private Map<String, CampRule> campRules = new HashMap<>();
+    private Map<String, TaskReminder> taskReminders = new HashMap<>();
+    private Map<String, StaffTask> staffTasks = new HashMap<>();
+    private List<IncidentReport> incidentReports = new ArrayList<>();
+    private List<SupplyReport> supplyReports = new ArrayList<>();
+    private List<RepairReport> repairReports = new ArrayList<>();
+    private List<ParentFeedback> parentFeedbacks = new ArrayList<>();
+    private List<BiWeeklyFeedback> biWeeklyFeedbacks = new ArrayList<>();
+    private Map<String, PaymentRecord> paymentRecords = new HashMap<>();
+    private Map<String, CampPhoto> campPhotos = new HashMap<>();
+    private List<Message> messages = new ArrayList<>();
+    private List<AttendanceRecord> attendanceRecords = new ArrayList<>();
+    private List<String> broadcastNotifications = new ArrayList<>();
+
+    // --- Parent Management ---
+    public Parent registerParent(String id, String fullName, String email, String phoneNumber, String address) {
+        Parent parent = new Parent(id, fullName, email, phoneNumber, address);
+        parents.put(id, parent);
+        return parent;
+    }
+
+    public void updateParent(String parentId, String fullName, String email, String phoneNumber, String address) {
+        Parent parent = parents.get(parentId);
+        if (parent != null) {
+            parent.setFullName(fullName);
+            parent.setEmail(email);
+            parent.setPhoneNumber(phoneNumber);
+            parent.setAddress(address);
+        }
+    }
+
+    public void deleteParent(String parentId) {
+        parents.remove(parentId);
+    }
+
+    public Parent getParent(String parentId) {
+        return parents.get(parentId);
+    }
+
+    // --- Camper Management ---
+    public Camper addCamper(String id, String firstName, String lastName, LocalDate birthDate, int campYear, String parentId) {
+        Camper camper = new Camper(id, firstName, lastName, birthDate, campYear, parentId);
+        campers.put(id, camper);
+        Parent parent = parents.get(parentId);
+        if (parent != null) {
+            parent.linkCamper(id);
+        }
+        return camper;
+    }
+
+    public void updateCamper(String id, String firstName, String lastName, LocalDate birthDate, int campYear) {
+        Camper camper = campers.get(id);
+        if (camper != null) {
+            camper.setFirstName(firstName);
+            camper.setLastName(lastName);
+            camper.setBirthDate(birthDate);
+            camper.setCampYear(campYear);
+        }
+    }
+
+    public void removeCamper(String id) {
+        Camper camper = campers.get(id);
+        if (camper != null) {
+            camper.setStatus(EnrollmentStatus.INACTIVE);
+            if (camper.getAssignedGroupId() != null) {
+                CampGroup g = campGroups.get(camper.getAssignedGroupId());
+                if (g != null) {
+                    g.removeCamper(id);
+                }
+            }
+        }
+    }
+
+    public void deleteCamperPermanently(String id) {
+        Camper camper = campers.remove(id);
+        if (camper != null) {
+            if (camper.getParentId() != null) {
+                Parent p = parents.get(camper.getParentId());
+                if (p != null) p.unlinkCamper(id);
+            }
+            if (camper.getAssignedGroupId() != null) {
+                CampGroup g = campGroups.get(camper.getAssignedGroupId());
+                if (g != null) g.removeCamper(id);
+            }
+        }
+    }
+
+    public Camper getCamper(String id) {
+        return campers.get(id);
+    }
+
+    public List<Camper> getCampersByYear(int year) {
+        return campers.values().stream()
+                .filter(c -> c.getCampYear() == year)
+                .collect(Collectors.toList());
+    }
+
+    public List<Camper> getCampersByParent(String parentId) {
+        return campers.values().stream()
+                .filter(c -> parentId.equals(c.getParentId()))
+                .collect(Collectors.toList());
+    }
+
+    public void suspendCamper(String camperId, String reason) {
+        Camper camper = campers.get(camperId);
+        if (camper != null) {
+            camper.suspend(reason);
+        }
+    }
+
+    public void admitCamper(String camperId) {
+        Camper camper = campers.get(camperId);
+        if (camper != null) {
+            camper.setStatus(EnrollmentStatus.ADMITTED);
+        }
+    }
+
+    public void updateCamperEmergencyContact(String camperId, EmergencyContact contact) {
+        Camper camper = campers.get(camperId);
+        if (camper != null) {
+            camper.setEmergencyContact(contact);
+        }
+    }
+
+    public void updateCamperMedicalInfo(String camperId, MedicalInfo medicalInfo) {
+        Camper camper = campers.get(camperId);
+        if (camper != null) {
+            camper.setMedicalInfo(medicalInfo);
+        }
+    }
+
+    public MedicalInfo getMedicalInfo(String camperId) {
+        Camper camper = campers.get(camperId);
+        return camper != null ? camper.getMedicalInfo() : null;
+    }
+
+    // --- Staff Management ---
+    public StaffMember addStaffMember(String id, String fullName, String email, String phoneNumber, StaffPosition position) {
+        StaffMember staff = new StaffMember(id, fullName, email, phoneNumber, position);
+        staffMembers.put(id, staff);
+        return staff;
+    }
+
+    public void assignStaffPosition(String staffId, StaffPosition newPosition) {
+        StaffMember staff = staffMembers.get(staffId);
+        if (staff != null) {
+            staff.setPosition(newPosition);
+        }
+    }
+
+    public void warnStaffMember(String staffId, String warningMessage) {
+        StaffMember staff = staffMembers.get(staffId);
+        if (staff != null) {
+            staff.addWarning(warningMessage);
+        }
+    }
+
+    public StaffMember getStaffMember(String staffId) {
+        return staffMembers.get(staffId);
+    }
+
+    // --- Groups Management ---
+    public CampGroup createGroup(String id, String name, String ageRange) {
+        CampGroup group = new CampGroup(id, name, ageRange);
+        campGroups.put(id, group);
+        return group;
+    }
+
+    public void modifyGroup(String groupId, String name, String ageRange) {
+        CampGroup group = campGroups.get(groupId);
+        if (group != null) {
+            group.setName(name);
+            group.setAgeRange(ageRange);
+        }
+    }
+
+    public void addCamperToGroup(String groupId, String camperId) {
+        CampGroup group = campGroups.get(groupId);
+        Camper camper = campers.get(camperId);
+        if (group != null && camper != null) {
+            group.addCamper(camperId);
+            camper.setAssignedGroupId(groupId);
+        }
+    }
+
+    public void assignCounselorToGroup(String groupId, String staffId) {
+        CampGroup group = campGroups.get(groupId);
+        if (group != null && staffMembers.containsKey(staffId)) {
+            group.addCounselor(staffId);
+        }
+    }
+
+    public CampGroup getGroup(String groupId) {
+        return campGroups.get(groupId);
+    }
+
+    public List<CampGroup> getAllGroups() {
+        return new ArrayList<>(campGroups.values());
+    }
+
+    public List<StaffMember> getCounselorsForCamper(String camperId) {
+        Camper camper = campers.get(camperId);
+        if (camper == null || camper.getAssignedGroupId() == null) {
+            return Collections.emptyList();
+        }
+        CampGroup group = campGroups.get(camper.getAssignedGroupId());
+        if (group == null) {
+            return Collections.emptyList();
+        }
+        return group.getCounselorIds().stream()
+                .map(staffMembers::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    // --- Facilities & Scheduling ---
+    public Facility addFacility(String id, String name, int capacity, String location) {
+        Facility facility = new Facility(id, name, capacity, location);
+        facilities.put(id, facility);
+        return facility;
+    }
+
+    public boolean scheduleActivity(String id, String title, String description, String groupId, String facilityId, LocalDateTime start, LocalDateTime end) {
+        // Prevent conflicting schedules for facility
+        boolean conflict = scheduledActivities.values().stream()
+                .anyMatch(a -> a.overlapsWith(facilityId, start, end));
+        if (conflict) {
+            return false;
+        }
+        ScheduledActivity activity = new ScheduledActivity(id, title, description, groupId, facilityId, start, end);
+        scheduledActivities.put(id, activity);
+        return true;
+    }
+
+    public void modifyScheduledActivity(String id, String title, String description, LocalDateTime start, LocalDateTime end) {
+        ScheduledActivity activity = scheduledActivities.get(id);
+        if (activity != null) {
+            // Check for conflict excluding current activity
+            boolean conflict = scheduledActivities.values().stream()
+                    .filter(a -> !a.getId().equals(id))
+                    .anyMatch(a -> a.overlapsWith(activity.getFacilityId(), start, end));
+            if (!conflict) {
+                activity.setTitle(title);
+                activity.setDescription(description);
+                activity.setStartTime(start);
+                activity.setEndTime(end);
+            }
+        }
+    }
+
+    public void deleteScheduledActivity(String id) {
+        scheduledActivities.remove(id);
+    }
+
+    public List<ScheduledActivity> getActivitiesForGroup(String groupId) {
+        return scheduledActivities.values().stream()
+                .filter(a -> a.getGroupId().equals(groupId))
+                .sorted(Comparator.comparing(ScheduledActivity::getStartTime))
+                .collect(Collectors.toList());
+    }
+
+    public List<ScheduledActivity> getActivitiesForCamper(String camperId) {
+        Camper camper = campers.get(camperId);
+        if (camper == null || camper.getAssignedGroupId() == null) {
+            return Collections.emptyList();
+        }
+        return getActivitiesForGroup(camper.getAssignedGroupId());
+    }
+
+    // Camp worker viewing assigned campers and current location/activities
+    public List<Camper> getCampersForCounselor(String staffId) {
+        List<Camper> assignedCampers = new ArrayList<>();
+        for (CampGroup group : campGroups.values()) {
+            if (group.getCounselorIds().contains(staffId)) {
+                for (String camperId : group.getCamperIds()) {
+                    Camper camper = campers.get(camperId);
+                    if (camper != null) {
+                        assignedCampers.add(camper);
+                    }
+                }
+            }
+        }
+        return assignedCampers;
+    }
+
+    // --- Forms & Consent ---
+    public FormTemplate createFormTemplate(String id, String title, FormType type, String content) {
+        FormTemplate template = new FormTemplate(id, title, type, content);
+        formTemplates.put(id, template);
+        return template;
+    }
+
+    public List<FormTemplate> getAllFormTemplates() {
+        return new ArrayList<>(formTemplates.values());
+    }
+
+    public SubmittedForm submitForm(String id, String templateId, FormType type, String camperId, String parentId, String signature, String data) {
+        SubmittedForm form = new SubmittedForm(id, templateId, type, camperId, parentId, signature, data);
+        submittedForms.add(form);
+        return form;
+    }
+
+    public List<SubmittedForm> getSubmittedFormsForCamper(String camperId) {
+        return submittedForms.stream()
+                .filter(f -> f.getCamperId().equals(camperId))
+                .collect(Collectors.toList());
+    }
+
+    public List<SubmittedForm> getSubmittedFormsForParent(String parentId) {
+        return submittedForms.stream()
+                .filter(f -> f.getParentId().equals(parentId))
+                .collect(Collectors.toList());
+    }
+
+    // --- Nametags Generation ---
+    public Nametag generateNametag(String camperId) {
+        Camper camper = campers.get(camperId);
+        if (camper == null) return null;
+        String groupName = camper.getAssignedGroupId() != null && campGroups.containsKey(camper.getAssignedGroupId())
+                ? campGroups.get(camper.getAssignedGroupId()).getName() : "Unassigned";
+        String phone = camper.getEmergencyContact() != null ? camper.getEmergencyContact().getPhoneNumber() : "None";
+        String allergies = camper.getMedicalInfo() != null && !camper.getMedicalInfo().getAllergies().isEmpty()
+                ? String.join(", ", camper.getMedicalInfo().getAllergies()) : "None";
+        return new Nametag(camperId, camper.getFullName(), groupName, phone, allergies);
+    }
+
+    public List<Nametag> batchGenerateNametags(List<String> camperIds) {
+        List<Nametag> tags = new ArrayList<>();
+        for (String id : camperIds) {
+            Nametag tag = generateNametag(id);
+            if (tag != null) {
+                tags.add(tag);
+            }
+        }
+        return tags;
+    }
+
+    public List<Nametag> generateAllNametags() {
+        return batchGenerateNametags(new ArrayList<>(campers.keySet()));
+    }
+
+    // --- Camp Rules ---
+    public CampRule createRule(String id, String title, String description, String appliesTo) {
+        CampRule rule = new CampRule(id, title, description, appliesTo);
+        campRules.put(id, rule);
+        return rule;
+    }
+
+    public void modifyRule(String id, String title, String description, String appliesTo) {
+        CampRule rule = campRules.get(id);
+        if (rule != null) {
+            rule.setTitle(title);
+            rule.setDescription(description);
+            rule.setAppliesTo(appliesTo);
+        }
+    }
+
+    public List<CampRule> getAllRules() {
+        return new ArrayList<>(campRules.values());
+    }
+
+    // --- Task Reminders (Admin) ---
+    public TaskReminder setReminder(String id, String title, String description, LocalDateTime time) {
+        TaskReminder reminder = new TaskReminder(id, title, description, time);
+        taskReminders.put(id, reminder);
+        return reminder;
+    }
+
+    public List<TaskReminder> getAllReminders() {
+        return new ArrayList<>(taskReminders.values());
+    }
+
+    // --- Staff Task & Completion Reports ---
+    public StaffTask assignTaskToStaff(String id, String staffId, String title, String description) {
+        StaffTask task = new StaffTask(id, staffId, title, description);
+        staffTasks.put(id, task);
+        return task;
+    }
+
+    public void submitTaskCompletionReport(String taskId, String report) {
+        StaffTask task = staffTasks.get(taskId);
+        if (task != null) {
+            task.submitCompletionReport(report);
+        }
+    }
+
+    public List<StaffTask> getTasksForStaff(String staffId) {
+        return staffTasks.values().stream()
+                .filter(t -> t.getAssignedStaffId().equals(staffId))
+                .collect(Collectors.toList());
+    }
+
+    // --- Camp Worker Reports (Behavior, Supplies, Repairs) ---
+    public IncidentReport reportInappropriateBehavior(String id, String camperId, String staffId, String details) {
+        IncidentReport report = new IncidentReport(id, camperId, staffId, details);
+        incidentReports.add(report);
+        return report;
+    }
+
+    public SupplyReport reportSuppliesShortage(String id, String staffId, List<String> supplies) {
+        SupplyReport report = new SupplyReport(id, staffId, supplies);
+        supplyReports.add(report);
+        return report;
+    }
+
+    public RepairReport reportNecessaryRepair(String id, String staffId, String facilityId, String issueDescription) {
+        RepairReport report = new RepairReport(id, staffId, facilityId, issueDescription);
+        repairReports.add(report);
+        return report;
+    }
+
+    public List<IncidentReport> getIncidentReports() {
+        return new ArrayList<>(incidentReports);
+    }
+
+    public List<SupplyReport> getSupplyReports() {
+        return new ArrayList<>(supplyReports);
+    }
+
+    public List<RepairReport> getRepairReports() {
+        return new ArrayList<>(repairReports);
+    }
+
+    // --- Parent Feedback & Bi-Weekly Feedback ---
+    public ParentFeedback submitParentFeedback(String id, String parentId, String topic, String comments) {
+        ParentFeedback feedback = new ParentFeedback(id, parentId, topic, comments);
+        parentFeedbacks.add(feedback);
+        return feedback;
+    }
+
+    public List<ParentFeedback> getAllParentFeedback() {
+        return new ArrayList<>(parentFeedbacks);
+    }
+
+    public BiWeeklyFeedback createBiWeeklyFeedback(String id, String camperId, LocalDate date, String behavior, String performance) {
+        BiWeeklyFeedback feedback = new BiWeeklyFeedback(id, camperId, date, behavior, performance);
+        biWeeklyFeedbacks.add(feedback);
+        return feedback;
+    }
+
+    public List<BiWeeklyFeedback> getBiWeeklyFeedbacksForCamper(String camperId) {
+        return biWeeklyFeedbacks.stream()
+                .filter(fb -> fb.getCamperId().equals(camperId))
+                .collect(Collectors.toList());
+    }
+
+    // --- Payment Management ---
+    public PaymentRecord createPaymentRecord(String id, String parentId, double amountDue) {
+        PaymentRecord record = new PaymentRecord(id, parentId, amountDue);
+        paymentRecords.put(parentId, record);
+        return record;
+    }
+
+    public void processPayment(String parentId, double amount) {
+        PaymentRecord record = paymentRecords.get(parentId);
+        if (record != null) {
+            record.makePayment(amount);
+        }
+    }
+
+    public PaymentRecord getPaymentRecord(String parentId) {
+        return paymentRecords.get(parentId);
+    }
+
+    // --- Photo Sharing ---
+    public CampPhoto uploadPhoto(String id, String photoUrl, String caption, List<String> camperIds) {
+        CampPhoto photo = new CampPhoto(id, photoUrl, caption);
+        if (camperIds != null) {
+            camperIds.forEach(photo::tagCamper);
+        }
+        campPhotos.put(id, photo);
+        return photo;
+    }
+
+    public List<CampPhoto> getPhotosForCamper(String camperId) {
+        return campPhotos.values().stream()
+                .filter(p -> p.getTaggedCamperIds().contains(camperId))
+                .collect(Collectors.toList());
+    }
+
+    // --- Messaging & Emergency Contact ---
+    public Message sendMessage(String id, String senderId, String recipientId, String content, boolean urgent) {
+        Message msg = new Message(id, senderId, recipientId, content, urgent);
+        messages.add(msg);
+        return msg;
+    }
+
+    public List<Message> getMessagesForUser(String userId) {
+        return messages.stream()
+                .filter(m -> m.getSenderId().equals(userId) || m.getRecipientId().equals(userId))
+                .collect(Collectors.toList());
+    }
+
+    // --- Notifications Broadcast ---
+    public void broadcastNotification(String notification) {
+        broadcastNotifications.add(notification);
+    }
+
+    public List<String> getBroadcastNotifications() {
+        return new ArrayList<>(broadcastNotifications);
+    }
+
+    // --- Attendance Logging ---
+    public AttendanceRecord logAttendance(String id, String camperId, LocalDate date, AttendanceStatus status, String staffId) {
+        AttendanceRecord record = new AttendanceRecord(id, camperId, date, status, staffId);
+        attendanceRecords.add(record);
+        return record;
+    }
+
+    public List<AttendanceRecord> getAttendanceByDate(LocalDate date) {
+        return attendanceRecords.stream()
+                .filter(a -> a.getDate().equals(date))
+                .collect(Collectors.toList());
+    }
+
+    public List<AttendanceRecord> getAttendanceForCamper(String camperId) {
+        return attendanceRecords.stream()
+                .filter(a -> a.getCamperId().equals(camperId))
+                .collect(Collectors.toList());
+    }
+}
+// File: Main.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        CampManagementSystem cms = new CampManagementSystem();
+        System.out.println("=== CAMP MANAGEMENT SYSTEM INITIALIZED ===");
+
+        // 1. Admin adds parents and campers
+        Parent p1 = cms.registerParent("P-001", "Alice Smith", "alice@example.com", "555-0101", "123 Elm St");
+        Parent p2 = cms.registerParent("P-002", "Robert Johnson", "robert@example.com", "555-0202", "456 Oak St");
+
+        Camper c1 = cms.addCamper("C-001", "Tommy", "Smith", LocalDate.of(2014, 5, 12), 2024, p1.getId());
+        Camper c2 = cms.addCamper("C-002", "Emma", "Johnson", LocalDate.of(2013, 8, 24), 2024, p2.getId());
+
+        // Historical camper from previous year
+        Camper cOld = cms.addCamper("C-OLD", "OldTimer", "Brown", LocalDate.of(2011, 2, 10), 2023, p1.getId());
+        System.out.println("Campers for year 2024: " + cms.getCampersByYear(2024).size());
+        System.out.println("Campers for previous year 2023: " + cms.getCampersByYear(2023).size());
+
+        // 2. Set emergency and medical information
+        c1.setEmergencyContact(new EmergencyContact("Alice Smith", "Mother", "555-0101", "555-9999"));
+        MedicalInfo med1 = new MedicalInfo();
+        med1.addAllergy("Peanuts");
+        med1.addMedication("EpiPen");
+        med1.setDoctorName("Dr. Peterson");
+        med1.setDoctorPhone("555-3333");
+        c1.setMedicalInfo(med1);
+        cms.admitCamper(c1.getId());
+        cms.admitCamper(c2.getId());
+
+        // 3. Staff & Groups Management
+        StaffMember counselor = cms.addStaffMember("S-001", "Jack Wilson", "jack@camp.com", "555-1111", StaffPosition.COUNSELOR);
+        StaffMember maintenance = cms.addStaffMember("S-002", "Bob Repair", "bob@camp.com", "555-2222", StaffPosition.MAINTENANCE);
+        cms.warnStaffMember(maintenance.getId(), "Left storage room unlocked.");
+
+        CampGroup bearsGroup = cms.createGroup("GRP-1", "Bears", "9-11");
+        cms.assignCounselorToGroup(bearsGroup.getId(), counselor.getId());
+        cms.addCamperToGroup(bearsGroup.getId(), c1.getId());
+        cms.addCamperToGroup(bearsGroup.getId(), c2.getId());
+
+        // 4. Facilities & Scheduling Activities
+        Facility pool = cms.addFacility("FAC-POOL", "Swimming Pool", 30, "North Campus");
+        LocalDateTime start = LocalDateTime.of(2024, 7, 10, 10, 0);
+        LocalDateTime end = LocalDateTime.of(2024, 7, 10, 11, 30);
+        boolean scheduled = cms.scheduleActivity("ACT-1", "Morning Swim", "Free swim and strokes training", bearsGroup.getId(), pool.getId(), start, end);
+        System.out.println("Scheduled swimming activity: " + scheduled);
+
+        // Conflict check
+        boolean conflict = cms.scheduleActivity("ACT-2", "Diving Class", "Conflict activity", bearsGroup.getId(), pool.getId(), start.plusMinutes(30), end.plusMinutes(30));
+        System.out.println("Attempted conflicting activity schedule: " + (conflict ? "Allowed" : "Blocked correctly"));
+
+        // 5. Nametags Fast Generation
+        List<Nametag> nametags = cms.generateAllNametags();
+        System.out.println("\nGenerated " + nametags.size() + " Nametags. Sample:");
+        System.out.println(nametags.get(0).formatCard());
+
+        // 6. Forms & Consent
+        FormTemplate consentTemplate = cms.createFormTemplate("T-001", "General Activities Consent", FormType.CONSENT, "I give full consent for camp activities.");
+        FormTemplate medicalForm = cms.createFormTemplate("T-002", "Medical Emergency Release", FormType.MEDICAL, "Authorize emergency medication.");
+        cms.submitForm("SUB-01", consentTemplate.getId(), FormType.CONSENT, c1.getId(), p1.getId(), "Alice Smith", "Signed electronically on portal.");
+
+        // 7. Parent features (Check payments, message counselor, see child's counselors)
+        PaymentRecord payment = cms.createPaymentRecord("PAY-001", p1.getId(), 500.0);
+        cms.processPayment(p1.getId(), 500.0);
+        System.out.println("\nParent Payment Status: " + cms.getPaymentRecord(p1.getId()));
+
+        List<StaffMember> myCounselors = cms.getCounselorsForCamper(c1.getId());
+        System.out.println("Counselors for camper Tommy: " + myCounselors.get(0).getFullName());
+
+        cms.sendMessage("MSG-1", p1.getId(), counselor.getId(), "Tommy has an allergy note submitted.", false);
+        cms.sendMessage("MSG-2", p1.getId(), counselor.getId(), "EMERGENCY: Pick up today delayed by 15 mins", true);
+
+        // 8. Staff Worker Operations
+        cms.logAttendance("ATT-01", c1.getId(), LocalDate.now(), AttendanceStatus.PRESENT, counselor.getId());
+        cms.logAttendance("ATT-02", c2.getId(), LocalDate.now(), AttendanceStatus.PRESENT, counselor.getId());
+
+        StaffTask task = cms.assignTaskToStaff("TSK-1", maintenance.getId(), "Inspect life jackets", "Check condition of all pool jackets");
+        cms.submitTaskCompletionReport(task.getId(), "All 30 life jackets inspected and stored properly.");
+
+        cms.reportNecessaryRepair("REP-1", counselor.getId(), pool.getId(), "Filter pump making noise");
+        cms.reportSuppliesShortage("SUP-1", counselor.getId(), List.of("Sunscreen SPF 50", "Goggles"));
+        cms.reportInappropriateBehavior("INC-1", c2.getId(), counselor.getId(), "Refused to wear life jacket at deep end");
+
+        // 9. Admin operations (Rules, Reminder, Broadcast, Bi-weekly feedback, Suspension)
+        cms.createRule("R-1", "Pool Safety", "No running near pool deck.", "Campers and Counselors");
+        cms.setReminder("REM-1", "Weekly Staff Meeting", "Review safety protocols", LocalDateTime.now().plusDays(1));
+        cms.broadcastNotification("Reminder: Camp water day this Friday. Bring swim gear!");
+
+        cms.createBiWeeklyFeedback("FB-01", c1.getId(), LocalDate.now(), "Cooperative and friendly.", "Excels at swimming and team activities.");
+        cms.submitParentFeedback("PF-01", p1.getId(), "Activities", "Loved the arts and crafts day!");
+
+        // Behavioral suspension demo
+        cms.suspendCamper(c2.getId(), "Multiple safety violations in pool");
+        System.out.println("\nCamper 2 Status after disciplinary action: " + c2.getStatus() + " (" + c2.getSuspensionReason() + ")");
+
+        // Photo sharing
+        CampPhoto photo = cms.uploadPhoto("PH-01", "https://camp.internal/img/swim.jpg", "Fun at pool day", List.of(c1.getId()));
+        System.out.println("Photos available for Tommy: " + cms.getPhotosForCamper(c1.getId()).size());
+
+        System.out.println("\n=== ALL SYSTEM DEMO CHECKS PASSED ===");
+    }
+}

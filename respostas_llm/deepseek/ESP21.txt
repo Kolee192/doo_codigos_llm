@@ -1,0 +1,883 @@
+// File: Mode.java
+public enum Mode {
+    NORMAL_INTERACTIVE,
+    ELECTION
+}
+// File: VotingStatus.java
+public enum VotingStatus {
+    NOT_VOTED,
+    ONLINE_VOTED,
+    OFFLINE_VOTED
+}
+// File: ApplicationStatus.java
+public enum ApplicationStatus {
+    PENDING,
+    APPROVED,
+    REJECTED
+}
+// File: UserRole.java
+public enum UserRole {
+    VOTER,
+    ECA,
+    CANDIDATE,
+    ESS
+}
+// File: User.java
+public abstract class User {
+    private final String loginId;
+    private String password;
+    private String firstName;
+    private String lastName;
+    private final UserRole role;
+
+    public User(String loginId, String password, String firstName, String lastName, UserRole role) {
+        this.loginId = loginId;
+        this.password = password;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.role = role;
+    }
+
+    public String getLoginId() {
+        return loginId;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public boolean checkPassword(String password) {
+        return this.password.equals(password);
+    }
+
+    public void changePassword(String oldPassword, String newPassword) {
+        if (!checkPassword(oldPassword)) {
+            throw new IllegalArgumentException("Old password is incorrect");
+        }
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new IllegalArgumentException("New password cannot be empty");
+        }
+        this.password = newPassword;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+}
+// File: ECA.java
+public class ECA extends User {
+    public ECA(String loginId, String password, String firstName, String lastName) {
+        super(loginId, password, firstName, lastName, UserRole.ECA);
+    }
+}
+// File: Voter.java
+public class Voter extends User {
+    private final String tck;
+    private final String voterId;
+    private String region;
+    private String stationId;
+    private VotingStatus votingStatus;
+    private String votingPassword;
+
+    public Voter(String firstName, String lastName, String tck, String voterId, String password, String region) {
+        super(voterId, password, firstName, lastName, UserRole.VOTER);
+        this.tck = tck;
+        this.voterId = voterId;
+        this.region = region;
+        this.votingStatus = VotingStatus.NOT_VOTED;
+    }
+
+    public String getTck() {
+        return tck;
+    }
+
+    public String getVoterId() {
+        return voterId;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public void setRegion(String region) {
+        this.region = region;
+    }
+
+    public String getStationId() {
+        return stationId;
+    }
+
+    public void setStationId(String stationId) {
+        this.stationId = stationId;
+    }
+
+    public VotingStatus getVotingStatus() {
+        return votingStatus;
+    }
+
+    public void setVotingStatus(VotingStatus votingStatus) {
+        this.votingStatus = votingStatus;
+    }
+
+    public String getVotingPassword() {
+        return votingPassword;
+    }
+
+    public void setVotingPassword(String votingPassword) {
+        this.votingPassword = votingPassword;
+    }
+}
+// File: VoterApplication.java
+public class VoterApplication {
+    private final String id;
+    private final String firstName;
+    private final String lastName;
+    private final String tck;
+    private final String voterId;
+    private final String region;
+    private final String picturePath;
+    private ApplicationStatus status;
+    private String rejectionReason;
+
+    public VoterApplication(String id, String firstName, String lastName, String tck,
+                            String voterId, String region, String picturePath) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.tck = tck;
+        this.voterId = voterId;
+        this.region = region;
+        this.picturePath = picturePath;
+        this.status = ApplicationStatus.PENDING;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public String getTck() {
+        return tck;
+    }
+
+    public String getVoterId() {
+        return voterId;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public String getPicturePath() {
+        return picturePath;
+    }
+
+    public ApplicationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ApplicationStatus status) {
+        this.status = status;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+}
+// File: ElectionCandidate.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class ElectionCandidate extends User {
+    private final String tck;
+    private final String party;
+    private final String region;
+    private String cv;
+    private String promises;
+    private boolean profileActivated;
+    private final List<Question> questions;
+
+    public ElectionCandidate(String loginId, String password, String firstName, String lastName,
+                             String tck, String party, String region) {
+        super(loginId, password, firstName, lastName, UserRole.CANDIDATE);
+        this.tck = tck;
+        this.party = party;
+        this.region = region;
+        this.cv = "";
+        this.promises = "";
+        this.profileActivated = false;
+        this.questions = new ArrayList<>();
+    }
+
+    public String getTck() {
+        return tck;
+    }
+
+    public String getParty() {
+        return party;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public String getCv() {
+        return cv;
+    }
+
+    public void editCV(String cv) {
+        this.cv = cv;
+        this.profileActivated = true;
+    }
+
+    public String getPromises() {
+        return promises;
+    }
+
+    public void editPromises(String promises) {
+        this.promises = promises;
+        this.profileActivated = true;
+    }
+
+    public boolean isProfileActivated() {
+        return profileActivated;
+    }
+
+    public void addQuestion(Question question) {
+        questions.add(question);
+    }
+
+    public List<Question> getQuestions() {
+        return new ArrayList<>(questions);
+    }
+
+    public void answerQuestion(int questionId, String answer) {
+        for (Question question : questions) {
+            if (question.getId() == questionId) {
+                question.setAnswer(answer);
+                return;
+            }
+        }
+        throw new IllegalArgumentException("Question not found: " + questionId);
+    }
+}
+// File: ElectionStationSupervisor.java
+public class ElectionStationSupervisor extends User {
+    private final String tck;
+    private final String supervisorId;
+    private final String stationId;
+
+    public ElectionStationSupervisor(String loginId, String password, String firstName, String lastName,
+                                     String tck, String supervisorId, String stationId) {
+        super(loginId, password, firstName, lastName, UserRole.ESS);
+        this.tck = tck;
+        this.supervisorId = supervisorId;
+        this.stationId = stationId;
+    }
+
+    public String getTck() {
+        return tck;
+    }
+
+    public String getSupervisorId() {
+        return supervisorId;
+    }
+
+    public String getStationId() {
+        return stationId;
+    }
+}
+// File: Question.java
+public class Question {
+    private final int id;
+    private final String voterId;
+    private final String text;
+    private String answer;
+    private boolean answered;
+
+    public Question(int id, String voterId, String text) {
+        this.id = id;
+        this.voterId = voterId;
+        this.text = text;
+        this.answer = "";
+        this.answered = false;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getVoterId() {
+        return voterId;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public String getAnswer() {
+        return answer;
+    }
+
+    public void setAnswer(String answer) {
+        this.answer = answer;
+        this.answered = true;
+    }
+
+    public boolean isAnswered() {
+        return answered;
+    }
+}
+// File: Session.java
+public class Session {
+    private final User user;
+    private boolean active;
+
+    public Session(User user) {
+        this.user = user;
+        this.active = true;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void close() {
+        active = false;
+    }
+}
+// File: OfficialVoterRecord.java
+public class OfficialVoterRecord {
+    private final String tck;
+    private final String voterId;
+    private final String region;
+
+    public OfficialVoterRecord(String tck, String voterId, String region) {
+        this.tck = tck;
+        this.voterId = voterId;
+        this.region = region;
+    }
+
+    public String getTck() {
+        return tck;
+    }
+
+    public String getVoterId() {
+        return voterId;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+}
+// File: ElectionSystem.java
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class ElectionSystem {
+    private Mode mode;
+    private final Map<String, User> users;
+    private final Map<String, Voter> votersByTck;
+    private final Map<String, ElectionCandidate> candidates;
+    private final Map<String, VoterApplication> applications;
+    private final Map<String, Integer> onlineVotes;
+    private final Map<String, Integer> offlineVotes;
+    private final Map<String, Integer> offlineVotedByStation;
+    private final Set<String> offlineEnteredStations;
+    private int applicationSequence;
+    private int questionSequence;
+    private boolean electionOpen;
+    private ElectionStationSupervisor openedSupervisor;
+
+    public ElectionSystem() {
+        this.mode = Mode.NORMAL_INTERACTIVE;
+        this.users = new HashMap<>();
+        this.votersByTck = new HashMap<>();
+        this.candidates = new LinkedHashMap<>();
+        this.applications = new LinkedHashMap<>();
+        this.onlineVotes = new HashMap<>();
+        this.offlineVotes = new HashMap<>();
+        this.offlineVotedByStation = new HashMap<>();
+        this.offlineEnteredStations = new HashSet<>();
+        this.applicationSequence = 1;
+        this.questionSequence = 1;
+        this.electionOpen = false;
+        this.openedSupervisor = null;
+
+        addUser(new ECA("eca1", "eca123", "Election", "Authority"));
+        addUser(new ElectionStationSupervisor(
+                "ess1", "ess123", "Station", "Supervisor",
+                "11111111111", "S1", "ST-1"
+        ));
+    }
+
+    private void addUser(User user) {
+        users.put(user.getLoginId(), user);
+        if (user instanceof Voter voter) {
+            votersByTck.put(voter.getTck(), voter);
+        }
+        if (user instanceof ElectionCandidate candidate) {
+            candidates.put(candidate.getLoginId(), candidate);
+        }
+    }
+
+    private void requireRole(User user, UserRole role) {
+        if (user == null || user.getRole() != role) {
+            throw new IllegalArgumentException("Required role: " + role);
+        }
+    }
+
+    public Session login(String loginId, String password) {
+        User user = users.get(loginId);
+        if (user == null || !user.checkPassword(password)) {
+            throw new IllegalArgumentException("Invalid login id or password");
+        }
+        return new Session(user);
+    }
+
+    public void logout(Session session) {
+        if (session != null) {
+            session.close();
+        }
+    }
+
+    public VoterApplication registerVoter(String firstName, String lastName, String tck,
+                                          String voterId, String region, String picturePath) {
+        if (votersByTck.containsKey(tck)) {
+            throw new IllegalArgumentException("A registered voter already exists with this TCK");
+        }
+        for (VoterApplication application : applications.values()) {
+            if (application.getTck().equals(tck) && application.getStatus() == ApplicationStatus.PENDING) {
+                throw new IllegalArgumentException("A pending application already exists with this TCK");
+            }
+        }
+        VoterApplication application = new VoterApplication(
+                "APP" + applicationSequence++,
+                firstName,
+                lastName,
+                tck,
+                voterId,
+                region,
+                picturePath
+        );
+        applications.put(application.getId(), application);
+        return application;
+    }
+
+    public Voter approveApplicant(ECA eca, String applicationId) {
+        requireRole(eca, UserRole.ECA);
+        VoterApplication application = applications.get(applicationId);
+        if (application == null) {
+            throw new IllegalArgumentException("Application not found: " + applicationId);
+        }
+        if (application.getStatus() != ApplicationStatus.PENDING) {
+            throw new IllegalArgumentException("Application is not pending");
+        }
+        if (votersByTck.containsKey(application.getTck())) {
+            throw new IllegalArgumentException("Voter already approved");
+        }
+
+        String generatedPassword = "vp" + application.getVoterId();
+        Voter voter = new Voter(
+                application.getFirstName(),
+                application.getLastName(),
+                application.getTck(),
+                application.getVoterId(),
+                generatedPassword,
+                application.getRegion()
+        );
+        application.setStatus(ApplicationStatus.APPROVED);
+        addUser(voter);
+        return voter;
+    }
+
+    public void rejectApplicant(ECA eca, String applicationId, String reason) {
+        requireRole(eca, UserRole.ECA);
+        VoterApplication application = applications.get(applicationId);
+        if (application == null) {
+            throw new IllegalArgumentException("Application not found: " + applicationId);
+        }
+        if (application.getStatus() != ApplicationStatus.PENDING) {
+            throw new IllegalArgumentException("Application is not pending");
+        }
+        application.setStatus(ApplicationStatus.REJECTED);
+        application.setRejectionReason(reason);
+    }
+
+    public void updateRegisteredVoters(ECA eca, Collection<OfficialVoterRecord> officialRecords) {
+        requireRole(eca, UserRole.ECA);
+        Map<String, OfficialVoterRecord> officialByTck = new HashMap<>();
+        for (OfficialVoterRecord record : officialRecords) {
+            officialByTck.put(record.getTck(), record);
+        }
+
+        List<Voter> currentVoters = new ArrayList<>(votersByTck.values());
+        for (Voter voter : currentVoters) {
+            OfficialVoterRecord official = officialByTck.get(voter.getTck());
+            if (official == null) {
+                users.remove(voter.getLoginId());
+                votersByTck.remove(voter.getTck());
+            } else {
+                voter.setRegion(official.getRegion());
+            }
+        }
+    }
+
+    public ElectionCandidate openCandidateAccount(ECA eca, String firstName, String lastName,
+                                                  String tck, String party, String region) {
+        requireRole(eca, UserRole.ECA);
+        String loginId = "cand" + tck;
+        if (users.containsKey(loginId)) {
+            throw new IllegalArgumentException("Candidate account already exists");
+        }
+        String generatedPassword = "cp" + tck;
+        ElectionCandidate candidate = new ElectionCandidate(
+                loginId,
+                generatedPassword,
+                firstName,
+                lastName,
+                tck,
+                party,
+                region
+        );
+        addUser(candidate);
+        return candidate;
+    }
+
+    public void changePassword(User user, String oldPassword, String newPassword) {
+        if (user == null) {
+            throw new IllegalArgumentException("User cannot be null");
+        }
+        user.changePassword(oldPassword, newPassword);
+    }
+
+    public void editCV(ElectionCandidate candidate, String cv) {
+        if (candidate == null) {
+            throw new IllegalArgumentException("Candidate cannot be null");
+        }
+        candidate.editCV(cv);
+    }
+
+    public void editPromises(ElectionCandidate candidate, String promises) {
+        if (candidate == null) {
+            throw new IllegalArgumentException("Candidate cannot be null");
+        }
+        candidate.editPromises(promises);
+    }
+
+    public List<ElectionCandidate> getCandidateList() {
+        return new ArrayList<>(candidates.values());
+    }
+
+    public List<ElectionCandidate> getCandidatesByRegion(String region) {
+        List<ElectionCandidate> result = new ArrayList<>();
+        for (ElectionCandidate candidate : candidates.values()) {
+            if (candidate.getRegion().equalsIgnoreCase(region)) {
+                result.add(candidate);
+            }
+        }
+        return result;
+    }
+
+    public ElectionCandidate viewCandidateInformation(String candidateId) {
+        ElectionCandidate candidate = candidates.get(candidateId);
+        if (candidate == null || !candidate.isProfileActivated()) {
+            return null;
+        }
+        return candidate;
+    }
+
+    public Question askQuestion(Voter voter, String candidateId, String text) {
+        if (voter == null) {
+            throw new IllegalArgumentException("Voter cannot be null");
+        }
+        ElectionCandidate candidate = candidates.get(candidateId);
+        if (candidate == null) {
+            throw new IllegalArgumentException("Candidate not found: " + candidateId);
+        }
+        if (!candidate.isProfileActivated()) {
+            throw new IllegalArgumentException("Candidate profile is not activated");
+        }
+        Question question = new Question(questionSequence++, voter.getVoterId(), text);
+        candidate.addQuestion(question);
+        return question;
+    }
+
+    public void answerQuestion(ElectionCandidate candidate, int questionId, String answer) {
+        if (candidate == null) {
+            throw new IllegalArgumentException("Candidate cannot be null");
+        }
+        candidate.answerQuestion(questionId, answer);
+    }
+
+    public Map<String, Integer> viewElectionResults(int year, String region, String party) {
+        Map<String, Integer> results = new LinkedHashMap<>();
+        for (ElectionCandidate candidate : candidates.values()) {
+            boolean regionMatches = region == null || region.isBlank()
+                    || candidate.getRegion().equalsIgnoreCase(region);
+            boolean partyMatches = party == null || party.isBlank()
+                    || candidate.getParty().equalsIgnoreCase(party);
+            if (regionMatches && partyMatches) {
+                int online = onlineVotes.getOrDefault(candidate.getLoginId(), 0);
+                int offline = offlineVotes.getOrDefault(candidate.getLoginId(), 0);
+                results.put(candidate.getLoginId(), online + offline);
+            }
+        }
+        return results;
+    }
+
+    public Map<String, Integer> getCurrentResults() {
+        Map<String, Integer> results = new LinkedHashMap<>();
+        for (ElectionCandidate candidate : candidates.values()) {
+            int online = onlineVotes.getOrDefault(candidate.getLoginId(), 0);
+            int offline = offlineVotes.getOrDefault(candidate.getLoginId(), 0);
+            results.put(candidate.getLoginId(), online + offline);
+        }
+        return results;
+    }
+
+    public boolean openSystem(String tck, String supervisorId, String password) {
+        for (User user : users.values()) {
+            if (user instanceof ElectionStationSupervisor supervisor
+                    && supervisor.getTck().equals(tck)
+                    && supervisor.getSupervisorId().equals(supervisorId)
+                    && supervisor.checkPassword(password)) {
+                openedSupervisor = supervisor;
+                electionOpen = true;
+                mode = Mode.ELECTION;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void closeSystem() {
+        electionOpen = false;
+        openedSupervisor = null;
+        mode = Mode.NORMAL_INTERACTIVE;
+    }
+
+    public String markGeneratePassword(String voterTck, boolean onlineVote) {
+        if (!electionOpen || openedSupervisor == null) {
+            throw new IllegalStateException("Election system is not open");
+        }
+        Voter voter = votersByTck.get(voterTck);
+        if (voter == null || voter.getVotingStatus() != VotingStatus.NOT_VOTED) {
+            throw new IllegalArgumentException("Voter cannot vote or has already voted");
+        }
+
+        if (onlineVote) {
+            String generatedHashPassword = "HASH-" + voter.getVoterId() + "-" + voter.getTck().hashCode();
+            voter.setVotingPassword(generatedHashPassword);
+            voter.setStationId(openedSupervisor.getStationId());
+            return generatedHashPassword;
+        }
+
+        voter.setVotingStatus(VotingStatus.OFFLINE_VOTED);
+        voter.setStationId(openedSupervisor.getStationId());
+        offlineVotedByStation.merge(openedSupervisor.getStationId(), 1, Integer::sum);
+        return "OFFLINE_VOTED";
+    }
+
+    private Voter findVoterByVoterId(String voterId) {
+        for (Voter voter : votersByTck.values()) {
+            if (voter.getVoterId().equals(voterId)) {
+                return voter;
+            }
+        }
+        return null;
+    }
+
+    public void voteOnline(String voterId, String password, String votingPassword, String candidateId) {
+        if (!electionOpen) {
+            throw new IllegalStateException("Election system is not open");
+        }
+        Voter voter = findVoterByVoterId(voterId);
+        if (voter == null) {
+            throw new IllegalArgumentException("Voter not found");
+        }
+        if (!voter.checkPassword(password)) {
+            throw new IllegalArgumentException("Invalid voter password");
+        }
+        if (voter.getVotingStatus() != VotingStatus.NOT_VOTED) {
+            throw new IllegalArgumentException("Voter has already voted");
+        }
+        if (voter.getVotingPassword() == null || !voter.getVotingPassword().equals(votingPassword)) {
+            throw new IllegalArgumentException("Invalid generated voting password");
+        }
+        if (!candidates.containsKey(candidateId)) {
+            throw new IllegalArgumentException("Candidate not found");
+        }
+
+        onlineVotes.merge(candidateId, 1, Integer::sum);
+        voter.setVotingStatus(VotingStatus.ONLINE_VOTED);
+        voter.setVotingPassword(null);
+    }
+
+    public void enterOfflineVotes(String supervisorId, String password, Map<String, Integer> votes) {
+        if (!electionOpen) {
+            throw new IllegalStateException("Election system is not open");
+        }
+
+        ElectionStationSupervisor supervisor = null;
+        for (User user : users.values()) {
+            if (user instanceof ElectionStationSupervisor candidateSupervisor
+                    && candidateSupervisor.getSupervisorId().equals(supervisorId)
+                    && candidateSupervisor.checkPassword(password)) {
+                supervisor = candidateSupervisor;
+                break;
+            }
+        }
+
+        if (supervisor == null) {
+            throw new IllegalArgumentException("Invalid supervisor credentials");
+        }
+
+        String stationId = supervisor.getStationId();
+        if (offlineEnteredStations.contains(stationId)) {
+            throw new IllegalArgumentException("Offline votes have already been entered for this station");
+        }
+
+        int suppliedTotal = 0;
+        for (Map.Entry<String, Integer> entry : votes.entrySet()) {
+            if (!candidates.containsKey(entry.getKey())) {
+                throw new IllegalArgumentException("Candidate not found: " + entry.getKey());
+            }
+            if (entry.getValue() == null || entry.getValue() < 0) {
+                throw new IllegalArgumentException("Vote count cannot be negative");
+            }
+            suppliedTotal += entry.getValue();
+        }
+
+        int expectedTotal = offlineVotedByStation.getOrDefault(stationId, 0);
+        if (suppliedTotal != expectedTotal) {
+            throw new IllegalArgumentException(
+                    "Offline vote count mismatch. Expected " + expectedTotal + " but got " + suppliedTotal
+            );
+        }
+
+        for (Map.Entry<String, Integer> entry : votes.entrySet()) {
+            offlineVotes.merge(entry.getKey(), entry.getValue(), Integer::sum);
+        }
+        offlineEnteredStations.add(stationId);
+    }
+
+    public Mode getMode() {
+        return mode;
+    }
+
+    public boolean isElectionOpen() {
+        return electionOpen;
+    }
+
+    public ElectionStationSupervisor getOpenedSupervisor() {
+        return openedSupervisor;
+    }
+}
+// File: Main.java
+import java.util.Map;
+
+public class Main {
+    public static void main(String[] args) {
+        ElectionSystem system = new ElectionSystem();
+        System.out.println("Initial mode: " + system.getMode());
+
+        Session ecaSession = system.login("eca1", "eca123");
+        ECA eca = (ECA) ecaSession.getUser();
+
+        VoterApplication application1 = system.registerVoter(
+                "Ayse", "Yilmaz", "12345678901", "VIN001", "Istanbul", "ayse-id.jpg"
+        );
+        Voter voter1 = system.approveApplicant(eca, application1.getId());
+        System.out.println("Approved voter: " + voter1.getVoterId()
+                + " / password: " + voter1.getPassword());
+
+        VoterApplication application2 = system.registerVoter(
+                "Ali", "Kaya", "12345678902", "VIN002", "Istanbul", "ali-id.jpg"
+        );
+        Voter voter2 = system.approveApplicant(eca, application2.getId());
+        System.out.println("Approved voter: " + voter2.getVoterId()
+                + " / password: " + voter2.getPassword());
+
+        ElectionCandidate candidate = system.openCandidateAccount(
+                eca, "Mehmet", "Demir", "98765432109", "PartyA", "Istanbul"
+        );
+        System.out.println("Candidate account: " + candidate.getLoginId()
+                + " / password: " + candidate.getPassword());
+
+        Session candidateSession = system.login(candidate.getLoginId(), candidate.getPassword());
+        ElectionCandidate loggedCandidate = (ElectionCandidate) candidateSession.getUser();
+        system.editCV(loggedCandidate, "Experienced public servant with a background in city planning.");
+        system.editPromises(loggedCandidate, "Improve public transport and expand green areas.");
+
+        Session voterSession = system.login(voter1.getLoginId(), voter1.getPassword());
+        Voter loggedVoter = (Voter) voterSession.getUser();
+
+        ElectionCandidate candidateInfo = system.viewCandidateInformation(candidate.getLoginId());
+        System.out.println("Candidate CV: " + candidateInfo.getCv());
+        System.out.println("Candidate promises: " + candidateInfo.getPromises());
+
+        Question question = system.askQuestion(
+                loggedVoter, candidate.getLoginId(), "How will you improve public transport?"
+        );
+        system.answerQuestion(
+                loggedCandidate, question.getId(), "By adding new metro lines and bus routes."
+        );
+        System.out.println("Question: " + question.getText());
+        System.out.println("Answer: " + question.getAnswer());
+
+        boolean opened = system.openSystem("11111111111", "S1", "ess123");
+        System.out.println("Election system opened: " + opened);
+        System.out.println("Mode now: " + system.getMode());
+
+        String generatedVotingPassword = system.markGeneratePassword(voter1.getTck(), true);
+        System.out.println("Generated online voting password: " + generatedVotingPassword);
+        system.voteOnline(voter1.getVoterId(), voter1.getPassword(),
+                generatedVotingPassword, candidate.getLoginId());
+
+        system.markGeneratePassword(voter2.getTck(), false);
+        system.enterOfflineVotes("S1", "ess123", Map.of(candidate.getLoginId(), 1));
+
+        Map<String, Integer> results = system.viewElectionResults(2025, "Istanbul", "PartyA");
+        System.out.println("Election results: " + results);
+
+        system.logout(voterSession);
+        system.logout(candidateSession);
+        system.logout(ecaSession);
+        system.closeSystem();
+        System.out.println("Final mode: " + system.getMode());
+    }
+}

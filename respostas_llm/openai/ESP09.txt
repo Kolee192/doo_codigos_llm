@@ -1,0 +1,787 @@
+// File: User.java
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class User {
+    private final String id;
+    private final String username;
+    private final Set<String> groups = ConcurrentHashMap.newKeySet();
+    private volatile boolean administrator;
+
+    public User(String username) {
+        this(UUID.randomUUID().toString(), username, false);
+    }
+
+    public User(String id, String username, boolean administrator) {
+        if (id == null || id.isBlank() || username == null || username.isBlank()) {
+            throw new IllegalArgumentException("User ID and username are required");
+        }
+        this.id = id;
+        this.username = username;
+        this.administrator = administrator;
+    }
+
+    public String getId() { return id; }
+    public String getUsername() { return username; }
+    public Set<String> getGroups() { return Set.copyOf(groups); }
+    public boolean isAdministrator() { return administrator; }
+    public void setAdministrator(boolean administrator) { this.administrator = administrator; }
+    public void addToGroup(String group) {
+        if (group == null || group.isBlank()) throw new IllegalArgumentException("Group is required");
+        groups.add(group);
+    }
+    public void removeFromGroup(String group) { groups.remove(group); }
+}
+
+// File: SharingPolicy.java
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class SharingPolicy {
+    private volatile boolean publicRead;
+    private final Set<String> userIds = ConcurrentHashMap.newKeySet();
+    private final Set<String> groups = ConcurrentHashMap.newKeySet();
+
+    public boolean isPublicRead() { return publicRead; }
+    public void setPublicRead(boolean publicRead) { this.publicRead = publicRead; }
+    public Set<String> getUserIds() { return Set.copyOf(userIds); }
+    public Set<String> getGroups() { return Set.copyOf(groups); }
+    public void shareWithUser(String userId) { userIds.add(userId); }
+    public void revokeFromUser(String userId) { userIds.remove(userId); }
+    public void shareWithGroup(String group) { groups.add(group); }
+    public void revokeFromGroup(String group) { groups.remove(group); }
+
+    public boolean permits(User user, String ownerId) {
+        if (user == null) return false;
+        if (user.isAdministrator() || user.getId().equals(ownerId) || publicRead) return true;
+        if (userIds.contains(user.getId())) return true;
+        return user.getGroups().stream().anyMatch(groups::contains);
+    }
+}
+
+// File: FileVersion.java
+import java.nio.file.Path;
+import java.time.Instant;
+
+public record FileVersion(int number, Path path, long size, String sha256, Instant createdAt) {}
+
+// File: FileAsset.java
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class FileAsset {
+    private final String id = UUID.randomUUID().toString();
+    private final String ownerId;
+    private final String filename;
+    private final String mediaType;
+    private final Instant uploadedAt = Instant.now();
+    private final SharingPolicy sharing = new SharingPolicy();
+    private final Map<String, String> metadata = new ConcurrentHashMap<>();
+    private final Set<String> tags = ConcurrentHashMap.newKeySet();
+    private final List<FileVersion> versions = new ArrayList<>();
+    private final Set<String> relatedFileIds = ConcurrentHashMap.newKeySet();
+    private volatile Path currentPath;
+    private volatile boolean immutable;
+    private volatile boolean deleted;
+    private volatile boolean hiddenAsBadData;
+
+    public FileAsset(String ownerId, String filename, String mediaType, Path path, FileVersion initialVersion) {
+        this.ownerId = ownerId;
+        this.filename = filename;
+        this.mediaType = mediaType == null ? "application/octet-stream" : mediaType;
+        this.currentPath = path;
+        this.versions.add(initialVersion);
+    }
+
+    public String getId() { return id; }
+    public String getOwnerId() { return ownerId; }
+    public String getFilename() { return filename; }
+    public String getMediaType() { return mediaType; }
+    public Instant getUploadedAt() { return uploadedAt; }
+    public Path getCurrentPath() { return currentPath; }
+    public SharingPolicy getSharing() { return sharing; }
+    public Map<String, String> getMetadata() { return Collections.unmodifiableMap(metadata); }
+    public Set<String> getTags() { return Set.copyOf(tags); }
+    public synchronized List<FileVersion> getVersions() { return List.copyOf(versions); }
+    public boolean isImmutable() { return immutable; }
+    public boolean isDeleted() { return deleted; }
+    public boolean isHiddenAsBadData() { return hiddenAsBadData; }
+    public Set<String> getRelatedFileIds() { return Set.copyOf(relatedFileIds); }
+
+    public void setMetadata(String key, String value) {
+        if (key == null || key.isBlank() || value == null) throw new IllegalArgumentException("Invalid metadata");
+        metadata.put(key, value);
+    }
+    public void addTag(String tag) {
+        if (tag == null || tag.isBlank()) throw new IllegalArgumentException("Tag is required");
+        tags.add(tag);
+    }
+    public void removeTag(String tag) { tags.remove(tag); }
+    public void setImmutable(boolean immutable) { this.immutable = immutable; }
+    public void setHiddenAsBadData(boolean hidden) { this.hiddenAsBadData = hidden; }
+    public void addRelatedFile(String fileId) { relatedFileIds.add(fileId); }
+    public void removeRelatedFile(String fileId) { relatedFileIds.remove(fileId); }
+    public void markDeleted() { deleted = true; }
+    public void restoreFromTrash() { deleted = false; }
+
+    public synchronized void addVersion(FileVersion version) {
+        if (immutable) throw new IllegalStateException("This file is immutable");
+        versions.add(version);
+        currentPath = version.path();
+    }
+
+    public synchronized void revertToVersion(int versionNumber) {
+        if (immutable) throw new IllegalStateException("This file is immutable");
+        FileVersion version = versions.stream()
+                .filter(v -> v.number() == versionNumber)
+                .findFirst().orElseThrow(() -> new IllegalArgumentException("Unknown version"));
+        currentPath = version.path();
+    }
+}
+
+// File: LogBookPage.java
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class LogBookPage {
+    private final String id = UUID.randomUUID().toString();
+    private final String authorId;
+    private final String title;
+    private final String content;
+    private final String section;
+    private final Instant createdAt = Instant.now();
+    private final String contentHash;
+    private final SharingPolicy sharing = new SharingPolicy();
+    private final Set<String> fileIds = ConcurrentHashMap.newKeySet();
+    private final Map<String, String> metadata = new ConcurrentHashMap<>();
+
+    public LogBookPage(String authorId, String title, String content, String section) {
+        this.authorId = authorId;
+        this.title = title == null ? "" : title;
+        this.content = content == null ? "" : content;
+        this.section = section == null ? "General" : section;
+        this.contentHash = hash(authorId + "\n" + this.title + "\n" + this.content + "\n" + createdAt);
+    }
+
+    private static String hash(String value) {
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public String getId() { return id; }
+    public String getAuthorId() { return authorId; }
+    public String getTitle() { return title; }
+    public String getContent() { return content; }
+    public String getSection() { return section; }
+    public Instant getCreatedAt() { return createdAt; }
+    public String getContentHash() { return contentHash; }
+    public SharingPolicy getSharing() { return sharing; }
+    public Set<String> getFileIds() { return Set.copyOf(fileIds); }
+    public Map<String, String> getMetadata() { return Map.copyOf(metadata); }
+    public void attachFile(String fileId) { fileIds.add(fileId); }
+    public void attachFiles(List<String> ids) { fileIds.addAll(ids); }
+    public void setMetadata(String key, String value) { metadata.put(key, value); }
+}
+
+// File: LogBook.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public final class LogBook {
+    private final String id = UUID.randomUUID().toString();
+    private final String ownerId;
+    private final String name;
+    private final SharingPolicy sharing = new SharingPolicy();
+    private final List<LogBookPage> pages = new ArrayList<>();
+
+    public LogBook(String ownerId, String name) {
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Log book name is required");
+        this.ownerId = ownerId;
+        this.name = name;
+    }
+
+    public String getId() { return id; }
+    public String getOwnerId() { return ownerId; }
+    public String getName() { return name; }
+    public SharingPolicy getSharing() { return sharing; }
+    public synchronized List<LogBookPage> getPages() { return List.copyOf(pages); }
+    public synchronized void addPage(LogBookPage page) { pages.add(page); }
+}
+
+// File: LogBookNavigator.java
+import java.util.List;
+
+public final class LogBookNavigator {
+    private final List<String> pageIds;
+    private int position = -1;
+
+    public LogBookNavigator(List<LogBookPage> pages) {
+        this.pageIds = pages.stream().map(LogBookPage::getId).toList();
+    }
+
+    public String current() { return position < 0 || position >= pageIds.size() ? null : pageIds.get(position); }
+    public String next() {
+        if (position + 1 < pageIds.size()) position++;
+        return current();
+    }
+    public String previous() {
+        if (position > 0) position--;
+        return current();
+    }
+}
+
+// File: MetadataRule.java
+import java.util.Set;
+
+public record MetadataRule(boolean required, Set<String> allowedValues) {
+    public MetadataRule {
+        allowedValues = allowedValues == null ? Set.of() : Set.copyOf(allowedValues);
+    }
+
+    public void validate(String value) {
+        if (required && (value == null || value.isBlank())) {
+            throw new IllegalArgumentException("Required metadata is missing");
+        }
+        if (value != null && !allowedValues.isEmpty() && !allowedValues.contains(value)) {
+            throw new IllegalArgumentException("Metadata value is not allowed: " + value);
+        }
+    }
+}
+
+// File: MetadataTemplate.java
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class MetadataTemplate {
+    private final String name;
+    private final Map<String, MetadataRule> rules = new ConcurrentHashMap<>();
+    private final Map<String, String> defaults = new ConcurrentHashMap<>();
+
+    public MetadataTemplate(String name) {
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Template name is required");
+        this.name = name;
+    }
+    public String getName() { return name; }
+    public Map<String, MetadataRule> getRules() { return Map.copyOf(rules); }
+    public Map<String, String> getDefaults() { return Map.copyOf(defaults); }
+    public void addField(String key, MetadataRule rule, String defaultValue) {
+        rules.put(key, rule);
+        if (defaultValue != null) defaults.put(key, defaultValue);
+    }
+    public void validate(Map<String, String> values) {
+        rules.forEach((key, rule) -> rule.validate(values.get(key)));
+    }
+}
+
+// File: SearchQuery.java
+import java.time.Instant;
+import java.util.Set;
+
+public final class SearchQuery {
+    private String text;
+    private String mediaType;
+    private String logBookId;
+    private String section;
+    private Instant from;
+    private Instant to;
+    private Set<String> tags = Set.of();
+    private boolean filesOnly;
+
+    public String getText() { return text; }
+    public SearchQuery text(String value) { text = value; return this; }
+    public String getMediaType() { return mediaType; }
+    public SearchQuery mediaType(String value) { mediaType = value; return this; }
+    public String getLogBookId() { return logBookId; }
+    public SearchQuery logBookId(String value) { logBookId = value; return this; }
+    public String getSection() { return section; }
+    public SearchQuery section(String value) { section = value; return this; }
+    public Instant getFrom() { return from; }
+    public SearchQuery from(Instant value) { from = value; return this; }
+    public Instant getTo() { return to; }
+    public SearchQuery to(Instant value) { to = value; return this; }
+    public Set<String> getTags() { return tags; }
+    public SearchQuery tags(Set<String> value) { tags = value == null ? Set.of() : Set.copyOf(value); return this; }
+    public boolean isFilesOnly() { return filesOnly; }
+    public SearchQuery filesOnly(boolean value) { filesOnly = value; return this; }
+}
+
+// File: Protocol.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class Protocol {
+    private final String id = UUID.randomUUID().toString();
+    private final String ownerId;
+    private final String title;
+    private final String parentProtocolId;
+    private final Instant createdAt = Instant.now();
+    private final List<Protocol> revisions = new ArrayList<>();
+    private final Map<String, String> metadata = new ConcurrentHashMap<>();
+    private final String content;
+
+    public Protocol(String ownerId, String title, String content, String parentProtocolId) {
+        this.ownerId = ownerId;
+        this.title = title;
+        this.content = content == null ? "" : content;
+        this.parentProtocolId = parentProtocolId;
+    }
+
+    public String getId() { return id; }
+    public String getOwnerId() { return ownerId; }
+    public String getTitle() { return title; }
+    public String getContent() { return content; }
+    public String getParentProtocolId() { return parentProtocolId; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Map<String, String> getMetadata() { return Map.copyOf(metadata); }
+    public void setMetadata(String key, String value) { metadata.put(key, value); }
+    public synchronized void addRevision(Protocol revision) { revisions.add(revision); }
+    public synchronized List<Protocol> getRevisions() { return List.copyOf(revisions); }
+}
+
+// File: WorkflowRun.java
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class WorkflowRun {
+    private final String id = UUID.randomUUID().toString();
+    private final String ownerId;
+    private final String plan;
+    private final Instant startedAt = Instant.now();
+    private volatile Instant finishedAt;
+    private volatile String status = "RUNNING";
+    private final Map<String, String> results = new ConcurrentHashMap<>();
+
+    public WorkflowRun(String ownerId, String plan) {
+        this.ownerId = ownerId;
+        this.plan = plan == null ? "" : plan;
+    }
+    public String getId() { return id; }
+    public String getOwnerId() { return ownerId; }
+    public String getPlan() { return plan; }
+    public Instant getStartedAt() { return startedAt; }
+    public Instant getFinishedAt() { return finishedAt; }
+    public String getStatus() { return status; }
+    public Map<String, String> getResults() { return Map.copyOf(results); }
+    public void recordResult(String key, String value) { results.put(key, value); }
+    public void finish(String status) {
+        this.status = status;
+        this.finishedAt = Instant.now();
+    }
+}
+
+// File: AcceptanceTestResult.java
+import java.time.Instant;
+import java.util.List;
+
+public record AcceptanceTestResult(Instant startedAt, Instant finishedAt, List<String> passed, List<String> failed) {
+    public AcceptanceTestResult {
+        passed = List.copyOf(passed);
+        failed = List.copyOf(failed);
+    }
+    public boolean isSuccessful() { return failed.isEmpty(); }
+}
+
+// File: AcceptanceTestRunner.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+
+public final class AcceptanceTestRunner {
+    public AcceptanceTestResult run(NeurohubNode node) {
+        Instant start = Instant.now();
+        List<String> passed = new ArrayList<>();
+        List<String> failed = new ArrayList<>();
+        check("storage directory is available", node.isStorageAvailable(), passed, failed);
+        check("node has registered users", node.getUserCount() > 0, passed, failed);
+        check("node has a configured storage location", node.getStorageRoot() != null, passed, failed);
+        return new AcceptanceTestResult(start, Instant.now(), passed, failed);
+    }
+
+    private void check(String name, boolean condition, List<String> passed, List<String> failed) {
+        (condition ? passed : failed).add(name);
+    }
+}
+
+// File: UbuntuInstaller.java
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public final class UbuntuInstaller {
+    public String createInstallScript() {
+        return """
+                #!/usr/bin/env bash
+                set -euo pipefail
+                export DEBIAN_FRONTEND=noninteractive
+                apt-get update
+                apt-get install -y openjdk-17-jre-headless nginx postgresql
+                install -d -o www-data -g www-data /var/lib/neurohub
+                echo "Neurohub runtime dependencies installed."
+                """;
+    }
+
+    public Path writeInstallScript(Path destination) throws IOException {
+        Files.writeString(destination, createInstallScript());
+        destination.toFile().setExecutable(true);
+        return destination;
+    }
+}
+
+// File: NeurohubNode.java
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class NeurohubNode {
+    private final Path storageRoot;
+    private final Map<String, User> users = new ConcurrentHashMap<>();
+    private final Map<String, FileAsset> files = new ConcurrentHashMap<>();
+    private final Map<String, LogBook> logBooks = new ConcurrentHashMap<>();
+    private final Map<String, Protocol> protocols = new ConcurrentHashMap<>();
+    private final Map<String, WorkflowRun> workflows = new ConcurrentHashMap<>();
+    private final Map<String, String> controlledTags = new ConcurrentHashMap<>();
+    private final Map<String, MetadataTemplate> templates = new ConcurrentHashMap<>();
+
+    public NeurohubNode(Path storageRoot) throws IOException {
+        this.storageRoot = storageRoot.toAbsolutePath().normalize();
+        Files.createDirectories(this.storageRoot);
+    }
+
+    public Path getStorageRoot() { return storageRoot; }
+    public int getUserCount() { return users.size(); }
+    public boolean isStorageAvailable() { return Files.isDirectory(storageRoot) && Files.isWritable(storageRoot); }
+    public void registerUser(User user) { users.put(user.getId(), user); }
+    public User getUser(String id) { return require(users.get(id), "Unknown user"); }
+    public Collection<FileAsset> getFiles() { return List.copyOf(files.values()); }
+
+    public LogBook createLogBook(User owner, String name) {
+        LogBook book = new LogBook(owner.getId(), name);
+        logBooks.put(book.getId(), book);
+        return book;
+    }
+
+    public LogBookPage createPage(User author, String logBookId, String title, String content, String section) {
+        LogBook book = require(logBooks.get(logBookId), "Unknown log book");
+        requireAccess(book.getSharing(), author, book.getOwnerId());
+        LogBookPage page = new LogBookPage(author.getId(), title, content, section);
+        book.addPage(page);
+        return page;
+    }
+
+    public FileAsset upload(User owner, String filename, InputStream input, String mediaType) throws IOException {
+        if (filename == null || filename.isBlank()) throw new IllegalArgumentException("Filename is required");
+        String safeName = Path.of(filename).getFileName().toString();
+        Path directory = storageRoot.resolve(owner.getId());
+        Files.createDirectories(directory);
+        Path target = Files.createTempFile(directory, "upload-", ".data");
+        try (InputStream in = input) {
+            Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            Files.deleteIfExists(target);
+            throw e;
+        }
+        FileVersion initial = createVersion(1, target);
+        FileAsset asset = new FileAsset(owner.getId(), safeName, mediaType, target, initial);
+        files.put(asset.getId(), asset);
+        return asset;
+    }
+
+    public List<FileAsset> uploadDirectory(User owner, Path directory) throws IOException {
+        if (!Files.isDirectory(directory)) throw new IllegalArgumentException("Not a directory");
+        List<FileAsset> uploaded = new ArrayList<>();
+        try (var paths = Files.walk(directory)) {
+            for (Path path : paths.filter(Files::isRegularFile).toList()) {
+                try (InputStream in = Files.newInputStream(path)) {
+                    uploaded.add(upload(owner, path.getFileName().toString(), in, Files.probeContentType(path)));
+                }
+            }
+        }
+        return List.copyOf(uploaded);
+    }
+
+    public void attachFile(User user, String logBookId, String pageId, String fileId) {
+        LogBook book = require(logBooks.get(logBookId), "Unknown log book");
+        LogBookPage page = findPage(book, pageId);
+        FileAsset file = require(files.get(fileId), "Unknown file");
+        requireAccess(book.getSharing(), user, book.getOwnerId());
+        requireAccess(page.getSharing(), user, page.getAuthorId());
+        requireAccess(file.getSharing(), user, file.getOwnerId());
+        page.attachFile(fileId);
+    }
+
+    public void attachFiles(User user, String logBookId, String pageId, List<String> fileIds) {
+        for (String fileId : fileIds) attachFile(user, logBookId, pageId, fileId);
+    }
+
+    public List<FileAsset> unattachedFiles(User user) {
+        var attached = logBooks.values().stream()
+                .flatMap(book -> book.getPages().stream())
+                .flatMap(page -> page.getFileIds().stream())
+                .collect(java.util.stream.Collectors.toSet());
+        return files.values().stream()
+                .filter(file -> file.getOwnerId().equals(user.getId()) && !file.isDeleted())
+                .filter(file -> !attached.contains(file.getId()))
+                .sorted(Comparator.comparing(FileAsset::getUploadedAt))
+                .toList();
+    }
+
+    public List<FileAsset> searchFiles(User user, SearchQuery query) {
+        String text = query.getText() == null ? "" : query.getText().toLowerCase();
+        return files.values().stream()
+                .filter(file -> !file.isDeleted())
+                .filter(file -> !file.isHiddenAsBadData())
+                .filter(file -> file.getSharing().permits(user, file.getOwnerId()))
+                .filter(file -> query.getMediaType() == null || file.getMediaType().equalsIgnoreCase(query.getMediaType()))
+                .filter(file -> query.getFrom() == null || !file.getUploadedAt().isBefore(query.getFrom()))
+                .filter(file -> query.getTo() == null || !file.getUploadedAt().isAfter(query.getTo()))
+                .filter(file -> file.getTags().containsAll(query.getTags()))
+                .filter(file -> text.isEmpty() || file.getFilename().toLowerCase().contains(text)
+                        || file.getMetadata().values().stream().anyMatch(v -> v.toLowerCase().contains(text)))
+                .filter(file -> matchesBookAndSection(user, file, query))
+                .sorted(Comparator.comparing(FileAsset::getUploadedAt).reversed())
+                .toList();
+    }
+
+    private boolean matchesBookAndSection(User user, FileAsset file, SearchQuery query) {
+        if (query.getLogBookId() == null && query.getSection() == null) return true;
+        return logBooks.values().stream()
+                .filter(book -> query.getLogBookId() == null || book.getId().equals(query.getLogBookId()))
+                .filter(book -> book.getSharing().permits(user, book.getOwnerId()))
+                .flatMap(book -> book.getPages().stream())
+                .filter(page -> query.getSection() == null || page.getSection().equalsIgnoreCase(query.getSection()))
+                .anyMatch(page -> page.getFileIds().contains(file.getId())
+                        && page.getSharing().permits(user, page.getAuthorId()));
+    }
+
+    public void addControlledTag(String tag) {
+        if (tag == null || tag.isBlank()) throw new IllegalArgumentException("Tag is required");
+        controlledTags.put(tag.toLowerCase(), tag);
+    }
+
+    public void tagFile(User user, String fileId, String tag) {
+        FileAsset file = accessibleFile(user, fileId);
+        String canonical = controlledTags.get(tag.toLowerCase());
+        if (canonical == null) throw new IllegalArgumentException("Tag is not in the controlled vocabulary");
+        file.addTag(canonical);
+    }
+
+    public void setFileMetadata(User user, String fileId, String key, String value, MetadataTemplate template) {
+        FileAsset file = accessibleFile(user, fileId);
+        if (template != null) template.validate(Map.of(key, value));
+        file.setMetadata(key, value);
+    }
+
+    public void updateFile(User user, String fileId, InputStream input) throws IOException {
+        FileAsset file = accessibleFile(user, fileId);
+        if (file.isImmutable()) throw new IllegalStateException("This file is immutable");
+        Path directory = storageRoot.resolve(file.getOwnerId());
+        Path target = Files.createTempFile(directory, "version-", ".data");
+        try (InputStream in = input) {
+            Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+        file.addVersion(createVersion(file.getVersions().size() + 1, target));
+    }
+
+    public void revertFile(User user, String fileId, int version) {
+        accessibleFile(user, fileId).revertToVersion(version);
+    }
+
+    public void deleteFile(User user, String fileId) {
+        FileAsset file = accessibleFile(user, fileId);
+        if (file.isImmutable()) throw new IllegalStateException("This file is immutable");
+        file.markDeleted();
+    }
+
+    public void restoreFile(User user, String fileId) {
+        FileAsset file = require(files.get(fileId), "Unknown file");
+        requireAccess(file.getSharing(), user, file.getOwnerId());
+        file.restoreFromTrash();
+    }
+
+    public void moveFile(User user, String fileId, Path destination) throws IOException {
+        FileAsset file = accessibleFile(user, fileId);
+        Path normalized = destination.toAbsolutePath().normalize();
+        if (!normalized.startsWith(storageRoot)) throw new IllegalArgumentException("Destination must be inside storage");
+        Files.createDirectories(normalized.getParent());
+        Files.move(file.getCurrentPath(), normalized, StandardCopyOption.REPLACE_EXISTING);
+        FileVersion previous = file.getVersions().get(file.getVersions().size() - 1);
+        file.addVersion(new FileVersion(previous.number() + 1, normalized, Files.size(normalized),
+                checksum(normalized), Instant.now()));
+    }
+
+    public Path download(User user, String fileId) throws IOException {
+        FileAsset file = accessibleFile(user, fileId);
+        if (file.isDeleted()) throw new IllegalStateException("File is in trash");
+        return file.getCurrentPath();
+    }
+
+    public Protocol createProtocol(User owner, String title, String content) {
+        Protocol protocol = new Protocol(owner.getId(), title, content, null);
+        protocols.put(protocol.getId(), protocol);
+        return protocol;
+    }
+
+    public Protocol branchProtocol(User owner, String protocolId, String title, String content) {
+        Protocol original = require(protocols.get(protocolId), "Unknown protocol");
+        Protocol branch = new Protocol(owner.getId(), title, content, original.getId());
+        protocols.put(branch.getId(), branch);
+        original.addRevision(branch);
+        return branch;
+    }
+
+    public WorkflowRun startWorkflow(User owner, String plan) {
+        WorkflowRun run = new WorkflowRun(owner.getId(), plan);
+        workflows.put(run.getId(), run);
+        return run;
+    }
+
+    public LogBookPage recordWorkflow(User owner, String logBookId, WorkflowRun run, String title) {
+        String details = "Workflow plan:\n" + run.getPlan() + "\nStatus: " + run.getStatus()
+                + "\nResults: " + run.getResults();
+        LogBookPage page = createPage(owner, logBookId, title, details, "Workflows");
+        page.setMetadata("workflowId", run.getId());
+        return page;
+    }
+
+    public Path createBackup(Path destination) throws IOException {
+        Path target = destination.toAbsolutePath().normalize();
+        if (target.getParent() != null) Files.createDirectories(target.getParent());
+        try (var out = new java.util.zip.ZipOutputStream(Files.newOutputStream(target));
+             var paths = Files.walk(storageRoot)) {
+            for (Path path : paths.filter(Files::isRegularFile).toList()) {
+                String entryName = storageRoot.relativize(path).toString().replace('\\', '/');
+                out.putNextEntry(new java.util.zip.ZipEntry(entryName));
+                Files.copy(path, out);
+                out.closeEntry();
+            }
+        }
+        return target;
+    }
+
+    public List<LogBookPage> pagesForPeriod(User viewer, String logBookId, Instant from, Instant to) {
+        LogBook book = require(logBooks.get(logBookId), "Unknown log book");
+        requireAccess(book.getSharing(), viewer, book.getOwnerId());
+        return book.getPages().stream()
+                .filter(page -> page.getSharing().permits(viewer, page.getAuthorId()))
+                .filter(page -> from == null || !page.getCreatedAt().isBefore(from))
+                .filter(page -> to == null || !page.getCreatedAt().isAfter(to))
+                .toList();
+    }
+
+    public LogBook getLogBook(String id) { return require(logBooks.get(id), "Unknown log book"); }
+    public FileAsset getFile(String id) { return require(files.get(id), "Unknown file"); }
+    public void registerTemplate(MetadataTemplate template) { templates.put(template.getName(), template); }
+    public MetadataTemplate getTemplate(String name) { return templates.get(name); }
+
+    private FileAsset accessibleFile(User user, String fileId) {
+        FileAsset file = require(files.get(fileId), "Unknown file");
+        requireAccess(file.getSharing(), user, file.getOwnerId());
+        return file;
+    }
+
+    private static LogBookPage findPage(LogBook book, String pageId) {
+        return book.getPages().stream().filter(page -> page.getId().equals(pageId))
+                .findFirst().orElseThrow(() -> new IllegalArgumentException("Unknown page"));
+    }
+
+    private static void requireAccess(SharingPolicy sharing, User user, String ownerId) {
+        if (!sharing.permits(user, ownerId)) throw new SecurityException("Access denied");
+    }
+
+    private static FileVersion createVersion(int number, Path path) throws IOException {
+        return new FileVersion(number, path, Files.size(path), checksum(path), Instant.now());
+    }
+
+    private static String checksum(Path path) throws IOException {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            try (InputStream input = Files.newInputStream(path)) {
+                byte[] buffer = new byte[1024 * 1024];
+                int read;
+                while ((read = input.read(buffer)) != -1) digest.update(buffer, 0, read);
+            }
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static <T> T require(T value, String message) {
+        if (value == null) throw new IllegalArgumentException(message);
+        return value;
+    }
+}
+
+// File: Main.java
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public final class Main {
+    public static void main(String[] args) throws Exception {
+        Path workspace = Files.createTempDirectory("neurohub-demo-");
+        NeurohubNode node = new NeurohubNode(workspace);
+        User researcher = new User("researcher");
+        User colleague = new User("colleague");
+        node.registerUser(researcher);
+        node.registerUser(colleague);
+
+        LogBook book = node.createLogBook(researcher, "Worm behaviour study");
+        book.getSharing().shareWithUser(colleague.getId());
+
+        FileAsset video = node.upload(
+                researcher,
+                "observation.txt",
+                new ByteArrayInputStream("Demo observation data".getBytes(StandardCharsets.UTF_8)),
+                "text/plain");
+        node.addControlledTag("behaviour");
+        node.tagFile(researcher, video.getId(), "behaviour");
+
+        LogBookPage page = node.createPage(researcher, book.getId(),
+                "Initial observation", "<p>Subject response: α</p>", "Observations");
+        page.getSharing().shareWithUser(colleague.getId());
+        node.attachFile(researcher, book.getId(), page.getId(), video.getId());
+
+        System.out.println("Created Neurohub demo node at: " + node.getStorageRoot());
+        System.out.println("Log book page: " + page.getTitle());
+        System.out.println("Acceptance checks passed: "
+                + new AcceptanceTestRunner().run(node).passed().size());
+    }
+}

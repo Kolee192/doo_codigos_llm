@@ -1,0 +1,659 @@
+// File: RgbColor.java
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public record RgbColor(int red, int green, int blue) {
+    private static final Pattern RGB_PATTERN =
+            Pattern.compile("rgb\\s*\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)",
+                    Pattern.CASE_INSENSITIVE);
+
+    public RgbColor {
+        if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255) {
+            throw new IllegalArgumentException("RGB components must be between 0 and 255");
+        }
+    }
+
+    public double distanceTo(RgbColor other) {
+        int dr = red - other.red;
+        int dg = green - other.green;
+        int db = blue - other.blue;
+        return Math.sqrt((double) dr * dr + (double) dg * dg + (double) db * db);
+    }
+
+    public String toHex() {
+        return String.format(Locale.ROOT, "#%02X%02X%02X", red, green, blue);
+    }
+
+    public static RgbColor parse(String value) {
+        if (value == null) {
+            return null;
+        }
+        String input = value.trim();
+        if (input.matches("#?[0-9a-fA-F]{6}")) {
+            String hex = input.startsWith("#") ? input.substring(1) : input;
+            return new RgbColor(
+                    Integer.parseInt(hex.substring(0, 2), 16),
+                    Integer.parseInt(hex.substring(2, 4), 16),
+                    Integer.parseInt(hex.substring(4, 6), 16));
+        }
+        Matcher matcher = RGB_PATTERN.matcher(input);
+        if (matcher.matches()) {
+            return new RgbColor(
+                    Integer.parseInt(matcher.group(1)),
+                    Integer.parseInt(matcher.group(2)),
+                    Integer.parseInt(matcher.group(3)));
+        }
+        return null;
+    }
+}
+
+// File: PaintColor.java
+import java.util.Objects;
+
+public record PaintColor(String collection, String number, String name, RgbColor color) {
+    public PaintColor {
+        collection = requireText(collection, "collection");
+        number = requireText(number, "number");
+        name = requireText(name, "name");
+        Objects.requireNonNull(color, "color");
+    }
+
+    private static String requireText(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(field + " must not be blank");
+        }
+        return value.trim();
+    }
+
+    public String key() {
+        return collection.toLowerCase() + ":" + number.toLowerCase();
+    }
+}
+
+// File: PaintCatalog.java
+import java.util.Collection;
+import java.util.Optional;
+
+public interface PaintCatalog {
+    Optional<PaintColor> find(String collection, String number);
+
+    Collection<PaintColor> findAll();
+
+    void add(PaintColor paint);
+
+    void update(PaintColor paint);
+
+    void delete(String collection, String number);
+}
+
+// File: InMemoryPaintCatalog.java
+import java.util.Collection;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+public class InMemoryPaintCatalog implements PaintCatalog {
+    private final ConcurrentMap<String, PaintColor> paints = new ConcurrentHashMap<>();
+
+    @Override
+    public Optional<PaintColor> find(String collection, String number) {
+        if (collection == null || number == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(paints.get(key(collection, number)));
+    }
+
+    @Override
+    public Collection<PaintColor> findAll() {
+        return paints.values().stream()
+                .sorted((a, b) -> {
+                    int collectionOrder = a.collection().compareToIgnoreCase(b.collection());
+                    return collectionOrder != 0
+                            ? collectionOrder
+                            : a.number().compareToIgnoreCase(b.number());
+                })
+                .toList();
+    }
+
+    @Override
+    public void add(PaintColor paint) {
+        if (paints.putIfAbsent(key(paint.collection(), paint.number()), paint) != null) {
+            throw new IllegalArgumentException("A paint with that collection and number already exists");
+        }
+    }
+
+    @Override
+    public void update(PaintColor paint) {
+        String key = key(paint.collection(), paint.number());
+        if (!paints.replace(key, paint)) {
+            throw new IllegalArgumentException("Paint not found: " + paint.collection() + " " + paint.number());
+        }
+    }
+
+    @Override
+    public void delete(String collection, String number) {
+        if (paints.remove(key(collection, number)) == null) {
+            throw new IllegalArgumentException("Paint not found: " + collection + " " + number);
+        }
+    }
+
+    private static String key(String collection, String number) {
+        return collection.trim().toLowerCase(Locale.ROOT) + ":" + number.trim().toLowerCase(Locale.ROOT);
+    }
+}
+
+// File: ColorSearchService.java
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+
+public class ColorSearchService {
+    private final PaintCatalog catalog;
+
+    public ColorSearchService(PaintCatalog catalog) {
+        this.catalog = catalog;
+    }
+
+    public List<PaintColor> search(String query, String collection, int limit) {
+        if (query == null || query.isBlank()) {
+            throw new IllegalArgumentException("Search query must not be blank");
+        }
+        if (limit < 1) {
+            throw new IllegalArgumentException("Limit must be positive");
+        }
+
+        String normalizedQuery = query.trim().toLowerCase(Locale.ROOT);
+        RgbColor requestedColor = RgbColor.parse(query);
+        var stream = catalog.findAll().stream()
+                .filter(paint -> collection == null || collection.isBlank()
+                        || paint.collection().equalsIgnoreCase(collection.trim()));
+
+        if (requestedColor != null) {
+            return stream.sorted(Comparator.comparingDouble(
+                            (PaintColor paint) -> paint.color().distanceTo(requestedColor))
+                    .thenComparing(PaintColor::collection)
+                    .thenComparing(PaintColor::number))
+                    .limit(limit)
+                    .toList();
+        }
+
+        return stream.filter(paint ->
+                        paint.name().toLowerCase(Locale.ROOT).contains(normalizedQuery)
+                                || paint.number().toLowerCase(Locale.ROOT).contains(normalizedQuery))
+                .limit(limit)
+                .toList();
+    }
+
+    public List<PaintColor> searchAllCollections(String query, int limit) {
+        return search(query, null, limit);
+    }
+
+    public List<PaintColor> closestColors(
+            String sourceNumber, String sourceCollection, String targetCollection, int count) {
+        if (count < 1) {
+            throw new IllegalArgumentException("Count must be positive");
+        }
+        PaintColor source = catalog.find(sourceCollection, sourceNumber)
+                .orElseThrow(() -> new IllegalArgumentException("Source paint was not found"));
+        return catalog.findAll().stream()
+                .filter(paint -> paint.collection().equalsIgnoreCase(targetCollection))
+                .filter(paint -> !paint.key().equalsIgnoreCase(source.key()))
+                .sorted(Comparator.comparingDouble(
+                                (PaintColor paint) -> paint.color().distanceTo(source.color()))
+                        .thenComparing(PaintColor::number))
+                .limit(count)
+                .toList();
+    }
+
+    public PaintColor translate(String sourceNumber, String sourceCollection, String targetCollection) {
+        return closestColors(sourceNumber, sourceCollection, targetCollection, 1)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No paints found in target collection"));
+    }
+}
+
+// File: UserRole.java
+public enum UserRole {
+    DEFAULT,
+    ADMINISTRATIVE
+}
+
+// File: AdminLevel.java
+public enum AdminLevel {
+    LEVEL_1,
+    LEVEL_2,
+    LEVEL_3
+}
+
+// File: AdminUser.java
+import java.util.Objects;
+
+public record AdminUser(String username, AdminLevel level) {
+    public AdminUser {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username must not be blank");
+        }
+        username = username.trim();
+        Objects.requireNonNull(level, "level");
+    }
+}
+
+// File: AdminService.java
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class AdminService {
+    private final PaintCatalog catalog;
+    private final Map<String, AdminUser> users = new ConcurrentHashMap<>();
+
+    public AdminService(PaintCatalog catalog) {
+        this.catalog = catalog;
+    }
+
+    public void registerInitialAdministrator(AdminUser user) {
+        if (users.putIfAbsent(user.username().toLowerCase(), user) != null) {
+            throw new IllegalArgumentException("Administrator already exists");
+        }
+    }
+
+    public AdminUser addAdministrator(String actingUsername, String username, AdminLevel level) {
+        AdminUser actor = requireAdministrator(actingUsername);
+        boolean permitted = switch (actor.level()) {
+            case LEVEL_1 -> level == AdminLevel.LEVEL_1;
+            case LEVEL_2 -> level == AdminLevel.LEVEL_1 || level == AdminLevel.LEVEL_2;
+            case LEVEL_3 -> true;
+        };
+        if (!permitted) {
+            throw new SecurityException("Administrator is not allowed to create that level");
+        }
+
+        AdminUser newUser = new AdminUser(username, level);
+        if (users.putIfAbsent(newUser.username().toLowerCase(), newUser) != null) {
+            throw new IllegalArgumentException("Administrator already exists");
+        }
+        return newUser;
+    }
+
+    public void addPaint(String actingUsername, PaintColor paint) {
+        requireAtLeast(actingUsername, AdminLevel.LEVEL_1);
+        catalog.add(paint);
+    }
+
+    public void updatePaint(String actingUsername, PaintColor paint) {
+        AdminUser actor = requireAdministrator(actingUsername);
+        if (actor.level() == AdminLevel.LEVEL_1) {
+            throw new SecurityException("Level 1 administrators cannot update paints");
+        }
+        catalog.update(paint);
+    }
+
+    public void deletePaint(String actingUsername, String collection, String number) {
+        AdminUser actor = requireAdministrator(actingUsername);
+        if (actor.level() != AdminLevel.LEVEL_3) {
+            throw new SecurityException("Only level 3 administrators can delete paints");
+        }
+        catalog.delete(collection, number);
+    }
+
+    public AdminUser requireAdministrator(String username) {
+        if (username == null) {
+            throw new SecurityException("Administrative access is required");
+        }
+        AdminUser user = users.get(username.trim().toLowerCase());
+        if (user == null) {
+            throw new SecurityException("Administrative access is required");
+        }
+        return user;
+    }
+
+    private AdminUser requireAtLeast(String username, AdminLevel minimum) {
+        AdminUser user = requireAdministrator(username);
+        if (user.level().ordinal() < minimum.ordinal()) {
+            throw new SecurityException("Insufficient administrative permissions");
+        }
+        return user;
+    }
+}
+
+// File: PaletteSearchEntry.java
+import java.time.Instant;
+import java.util.List;
+
+public record PaletteSearchEntry(String query, Instant searchedAt, List<String> paintKeys) {
+    public PaletteSearchEntry {
+        paintKeys = List.copyOf(paintKeys);
+    }
+}
+
+// File: UploadedImage.java
+import java.time.Instant;
+
+public final class UploadedImage {
+    private final String fileName;
+    private final Instant uploadedAt;
+    private final byte[] content;
+
+    public UploadedImage(String fileName, Instant uploadedAt, byte[] content) {
+        this.fileName = fileName == null || fileName.isBlank() ? "upload" : fileName;
+        this.uploadedAt = uploadedAt;
+        this.content = content.clone();
+    }
+
+    public String fileName() {
+        return fileName;
+    }
+
+    public Instant uploadedAt() {
+        return uploadedAt;
+    }
+
+    public byte[] content() {
+        return content.clone();
+    }
+}
+
+// File: PaletteService.java
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class PaletteService {
+    private static final Duration RETENTION = Duration.ofDays(30);
+    private static final int MAX_ENTRIES = 100;
+
+    private final Map<String, SessionPalette> palettes = new ConcurrentHashMap<>();
+
+    public void recordSearch(String sessionId, String query, List<PaintColor> results) {
+        SessionPalette palette = palette(sessionId);
+        synchronized (palette) {
+            prune(palette, Instant.now());
+            List<String> keys = results.stream().map(PaintColor::key).toList();
+            palette.searches.addFirst(new PaletteSearchEntry(query, Instant.now(), keys));
+            trim(palette.searches);
+        }
+    }
+
+    public List<PaletteSearchEntry> recentSearches(String sessionId) {
+        SessionPalette palette = palette(sessionId);
+        synchronized (palette) {
+            prune(palette, Instant.now());
+            return List.copyOf(palette.searches);
+        }
+    }
+
+    public void storeUploadedImage(String sessionId, String fileName, byte[] content) {
+        SessionPalette palette = palette(sessionId);
+        synchronized (palette) {
+            prune(palette, Instant.now());
+            palette.images.addFirst(new UploadedImage(fileName, Instant.now(), content));
+            trim(palette.images);
+        }
+    }
+
+    public List<UploadedImage> recentImages(String sessionId) {
+        SessionPalette palette = palette(sessionId);
+        synchronized (palette) {
+            prune(palette, Instant.now());
+            return List.copyOf(palette.images);
+        }
+    }
+
+    public void removeExpiredSessions() {
+        Instant cutoff = Instant.now().minus(RETENTION);
+        palettes.entrySet().removeIf(entry -> {
+            SessionPalette palette = entry.getValue();
+            synchronized (palette) {
+                prune(palette, Instant.now());
+                return palette.lastAccess.isBefore(cutoff);
+            }
+        });
+    }
+
+    private SessionPalette palette(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new IllegalArgumentException("A client session ID is required");
+        }
+        SessionPalette palette = palettes.computeIfAbsent(sessionId, ignored -> new SessionPalette());
+        palette.lastAccess = Instant.now();
+        return palette;
+    }
+
+    private static void prune(SessionPalette palette, Instant now) {
+        Instant cutoff = now.minus(RETENTION);
+        palette.searches.removeIf(entry -> entry.searchedAt().isBefore(cutoff));
+        palette.images.removeIf(image -> image.uploadedAt().isBefore(cutoff));
+        palette.lastAccess = now;
+    }
+
+    private static void trim(Deque<?> entries) {
+        while (entries.size() > MAX_ENTRIES) {
+            entries.removeLast();
+        }
+    }
+
+    private static final class SessionPalette {
+        private final Deque<PaletteSearchEntry> searches = new ArrayDeque<>();
+        private final Deque<UploadedImage> images = new ArrayDeque<>();
+        private volatile Instant lastAccess = Instant.now();
+    }
+}
+
+// File: ColorSampleMatcher.java
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.List;
+import javax.imageio.ImageIO;
+
+public class ColorSampleMatcher {
+    private final ColorSearchService searchService;
+    private final PaletteService paletteService;
+
+    public ColorSampleMatcher(ColorSearchService searchService, PaletteService paletteService) {
+        this.searchService = searchService;
+        this.paletteService = paletteService;
+    }
+
+    public List<PaintColor> uploadAndMatchAt(
+            String sessionId, String fileName, byte[] imageBytes, int x, int y,
+            String collection, int resultLimit) throws IOException {
+        BufferedImage image = readImage(imageBytes);
+        paletteService.storeUploadedImage(sessionId, fileName, imageBytes);
+        if (x < 0 || y < 0 || x >= image.getWidth() || y >= image.getHeight()) {
+            throw new IllegalArgumentException("Selected point is outside the image");
+        }
+        return searchService.search(toColor(image.getRGB(x, y)).toHex(), collection, resultLimit);
+    }
+
+    public List<PaintColor> uploadAndMatchRegion(
+            String sessionId, String fileName, byte[] imageBytes,
+            int x, int y, int width, int height, String collection, int resultLimit) throws IOException {
+        BufferedImage image = readImage(imageBytes);
+        paletteService.storeUploadedImage(sessionId, fileName, imageBytes);
+        if (width < 1 || height < 1 || x < 0 || y < 0
+                || x + width > image.getWidth() || y + height > image.getHeight()) {
+            throw new IllegalArgumentException("Selected region is outside the image");
+        }
+
+        long red = 0;
+        long green = 0;
+        long blue = 0;
+        long count = (long) width * height;
+        for (int row = y; row < y + height; row++) {
+            for (int column = x; column < x + width; column++) {
+                int rgb = image.getRGB(column, row);
+                red += (rgb >>> 16) & 0xff;
+                green += (rgb >>> 8) & 0xff;
+                blue += rgb & 0xff;
+            }
+        }
+
+        RgbColor average = new RgbColor(
+                (int) (red / count), (int) (green / count), (int) (blue / count));
+        return searchService.search(average.toHex(), collection, resultLimit);
+    }
+
+    private static BufferedImage readImage(byte[] imageBytes) throws IOException {
+        if (imageBytes == null || imageBytes.length == 0) {
+            throw new IllegalArgumentException("Image data must not be empty");
+        }
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageBytes));
+        if (image == null) {
+            throw new IOException("Unsupported or invalid image format");
+        }
+        return image;
+    }
+
+    private static RgbColor toColor(int argb) {
+        return new RgbColor((argb >>> 16) & 0xff, (argb >>> 8) & 0xff, argb & 0xff);
+    }
+}
+
+// File: Theme.java
+public record Theme(String name, String primaryColor, String backgroundColor, String textColor) {
+    public Theme {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Theme name must not be blank");
+        }
+        if (primaryColor == null || backgroundColor == null || textColor == null) {
+            throw new IllegalArgumentException("Theme colors must not be null");
+        }
+    }
+
+    public static Theme abcPaintDefault() {
+        return new Theme("ABC Paint", "#245A8D", "#FFFFFF", "#202020");
+    }
+}
+
+// File: ErrorReporter.java
+public interface ErrorReporter {
+    void report(String context, Throwable error);
+}
+
+// File: ConsoleErrorReporter.java
+import java.time.Instant;
+
+public class ConsoleErrorReporter implements ErrorReporter {
+    @Override
+    public void report(String context, Throwable error) {
+        System.err.println("[" + Instant.now() + "] ColorKast error in " + context + ": "
+                + error.getClass().getSimpleName() + ": " + error.getMessage());
+    }
+}
+
+// File: ColorKastApplication.java
+import java.util.List;
+import java.util.function.Supplier;
+
+public class ColorKastApplication {
+    private final PaintCatalog catalog;
+    private final ColorSearchService searchService;
+    private final PaletteService paletteService;
+    private final ColorSampleMatcher sampleMatcher;
+    private final AdminService adminService;
+    private final ErrorReporter errorReporter;
+    private volatile Theme theme;
+
+    public ColorKastApplication(ErrorReporter errorReporter) {
+        this(new InMemoryPaintCatalog(), new PaletteService(), errorReporter);
+    }
+
+    public ColorKastApplication(
+            PaintCatalog catalog, PaletteService paletteService, ErrorReporter errorReporter) {
+        this.catalog = catalog;
+        this.paletteService = paletteService;
+        this.errorReporter = errorReporter;
+        this.searchService = new ColorSearchService(catalog);
+        this.sampleMatcher = new ColorSampleMatcher(searchService, paletteService);
+        this.adminService = new AdminService(catalog);
+        this.theme = Theme.abcPaintDefault();
+    }
+
+    public PaintCatalog catalog() {
+        return catalog;
+    }
+
+    public ColorSearchService searchService() {
+        return searchService;
+    }
+
+    public PaletteService paletteService() {
+        return paletteService;
+    }
+
+    public ColorSampleMatcher sampleMatcher() {
+        return sampleMatcher;
+    }
+
+    public AdminService adminService() {
+        return adminService;
+    }
+
+    public Theme theme() {
+        return theme;
+    }
+
+    public void setTheme(Theme theme) {
+        this.theme = theme;
+    }
+
+    public List<PaintColor> search(String sessionId, String query, String collection, int limit) {
+        return recover("color search", List.of(), () -> {
+            List<PaintColor> results = searchService.search(query, collection, limit);
+            paletteService.recordSearch(sessionId, query, results);
+            return results;
+        });
+    }
+
+    private <T> T recover(String context, T fallback, Supplier<T> operation) {
+        try {
+            return operation.get();
+        } catch (RuntimeException error) {
+            errorReporter.report(context, error);
+            return fallback;
+        }
+    }
+}
+
+// File: Main.java
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        ColorKastApplication app = new ColorKastApplication(new ConsoleErrorReporter());
+
+        app.adminService().registerInitialAdministrator(
+                new AdminUser("root", AdminLevel.LEVEL_3));
+
+        app.adminService().addPaint("root",
+                new PaintColor("Classic", "C-100", "Warm White", new RgbColor(245, 241, 230)));
+        app.adminService().addPaint("root",
+                new PaintColor("Classic", "C-210", "Ocean Blue", new RgbColor(45, 112, 168)));
+        app.adminService().addPaint("root",
+                new PaintColor("Modern", "M-01", "Soft White", new RgbColor(241, 239, 228)));
+        app.adminService().addPaint("root",
+                new PaintColor("Modern", "M-12", "Deep Blue", new RgbColor(48, 108, 160)));
+
+        String sessionId = "demo-client-session";
+        List<PaintColor> results = app.search(sessionId, "white", null, 10);
+        System.out.println("Search results:");
+        results.forEach(paint -> System.out.println(
+                paint.collection() + " " + paint.number() + " - " + paint.name()
+                        + " " + paint.color().toHex()));
+
+        PaintColor translation = app.searchService().translate("C-210", "Classic", "Modern");
+        System.out.println("Translated Classic C-210 to Modern: " + translation.number()
+                + " (" + translation.name() + ")");
+
+        System.out.println("Palette searches saved: "
+                + app.paletteService().recentSearches(sessionId).size());
+    }
+}

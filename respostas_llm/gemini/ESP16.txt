@@ -1,0 +1,1765 @@
+// File: Language.java
+public enum Language {
+    SWEDISH,
+    ENGLISH,
+    SPANISH,
+    FRENCH
+}
+
+// File: OwnerVerificationStatus.java
+public enum OwnerVerificationStatus {
+    PENDING,
+    VERIFIED,
+    REJECTED
+}
+
+// File: ResultViewType.java
+public enum ResultViewType {
+    MAP,
+    LIST
+}
+
+// File: SortOption.java
+public enum SortOption {
+    PRICE,
+    DISTANCE,
+    RESTAURANT_TYPE,
+    SPECIFIC_DISH,
+    RESTAURANT_NAME
+}
+
+// File: SortOrder.java
+public enum SortOrder {
+    ASCENDING,
+    DESCENDING
+}
+
+// File: Dish.java
+import java.util.Objects;
+
+public class Dish {
+    private String name;
+    private String description;
+    private double price;
+
+    public Dish(String name, String description, double price) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Dish dish)) return false;
+        return Objects.equals(name, dish.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
+    }
+
+    @Override
+    public String toString() {
+        return name + " - " + description + " (" + price + " SEK)";
+    }
+}
+
+// File: Restaurant.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Restaurant {
+    private String id;
+    private String name;
+    private String address;
+    private String email;
+    private String phone;
+    private String mobilePhone;
+    private double averagePrice;
+    private String description;
+    private String restaurantType;
+    private String pictureUrl;
+    private String websiteUrl;
+    private double latitude;
+    private double longitude;
+    private final List<Dish> menu = new ArrayList<>();
+
+    public Restaurant(String id, String name, String address, String email, String phone, double averagePrice) {
+        this.id = id;
+        this.name = name;
+        this.address = address;
+        this.email = email;
+        this.phone = phone;
+        this.averagePrice = averagePrice;
+        this.description = "";
+        this.restaurantType = "General";
+        this.pictureUrl = "default_picture.png";
+        this.websiteUrl = "https://example.com/" + id;
+        this.latitude = 0.0;
+        this.longitude = 0.0;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getMobilePhone() {
+        return mobilePhone;
+    }
+
+    public void setMobilePhone(String mobilePhone) {
+        this.mobilePhone = mobilePhone;
+    }
+
+    public double getAveragePrice() {
+        return averagePrice;
+    }
+
+    public void setAveragePrice(double averagePrice) {
+        this.averagePrice = averagePrice;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getRestaurantType() {
+        return restaurantType;
+    }
+
+    public void setRestaurantType(String restaurantType) {
+        this.restaurantType = restaurantType;
+    }
+
+    public String getPictureUrl() {
+        return pictureUrl;
+    }
+
+    public void setPictureUrl(String pictureUrl) {
+        this.pictureUrl = pictureUrl;
+    }
+
+    public String getWebsiteUrl() {
+        return websiteUrl;
+    }
+
+    public void setWebsiteUrl(String websiteUrl) {
+        this.websiteUrl = websiteUrl;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(double latitude) {
+        this.latitude = latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(double longitude) {
+        this.longitude = longitude;
+    }
+
+    public List<Dish> getMenu() {
+        return Collections.unmodifiableList(menu);
+    }
+
+    public void addDish(Dish dish) {
+        menu.add(dish);
+    }
+
+    public void removeDish(Dish dish) {
+        menu.remove(dish);
+    }
+
+    public void clearMenu() {
+        menu.clear();
+    }
+}
+
+// File: User.java
+public class User {
+    private String username;
+    private String password;
+    private String email;
+    private String phone;
+    private Language language;
+    private boolean active;
+
+    public User(String username, String password, String email, String phone) {
+        this.username = username;
+        this.password = password;
+        this.email = email;
+        this.phone = phone;
+        this.language = Language.ENGLISH;
+        this.active = true;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public Language getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(Language language) {
+        this.language = language;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+}
+
+// File: RestaurantOwner.java
+public class RestaurantOwner {
+    private String username;
+    private String password;
+    private String address;
+    private String email;
+    private String phone;
+    private String mobileNumber;
+    private OwnerVerificationStatus verificationStatus;
+    private Language language;
+
+    public RestaurantOwner(String username, String password, String address, String email, String phone, String mobileNumber) {
+        this.username = username;
+        this.password = password;
+        this.address = address;
+        this.email = email;
+        this.phone = phone;
+        this.mobileNumber = mobileNumber;
+        this.verificationStatus = OwnerVerificationStatus.PENDING;
+        this.language = Language.ENGLISH;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getMobileNumber() {
+        return mobileNumber;
+    }
+
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
+    }
+
+    public OwnerVerificationStatus getVerificationStatus() {
+        return verificationStatus;
+    }
+
+    public void setVerificationStatus(OwnerVerificationStatus verificationStatus) {
+        this.verificationStatus = verificationStatus;
+    }
+
+    public Language getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(Language language) {
+        this.language = language;
+    }
+}
+
+// File: Administrator.java
+public class Administrator {
+    private String username;
+    private String password;
+    private Language language;
+
+    public Administrator(String username, String password) {
+        this.username = username;
+        this.password = password;
+        this.language = Language.ENGLISH;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public Language getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(Language language) {
+        this.language = language;
+    }
+}
+
+// File: Email.java
+public class Email {
+    private final String recipient;
+    private final String subject;
+    private final String body;
+
+    public Email(String recipient, String subject, String body) {
+        this.recipient = recipient;
+        this.subject = subject;
+        this.body = body;
+    }
+
+    public String getRecipient() {
+        return recipient;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public String getBody() {
+        return body;
+    }
+}
+
+// File: EmailService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class EmailService {
+    private final List<Email> sentEmails = new ArrayList<>();
+
+    public void sendEmail(String recipient, String subject, String body) {
+        Email email = new Email(recipient, subject, body);
+        sentEmails.add(email);
+    }
+
+    public List<Email> getSentEmails() {
+        return Collections.unmodifiableList(sentEmails);
+    }
+
+    public Email getLatestEmailFor(String recipient) {
+        for (int i = sentEmails.size() - 1; i >= 0; i--) {
+            if (sentEmails.get(i).getRecipient().equalsIgnoreCase(recipient)) {
+                return sentEmails.get(i);
+            }
+        }
+        return null;
+    }
+}
+
+// File: RestaurantSearchResult.java
+import java.util.Objects;
+
+public class RestaurantSearchResult {
+    private final Restaurant restaurant;
+    private final double distanceKm;
+    private final String matchedDishName;
+
+    public RestaurantSearchResult(Restaurant restaurant, double distanceKm, String matchedDishName) {
+        this.restaurant = restaurant;
+        this.distanceKm = distanceKm;
+        this.matchedDishName = matchedDishName;
+    }
+
+    public Restaurant getRestaurant() {
+        return restaurant;
+    }
+
+    public double getDistanceKm() {
+        return distanceKm;
+    }
+
+    public String getMatchedDishName() {
+        return matchedDishName != null ? matchedDishName : "";
+    }
+
+    public String toListElementView() {
+        String shortDesc = restaurant.getDescription();
+        if (shortDesc.length() > 60) {
+            shortDesc = shortDesc.substring(0, 57) + "...";
+        }
+        String twoLineDesc = shortDesc + "\nFreshly prepared daily.";
+
+        return "--------------------------------------------------\n" +
+                "Name: " + restaurant.getName() + "\n" +
+                "Telephone: " + restaurant.getPhone() + "\n" +
+                "Food Type: " + restaurant.getRestaurantType() + "\n" +
+                "Distance: " + String.format("%.2f", distanceKm) + " km\n" +
+                "Average Price: " + restaurant.getAveragePrice() + " SEK\n" +
+                "Description:\n" + twoLineDesc + "\n" +
+                "Website: " + restaurant.getWebsiteUrl() + "\n" +
+                "Info Link: [Select Information Link]\n" +
+                "--------------------------------------------------";
+    }
+
+    public String toMapPinView() {
+        return "Pin at (" + String.format("%.4f", restaurant.getLatitude()) + ", " +
+                String.format("%.4f", restaurant.getLongitude()) + ") -> " +
+                restaurant.getName() + " [Info Link: Select Pin]";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof RestaurantSearchResult that)) return false;
+        return Objects.equals(restaurant.getId(), that.restaurant.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(restaurant.getId());
+    }
+}
+
+// File: SearchCriteria.java
+public class SearchCriteria {
+    private Integer minPrice;
+    private Integer maxPrice;
+    private Integer minDistanceKm;
+    private Integer maxDistanceKm;
+    private String restaurantType;
+    private String specificDish;
+    private String freeText;
+    private boolean searchByPriceExplicit;
+
+    public SearchCriteria() {
+        this.minDistanceKm = 0;
+        this.maxDistanceKm = 10;
+        this.searchByPriceExplicit = false;
+    }
+
+    public Integer getMinPrice() {
+        return minPrice;
+    }
+
+    public void setMinPrice(Integer minPrice) {
+        this.minPrice = minPrice;
+        if (minPrice != null) {
+            this.searchByPriceExplicit = true;
+        }
+    }
+
+    public Integer getMaxPrice() {
+        return maxPrice;
+    }
+
+    public void setMaxPrice(Integer maxPrice) {
+        this.maxPrice = maxPrice;
+        if (maxPrice != null) {
+            this.searchByPriceExplicit = true;
+        }
+    }
+
+    public Integer getMinDistanceKm() {
+        return minDistanceKm;
+    }
+
+    public void setMinDistanceKm(Integer minDistanceKm) {
+        this.minDistanceKm = minDistanceKm;
+    }
+
+    public Integer getMaxDistanceKm() {
+        return maxDistanceKm;
+    }
+
+    public void setMaxDistanceKm(Integer maxDistanceKm) {
+        this.maxDistanceKm = maxDistanceKm;
+    }
+
+    public String getRestaurantType() {
+        return restaurantType;
+    }
+
+    public void setRestaurantType(String restaurantType) {
+        this.restaurantType = restaurantType;
+    }
+
+    public String getSpecificDish() {
+        return specificDish;
+    }
+
+    public void setSpecificDish(String specificDish) {
+        this.specificDish = specificDish;
+    }
+
+    public String getFreeText() {
+        return freeText;
+    }
+
+    public void setFreeText(String freeText) {
+        this.freeText = freeText;
+    }
+
+    public boolean isSearchByPriceExplicit() {
+        return searchByPriceExplicit;
+    }
+
+    public void setSearchByPriceExplicit(boolean searchByPriceExplicit) {
+        this.searchByPriceExplicit = searchByPriceExplicit;
+    }
+}
+
+// File: FilterCriteria.java
+public class FilterCriteria {
+    private Integer maxDistanceKm;
+    private Integer maxPrice;
+    private String restaurantType;
+    private String specificDish;
+
+    public FilterCriteria() {
+    }
+
+    public Integer getMaxDistanceKm() {
+        return maxDistanceKm;
+    }
+
+    public void setMaxDistanceKm(Integer maxDistanceKm) {
+        this.maxDistanceKm = maxDistanceKm;
+    }
+
+    public Integer getMaxPrice() {
+        return maxPrice;
+    }
+
+    public void setMaxPrice(Integer maxPrice) {
+        this.maxPrice = maxPrice;
+    }
+
+    public String getRestaurantType() {
+        return restaurantType;
+    }
+
+    public void setRestaurantType(String restaurantType) {
+        this.restaurantType = restaurantType;
+    }
+
+    public String getSpecificDish() {
+        return specificDish;
+    }
+
+    public void setSpecificDish(String specificDish) {
+        this.specificDish = specificDish;
+    }
+}
+
+// File: SearchResultView.java
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+public class SearchResultView {
+    private ResultViewType viewType;
+    private final List<RestaurantSearchResult> baseResults;
+    private List<RestaurantSearchResult> filteredResults;
+    private final int defaultZoomLevel = 12;
+    private SortOption currentSortOption;
+    private SortOrder currentSortOrder;
+
+    public SearchResultView(ResultViewType viewType, List<RestaurantSearchResult> initialResults, boolean searchByPriceDefault) {
+        this.viewType = viewType;
+        this.baseResults = new ArrayList<>(initialResults.stream().limit(100).toList());
+        this.filteredResults = new ArrayList<>(this.baseResults);
+        this.currentSortOrder = SortOrder.ASCENDING;
+        if (searchByPriceDefault) {
+            applyPriceSearchDefaultSorting();
+        } else {
+            applyOtherSearchDefaultSorting();
+        }
+    }
+
+    public ResultViewType getViewType() {
+        return viewType;
+    }
+
+    public void setViewType(ResultViewType viewType) {
+        this.viewType = viewType;
+    }
+
+    public int getDefaultZoomLevel() {
+        return defaultZoomLevel;
+    }
+
+    public List<RestaurantSearchResult> getDisplayedResults() {
+        return filteredResults;
+    }
+
+    public int getResultCount() {
+        return filteredResults.size();
+    }
+
+    public void applyFilter(FilterCriteria filter) {
+        filteredResults = new ArrayList<>(baseResults.stream()
+                .filter(res -> filter.getMaxDistanceKm() == null || res.getDistanceKm() <= filter.getMaxDistanceKm())
+                .filter(res -> filter.getMaxPrice() == null || res.getRestaurant().getAveragePrice() <= filter.getMaxPrice())
+                .filter(res -> filter.getRestaurantType() == null || filter.getRestaurantType().isBlank() ||
+                        res.getRestaurant().getRestaurantType().equalsIgnoreCase(filter.getRestaurantType()))
+                .filter(res -> filter.getSpecificDish() == null || filter.getSpecificDish().isBlank() ||
+                        res.getRestaurant().getMenu().stream().anyMatch(d -> d.getName().equalsIgnoreCase(filter.getSpecificDish())))
+                .limit(100)
+                .toList());
+
+        if (currentSortOption != null) {
+            applySorting(currentSortOption, currentSortOrder);
+        }
+    }
+
+    public void applyPriceSearchDefaultSorting() {
+        currentSortOption = SortOption.PRICE;
+        currentSortOrder = SortOrder.ASCENDING;
+        filteredResults.sort(
+                Comparator.comparingDouble((RestaurantSearchResult r) -> r.getRestaurant().getAveragePrice())
+                        .thenComparingDouble(RestaurantSearchResult::getDistanceKm)
+                        .thenComparing(r -> r.getRestaurant().getRestaurantType(), String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(RestaurantSearchResult::getMatchedDishName, String.CASE_INSENSITIVE_ORDER)
+        );
+    }
+
+    public void applyOtherSearchDefaultSorting() {
+        currentSortOption = SortOption.DISTANCE;
+        currentSortOrder = SortOrder.ASCENDING;
+        filteredResults.sort(
+                Comparator.comparingDouble(RestaurantSearchResult::getDistanceKm)
+                        .thenComparingDouble((RestaurantSearchResult r) -> r.getRestaurant().getAveragePrice())
+                        .thenComparing(r -> r.getRestaurant().getRestaurantType(), String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(RestaurantSearchResult::getMatchedDishName, String.CASE_INSENSITIVE_ORDER)
+        );
+    }
+
+    public void toggleSort(SortOption option) {
+        if (currentSortOption == option) {
+            currentSortOrder = (currentSortOrder == SortOrder.ASCENDING) ? SortOrder.DESCENDING : SortOrder.ASCENDING;
+        } else {
+            currentSortOption = option;
+            currentSortOrder = SortOrder.ASCENDING;
+        }
+        applySorting(currentSortOption, currentSortOrder);
+    }
+
+    private void applySorting(SortOption option, SortOrder order) {
+        Comparator<RestaurantSearchResult> comparator = switch (option) {
+            case PRICE -> Comparator.comparingDouble(r -> r.getRestaurant().getAveragePrice());
+            case DISTANCE -> Comparator.comparingDouble(RestaurantSearchResult::getDistanceKm);
+            case RESTAURANT_TYPE -> Comparator.comparing(r -> r.getRestaurant().getRestaurantType(), String.CASE_INSENSITIVE_ORDER);
+            case SPECIFIC_DISH -> Comparator.comparing(RestaurantSearchResult::getMatchedDishName, String.CASE_INSENSITIVE_ORDER);
+            case RESTAURANT_NAME -> Comparator.comparing(r -> r.getRestaurant().getName(), String.CASE_INSENSITIVE_ORDER);
+        };
+
+        if (order == SortOrder.DESCENDING) {
+            comparator = comparator.reversed();
+        }
+        filteredResults.sort(comparator);
+    }
+
+    public String renderFilteringMenu() {
+        return "=== FILTERING MENU ===\n" +
+                "1. Increase/Decrease Max Distance\n" +
+                "2. Increase/Decrease Max Price\n" +
+                "3. Choose Restaurant Type\n" +
+                "4. Choose Specific Dish\n" +
+                "======================";
+    }
+
+    public String renderSortingHeader() {
+        return "=== SORT OPTIONS === [PRICE] [DISTANCE] [RESTAURANT_TYPE] [SPECIFIC_DISH] [RESTAURANT_NAME] (Current: "
+                + currentSortOption + " " + currentSortOrder + ")";
+    }
+
+    public String render() {
+        StringBuilder sb = new StringBuilder();
+        if (viewType == ResultViewType.MAP) {
+            sb.append("=== MAP VIEW (Zoom: ").append(defaultZoomLevel).append("x) ===\n");
+            sb.append("[Filter Button: Filter Results]\n");
+            sb.append("Showing closest & relevant restaurants (Max 100):\n");
+            for (RestaurantSearchResult r : filteredResults) {
+                sb.append(r.toMapPinView()).append("\n");
+            }
+        } else {
+            sb.append("=== LIST VIEW ===\n");
+            sb.append(renderSortingHeader()).append("\n");
+            sb.append("[Filter Button: Filter Results]\n");
+            sb.append("Showing restaurants (Max 100):\n");
+            for (RestaurantSearchResult r : filteredResults) {
+                sb.append(r.toListElementView()).append("\n");
+            }
+        }
+        return sb.toString();
+    }
+}
+
+// File: GpsNavigationService.java
+public class GpsNavigationService {
+    private boolean navigating = false;
+    private String currentDestination;
+
+    public void startNavigation(String destinationAddress) {
+        this.currentDestination = destinationAddress;
+        this.navigating = true;
+    }
+
+    public boolean isNavigating() {
+        return navigating;
+    }
+
+    public String getCurrentDestination() {
+        return currentDestination;
+    }
+
+    public void reachDestination() {
+        this.navigating = false;
+    }
+}
+
+// File: SystemDatabase.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+public class SystemDatabase {
+    private final Map<String, User> users = new HashMap<>();
+    private final Map<String, RestaurantOwner> owners = new HashMap<>();
+    private final Map<String, Administrator> admins = new HashMap<>();
+    private final Map<String, Restaurant> restaurants = new HashMap<>();
+    private final Map<String, String> ownerRestaurantMap = new HashMap<>(); // ownerUsername -> restaurantId
+    private final List<String> restaurantTypes = new ArrayList<>();
+    private final List<Dish> dishCatalog = new ArrayList<>();
+
+    public SystemDatabase() {
+        // Default restaurant types
+        restaurantTypes.add("Italian");
+        restaurantTypes.add("Japanese");
+        restaurantTypes.add("Swedish");
+        restaurantTypes.add("Mexican");
+        restaurantTypes.add("Fast Food");
+
+        // Default admin
+        admins.put("admin", new Administrator("admin", "admin123"));
+    }
+
+    public Map<String, User> getUsers() {
+        return users;
+    }
+
+    public Map<String, RestaurantOwner> getOwners() {
+        return owners;
+    }
+
+    public Map<String, Administrator> getAdmins() {
+        return admins;
+    }
+
+    public Map<String, Restaurant> getRestaurants() {
+        return restaurants;
+    }
+
+    public List<String> getRestaurantTypes() {
+        return restaurantTypes;
+    }
+
+    public List<Dish> getDishCatalog() {
+        return dishCatalog;
+    }
+
+    public void registerRestaurant(String ownerUsername, Restaurant restaurant) {
+        restaurants.put(restaurant.getId(), restaurant);
+        if (ownerUsername != null) {
+            ownerRestaurantMap.put(ownerUsername, restaurant.getId());
+        }
+    }
+
+    public Restaurant getRestaurantByOwner(String ownerUsername) {
+        String restaurantId = ownerRestaurantMap.get(ownerUsername);
+        if (restaurantId != null) {
+            return restaurants.get(restaurantId);
+        }
+        return null;
+    }
+
+    public void deleteRestaurantByOwner(String ownerUsername) {
+        String restaurantId = ownerRestaurantMap.remove(ownerUsername);
+        if (restaurantId != null) {
+            restaurants.remove(restaurantId);
+        }
+    }
+
+    public Optional<User> findUserByUsername(String username) {
+        return Optional.ofNullable(users.get(username));
+    }
+
+    public Optional<User> findUserByEmail(String email) {
+        return users.values().stream()
+                .filter(u -> u.getEmail().equalsIgnoreCase(email))
+                .findFirst();
+    }
+
+    public Optional<RestaurantOwner> findOwnerByUsername(String username) {
+        return Optional.ofNullable(owners.get(username));
+    }
+
+    public Optional<RestaurantOwner> findOwnerByEmail(String email) {
+        return owners.values().stream()
+                .filter(o -> o.getEmail().equalsIgnoreCase(email))
+                .findFirst();
+    }
+
+    public double calculateDistance(double userLat, double userLon, double restLat, double restLon) {
+        // Approximate planar distance in km
+        double dLat = (restLat - userLat) * 111.0;
+        double dLon = (restLon - userLon) * 111.0 * Math.cos(Math.toRadians(userLat));
+        return Math.sqrt(dLat * dLat + dLon * dLon);
+    }
+}
+
+// File: AppStore.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class AppStore {
+    private final String latestVersion;
+    private final List<String> changeLogs = new ArrayList<>();
+
+    public AppStore(String latestVersion) {
+        this.latestVersion = latestVersion;
+        this.changeLogs.add("v1.0.0: Initial public release");
+        this.changeLogs.add("v1.1.0: Added smart filters and updated UI");
+    }
+
+    public String downloadApplication() {
+        // Free to download
+        return "Mobile Application downloaded successfully for free (Version: " + latestVersion + ").";
+    }
+
+    public boolean isNewReleaseAvailable(String currentVersion) {
+        return !latestVersion.equalsIgnoreCase(currentVersion);
+    }
+
+    public String getLatestVersion() {
+        return latestVersion;
+    }
+
+    public String downloadNewRelease(String currentVersion) {
+        if (isNewReleaseAvailable(currentVersion)) {
+            return "Downloaded new release: " + latestVersion;
+        }
+        return "Already running the latest version: " + currentVersion;
+    }
+}
+
+// File: MobileApplication.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+public class MobileApplication {
+    private String installedVersion;
+    private final AppStore appStore;
+    private final SystemDatabase database;
+    private final EmailService emailService;
+    private final GpsNavigationService navigationService;
+
+    private User currentUser;
+    private String savedUsername;
+    private String savedPassword;
+    private boolean onSearchPage = false;
+    private double userLatitude = 59.3293;  // Default user location (e.g., Stockholm)
+    private double userLongitude = 18.0686;
+    private SearchResultView currentResultView;
+
+    public MobileApplication(AppStore appStore, SystemDatabase database, EmailService emailService) {
+        this.installedVersion = "1.0.0";
+        this.appStore = appStore;
+        this.database = database;
+        this.emailService = emailService;
+        this.navigationService = new GpsNavigationService();
+    }
+
+    // FR1: Download mobile application
+    public static MobileApplication downloadFromAppStore(AppStore store, SystemDatabase db, EmailService emailService) {
+        store.downloadApplication();
+        MobileApplication app = new MobileApplication(store, db, emailService);
+        app.installedVersion = store.getLatestVersion();
+        return app;
+    }
+
+    // FR2: Download and notify users of new releases (manual check)
+    public String checkForNewReleases() {
+        if (appStore.isNewReleaseAvailable(installedVersion)) {
+            return "A new release (" + appStore.getLatestVersion() + ") is available! You can download it now.";
+        }
+        return "You are using the latest version (" + installedVersion + ").";
+    }
+
+    public String downloadUpdate() {
+        if (appStore.isNewReleaseAvailable(installedVersion)) {
+            String msg = appStore.downloadNewRelease(installedVersion);
+            this.installedVersion = appStore.getLatestVersion();
+            return msg;
+        }
+        return "No new release to download.";
+    }
+
+    // FR3: User registration
+    public String registerUser(String username, String password, String email, String phone) {
+        if (username == null || username.isBlank() || password == null || password.isBlank() || email == null || email.isBlank()) {
+            return "Registration failed: user-name, password, and email address are required.";
+        }
+        if (database.findUserByUsername(username).isPresent()) {
+            return "Registration failed: user-name already exists.";
+        }
+        User user = new User(username, password, email, phone);
+        database.getUsers().put(username, user);
+        return "Registration successful.";
+    }
+
+    // FR4: User log-in & automatic login
+    public String login(String username, String password) {
+        Optional<User> userOpt = database.findUserByUsername(username);
+        if (userOpt.isPresent() && userOpt.get().isActive() && userOpt.get().getPassword().equals(password)) {
+            this.currentUser = userOpt.get();
+            this.savedUsername = username;
+            this.savedPassword = password;
+            this.onSearchPage = true; // FR6: first page shown is the search page
+            return "Log-in successful. Welcome to the search page!";
+        }
+        return "Log-in failed: Invalid credentials or inactive account.";
+    }
+
+    public String autoLogin() {
+        if (savedUsername != null && savedPassword != null) {
+            return login(savedUsername, savedPassword);
+        }
+        return "No stored credentials for automatic log-in.";
+    }
+
+    public void logout() {
+        this.currentUser = null;
+        this.onSearchPage = false;
+        this.currentResultView = null;
+    }
+
+    // FR5: Retrieve password
+    public String retrievePassword(String email) {
+        Optional<User> userOpt = database.findUserByEmail(email);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            emailService.sendEmail(email, "Password Retrieval", "Your password is: " + user.getPassword());
+            return "Password has been sent to your e-mail address.";
+        }
+        return "E-mail address not found.";
+    }
+
+    // Input validation for Price and Destination (FR14)
+    public boolean validateIntegerInput(String input, String fieldName, StringBuilder errorMessage) {
+        try {
+            int val = Integer.parseInt(input.trim());
+            if (val < 0) {
+                errorMessage.append("Invalid input for ").append(fieldName).append(": must be non-negative integer. Please insert an accepted input.");
+                return false;
+            }
+            return true;
+        } catch (NumberFormatException e) {
+            errorMessage.append("Invalid input for ").append(fieldName).append(": '").append(input).append("' is not an integer. Please insert an accepted input.");
+            return false;
+        }
+    }
+
+    // FR6, FR7, FR8, FR12, FR13, FR15, FR16, FR17, FR18: Search
+    public String search(SearchCriteria criteria) {
+        if (currentUser == null) {
+            return "Please log in to search.";
+        }
+
+        List<RestaurantSearchResult> matchingResults = new ArrayList<>();
+
+        for (Restaurant r : database.getRestaurants().values()) {
+            double distance = database.calculateDistance(userLatitude, userLongitude, r.getLatitude(), r.getLongitude());
+
+            // Destination distance check (FR13, default min 0, max 10)
+            if (criteria.getMinDistanceKm() != null && distance < criteria.getMinDistanceKm()) {
+                continue;
+            }
+            if (criteria.getMaxDistanceKm() != null && distance > criteria.getMaxDistanceKm()) {
+                continue;
+            }
+
+            // Price range check (FR12)
+            if (criteria.getMinPrice() != null && r.getAveragePrice() < criteria.getMinPrice()) {
+                continue;
+            }
+            if (criteria.getMaxPrice() != null && r.getAveragePrice() > criteria.getMaxPrice()) {
+                continue;
+            }
+
+            // Restaurant type check (FR15)
+            if (criteria.getRestaurantType() != null && !criteria.getRestaurantType().isBlank()) {
+                if (!r.getRestaurantType().equalsIgnoreCase(criteria.getRestaurantType())) {
+                    continue;
+                }
+            }
+
+            // Specific dish check (FR16)
+            String matchedDish = null;
+            if (criteria.getSpecificDish() != null && !criteria.getSpecificDish().isBlank()) {
+                Optional<Dish> dishOpt = r.getMenu().stream()
+                        .filter(d -> d.getName().equalsIgnoreCase(criteria.getSpecificDish()))
+                        .findFirst();
+                if (dishOpt.isEmpty()) {
+                    continue;
+                } else {
+                    matchedDish = dishOpt.get().getName();
+                }
+            }
+
+            // Free-text search check (FR17)
+            if (criteria.getFreeText() != null && !criteria.getFreeText().isBlank()) {
+                String term = criteria.getFreeText().toLowerCase();
+                boolean matchesName = r.getName().toLowerCase().contains(term);
+                boolean matchesDesc = r.getDescription().toLowerCase().contains(term);
+                boolean matchesAddress = r.getAddress().toLowerCase().contains(term);
+                boolean matchesType = r.getRestaurantType().toLowerCase().contains(term);
+                boolean matchesMenu = r.getMenu().stream()
+                        .anyMatch(d -> d.getName().toLowerCase().contains(term) || d.getDescription().toLowerCase().contains(term));
+
+                if (!matchesName && !matchesDesc && !matchesAddress && !matchesType && !matchesMenu) {
+                    continue;
+                }
+            }
+
+            matchingResults.add(new RestaurantSearchResult(r, distance, matchedDish));
+        }
+
+        // FR18: No match found - keep user on search page
+        if (matchingResults.isEmpty()) {
+            this.onSearchPage = true;
+            this.currentResultView = null;
+            return "No match found. You remain on the search page to conduct a new search.";
+        }
+
+        // Default view: FR12 says search by price defaults to list view. Other searches default to map view.
+        ResultViewType defaultViewType;
+        if (criteria.isSearchByPriceExplicit()) {
+            defaultViewType = ResultViewType.LIST;
+        } else {
+            defaultViewType = ResultViewType.MAP;
+        }
+
+        this.currentResultView = new SearchResultView(defaultViewType, matchingResults, criteria.isSearchByPriceExplicit());
+        this.onSearchPage = false;
+        return "Search completed. Found " + currentResultView.getResultCount() + " results.";
+    }
+
+    // FR10: Switch result view
+    public void switchResultView() {
+        if (currentResultView != null) {
+            if (currentResultView.getViewType() == ResultViewType.MAP) {
+                currentResultView.setViewType(ResultViewType.LIST);
+            } else {
+                currentResultView.setViewType(ResultViewType.MAP);
+            }
+        }
+    }
+
+    // FR19: Sorting results
+    public void sortResults(SortOption option) {
+        if (currentResultView != null) {
+            currentResultView.toggleSort(option);
+        }
+    }
+
+    // FR20: Filtering results
+    public void filterResults(FilterCriteria filter) {
+        if (currentResultView != null) {
+            currentResultView.applyFilter(filter);
+        }
+    }
+
+    // FR9: Navigation to restaurant
+    public String selectAndNavigateToRestaurant(RestaurantSearchResult result) {
+        navigationService.startNavigation(result.getRestaurant().getAddress());
+        return "Navigating to: " + result.getRestaurant().getName() + " at " + result.getRestaurant().getAddress();
+    }
+
+    public String reachDestinationAndReturnToSearch() {
+        navigationService.reachDestination();
+        this.onSearchPage = true;
+        return "Destination reached. Returned to search page.";
+    }
+
+    // FR11: Select information link
+    public String selectInformationLink(Restaurant restaurant) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== RESTAURANT INFORMATION PAGE ===\n");
+        sb.append("Picture: [").append(restaurant.getPictureUrl()).append("]\n");
+        sb.append("Name: ").append(restaurant.getName()).append("\n");
+        sb.append("Address: ").append(restaurant.getAddress()).append("\n");
+        sb.append("Phone: ").append(restaurant.getPhone()).append("\n");
+        sb.append("E-mail: ").append(restaurant.getEmail()).append("\n");
+        sb.append("Type of food: ").append(restaurant.getRestaurantType()).append("\n");
+        sb.append("Average price: ").append(restaurant.getAveragePrice()).append(" SEK\n");
+        sb.append("Description: ").append(restaurant.getDescription()).append("\n");
+        sb.append("--- MENU ---\n");
+        if (restaurant.getMenu().isEmpty()) {
+            sb.append("No dishes listed.\n");
+        } else {
+            for (Dish dish : restaurant.getMenu()) {
+                sb.append("Dish: ").append(dish.getName())
+                        .append(" | Description: ").append(dish.getDescription())
+                        .append(" | Price: ").append(dish.getPrice()).append(" SEK\n");
+            }
+        }
+        sb.append("===================================");
+        return sb.toString();
+    }
+
+    // FR21: Profile page
+    public String updateProfile(String newPassword, String newEmail, String newPhone, Language newLanguage) {
+        if (currentUser == null) {
+            return "Please log in to edit profile.";
+        }
+        if (newPassword != null && !newPassword.isBlank()) {
+            currentUser.setPassword(newPassword);
+            this.savedPassword = newPassword;
+        }
+        if (newEmail != null && !newEmail.isBlank()) {
+            currentUser.setEmail(newEmail);
+        }
+        if (newPhone != null) {
+            currentUser.setPhone(newPhone);
+        }
+        if (newLanguage != null) {
+            currentUser.setLanguage(newLanguage);
+        }
+        return "Profile updated successfully. App language set to " + currentUser.getLanguage() + ".";
+    }
+
+    public User getCurrentUser() {
+        return currentUser;
+    }
+
+    public SearchResultView getCurrentResultView() {
+        return currentResultView;
+    }
+
+    public boolean isOnSearchPage() {
+        return onSearchPage;
+    }
+
+    public void setUserLocation(double lat, double lon) {
+        this.userLatitude = lat;
+        this.userLongitude = lon;
+    }
+
+    public String getInstalledVersion() {
+        return installedVersion;
+    }
+}
+
+// File: WebPortal.java
+import java.util.Optional;
+
+public class WebPortal {
+    private final SystemDatabase database;
+    private final EmailService emailService;
+    private RestaurantOwner loggedInOwner;
+    private Administrator loggedInAdmin;
+
+    public WebPortal(SystemDatabase database, EmailService emailService) {
+        this.database = database;
+        this.emailService = emailService;
+    }
+
+    // FR22: Restaurant owner registration
+    public String registerOwner(String username, String password, String address, String email, String phone, String mobileNumber) {
+        if (username == null || username.isBlank() || password == null || password.isBlank() ||
+                address == null || address.isBlank() || email == null || email.isBlank() || phone == null || phone.isBlank()) {
+            return "Registration failed: username, password, address, email, and phone are mandatory.";
+        }
+        if (database.findOwnerByUsername(username).isPresent()) {
+            return "Registration failed: username already in use.";
+        }
+        RestaurantOwner owner = new RestaurantOwner(username, password, address, email, phone, mobileNumber);
+        database.getOwners().put(username, owner);
+        return "Registration submitted. Applied for verification.";
+    }
+
+    // FR23: Restaurant owner log-in
+    public String loginOwner(String username, String password) {
+        Optional<RestaurantOwner> ownerOpt = database.findOwnerByUsername(username);
+        if (ownerOpt.isEmpty()) {
+            return "Log-in failed: Invalid credentials.";
+        }
+        RestaurantOwner owner = ownerOpt.get();
+        if (owner.getVerificationStatus() != OwnerVerificationStatus.VERIFIED) {
+            return "Log-in failed: Account is not verified yet.";
+        }
+        if (!owner.getPassword().equals(password)) {
+            return "Log-in failed: Invalid credentials.";
+        }
+        this.loggedInOwner = owner;
+        return "Logged in successfully as restaurant owner.";
+    }
+
+    public void logoutOwner() {
+        this.loggedInOwner = null;
+    }
+
+    public String retrieveOwnerPassword(String email) {
+        Optional<RestaurantOwner> ownerOpt = database.findOwnerByEmail(email);
+        if (ownerOpt.isPresent()) {
+            RestaurantOwner owner = ownerOpt.get();
+            emailService.sendEmail(email, "Web-Portal Password Retrieval", "Your password is: " + owner.getPassword());
+            return "Password recovery email sent.";
+        }
+        return "Email address not found.";
+    }
+
+    // FR24: Manage restaurant information by restaurant owner
+    public String addOrUpdateRestaurantInfo(String name, String address, String email, String phone,
+                                            Double averagePrice, String description, String restaurantType,
+                                            String pictureUrl, String mobilePhone) {
+        if (loggedInOwner == null) {
+            return "Must be logged in to manage information.";
+        }
+        if (name == null || name.isBlank() || address == null || address.isBlank() ||
+                email == null || email.isBlank() || phone == null || phone.isBlank() || averagePrice == null) {
+            return "Failed: Mandatory fields (restaurant name, address, email, phone, average price) must be filled.";
+        }
+
+        Restaurant restaurant = database.getRestaurantByOwner(loggedInOwner.getUsername());
+        if (restaurant == null) {
+            restaurant = new Restaurant("rest_" + loggedInOwner.getUsername(), name, address, email, phone, averagePrice);
+            database.registerRestaurant(loggedInOwner.getUsername(), restaurant);
+        } else {
+            restaurant.setName(name);
+            restaurant.setAddress(address);
+            restaurant.setEmail(email);
+            restaurant.setPhone(phone);
+            restaurant.setAveragePrice(averagePrice);
+        }
+
+        if (description != null) restaurant.setDescription(description);
+        if (restaurantType != null) restaurant.setRestaurantType(restaurantType);
+        if (pictureUrl != null) restaurant.setPictureUrl(pictureUrl);
+        if (mobilePhone != null) restaurant.setMobilePhone(mobilePhone);
+
+        return "Restaurant information saved successfully.";
+    }
+
+    public String addDishToMenu(String dishName, String dishDescription, double dishPrice) {
+        if (loggedInOwner == null) {
+            return "Must be logged in to manage menu.";
+        }
+        Restaurant restaurant = database.getRestaurantByOwner(loggedInOwner.getUsername());
+        if (restaurant == null) {
+            return "Please create restaurant information before adding dishes.";
+        }
+        restaurant.addDish(new Dish(dishName, dishDescription, dishPrice));
+        return "Dish added to restaurant menu.";
+    }
+
+    public String deleteRestaurantInfo() {
+        if (loggedInOwner == null) {
+            return "Must be logged in to delete information.";
+        }
+        database.deleteRestaurantByOwner(loggedInOwner.getUsername());
+        return "Restaurant information deleted.";
+    }
+
+    // FR25: Owner preferred language
+    public String setOwnerPreferredLanguage(Language language) {
+        if (loggedInOwner == null) {
+            return "Must be logged in to set language.";
+        }
+        loggedInOwner.setLanguage(language);
+        return "Web-portal language set to " + language;
+    }
+
+    // FR26: Administrator log in
+    public String loginAdmin(String username, String password) {
+        Administrator admin = database.getAdmins().get(username);
+        if (admin != null && admin.getPassword().equals(password)) {
+            this.loggedInAdmin = admin;
+            return "Logged in successfully as administrator.";
+        }
+        return "Administrator log-in failed.";
+    }
+
+    public void logoutAdmin() {
+        this.loggedInAdmin = null;
+    }
+
+    // FR27: Verify or reject restaurant owner
+    public String verifyRestaurantOwner(String ownerUsername) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        Optional<RestaurantOwner> ownerOpt = database.findOwnerByUsername(ownerUsername);
+        if (ownerOpt.isEmpty()) return "Restaurant owner not found.";
+
+        RestaurantOwner owner = ownerOpt.get();
+        owner.setVerificationStatus(OwnerVerificationStatus.VERIFIED);
+        emailService.sendEmail(owner.getEmail(), "Account Verified", "Your account has been verified. You can now log in.");
+        return "Restaurant owner verified and notified by confirmation email.";
+    }
+
+    public String rejectRestaurantOwner(String ownerUsername) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        Optional<RestaurantOwner> ownerOpt = database.findOwnerByUsername(ownerUsername);
+        if (ownerOpt.isEmpty()) return "Restaurant owner not found.";
+
+        RestaurantOwner owner = ownerOpt.get();
+        owner.setVerificationStatus(OwnerVerificationStatus.REJECTED);
+        emailService.sendEmail(owner.getEmail(), "Account Rejected", "Your registration has been rejected.");
+        return "Restaurant owner rejected and notified by rejection email.";
+    }
+
+    // FR28: Manage restaurant types
+    public String addRestaurantType(String type) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        if (!database.getRestaurantTypes().contains(type)) {
+            database.getRestaurantTypes().add(type);
+            return "Restaurant type '" + type + "' added.";
+        }
+        return "Restaurant type already exists.";
+    }
+
+    public String editRestaurantType(String oldType, String newType) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        int index = database.getRestaurantTypes().indexOf(oldType);
+        if (index >= 0) {
+            database.getRestaurantTypes().set(index, newType);
+            return "Restaurant type updated to '" + newType + "'.";
+        }
+        return "Restaurant type not found.";
+    }
+
+    public String deleteRestaurantType(String type) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        if (database.getRestaurantTypes().remove(type)) {
+            return "Restaurant type '" + type + "' removed.";
+        }
+        return "Restaurant type not found.";
+    }
+
+    // FR29: Manage restaurant dishes in global catalog
+    public String addDishToCatalog(String name, String description, double price) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        database.getDishCatalog().add(new Dish(name, description, price));
+        return "Dish added to catalog.";
+    }
+
+    public String editDishInCatalog(String oldName, String newName, String newDescription, double newPrice) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        for (Dish d : database.getDishCatalog()) {
+            if (d.getName().equalsIgnoreCase(oldName)) {
+                d.setName(newName);
+                d.setDescription(newDescription);
+                d.setPrice(newPrice);
+                return "Dish updated in catalog.";
+            }
+        }
+        return "Dish not found in catalog.";
+    }
+
+    public String deleteDishFromCatalog(String name) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        boolean removed = database.getDishCatalog().removeIf(d -> d.getName().equalsIgnoreCase(name));
+        return removed ? "Dish removed from catalog." : "Dish not found in catalog.";
+    }
+
+    // FR30: Manage restaurant information by admin
+    public String adminAddRestaurant(String restaurantId, String name, String address, String email, String phone, double avgPrice) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        Restaurant restaurant = new Restaurant(restaurantId, name, address, email, phone, avgPrice);
+        database.getRestaurants().put(restaurantId, restaurant);
+        return "Restaurant information added by admin.";
+    }
+
+    public String adminEditRestaurant(String restaurantId, String name, String address, String email, String phone, double avgPrice) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        Restaurant restaurant = database.getRestaurants().get(restaurantId);
+        if (restaurant == null) return "Restaurant not found.";
+        restaurant.setName(name);
+        restaurant.setAddress(address);
+        restaurant.setEmail(email);
+        restaurant.setPhone(phone);
+        restaurant.setAveragePrice(avgPrice);
+        return "Restaurant information updated by admin.";
+    }
+
+    public String adminDeleteRestaurant(String restaurantId) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        Restaurant removed = database.getRestaurants().remove(restaurantId);
+        return removed != null ? "Restaurant information deleted." : "Restaurant not found.";
+    }
+
+    // FR31: Manage users by admin
+    public String adminEditUser(String username, String newPassword, String newEmail, String newPhone) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        Optional<User> userOpt = database.findUserByUsername(username);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if (newPassword != null) user.setPassword(newPassword);
+            if (newEmail != null) user.setEmail(newEmail);
+            if (newPhone != null) user.setPhone(newPhone);
+            return "User updated by admin.";
+        }
+        return "User not found.";
+    }
+
+    public String adminDeleteOrInactivateUser(String username, boolean deletePermanently) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        if (deletePermanently) {
+            User removed = database.getUsers().remove(username);
+            return removed != null ? "User deleted." : "User not found.";
+        } else {
+            Optional<User> userOpt = database.findUserByUsername(username);
+            if (userOpt.isPresent()) {
+                userOpt.get().setActive(false);
+                return "User inactivated.";
+            }
+            return "User not found.";
+        }
+    }
+
+    // FR32: Manage restaurant owners by admin
+    public String adminAddRestaurantOwner(String username, String password, String address, String email, String phone, String mobile) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        if (database.findOwnerByUsername(username).isPresent()) {
+            return "Owner already exists.";
+        }
+        RestaurantOwner owner = new RestaurantOwner(username, password, address, email, phone, mobile);
+        owner.setVerificationStatus(OwnerVerificationStatus.VERIFIED);
+        database.getOwners().put(username, owner);
+        return "Restaurant owner added by admin.";
+    }
+
+    public String adminEditRestaurantOwner(String username, String newAddress, String newEmail, String newPhone) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        Optional<RestaurantOwner> ownerOpt = database.findOwnerByUsername(username);
+        if (ownerOpt.isPresent()) {
+            RestaurantOwner owner = ownerOpt.get();
+            if (newAddress != null) owner.setAddress(newAddress);
+            if (newEmail != null) owner.setEmail(newEmail);
+            if (newPhone != null) owner.setPhone(newPhone);
+            return "Restaurant owner updated by admin.";
+        }
+        return "Restaurant owner not found.";
+    }
+
+    public String adminDeleteRestaurantOwner(String username) {
+        if (loggedInAdmin == null) return "Administrator access required.";
+        RestaurantOwner removed = database.getOwners().remove(username);
+        if (removed != null) {
+            database.deleteRestaurantByOwner(username);
+            return "Restaurant owner and associated restaurant information deleted.";
+        }
+        return "Restaurant owner not found.";
+    }
+
+    // FR33: Admin preferred language
+    public String setAdminPreferredLanguage(Language language) {
+        if (loggedInAdmin == null) return "Must be logged in to set language.";
+        loggedInAdmin.setLanguage(language);
+        return "Web-portal language set to " + language;
+    }
+
+    public RestaurantOwner getLoggedInOwner() {
+        return loggedInOwner;
+    }
+
+    public Administrator getLoggedInAdmin() {
+        return loggedInAdmin;
+    }
+}
+
+// File: Main.java
+public class Main {
+    public static void main(String[] args) {
+        // Initialize infrastructure
+        AppStore appStore = new AppStore("1.1.0");
+        SystemDatabase db = new SystemDatabase();
+        EmailService emailService = new EmailService();
+
+        System.out.println("=== SYSTEM INITIALIZATION ===");
+
+        // FR1 & FR2: Download mobile application & check updates
+        MobileApplication mobileApp = MobileApplication.downloadFromAppStore(appStore, db, emailService);
+        System.out.println("FR1 & FR2: App installed version: " + mobileApp.getInstalledVersion());
+        System.out.println("Update check: " + mobileApp.checkForNewReleases());
+
+        // FR26 & FR28: Admin setup
+        WebPortal webPortal = new WebPortal(db, emailService);
+        webPortal.loginAdmin("admin", "admin123");
+        webPortal.addRestaurantType("French");
+        webPortal.addDishToCatalog("Köttbullar", "Swedish meatballs with lingonberries", 135.0);
+        System.out.println("FR28: Admin added restaurant types: " + db.getRestaurantTypes());
+
+        // FR22: Restaurant Owner Registration
+        String regMsg = webPortal.registerOwner("mario", "pasta123", "Stortorget 1", "mario@example.com", "08123456", "0701122334");
+        System.out.println("FR22: Owner Registration: " + regMsg);
+
+        // FR27: Admin Verifies Owner
+        String verifyMsg = webPortal.verifyRestaurantOwner("mario");
+        System.out.println("FR27: Admin Verification: " + verifyMsg);
+        System.out.println("Sent Email: " + emailService.getLatestEmailFor("mario@example.com").getSubject());
+
+        // FR23 & FR24: Owner logs in and adds restaurant information
+        webPortal.loginOwner("mario", "pasta123");
+        webPortal.addOrUpdateRestaurantInfo(
+                "Trattoria Mario",
+                "Stortorget 1",
+                "mario@example.com",
+                "08123456",
+                180.0,
+                "Authentic Italian restaurant in the heart of the city.",
+                "Italian",
+                "mario.jpg",
+                "0701122334"
+        );
+        webPortal.addDishToMenu("Lasagna Bolognese", "Classic rich beef lasagna", 160.0);
+        webPortal.addDishToMenu("Pizza Margherita", "Fresh mozzarella and basil", 140.0);
+
+        // Set restaurant location to Stockholm coordinates
+        Restaurant marioRest = db.getRestaurantByOwner("mario");
+        marioRest.setLatitude(59.3250);
+        marioRest.setLongitude(18.0700);
+
+        // Add a second restaurant via Admin (FR30)
+        webPortal.adminAddRestaurant("rest_sushi", "Sakura Sushi", "Kungsgatan 12", "sakura@example.com", "08998877", 220.0);
+        Restaurant sushiRest = db.getRestaurants().get("rest_sushi");
+        sushiRest.setRestaurantType("Japanese");
+        sushiRest.setDescription("Finest sushi and sashimi in town.");
+        sushiRest.addDish(new Dish("Salmon Nigiri Set", "8 pieces fresh salmon", 180.0));
+        sushiRest.setLatitude(59.3350);
+        sushiRest.setLongitude(18.0650);
+
+        System.out.println("FR24 & FR30: Added restaurants: " + db.getRestaurants().keySet());
+
+        // FR3: Mobile User Registration
+        String userReg = mobileApp.registerUser("alice", "passAlice", "alice@example.com", "0723456789");
+        System.out.println("FR3: User Registration: " + userReg);
+
+        // FR4: Mobile User Log-in & Auto login test
+        String userLogin = mobileApp.login("alice", "passAlice");
+        System.out.println("FR4: Mobile Log-in: " + userLogin);
+        System.out.println("Is on Search Page: " + mobileApp.isOnSearchPage());
+
+        // FR5: Retrieve Password
+        String passRetrieval = mobileApp.retrievePassword("alice@example.com");
+        System.out.println("FR5: Retrieve Password: " + passRetrieval);
+        System.out.println("Password Email Body: " + emailService.getLatestEmailFor("alice@example.com").getBody());
+
+        // FR14: Input validation demo
+        StringBuilder err = new StringBuilder();
+        boolean valid = mobileApp.validateIntegerInput("abc", "Price", err);
+        System.out.println("FR14 Input Validation Check (valid: " + valid + "): " + err);
+
+        // FR12: Search by Price (Default list view)
+        SearchCriteria priceSearch = new SearchCriteria();
+        priceSearch.setMinPrice(100);
+        priceSearch.setMaxPrice(200);
+        mobileApp.search(priceSearch);
+        System.out.println("FR12: Search by Price View Type: " + mobileApp.getCurrentResultView().getViewType());
+        System.out.println(mobileApp.getCurrentResultView().render());
+
+        // FR13 & FR17: Search by Destination & Free-Text (Default map view)
+        SearchCriteria generalSearch = new SearchCriteria();
+        generalSearch.setFreeText("Italian");
+        generalSearch.setMinDistanceKm(0);
+        generalSearch.setMaxDistanceKm(5);
+        mobileApp.search(generalSearch);
+        System.out.println("FR13 & FR17: Search by Text/Destination View Type: " + mobileApp.getCurrentResultView().getViewType());
+        System.out.println(mobileApp.getCurrentResultView().render());
+
+        // FR10: Switch Result View
+        mobileApp.switchResultView();
+        System.out.println("FR10: Switched to View Type: " + mobileApp.getCurrentResultView().getViewType());
+
+        // FR19: Sorting Results
+        System.out.println("FR19: Sorting by PRICE...");
+        mobileApp.sortResults(SortOption.PRICE);
+        System.out.println(mobileApp.getCurrentResultView().render());
+
+        // FR20: Filtering Results
+        System.out.println("FR20: Filtering results (max distance 1 km)...");
+        FilterCriteria filter = new FilterCriteria();
+        filter.setMaxDistanceKm(1);
+        mobileApp.filterResults(filter);
+        System.out.println(mobileApp.getCurrentResultView().render());
+
+        // FR11: Select Information Link
+        RestaurantSearchResult selectedResult = mobileApp.getCurrentResultView().getDisplayedResults().get(0);
+        String infoPage = mobileApp.selectInformationLink(selectedResult.getRestaurant());
+        System.out.println("FR11 Information Link Selected:\n" + infoPage);
+
+        // FR9: Navigation to Restaurant
+        System.out.println(mobileApp.selectAndNavigateToRestaurant(selectedResult));
+        System.out.println(mobileApp.reachDestinationAndReturnToSearch());
+        System.out.println("Is on Search Page after navigation: " + mobileApp.isOnSearchPage());
+
+        // FR18: No match found scenario
+        SearchCriteria noMatchCriteria = new SearchCriteria();
+        noMatchCriteria.setFreeText("NonExistentTacos");
+        String noMatchResult = mobileApp.search(noMatchCriteria);
+        System.out.println("FR18 No Match: " + noMatchResult);
+        System.out.println("Remains on Search Page: " + mobileApp.isOnSearchPage());
+
+        // FR21: Profile page update (Language, details)
+        String profileUpdate = mobileApp.updateProfile("newPassAlice", "alice_new@example.com", "0799999999", Language.SWEDISH);
+        System.out.println("FR21 Profile update: " + profileUpdate);
+
+        // FR25 & FR33: Language changes on web portal
+        System.out.println("FR25 Owner Language: " + webPortal.setOwnerPreferredLanguage(Language.SPANISH));
+        System.out.println("FR33 Admin Language: " + webPortal.setAdminPreferredLanguage(Language.FRENCH));
+
+        // FR31 & FR32: Admin user & owner management
+        System.out.println("FR31 Admin user update: " + webPortal.adminEditUser("alice", "adminSetPass", "alice_admin@example.com", "0700000000"));
+        System.out.println("FR32 Admin delete owner: " + webPortal.adminDeleteRestaurantOwner("mario"));
+        System.out.println("Restaurants remaining after owner deleted: " + db.getRestaurants().keySet());
+
+        System.out.println("\n=== ALL REQUIREMENTS DEMONSTRATED SUCCESSFULLY ===");
+    }
+}

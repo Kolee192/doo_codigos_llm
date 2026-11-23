@@ -1,0 +1,566 @@
+// File: Gender.java
+public enum Gender {
+    FEMALE,
+    MALE,
+    OTHER,
+    UNSPECIFIED
+}
+
+// File: ChildStatus.java
+public enum ChildStatus {
+    ENROLLED,
+    WAITING_LIST,
+    WITHDRAWN
+}
+
+// File: Classification.java
+public enum Classification {
+    ADMINISTRATOR,
+    TEACHER,
+    ASSISTANT
+}
+
+// File: Parent.java
+import java.util.Objects;
+
+public record Parent(
+        long parentId,
+        String name,
+        String address,
+        String homePhone,
+        String workPhone,
+        String email,
+        String emergencyName,
+        String emergencyPhone,
+        String authorizedPickUp) {
+
+    public Parent {
+        if (parentId <= 0) throw new IllegalArgumentException("Parent ID must be positive");
+        name = required(name, "Parent name");
+        address = required(address, "Address");
+        homePhone = required(homePhone, "Home phone");
+        workPhone = Objects.requireNonNullElse(workPhone, "");
+        email = Objects.requireNonNullElse(email, "");
+        emergencyName = required(emergencyName, "Emergency contact name");
+        emergencyPhone = required(emergencyPhone, "Emergency contact phone");
+        authorizedPickUp = Objects.requireNonNullElse(authorizedPickUp, "");
+    }
+
+    private static String required(String value, String label) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(label + " is required");
+        return value.trim();
+    }
+}
+
+// File: Child.java
+import java.time.LocalDate;
+import java.util.Objects;
+
+public record Child(
+        long childId,
+        long parentId,
+        String name,
+        LocalDate birthDate,
+        Gender gender,
+        long classroomId,
+        String specialNeeds,
+        String photo,
+        ChildStatus status,
+        String comments) {
+
+    public Child {
+        if (childId <= 0 || parentId <= 0 || classroomId <= 0) {
+            throw new IllegalArgumentException("Child, parent, and classroom IDs must be positive");
+        }
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Child name is required");
+        name = name.trim();
+        Objects.requireNonNull(birthDate, "Birth date is required");
+        Objects.requireNonNull(gender, "Gender is required");
+        Objects.requireNonNull(status, "Status is required");
+        specialNeeds = Objects.requireNonNullElse(specialNeeds, "");
+        photo = Objects.requireNonNullElse(photo, "");
+        comments = Objects.requireNonNullElse(comments, "");
+    }
+
+    public Child withStatus(ChildStatus newStatus) {
+        return new Child(childId, parentId, name, birthDate, gender, classroomId,
+                specialNeeds, photo, newStatus, comments);
+    }
+
+    public Child withComments(String newComments) {
+        return new Child(childId, parentId, name, birthDate, gender, classroomId,
+                specialNeeds, photo, status, newComments);
+    }
+}
+
+// File: Employee.java
+import java.util.Objects;
+
+public record Employee(
+        long userId,
+        String password,
+        String firstName,
+        String lastName,
+        Classification classification) {
+
+    public Employee {
+        if (userId <= 0) throw new IllegalArgumentException("User ID must be positive");
+        if (password == null || password.isBlank()) throw new IllegalArgumentException("Password is required");
+        if (firstName == null || firstName.isBlank()) throw new IllegalArgumentException("First name is required");
+        if (lastName == null || lastName.isBlank()) throw new IllegalArgumentException("Last name is required");
+        firstName = firstName.trim();
+        lastName = lastName.trim();
+        Objects.requireNonNull(classification, "Classification is required");
+    }
+}
+
+// File: Classroom.java
+import java.util.Objects;
+
+public record Classroom(
+        long classroomId,
+        String name,
+        String roomNo,
+        String phoneNumber,
+        String teacher,
+        String assistant) {
+
+    public Classroom {
+        if (classroomId <= 0) throw new IllegalArgumentException("Classroom ID must be positive");
+        name = required(name, "Classroom name");
+        roomNo = required(roomNo, "Room number");
+        phoneNumber = Objects.requireNonNullElse(phoneNumber, "");
+        teacher = Objects.requireNonNullElse(teacher, "");
+        assistant = Objects.requireNonNullElse(assistant, "");
+    }
+
+    private static String required(String value, String label) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(label + " is required");
+        return value.trim();
+    }
+}
+
+// File: Bill.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Objects;
+
+public record Bill(
+        long invoiceId,
+        long parentId,
+        BigDecimal amountDue,
+        BigDecimal amountPaid,
+        LocalDate datePaid,
+        int billingYear,
+        int billingMonth) {
+
+    public Bill {
+        if (invoiceId <= 0 || parentId <= 0) throw new IllegalArgumentException("Invoice and parent IDs must be positive");
+        Objects.requireNonNull(amountDue, "Amount due is required");
+        Objects.requireNonNull(amountPaid, "Amount paid is required");
+        if (amountDue.signum() < 0 || amountPaid.signum() < 0) {
+            throw new IllegalArgumentException("Invoice amounts cannot be negative");
+        }
+        if (billingMonth < 1 || billingMonth > 12) throw new IllegalArgumentException("Billing month must be 1–12");
+        if (amountPaid.compareTo(amountDue) > 0) throw new IllegalArgumentException("Amount paid cannot exceed amount due");
+        if (amountPaid.signum() > 0 && datePaid == null) throw new IllegalArgumentException("Payment date is required");
+    }
+
+    public BigDecimal balance() {
+        return amountDue.subtract(amountPaid);
+    }
+}
+
+// File: CallSheet.java
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.Objects;
+
+public record CallSheet(long childId, LocalDate date, LocalTime signIn, LocalTime signOut) {
+    public CallSheet {
+        if (childId <= 0) throw new IllegalArgumentException("Child ID must be positive");
+        Objects.requireNonNull(date, "Call-sheet date is required");
+        if (signIn != null && signOut != null && signOut.isBefore(signIn)) {
+            throw new IllegalArgumentException("Sign-out cannot be before sign-in");
+        }
+    }
+}
+
+// File: Change.java
+import java.time.LocalDateTime;
+
+public record Change(long userId, LocalDateTime time, String description) {
+    public Change {
+        if (userId <= 0) throw new IllegalArgumentException("User ID must be positive");
+        if (time == null) throw new IllegalArgumentException("Change time is required");
+        if (description == null || description.isBlank()) throw new IllegalArgumentException("Description is required");
+        description = description.trim();
+    }
+}
+
+// File: Immunization.java
+import java.time.LocalDate;
+
+public record Immunization(long immuneId, long childId, String type, LocalDate date) {
+    public Immunization {
+        if (immuneId <= 0 || childId <= 0) throw new IllegalArgumentException("Immunization and child IDs must be positive");
+        if (type == null || type.isBlank()) throw new IllegalArgumentException("Immunization type is required");
+        if (date == null) throw new IllegalArgumentException("Immunization date is required");
+        type = type.trim();
+    }
+}
+
+// File: Registration.java
+import java.time.LocalDate;
+
+public record Registration(long childId, LocalDate registerDate, LocalDate enrollDate, LocalDate withdrawDate) {
+    public Registration {
+        if (childId <= 0) throw new IllegalArgumentException("Child ID must be positive");
+        if (registerDate == null) throw new IllegalArgumentException("Registration date is required");
+        if (enrollDate != null && enrollDate.isBefore(registerDate)) {
+            throw new IllegalArgumentException("Enrollment cannot precede registration");
+        }
+        if (withdrawDate != null && enrollDate != null && withdrawDate.isBefore(enrollDate)) {
+            throw new IllegalArgumentException("Withdrawal cannot precede enrollment");
+        }
+    }
+
+    public Registration withEnrollmentDate(LocalDate date) {
+        return new Registration(childId, registerDate, date, withdrawDate);
+    }
+
+    public Registration withWithdrawalDate(LocalDate date) {
+        return new Registration(childId, registerDate, enrollDate, date);
+    }
+}
+
+// File: Reminder.java
+import java.time.LocalDate;
+
+public record Reminder(long reminderId, long employeeId, LocalDate date, String message) {
+    public Reminder {
+        if (reminderId <= 0 || employeeId <= 0) throw new IllegalArgumentException("Reminder and employee IDs must be positive");
+        if (date == null) throw new IllegalArgumentException("Reminder date is required");
+        if (message == null || message.isBlank()) throw new IllegalArgumentException("Reminder message is required");
+        message = message.trim();
+    }
+}
+
+// File: WaitingList.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public final class WaitingList {
+    private final long classroomId;
+    private final List<Long> childIds = new ArrayList<>();
+
+    public WaitingList(long classroomId) {
+        if (classroomId <= 0) throw new IllegalArgumentException("Classroom ID must be positive");
+        this.classroomId = classroomId;
+    }
+
+    public long classroomId() {
+        return classroomId;
+    }
+
+    public List<Long> childIds() {
+        return Collections.unmodifiableList(childIds);
+    }
+
+    void add(long childId) {
+        if (!childIds.contains(childId)) childIds.add(childId);
+    }
+
+    void remove(long childId) {
+        childIds.remove(childId);
+    }
+
+    boolean isEmpty() {
+        return childIds.isEmpty();
+    }
+
+    Long pollFirst() {
+        return childIds.isEmpty() ? null : childIds.remove(0);
+    }
+}
+
+// File: DayCareCenter.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+public final class DayCareCenter {
+    public static final int CLASSROOM_CAPACITY = 20;
+
+    private final Map<Long, Parent> parents = new LinkedHashMap<>();
+    private final Map<Long, Child> children = new LinkedHashMap<>();
+    private final Map<Long, Employee> employees = new LinkedHashMap<>();
+    private final Map<Long, Classroom> classrooms = new LinkedHashMap<>();
+    private final Map<Long, Bill> bills = new LinkedHashMap<>();
+    private final Map<Long, Immunization> immunizations = new LinkedHashMap<>();
+    private final Map<Long, Registration> registrations = new LinkedHashMap<>();
+    private final Map<Long, Reminder> reminders = new LinkedHashMap<>();
+    private final Map<Long, WaitingList> waitingLists = new LinkedHashMap<>();
+    private final List<CallSheet> callSheets = new ArrayList<>();
+    private final List<Change> changes = new ArrayList<>();
+
+    public synchronized void addClassroom(Classroom classroom) {
+        Objects.requireNonNull(classroom, "Classroom is required");
+        if (classrooms.putIfAbsent(classroom.classroomId(), classroom) != null) {
+            throw new IllegalArgumentException("Classroom ID already exists");
+        }
+    }
+
+    public synchronized void addEmployee(Employee employee) {
+        Objects.requireNonNull(employee, "Employee is required");
+        if (employees.putIfAbsent(employee.userId(), employee) != null) {
+            throw new IllegalArgumentException("Employee ID already exists");
+        }
+    }
+
+    public synchronized boolean authenticate(long userId, String password) {
+        Employee employee = employees.get(userId);
+        return employee != null && Objects.equals(employee.password(), password);
+    }
+
+    public synchronized void registerFamily(Parent parent, Child child, Immunization initialImmunization,
+                                             Registration registration) {
+        Objects.requireNonNull(parent, "Parent is required");
+        if (parents.containsKey(parent.parentId())) throw new IllegalArgumentException("Parent ID already exists");
+        validateNewChild(child, initialImmunization, registration);
+        if (child.parentId() != parent.parentId()) throw new IllegalArgumentException("Child must belong to this parent");
+        parents.put(parent.parentId(), parent);
+        addChildValidated(child, initialImmunization, registration);
+    }
+
+    public synchronized void addChild(Child child, Immunization initialImmunization, Registration registration) {
+        Objects.requireNonNull(child, "Child is required");
+        if (!parents.containsKey(child.parentId())) throw new IllegalArgumentException("Child's parent does not exist");
+        validateNewChild(child, initialImmunization, registration);
+        addChildValidated(child, initialImmunization, registration);
+    }
+
+    private void validateNewChild(Child child, Immunization immunization, Registration registration) {
+        Objects.requireNonNull(child, "Child is required");
+        Objects.requireNonNull(immunization, "An initial immunization is required");
+        Objects.requireNonNull(registration, "Registration is required");
+        if (children.containsKey(child.childId())) throw new IllegalArgumentException("Child ID already exists");
+        if (!classrooms.containsKey(child.classroomId())) throw new IllegalArgumentException("Classroom does not exist");
+        if (immunization.childId() != child.childId()) throw new IllegalArgumentException("Immunization belongs to another child");
+        if (immunizations.containsKey(immunization.immuneId())) throw new IllegalArgumentException("Immunization ID already exists");
+        if (registration.childId() != child.childId()) throw new IllegalArgumentException("Registration belongs to another child");
+    }
+
+    private void addChildValidated(Child child, Immunization immunization, Registration registration) {
+        long enrolled = children.values().stream()
+                .filter(c -> c.classroomId() == child.classroomId() && c.status() == ChildStatus.ENROLLED)
+                .count();
+        ChildStatus status = enrolled < CLASSROOM_CAPACITY ? ChildStatus.ENROLLED : ChildStatus.WAITING_LIST;
+        Child stored = child.withStatus(status);
+        children.put(stored.childId(), stored);
+        immunizations.put(immunization.immuneId(), immunization);
+        registrations.put(stored.childId(), registration);
+        if (status == ChildStatus.WAITING_LIST) {
+            waitingLists.computeIfAbsent(stored.classroomId(), WaitingList::new).add(stored.childId());
+        }
+    }
+
+    public synchronized void addImmunization(Immunization immunization) {
+        Objects.requireNonNull(immunization, "Immunization is required");
+        if (!children.containsKey(immunization.childId())) throw new IllegalArgumentException("Child does not exist");
+        if (immunizations.putIfAbsent(immunization.immuneId(), immunization) != null) {
+            throw new IllegalArgumentException("Immunization ID already exists");
+        }
+    }
+
+    public synchronized void issueBill(Bill bill) {
+        Objects.requireNonNull(bill, "Bill is required");
+        if (!parents.containsKey(bill.parentId())) throw new IllegalArgumentException("Parent does not exist");
+        if (bills.containsKey(bill.invoiceId())) throw new IllegalArgumentException("Invoice ID already exists");
+        boolean duplicateMonth = bills.values().stream().anyMatch(existing ->
+                existing.parentId() == bill.parentId()
+                        && existing.billingYear() == bill.billingYear()
+                        && existing.billingMonth() == bill.billingMonth());
+        if (duplicateMonth) throw new IllegalArgumentException("A bill already exists for this parent and month");
+        bills.put(bill.invoiceId(), bill);
+    }
+
+    public synchronized void addCallSheet(CallSheet callSheet) {
+        Objects.requireNonNull(callSheet, "Call sheet is required");
+        if (!children.containsKey(callSheet.childId())) throw new IllegalArgumentException("Child does not exist");
+        boolean exists = callSheets.stream().anyMatch(existing ->
+                existing.childId() == callSheet.childId() && existing.date().equals(callSheet.date()));
+        if (exists) throw new IllegalArgumentException("A call sheet already exists for this child and date");
+        callSheets.add(callSheet);
+    }
+
+    public synchronized void addReminder(Reminder reminder) {
+        Objects.requireNonNull(reminder, "Reminder is required");
+        if (!employees.containsKey(reminder.employeeId())) throw new IllegalArgumentException("Employee does not exist");
+        if (reminders.putIfAbsent(reminder.reminderId(), reminder) != null) {
+            throw new IllegalArgumentException("Reminder ID already exists");
+        }
+    }
+
+    public synchronized void recordChange(Change change) {
+        Objects.requireNonNull(change, "Change is required");
+        if (!employees.containsKey(change.userId())) throw new IllegalArgumentException("Employee does not exist");
+        changes.add(change);
+    }
+
+    public synchronized void withdrawChild(long childId, LocalDate date) {
+        Objects.requireNonNull(date, "Withdrawal date is required");
+        Child child = requireChild(childId);
+        if (child.status() == ChildStatus.WITHDRAWN) throw new IllegalStateException("Child is already withdrawn");
+
+        children.put(childId, child.withStatus(ChildStatus.WITHDRAWN));
+        Registration registration = registrations.get(childId);
+        registrations.put(childId, registration.withWithdrawalDate(date));
+
+        if (child.status() == ChildStatus.WAITING_LIST) {
+            WaitingList list = waitingLists.get(child.classroomId());
+            if (list != null) {
+                list.remove(childId);
+                removeEmptyWaitingList(child.classroomId(), list);
+            }
+        } else {
+            promoteNextChild(child.classroomId(), date);
+        }
+    }
+
+    private void promoteNextChild(long classroomId, LocalDate date) {
+        WaitingList list = waitingLists.get(classroomId);
+        if (list == null) return;
+        Long nextId = list.pollFirst();
+        if (nextId == null) {
+            removeEmptyWaitingList(classroomId, list);
+            return;
+        }
+        Child next = requireChild(nextId);
+        children.put(nextId, next.withStatus(ChildStatus.ENROLLED));
+        Registration registration = registrations.get(nextId);
+        registrations.put(nextId, registration.withEnrollmentDate(date));
+        removeEmptyWaitingList(classroomId, list);
+    }
+
+    private void removeEmptyWaitingList(long classroomId, WaitingList list) {
+        if (list.isEmpty()) waitingLists.remove(classroomId);
+    }
+
+    public synchronized List<Child> childrenInClassroom(long classroomId) {
+        if (!classrooms.containsKey(classroomId)) throw new IllegalArgumentException("Classroom does not exist");
+        return children.values().stream()
+                .filter(child -> child.classroomId() == classroomId && child.status() != ChildStatus.WITHDRAWN)
+                .toList();
+    }
+
+    public synchronized List<Child> childrenOfParent(long parentId) {
+        if (!parents.containsKey(parentId)) throw new IllegalArgumentException("Parent does not exist");
+        return children.values().stream().filter(child -> child.parentId() == parentId).toList();
+    }
+
+    public synchronized List<Immunization> immunizationsForChild(long childId) {
+        requireChild(childId);
+        return immunizations.values().stream().filter(item -> item.childId() == childId).toList();
+    }
+
+    public synchronized List<Bill> billsForParent(long parentId) {
+        if (!parents.containsKey(parentId)) throw new IllegalArgumentException("Parent does not exist");
+        return bills.values().stream().filter(bill -> bill.parentId() == parentId).toList();
+    }
+
+    public synchronized List<Reminder> remindersForEmployee(long employeeId, LocalDate date) {
+        if (!employees.containsKey(employeeId)) throw new IllegalArgumentException("Employee does not exist");
+        return reminders.values().stream()
+                .filter(reminder -> reminder.employeeId() == employeeId && reminder.date().equals(date))
+                .toList();
+    }
+
+    public synchronized WaitingList waitingListForClassroom(long classroomId) {
+        if (!classrooms.containsKey(classroomId)) throw new IllegalArgumentException("Classroom does not exist");
+        return waitingLists.get(classroomId);
+    }
+
+    public synchronized Child child(long childId) {
+        return requireChild(childId);
+    }
+
+    public synchronized Parent parent(long parentId) {
+        Parent parent = parents.get(parentId);
+        if (parent == null) throw new IllegalArgumentException("Parent does not exist");
+        return parent;
+    }
+
+    public synchronized Classroom classroom(long classroomId) {
+        Classroom classroom = classrooms.get(classroomId);
+        if (classroom == null) throw new IllegalArgumentException("Classroom does not exist");
+        return classroom;
+    }
+
+    public synchronized List<Change> changes() {
+        return Collections.unmodifiableList(new ArrayList<>(changes));
+    }
+
+    public synchronized List<CallSheet> callSheets() {
+        return Collections.unmodifiableList(new ArrayList<>(callSheets));
+    }
+
+    public synchronized BigDecimal totalOutstandingForParent(long parentId) {
+        return billsForParent(parentId).stream()
+                .map(Bill::balance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public synchronized Bill createMonthlyBill(long invoiceId, long parentId, BigDecimal amountDue, YearMonth month) {
+        Objects.requireNonNull(month, "Billing month is required");
+        Bill bill = new Bill(invoiceId, parentId, amountDue, BigDecimal.ZERO, null,
+                month.getYear(), month.getMonthValue());
+        issueBill(bill);
+        return bill;
+    }
+
+    private Child requireChild(long childId) {
+        Child child = children.get(childId);
+        if (child == null) throw new IllegalArgumentException("Child does not exist");
+        return child;
+    }
+}
+
+// File: Main.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+public class Main {
+    public static void main(String[] args) {
+        DayCareCenter center = new DayCareCenter();
+
+        center.addClassroom(new Classroom(1, "Preschool", "101", "555-0101", "Jamie Teacher", "Alex Assistant"));
+        center.addEmployee(new Employee(1, "demo-password", "Morgan", "Admin", Classification.ADMINISTRATOR));
+
+        Parent parent = new Parent(1, "Taylor Parent", "12 Oak Street", "555-1000",
+                "555-1001", "taylor@example.com", "Casey Contact", "555-1002", "Jordan Pickup");
+        Child child = new Child(1, 1, "Riley Taylor", LocalDate.of(2021, 4, 12),
+                Gender.UNSPECIFIED, 1, "Peanut allergy", "riley.jpg", ChildStatus.ENROLLED, "Enjoys story time");
+        Immunization immunization = new Immunization(1, 1, "MMR", LocalDate.now());
+        Registration registration = new Registration(1, LocalDate.now(), LocalDate.now(), null);
+
+        center.registerFamily(parent, child, immunization, registration);
+        center.createMonthlyBill(1, 1, new BigDecimal("450.00"), java.time.YearMonth.now());
+        center.addCallSheet(new CallSheet(1, LocalDate.now(), java.time.LocalTime.of(8, 30), null));
+        center.addReminder(new Reminder(1, 1, LocalDate.now(), "Call parent about the upcoming field trip."));
+        center.recordChange(new Change(1, LocalDateTime.now(), "Registered Riley Taylor"));
+
+        System.out.println("Children enrolled in Preschool: " + center.childrenInClassroom(1).size());
+        System.out.println("Outstanding balance: $" + center.totalOutstandingForParent(1));
+        System.out.println("Admin login valid: " + center.authenticate(1, "demo-password"));
+    }
+}

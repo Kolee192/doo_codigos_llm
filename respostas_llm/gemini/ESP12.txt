@@ -1,0 +1,1592 @@
+// File: Role.java
+public enum Role {
+    DEPOSITOR,
+    FACILITY_MANAGER,
+    COLLABORATOR,
+    DATA_REUSER,
+    ADMINISTRATOR,
+    RESEARCH_INFORMATION_MANAGER,
+    FUNDING_BODY
+}
+
+// File: User.java
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+public class User {
+    private final String userId;
+    private final String fullName;
+    private final String email;
+    private final String department;
+    private final Role role;
+    private String preferredLanguage;
+    private final Set<String> delegatedDepositorIds;
+
+    public User(String userId, String fullName, String email, String department, Role role, String preferredLanguage) {
+        this.userId = userId;
+        this.fullName = fullName;
+        this.email = email;
+        this.department = department;
+        this.role = role;
+        this.preferredLanguage = preferredLanguage == null ? "en" : preferredLanguage;
+        this.delegatedDepositorIds = new HashSet<>();
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public String getPreferredLanguage() {
+        return preferredLanguage;
+    }
+
+    public void setPreferredLanguage(String preferredLanguage) {
+        this.preferredLanguage = preferredLanguage;
+    }
+
+    public Set<String> getDelegatedDepositorIds() {
+        return Collections.unmodifiableSet(delegatedDepositorIds);
+    }
+
+    public void addDelegatedDepositor(String depositorId) {
+        this.delegatedDepositorIds.add(depositorId);
+    }
+
+    public boolean canDepositOnBehalfOf(String depositorId) {
+        return this.userId.equals(depositorId) || this.delegatedDepositorIds.contains(depositorId);
+    }
+}
+
+// File: LdapDirectoryService.java
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+public class LdapDirectoryService {
+    private final Map<String, User> directory = new HashMap<>();
+
+    public void registerUser(User user) {
+        directory.put(user.getUserId(), user);
+    }
+
+    public Optional<User> authenticate(String userId) {
+        return Optional.ofNullable(directory.get(userId));
+    }
+
+    public Map<String, String> fetchUserProfileMetadata(String userId) {
+        Map<String, String> meta = new HashMap<>();
+        User user = directory.get(userId);
+        if (user != null) {
+            meta.put("creator.name", user.getFullName());
+            meta.put("creator.email", user.getEmail());
+            meta.put("creator.department", user.getDepartment());
+            meta.put("creator.institution", "University of Bath");
+        }
+        return meta;
+    }
+}
+
+// File: License.java
+public class License {
+    private final String identifier;
+    private final String name;
+    private final String url;
+    private final boolean openAccess;
+
+    public License(String identifier, String name, String url, boolean openAccess) {
+        this.identifier = identifier;
+        this.name = name;
+        this.url = url;
+        this.openAccess = openAccess;
+    }
+
+    public String getIdentifier() {
+        return identifier;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public boolean isOpenAccess() {
+        return openAccess;
+    }
+
+    public static final License CC_BY_4_0 = new License("CC-BY-4.0", "Creative Commons Attribution 4.0 International", "https://creativecommons.org/licenses/by/4.0/", true);
+    public static final License CC0_1_0 = new License("CC0-1.0", "Creative Commons Zero Universal", "https://creativecommons.org/publicdomain/zero/1.0/", true);
+    public static final License RESTRICTED_COLLABORATION = new License("BATH-RESTRICTED", "University of Bath Collaborative Research IP License", "https://www.bath.ac.uk/ip/terms", false);
+}
+
+// File: AccessLevel.java
+public enum AccessLevel {
+    OPEN,
+    EMBARGOED,
+    RESTRICTED,
+    CLOSED
+}
+
+// File: DatasetStatus.java
+public enum DatasetStatus {
+    DRAFT,
+    SUBMITTED_FOR_REVIEW,
+    APPROVED,
+    PUBLISHED,
+    SCHEDULED_FOR_DISPOSAL,
+    DISPOSED
+}
+
+// File: DisposalPolicy.java
+import java.time.LocalDate;
+
+public class DisposalPolicy {
+    private final int retentionYears;
+    private final LocalDate scheduledDisposalDate;
+    private final String justification;
+    private boolean approvedByAdministrator;
+
+    public DisposalPolicy(int retentionYears, LocalDate scheduledDisposalDate, String justification) {
+        this.retentionYears = retentionYears;
+        this.scheduledDisposalDate = scheduledDisposalDate;
+        this.justification = justification;
+        this.approvedByAdministrator = false;
+    }
+
+    public int getRetentionYears() {
+        return retentionYears;
+    }
+
+    public LocalDate getScheduledDisposalDate() {
+        return scheduledDisposalDate;
+    }
+
+    public String getJustification() {
+        return justification;
+    }
+
+    public boolean isApprovedByAdministrator() {
+        return approvedByAdministrator;
+    }
+
+    public void approveDisposal() {
+        this.approvedByAdministrator = true;
+    }
+}
+
+// File: StoredFile.java
+public class StoredFile {
+    private final String fileId;
+    private final String fileName;
+    private final String contentType;
+    private final long sizeBytes;
+    private final String sha256Checksum;
+    private final boolean liveWorkingData;
+    private final byte[] content;
+
+    public StoredFile(String fileId, String fileName, String contentType, long sizeBytes, String sha256Checksum, boolean liveWorkingData, byte[] content) {
+        this.fileId = fileId;
+        this.fileName = fileName;
+        this.contentType = contentType;
+        this.sizeBytes = sizeBytes;
+        this.sha256Checksum = sha256Checksum;
+        this.liveWorkingData = liveWorkingData;
+        this.content = content != null ? content : new byte[0];
+    }
+
+    public String getFileId() {
+        return fileId;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public long getSizeBytes() {
+        return sizeBytes;
+    }
+
+    public String getSha256Checksum() {
+        return sha256Checksum;
+    }
+
+    public boolean isLiveWorkingData() {
+        return liveWorkingData;
+    }
+
+    public byte[] getContent() {
+        return content.clone();
+    }
+}
+
+// File: StorageBackend.java
+import java.io.InputStream;
+
+public interface StorageBackend {
+    void store(String fileId, byte[] data);
+    byte[] retrieve(String fileId);
+    boolean verifyIntegrity(String fileId, String expectedSha256);
+    long getCapacityAvailable();
+}
+
+// File: HcpObjectStorage.java
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Map;
+
+public class HcpObjectStorage implements StorageBackend {
+    private final Map<String, byte[]> objectStore = new HashMap<>();
+
+    @Override
+    public void store(String fileId, byte[] data) {
+        objectStore.put(fileId, data.clone());
+    }
+
+    @Override
+    public byte[] retrieve(String fileId) {
+        byte[] data = objectStore.get(fileId);
+        return data == null ? null : data.clone();
+    }
+
+    @Override
+    public boolean verifyIntegrity(String fileId, String expectedSha256) {
+        byte[] data = objectStore.get(fileId);
+        if (data == null) {
+            return false;
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data);
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString().equalsIgnoreCase(expectedSha256);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
+    }
+
+    @Override
+    public long getCapacityAvailable() {
+        return Long.MAX_VALUE;
+    }
+}
+
+// File: DatasetMetadata.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class DatasetMetadata {
+    private String title;
+    private final List<String> authors = new ArrayList<>();
+    private String description;
+    private String subjectDiscipline;
+    private final List<String> keywords = new ArrayList<>();
+    private String opusPublicationId;
+    private String dmpId;
+    private String crisProjectId;
+    private String funderName;
+    private String grantNumber;
+    private String externalRepositoryUrl;
+    private final Map<String, String> customDomainMetadata = new HashMap<>();
+
+    public DatasetMetadata(String title, String description, String subjectDiscipline) {
+        this.title = title;
+        this.description = description;
+        this.subjectDiscipline = subjectDiscipline;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public List<String> getAuthors() {
+        return authors;
+    }
+
+    public void addAuthor(String author) {
+        this.authors.add(author);
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getSubjectDiscipline() {
+        return subjectDiscipline;
+    }
+
+    public void setSubjectDiscipline(String subjectDiscipline) {
+        this.subjectDiscipline = subjectDiscipline;
+    }
+
+    public List<String> getKeywords() {
+        return keywords;
+    }
+
+    public void addKeyword(String keyword) {
+        this.keywords.add(keyword);
+    }
+
+    public String getOpusPublicationId() {
+        return opusPublicationId;
+    }
+
+    public void setOpusPublicationId(String opusPublicationId) {
+        this.opusPublicationId = opusPublicationId;
+    }
+
+    public String getDmpId() {
+        return dmpId;
+    }
+
+    public void setDmpId(String dmpId) {
+        this.dmpId = dmpId;
+    }
+
+    public String getCrisProjectId() {
+        return crisProjectId;
+    }
+
+    public void setCrisProjectId(String crisProjectId) {
+        this.crisProjectId = crisProjectId;
+    }
+
+    public String getFunderName() {
+        return funderName;
+    }
+
+    public void setFunderName(String funderName) {
+        this.funderName = funderName;
+    }
+
+    public String getGrantNumber() {
+        return grantNumber;
+    }
+
+    public void setGrantNumber(String grantNumber) {
+        this.grantNumber = grantNumber;
+    }
+
+    public String getExternalRepositoryUrl() {
+        return externalRepositoryUrl;
+    }
+
+    public void setExternalRepositoryUrl(String externalRepositoryUrl) {
+        this.externalRepositoryUrl = externalRepositoryUrl;
+    }
+
+    public Map<String, String> getCustomDomainMetadata() {
+        return customDomainMetadata;
+    }
+
+    public void addCustomField(String key, String value) {
+        this.customDomainMetadata.put(key, value);
+    }
+}
+
+// File: DatasetVersion.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class DatasetVersion {
+    private final int versionNumber;
+    private final LocalDateTime createdTimestamp;
+    private final String changeSummary;
+    private final DatasetMetadata metadata;
+    private final License license;
+    private final DisposalPolicy disposalPolicy;
+    private final AccessLevel accessLevel;
+    private final LocalDate embargoEndDate;
+    private final Set<String> privilegedCollaborators;
+    private final List<StoredFile> files;
+    private String doi;
+    private String persistentUrl;
+
+    public DatasetVersion(int versionNumber, String changeSummary, DatasetMetadata metadata, License license,
+                          DisposalPolicy disposalPolicy, AccessLevel accessLevel, LocalDate embargoEndDate) {
+        this.versionNumber = versionNumber;
+        this.createdTimestamp = LocalDateTime.now();
+        this.changeSummary = changeSummary;
+        this.metadata = metadata;
+        this.license = license;
+        this.disposalPolicy = disposalPolicy;
+        this.accessLevel = accessLevel;
+        this.embargoEndDate = embargoEndDate;
+        this.privilegedCollaborators = new HashSet<>();
+        this.files = new ArrayList<>();
+    }
+
+    public int getVersionNumber() {
+        return versionNumber;
+    }
+
+    public LocalDateTime getCreatedTimestamp() {
+        return createdTimestamp;
+    }
+
+    public String getChangeSummary() {
+        return changeSummary;
+    }
+
+    public DatasetMetadata getMetadata() {
+        return metadata;
+    }
+
+    public License getLicense() {
+        return license;
+    }
+
+    public DisposalPolicy getDisposalPolicy() {
+        return disposalPolicy;
+    }
+
+    public AccessLevel getAccessLevel() {
+        return accessLevel;
+    }
+
+    public LocalDate getEmbargoEndDate() {
+        return embargoEndDate;
+    }
+
+    public Set<String> getPrivilegedCollaborators() {
+        return Collections.unmodifiableSet(privilegedCollaborators);
+    }
+
+    public void addPrivilegedCollaborator(String collaboratorId) {
+        this.privilegedCollaborators.add(collaboratorId);
+    }
+
+    public List<StoredFile> getFiles() {
+        return Collections.unmodifiableList(files);
+    }
+
+    public void addFile(StoredFile file) {
+        this.files.add(file);
+    }
+
+    public String getDoi() {
+        return doi;
+    }
+
+    public void setDoi(String doi) {
+        this.doi = doi;
+    }
+
+    public String getPersistentUrl() {
+        return persistentUrl;
+    }
+
+    public void setPersistentUrl(String persistentUrl) {
+        this.persistentUrl = persistentUrl;
+    }
+
+    public boolean isEmbargoActive(LocalDate currentDate) {
+        if (accessLevel == AccessLevel.EMBARGOED && embargoEndDate != null) {
+            return currentDate.isBefore(embargoEndDate);
+        }
+        return false;
+    }
+}
+
+// File: Dataset.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Dataset {
+    private final String datasetId;
+    private final String depositorId;
+    private final List<DatasetVersion> versions = new ArrayList<>();
+    private DatasetStatus status;
+    private final boolean externalRepositoryLink;
+
+    public Dataset(String datasetId, String depositorId, boolean externalRepositoryLink) {
+        this.datasetId = datasetId;
+        this.depositorId = depositorId;
+        this.status = DatasetStatus.DRAFT;
+        this.externalRepositoryLink = externalRepositoryLink;
+    }
+
+    public String getDatasetId() {
+        return datasetId;
+    }
+
+    public String getDepositorId() {
+        return depositorId;
+    }
+
+    public DatasetStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(DatasetStatus status) {
+        this.status = status;
+    }
+
+    public boolean isExternalRepositoryLink() {
+        return externalRepositoryLink;
+    }
+
+    public List<DatasetVersion> getVersions() {
+        return Collections.unmodifiableList(versions);
+    }
+
+    public DatasetVersion getLatestVersion() {
+        if (versions.isEmpty()) {
+            return null;
+        }
+        return versions.get(versions.size() - 1);
+    }
+
+    public void addVersion(DatasetVersion version) {
+        this.versions.add(version);
+    }
+
+    public DatasetVersion getVersion(int versionNumber) {
+        for (DatasetVersion v : versions) {
+            if (v.getVersionNumber() == versionNumber) {
+                return v;
+            }
+        }
+        return null;
+    }
+}
+
+// File: DoiService.java
+public class DoiService {
+    private final String prefix = "10.15125/BATH-";
+
+    public String mintDoi(String datasetId, int versionNumber) {
+        return prefix + datasetId.toUpperCase() + ".V" + versionNumber;
+    }
+
+    public String generatePersistentUrl(String doi) {
+        return "https://doi.org/" + doi;
+    }
+
+    public String formatApaCitation(Dataset dataset, DatasetVersion version) {
+        String authors = String.join(", ", version.getMetadata().getAuthors());
+        int year = version.getCreatedTimestamp().getYear();
+        String title = version.getMetadata().getTitle();
+        String doi = version.getDoi();
+        return String.format("%s (%d). %s [Data set]. University of Bath Data Archive. %s",
+                authors.isEmpty() ? "University of Bath" : authors,
+                year,
+                title,
+                doi != null ? "https://doi.org/" + doi : version.getPersistentUrl());
+    }
+
+    public String formatBibtexCitation(Dataset dataset, DatasetVersion version) {
+        String key = "bath_" + dataset.getDatasetId() + "_v" + version.getVersionNumber();
+        String authors = String.join(" and ", version.getMetadata().getAuthors());
+        return String.format("""
+                @misc{%s,
+                  author = {%s},
+                  title = {{%s}},
+                  year = {%d},
+                  publisher = {University of Bath Research Data Archive},
+                  doi = {%s},
+                  url = {%s}
+                }""",
+                key,
+                authors,
+                version.getMetadata().getTitle(),
+                version.getCreatedTimestamp().getYear(),
+                version.getDoi(),
+                version.getPersistentUrl());
+    }
+}
+
+// File: MetadataValidator.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class MetadataValidator {
+    public static class ValidationResult {
+        private final boolean valid;
+        private final List<String> errors;
+
+        public ValidationResult(boolean valid, List<String> errors) {
+            this.valid = valid;
+            this.errors = errors;
+        }
+
+        public boolean isValid() {
+            return valid;
+        }
+
+        public List<String> getErrors() {
+            return errors;
+        }
+    }
+
+    public ValidationResult validate(DatasetVersion version) {
+        List<String> errors = new ArrayList<>();
+        DatasetMetadata meta = version.getMetadata();
+
+        if (meta == null) {
+            errors.add("Metadata object is missing.");
+            return new ValidationResult(false, errors);
+        }
+
+        if (meta.getTitle() == null || meta.getTitle().trim().isEmpty()) {
+            errors.add("Mandatory field missing: Title is required.");
+        }
+        if (meta.getAuthors() == null || meta.getAuthors().isEmpty()) {
+            errors.add("Mandatory field missing: At least one Author/Creator is required.");
+        }
+        if (meta.getDescription() == null || meta.getDescription().trim().length() < 10) {
+            errors.add("Mandatory field missing: Description must be at least 10 characters.");
+        }
+        if (meta.getSubjectDiscipline() == null || meta.getSubjectDiscipline().trim().isEmpty()) {
+            errors.add("Mandatory field missing: Subject discipline is required.");
+        }
+        if (version.getLicense() == null) {
+            errors.add("Mandatory field missing: Valid license selection is required.");
+        }
+
+        return new ValidationResult(errors.isEmpty(), errors);
+    }
+}
+
+// File: FixityAuditReport.java
+import java.time.LocalDateTime;
+
+public class FixityAuditReport {
+    private final String fileId;
+    private final String fileName;
+    private final boolean passed;
+    private final String expectedSha256;
+    private final LocalDateTime checkTimestamp;
+
+    public FixityAuditReport(String fileId, String fileName, boolean passed, String expectedSha256) {
+        this.fileId = fileId;
+        this.fileName = fileName;
+        this.passed = passed;
+        this.expectedSha256 = expectedSha256;
+        this.checkTimestamp = LocalDateTime.now();
+    }
+
+    public String getFileId() {
+        return fileId;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public boolean isPassed() {
+        return passed;
+    }
+
+    public String getExpectedSha256() {
+        return expectedSha256;
+    }
+
+    public LocalDateTime getCheckTimestamp() {
+        return checkTimestamp;
+    }
+}
+
+// File: UsageMetricRecord.java
+import java.time.LocalDateTime;
+
+public class UsageMetricRecord {
+    public enum Action {
+        VIEW,
+        DOWNLOAD,
+        CITATION
+    }
+
+    private final String datasetId;
+    private final int versionNumber;
+    private final Action action;
+    private final String country;
+    private final String sector;
+    private final LocalDateTime timestamp;
+
+    public UsageMetricRecord(String datasetId, int versionNumber, Action action, String country, String sector) {
+        this.datasetId = datasetId;
+        this.versionNumber = versionNumber;
+        this.action = action;
+        this.country = country;
+        this.sector = sector;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getDatasetId() {
+        return datasetId;
+    }
+
+    public int getVersionNumber() {
+        return versionNumber;
+    }
+
+    public Action action() {
+        return action;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public String getSector() {
+        return sector;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+}
+
+// File: AnalyticsService.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class AnalyticsService {
+    private final List<UsageMetricRecord> metrics = new ArrayList<>();
+    private final Map<String, Integer> citationCounts = new HashMap<>();
+
+    public void logMetric(String datasetId, int versionNumber, UsageMetricRecord.Action action, String country, String sector) {
+        metrics.add(new UsageMetricRecord(datasetId, versionNumber, action, country, sector));
+    }
+
+    public void recordCitation(String datasetId) {
+        citationCounts.put(datasetId, citationCounts.getOrDefault(datasetId, 0) + 1);
+        metrics.add(new UsageMetricRecord(datasetId, 1, UsageMetricRecord.Action.CITATION, "GLOBAL", "ACADEMIC"));
+    }
+
+    public int getCitationCount(String datasetId) {
+        return citationCounts.getOrDefault(datasetId, 0);
+    }
+
+    public long getTotalDownloads(String datasetId) {
+        return metrics.stream()
+                .filter(m -> m.getDatasetId().equals(datasetId) && m.action() == UsageMetricRecord.Action.DOWNLOAD)
+                .count();
+    }
+
+    public long getTotalViews(String datasetId) {
+        return metrics.stream()
+                .filter(m -> m.getDatasetId().equals(datasetId) && m.action() == UsageMetricRecord.Action.VIEW)
+                .count();
+    }
+
+    public Map<String, Long> getDownloadsByCountry(String datasetId) {
+        return metrics.stream()
+                .filter(m -> m.getDatasetId().equals(datasetId) && m.action() == UsageMetricRecord.Action.DOWNLOAD)
+                .collect(Collectors.groupingBy(UsageMetricRecord::getCountry, Collectors.counting()));
+    }
+
+    public Map<String, Long> getDownloadsBySector(String datasetId) {
+        return metrics.stream()
+                .filter(m -> m.getDatasetId().equals(datasetId) && m.action() == UsageMetricRecord.Action.DOWNLOAD)
+                .collect(Collectors.groupingBy(UsageMetricRecord::getSector, Collectors.counting()));
+    }
+}
+
+// File: LocalizationService.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class LocalizationService {
+    private final Map<String, Map<String, String>> translations = new HashMap<>();
+
+    public LocalizationService() {
+        Map<String, String> en = new HashMap<>();
+        en.put("ui.welcome", "Welcome to University of Bath Data Archive");
+        en.put("ui.deposit", "Deposit New Dataset");
+        en.put("ui.search", "Search Archive");
+        en.put("ui.cite", "Cite this Dataset");
+        translations.put("en", en);
+
+        Map<String, String> fr = new HashMap<>();
+        fr.put("ui.welcome", "Bienvenue aux archives de données de l'Université de Bath");
+        fr.put("ui.deposit", "Déposer un nouveau jeu de données");
+        fr.put("ui.search", "Rechercher dans l'archive");
+        fr.put("ui.cite", "Citer ce jeu de données");
+        translations.put("fr", fr);
+
+        Map<String, String> es = new HashMap<>();
+        es.put("ui.welcome", "Bienvenido al Archivo de Datos de la Universidad de Bath");
+        es.put("ui.deposit", "Depositar nuevo conjunto de datos");
+        es.put("ui.search", "Buscar en el archivo");
+        es.put("ui.cite", "Citar este conjunto de datos");
+        translations.put("es", es);
+    }
+
+    public String getMessage(String key, String lang) {
+        String effectiveLang = translations.containsKey(lang) ? lang : "en";
+        return translations.get(effectiveLang).getOrDefault(key, key);
+    }
+}
+
+// File: CrisIntegrationService.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class CrisIntegrationService {
+    public static class CrisProject {
+        private final String projectId;
+        private final String projectTitle;
+        private final String funderName;
+        private final String grantRef;
+        private final List<String> outputDatasetIds = new ArrayList<>();
+
+        public CrisProject(String projectId, String projectTitle, String funderName, String grantRef) {
+            this.projectId = projectId;
+            this.projectTitle = projectTitle;
+            this.funderName = funderName;
+            this.grantRef = grantRef;
+        }
+
+        public String getProjectId() {
+            return projectId;
+        }
+
+        public String getProjectTitle() {
+            return projectTitle;
+        }
+
+        public String getFunderName() {
+            return funderName;
+        }
+
+        public String getGrantRef() {
+            return grantRef;
+        }
+
+        public List<String> getOutputDatasetIds() {
+            return outputDatasetIds;
+        }
+
+        public void linkDataset(String datasetId) {
+            outputDatasetIds.add(datasetId);
+        }
+    }
+
+    private final Map<String, CrisProject> projects = new HashMap<>();
+
+    public void registerProject(CrisProject project) {
+        projects.put(project.getProjectId(), project);
+    }
+
+    public CrisProject getProject(String projectId) {
+        return projects.get(projectId);
+    }
+
+    public void linkDatasetToCris(String projectId, String datasetId) {
+        CrisProject project = projects.get(projectId);
+        if (project != null) {
+            project.linkDataset(datasetId);
+        }
+    }
+}
+
+// File: MetadataHarvestingService.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class MetadataHarvestingService {
+    public static class OaiRecord {
+        private final String identifier;
+        private final String title;
+        private final List<String> creators;
+        private final String subject;
+        private final String description;
+        private final String publisher;
+        private final String date;
+        private final String license;
+        private final String doi;
+        private final String funder;
+        private final String grantRef;
+
+        public OaiRecord(String identifier, String title, List<String> creators, String subject,
+                         String description, String publisher, String date, String license,
+                         String doi, String funder, String grantRef) {
+            this.identifier = identifier;
+            this.title = title;
+            this.creators = creators;
+            this.subject = subject;
+            this.description = description;
+            this.publisher = publisher;
+            this.date = date;
+            this.license = license;
+            this.doi = doi;
+            this.funder = funder;
+            this.grantRef = grantRef;
+        }
+
+        public String toDublinCoreXml() {
+            return String.format("""
+                    <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+                      <dc:identifier>%s</dc:identifier>
+                      <dc:title>%s</dc:title>
+                      %s
+                      <dc:subject>%s</dc:subject>
+                      <dc:description>%s</dc:description>
+                      <dc:publisher>%s</dc:publisher>
+                      <dc:date>%s</dc:date>
+                      <dc:rights>%s</dc:rights>
+                      <dc:relation>%s</dc:relation>
+                    </oai_dc:dc>""",
+                    identifier,
+                    title,
+                    creators.stream().map(c -> "<dc:creator>" + c + "</dc:creator>").collect(Collectors.joining("\n  ")),
+                    subject,
+                    description,
+                    publisher,
+                    date,
+                    license,
+                    doi != null ? "info:doi/" + doi : "");
+        }
+
+        public String getFunder() {
+            return funder;
+        }
+
+        public String getGrantRef() {
+            return grantRef;
+        }
+
+        public String getIdentifier() {
+            return identifier;
+        }
+    }
+
+    public List<OaiRecord> harvestByFunder(List<Dataset> datasets, String funderName) {
+        List<OaiRecord> harvested = new ArrayList<>();
+        for (Dataset d : datasets) {
+            if (d.getStatus() == DatasetStatus.PUBLISHED) {
+                DatasetVersion v = d.getLatestVersion();
+                if (v != null && funderName.equalsIgnoreCase(v.getMetadata().getFunderName())) {
+                    harvested.add(new OaiRecord(
+                            d.getDatasetId(),
+                            v.getMetadata().getTitle(),
+                            v.getMetadata().getAuthors(),
+                            v.getMetadata().getSubjectDiscipline(),
+                            v.getMetadata().getDescription(),
+                            "University of Bath",
+                            v.getCreatedTimestamp().toLocalDate().toString(),
+                            v.getLicense().getName(),
+                            v.getDoi(),
+                            v.getMetadata().getFunderName(),
+                            v.getMetadata().getGrantNumber()
+                    ));
+                }
+            }
+        }
+        return harvested;
+    }
+}
+
+// File: SwordDepositRequest.java
+public class SwordDepositRequest {
+    private final String depositorId;
+    private final String onBehalfOf;
+    private final String title;
+    private final String abstractText;
+    private final String discipline;
+    private final String licenseIdentifier;
+    private final String fileName;
+    private final byte[] fileBytes;
+
+    public SwordDepositRequest(String depositorId, String onBehalfOf, String title, String abstractText,
+                               String discipline, String licenseIdentifier, String fileName, byte[] fileBytes) {
+        this.depositorId = depositorId;
+        this.onBehalfOf = onBehalfOf;
+        this.title = title;
+        this.abstractText = abstractText;
+        this.discipline = discipline;
+        this.licenseIdentifier = licenseIdentifier;
+        this.fileName = fileName;
+        this.fileBytes = fileBytes != null ? fileBytes : new byte[0];
+    }
+
+    public String getDepositorId() {
+        return depositorId;
+    }
+
+    public String getOnBehalfOf() {
+        return onBehalfOf;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getAbstractText() {
+        return abstractText;
+    }
+
+    public String getDiscipline() {
+        return discipline;
+    }
+
+    public String getLicenseIdentifier() {
+        return licenseIdentifier;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public byte[] getFileBytes() {
+        return fileBytes.clone();
+    }
+}
+
+// File: BathDataArchiveService.java
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+public class BathDataArchiveService {
+    private final LdapDirectoryService ldapService;
+    private final StorageBackend storageBackend;
+    private final DoiService doiService;
+    private final MetadataValidator metadataValidator;
+    private final AnalyticsService analyticsService;
+    private final CrisIntegrationService crisService;
+    private final LocalizationService localizationService;
+    private final MetadataHarvestingService harvestingService;
+
+    private final Map<String, Dataset> datasets = new HashMap<>();
+    private final Map<String, DatasetMetadata> rememberedDepositorMetadata = new HashMap<>();
+
+    public BathDataArchiveService(LdapDirectoryService ldapService, StorageBackend storageBackend) {
+        this.ldapService = ldapService;
+        this.storageBackend = storageBackend;
+        this.doiService = new DoiService();
+        this.metadataValidator = new MetadataValidator();
+        this.analyticsService = new AnalyticsService();
+        this.crisService = new CrisIntegrationService();
+        this.localizationService = new LocalizationService();
+        this.harvestingService = new MetadataHarvestingService();
+    }
+
+    public Dataset createDatasetDraft(String actingUserId, String onBehalfOfUserId, boolean externalRepoLink) {
+        User actor = ldapService.authenticate(actingUserId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found in University LDAP: " + actingUserId));
+
+        String targetDepositorId = actingUserId;
+        if (onBehalfOfUserId != null && !onBehalfOfUserId.equals(actingUserId)) {
+            if (!actor.canDepositOnBehalfOf(onBehalfOfUserId) && actor.getRole() != Role.FACILITY_MANAGER && actor.getRole() != Role.ADMINISTRATOR) {
+                throw new SecurityException("User " + actingUserId + " is not authorized to deposit on behalf of " + onBehalfOfUserId);
+            }
+            targetDepositorId = onBehalfOfUserId;
+        }
+
+        String datasetId = "bath-data-" + UUID.randomUUID().toString().substring(0, 8);
+        Dataset dataset = new Dataset(datasetId, targetDepositorId, externalRepoLink);
+        datasets.put(datasetId, dataset);
+        return dataset;
+    }
+
+    public DatasetMetadata prepareMetadataWithDefaults(String depositorId, String title, String description, String discipline) {
+        DatasetMetadata meta = new DatasetMetadata(title, description, discipline);
+        Map<String, String> ldapDefaults = ldapService.fetchUserProfileMetadata(depositorId);
+        if (ldapDefaults.containsKey("creator.name")) {
+            meta.addAuthor(ldapDefaults.get("creator.name") + " (" + ldapDefaults.get("creator.department") + ")");
+        }
+        DatasetMetadata previous = rememberedDepositorMetadata.get(depositorId);
+        if (previous != null) {
+            meta.setCrisProjectId(previous.getCrisProjectId());
+            meta.setDmpId(previous.getDmpId());
+            meta.setFunderName(previous.getFunderName());
+            meta.setGrantNumber(previous.getGrantNumber());
+        }
+        return meta;
+    }
+
+    public StoredFile uploadFile(String datasetId, String fileName, String contentType, byte[] data, boolean isLive) {
+        String fileId = "file-" + UUID.randomUUID().toString();
+        String checksum = calculateSha256(data);
+        storageBackend.store(fileId, data);
+        return new StoredFile(fileId, fileName, contentType, data.length, checksum, isLive, data);
+    }
+
+    public DatasetVersion addVersionToDataset(String datasetId, String actingUserId, DatasetMetadata metadata,
+                                              License license, DisposalPolicy disposalPolicy,
+                                              AccessLevel accessLevel, LocalDate embargoEndDate,
+                                              List<StoredFile> files, String changeSummary) {
+        Dataset dataset = datasets.get(datasetId);
+        if (dataset == null) {
+            throw new IllegalArgumentException("Dataset not found: " + datasetId);
+        }
+
+        int nextVersionNumber = dataset.getVersions().size() + 1;
+        DatasetVersion version = new DatasetVersion(nextVersionNumber, changeSummary, metadata, license, disposalPolicy, accessLevel, embargoEndDate);
+        for (StoredFile file : files) {
+            version.addFile(file);
+        }
+
+        dataset.addVersion(version);
+        rememberedDepositorMetadata.put(dataset.getDepositorId(), metadata);
+        if (metadata.getCrisProjectId() != null) {
+            crisService.linkDatasetToCris(metadata.getCrisProjectId(), datasetId);
+        }
+        return version;
+    }
+
+    public void submitForReview(String datasetId) {
+        Dataset dataset = datasets.get(datasetId);
+        if (dataset == null) {
+            throw new IllegalArgumentException("Dataset not found");
+        }
+        dataset.setStatus(DatasetStatus.SUBMITTED_FOR_REVIEW);
+    }
+
+    public boolean adminApproveAndPublish(String adminUserId, String datasetId) {
+        User admin = ldapService.authenticate(adminUserId)
+                .orElseThrow(() -> new IllegalArgumentException("Admin not found"));
+        if (admin.getRole() != Role.ADMINISTRATOR) {
+            throw new SecurityException("Only University of Bath Archive Administrators can approve datasets.");
+        }
+
+        Dataset dataset = datasets.get(datasetId);
+        if (dataset == null) {
+            throw new IllegalArgumentException("Dataset not found");
+        }
+
+        DatasetVersion latest = dataset.getLatestVersion();
+        if (latest == null) {
+            return false;
+        }
+
+        MetadataValidator.ValidationResult validation = metadataValidator.validate(latest);
+        if (!validation.isValid()) {
+            throw new IllegalStateException("Metadata validation failed: " + String.join(", ", validation.getErrors()));
+        }
+
+        String doi = doiService.mintDoi(dataset.getDatasetId(), latest.getVersionNumber());
+        String purl = doiService.generatePersistentUrl(doi);
+        latest.setDoi(doi);
+        latest.setPersistentUrl(purl);
+
+        dataset.setStatus(DatasetStatus.PUBLISHED);
+        return true;
+    }
+
+    public FixityAuditReport auditFileIntegrity(String fileId, String expectedSha256, String fileName) {
+        boolean match = storageBackend.verifyIntegrity(fileId, expectedSha256);
+        return new FixityAuditReport(fileId, fileName, match, expectedSha256);
+    }
+
+    public boolean canAccessData(Dataset dataset, DatasetVersion version, User user, LocalDate currentDate, boolean onCampus) {
+        if (user != null && (user.getRole() == Role.ADMINISTRATOR || user.getUserId().equals(dataset.getDepositorId()))) {
+            return true;
+        }
+
+        if (version.getPrivilegedCollaborators().contains(user != null ? user.getUserId() : "")) {
+            return true;
+        }
+
+        if (version.isEmbargoActive(currentDate)) {
+            return false;
+        }
+
+        if (version.getAccessLevel() == AccessLevel.OPEN) {
+            return true;
+        }
+
+        if (version.getAccessLevel() == AccessLevel.RESTRICTED) {
+            return onCampus && user != null;
+        }
+
+        return false;
+    }
+
+    public List<Dataset> searchCatalog(String query, String subjectFilter) {
+        String q = query == null ? "" : query.toLowerCase();
+        String subj = subjectFilter == null ? "" : subjectFilter.toLowerCase();
+
+        return datasets.values().stream()
+                .filter(d -> d.getStatus() == DatasetStatus.PUBLISHED)
+                .filter(d -> {
+                    DatasetVersion v = d.getLatestVersion();
+                    if (v == null) return false;
+                    boolean matchesQuery = q.isEmpty() ||
+                            v.getMetadata().getTitle().toLowerCase().contains(q) ||
+                            v.getMetadata().getDescription().toLowerCase().contains(q) ||
+                            v.getMetadata().getKeywords().stream().anyMatch(k -> k.toLowerCase().contains(q));
+                    boolean matchesSubject = subj.isEmpty() ||
+                            v.getMetadata().getSubjectDiscipline().toLowerCase().contains(subj);
+                    return matchesQuery && matchesSubject;
+                })
+                .collect(Collectors.toList());
+    }
+
+    public List<Dataset> primoSearchEndpoint(String genericSearchTerm) {
+        return searchCatalog(genericSearchTerm, null);
+    }
+
+    public Dataset swordDeposit(SwordDepositRequest request) {
+        User actor = ldapService.authenticate(request.getDepositorId())
+                .orElseThrow(() -> new IllegalArgumentException("Unknown SWORD user"));
+        Dataset dataset = createDatasetDraft(actor.getUserId(), request.getOnBehalfOf(), false);
+
+        DatasetMetadata meta = new DatasetMetadata(request.getTitle(), request.getAbstractText(), request.getDiscipline());
+        meta.addAuthor(actor.getFullName());
+
+        List<StoredFile> files = new ArrayList<>();
+        if (request.getFileBytes() != null && request.getFileBytes().length > 0) {
+            StoredFile file = uploadFile(dataset.getDatasetId(), request.getFileName(), "application/octet-stream", request.getFileBytes(), false);
+            files.add(file);
+        }
+
+        License lic = "CC-BY-4.0".equalsIgnoreCase(request.getLicenseIdentifier()) ? License.CC_BY_4_0 : License.RESTRICTED_COLLABORATION;
+        DisposalPolicy policy = new DisposalPolicy(10, LocalDate.now().plusYears(10), "Standard 10-year research funder retention");
+
+        addVersionToDataset(dataset.getDatasetId(), actor.getUserId(), meta, lic, policy, AccessLevel.OPEN, null, files, "Deposited via SWORDv2 API");
+        submitForReview(dataset.getDatasetId());
+        return dataset;
+    }
+
+    public void approveDisposal(String adminUserId, String datasetId) {
+        User admin = ldapService.authenticate(adminUserId).orElseThrow();
+        if (admin.getRole() != Role.ADMINISTRATOR) {
+            throw new SecurityException("Only admin can approve disposal");
+        }
+        Dataset dataset = datasets.get(datasetId);
+        if (dataset != null && dataset.getLatestVersion() != null) {
+            dataset.getLatestVersion().getDisposalPolicy().approveDisposal();
+            dataset.setStatus(DatasetStatus.DISPOSED);
+        }
+    }
+
+    public byte[] wholesaleExportArchive() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("BATH-ARCHIVE-WHOLESALE-EXPORT-V1\n");
+        for (Dataset d : datasets.values()) {
+            DatasetVersion v = d.getLatestVersion();
+            if (v != null) {
+                sb.append("DATASET:").append(d.getDatasetId())
+                  .append("|STATUS:").append(d.getStatus())
+                  .append("|TITLE:").append(v.getMetadata().getTitle())
+                  .append("|DOI:").append(v.getDoi())
+                  .append("|FILES_COUNT:").append(v.getFiles().size())
+                  .append("\n");
+            }
+        }
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    public int wholesaleImportExternalData(List<Dataset> externalDatasets) {
+        int imported = 0;
+        for (Dataset d : externalDatasets) {
+            datasets.put(d.getDatasetId(), d);
+            imported++;
+        }
+        return imported;
+    }
+
+    public List<Dataset> queryEntireArchive(DatasetStatus statusFilter, String funderFilter) {
+        return datasets.values().stream()
+                .filter(d -> statusFilter == null || d.getStatus() == statusFilter)
+                .filter(d -> {
+                    if (funderFilter == null) return true;
+                    DatasetVersion v = d.getLatestVersion();
+                    return v != null && funderFilter.equalsIgnoreCase(v.getMetadata().getFunderName());
+                })
+                .collect(Collectors.toList());
+    }
+
+    private String calculateSha256(byte[] data) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data);
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) sb.append('0');
+                sb.append(hex);
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public DoiService getDoiService() {
+        return doiService;
+    }
+
+    public AnalyticsService getAnalyticsService() {
+        return analyticsService;
+    }
+
+    public CrisIntegrationService getCrisService() {
+        return crisService;
+    }
+
+    public LocalizationService getLocalizationService() {
+        return localizationService;
+    }
+
+    public MetadataHarvestingService getHarvestingService() {
+        return harvestingService;
+    }
+
+    public Map<String, Dataset> getAllDatasets() {
+        return Collections.unmodifiableMap(datasets);
+    }
+}
+
+// File: Main.java
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=== University of Bath Research Data Archive System Demo ===\n");
+
+        // 1. Initialize LDAP and Storage (HCP Object Storage)
+        LdapDirectoryService ldap = new LdapDirectoryService();
+        User profSmith = new User("smith_a", "Prof. Alice Smith", "a.smith@bath.ac.uk", "Dept of Chemistry", Role.DEPOSITOR, "en");
+        User drDupont = new User("dupont_j", "Dr. Jean Dupont", "j.dupont@bath.ac.uk", "Dept of Physics", Role.DEPOSITOR, "fr");
+        User facManager = new User("facility_mgr", "Dr. Bob Facility", "b.facility@bath.ac.uk", "MC2 Microscopy Facility", Role.FACILITY_MANAGER, "en");
+        User adminUser = new User("bath_admin", "Bath Archive Administrator", "data-archive-admin@bath.ac.uk", "Library & Archive Services", Role.ADMINISTRATOR, "en");
+        User extCollaborator = new User("ext_collab_carol", "Dr. Carol Offsite", "carol@collaborator-inst.org", "External Institute", Role.COLLABORATOR, "es");
+        User crisManager = new User("cris_mgr", "Research Information Manager", "rim@bath.ac.uk", "Research & Innovation Services", Role.RESEARCH_INFORMATION_MANAGER, "en");
+
+        // Set delegation: Prof Smith allows facility manager to deposit on her behalf
+        profSmith.addDelegatedDepositor("facility_mgr");
+
+        ldap.registerUser(profSmith);
+        ldap.registerUser(drDupont);
+        ldap.registerUser(facManager);
+        ldap.registerUser(adminUser);
+        ldap.registerUser(extCollaborator);
+        ldap.registerUser(crisManager);
+
+        StorageBackend hcpStorage = new HcpObjectStorage();
+        BathDataArchiveService archive = new BathDataArchiveService(ldap, hcpStorage);
+
+        // 2. CRIS Integration Setup
+        CrisIntegrationService.CrisProject projectEpsrc = new CrisIntegrationService.CrisProject(
+                "CRIS-PROJ-7788", "NextGen Photocatalysis Systems", "EPSRC", "EP/K012345/1");
+        archive.getCrisService().registerProject(projectEpsrc);
+
+        // 3. User Story: Familiar Web/Auto-filled Metadata & Opus Publication / DMP Linking
+        System.out.println("--- 1. Deposit with Autofill & DMP / Opus Linking ---");
+        Dataset dataset1 = archive.createDatasetDraft("smith_a", null, false);
+        DatasetMetadata meta1 = archive.prepareMetadataWithDefaults("smith_a",
+                "Solar Photocatalysis Reaction Time-Series Data",
+                "Kinetic rate experiments of novel metal-organic frameworks under artificial sunlight.",
+                "Chemistry");
+        meta1.addKeyword("photocatalysis");
+        meta1.addKeyword("chemistry");
+        meta1.setDmpId("DMP-BATH-CHEM-2023-A");
+        meta1.setOpusPublicationId("opus/publications/98765");
+        meta1.setCrisProjectId("CRIS-PROJ-7788");
+        meta1.setFunderName("EPSRC");
+        meta1.setGrantNumber("EP/K012345/1");
+
+        // Arbitrarily large file deposit & Integrity check
+        byte[] largeData = "Large RAW spectrometer time-series observations 2023-2024 ... [GB/TB data payload]".getBytes(StandardCharsets.UTF_8);
+        StoredFile file1 = archive.uploadFile(dataset1.getDatasetId(), "photocat_kinetics_v1.csv", "text/csv", largeData, false);
+
+        // Version 1 with Embargo and Privileged Off-Campus Collaborator Access
+        LocalDate embargoDate = LocalDate.now().plusMonths(6);
+        DisposalPolicy policy1 = new DisposalPolicy(10, LocalDate.now().plusYears(10), "Retain for 10 years in line with EPSRC data mandate.");
+
+        DatasetVersion v1 = archive.addVersionToDataset(
+                dataset1.getDatasetId(), "smith_a", meta1, License.CC_BY_4_0, policy1, AccessLevel.EMBARGOED, embargoDate,
+                List.of(file1), "Initial dataset deposit associated with Opus paper 98765"
+        );
+        v1.addPrivilegedCollaborator("ext_collab_carol");
+
+        // Submit for Review
+        archive.submitForReview(dataset1.getDatasetId());
+        System.out.println("Dataset created: ID=" + dataset1.getDatasetId() + ", Status=" + dataset1.getStatus());
+        System.out.println("Auto-filled authors: " + v1.getMetadata().getAuthors());
+        System.out.println("Linked Opus Publication ID: " + v1.getMetadata().getOpusPublicationId());
+        System.out.println("Linked DMP: " + v1.getMetadata().getDmpId());
+
+        // 4. Archive Administrator Review and DOI minting
+        System.out.println("\n--- 2. Administrator Quality Check & DOI Minting ---");
+        boolean published = archive.adminApproveAndPublish("bath_admin", dataset1.getDatasetId());
+        System.out.println("Dataset approved and published? " + published);
+        System.out.println("Minted DOI: " + v1.getDoi());
+        System.out.println("Persistent URL: " + v1.getPersistentUrl());
+
+        // 5. Versioning (v2 update with transparent changes)
+        System.out.println("\n--- 3. Dataset Versioning ---");
+        byte[] v2Data = "Updated reaction dataset including calibration factors".getBytes(StandardCharsets.UTF_8);
+        StoredFile file2 = archive.uploadFile(dataset1.getDatasetId(), "photocat_kinetics_v2.csv", "text/csv", v2Data, false);
+        DatasetVersion v2 = archive.addVersionToDataset(
+                dataset1.getDatasetId(), "smith_a", meta1, License.CC_BY_4_0, policy1, AccessLevel.EMBARGOED, embargoDate,
+                List.of(file1, file2), "Version 2: Added calibration measurements"
+        );
+        archive.adminApproveAndPublish("bath_admin", dataset1.getDatasetId());
+        System.out.println("Dataset now has versions: " + dataset1.getVersions().size());
+        System.out.println("V1 DOI: " + dataset1.getVersion(1).getDoi());
+        System.out.println("V2 DOI: " + dataset1.getVersion(2).getDoi());
+
+        // 6. Access Control & Embargo Checks (Privileged Collaborator vs General Reuser)
+        System.out.println("\n--- 4. Embargo & Privileged Off-Campus Access ---");
+        boolean canReuserAccess = archive.canAccessData(dataset1, v2, null, LocalDate.now(), false);
+        boolean canCarolAccess = archive.canAccessData(dataset1, v2, extCollaborator, LocalDate.now(), false);
+        System.out.println("Public Reuser access during embargo: " + canReuserAccess + " (Blocked by active embargo)");
+        System.out.println("External Collaborator (Carol) access during embargo off-campus: " + canCarolAccess + " (Allowed via privileged list)");
+
+        // 7. Facility Manager depositing on behalf of researcher
+        System.out.println("\n--- 5. Facility Manager Delegation Deposit ---");
+        Dataset facilityDataset = archive.createDatasetDraft("facility_mgr", "smith_a", false);
+        DatasetMetadata facMeta = new DatasetMetadata("MC2 Electron Microscopy Scans", "High-res SEM micrographs", "Materials Science");
+        facMeta.addAuthor("Prof. Alice Smith");
+        byte[] semImage = "TIFF-RAW-IMAGE-BYTE-STREAM".getBytes(StandardCharsets.UTF_8);
+        StoredFile semFile = archive.uploadFile(facilityDataset.getDatasetId(), "micrograph_01.tif", "image/tiff", semImage, false);
+        archive.addVersionToDataset(facilityDataset.getDatasetId(), "facility_mgr", facMeta, License.CC0_1_0,
+                new DisposalPolicy(5, LocalDate.now().plusYears(5), "5-year facility storage"),
+                AccessLevel.OPEN, null, List.of(semFile), "Direct upload from MC2 facility");
+        archive.submitForReview(facilityDataset.getDatasetId());
+        archive.adminApproveAndPublish("bath_admin", facilityDataset.getDatasetId());
+        System.out.println("Facility deposit successful. Owner: " + facilityDataset.getDepositorId() + ", Status: " + facilityDataset.getStatus());
+
+        // 8. SWORD2 API Deposit (VRE / Pure programmatic deposit)
+        System.out.println("\n--- 6. SWORD2 / API Ingestion Standard ---");
+        SwordDepositRequest swordReq = new SwordDepositRequest(
+                "dupont_j", null, "VRE Simulation Run: Quantum Spin States",
+                "Automated output from VRE cluster computing environment.",
+                "Physics", "CC-BY-4.0", "spin_results.json", "{\"state\": [1, 0, -1]}".getBytes(StandardCharsets.UTF_8)
+        );
+        Dataset swordDataset = archive.swordDeposit(swordReq);
+        archive.adminApproveAndPublish("bath_admin", swordDataset.getDatasetId());
+        System.out.println("SWORD API Dataset published. ID: " + swordDataset.getDatasetId() + ", Title: " + swordDataset.getLatestVersion().getMetadata().getTitle());
+
+        // 9. Linking External Repositories (e.g. Zenodo/Dryad registration)
+        System.out.println("\n--- 7. Linking Externally Hosted Repositories ---");
+        Dataset externalDataset = archive.createDatasetDraft("smith_a", null, true);
+        DatasetMetadata extMeta = new DatasetMetadata("Global Climate Models 2024", "External climate simulations hosted at CEDA", "Meteorology");
+        extMeta.addAuthor("Prof. Alice Smith");
+        extMeta.setExternalRepositoryUrl("https://archive.ceda.ac.uk/record/12345");
+        archive.addVersionToDataset(externalDataset.getDatasetId(), "smith_a", extMeta, License.CC_BY_4_0,
+                new DisposalPolicy(10, LocalDate.now().plusYears(10), "Maintained externally"),
+                AccessLevel.OPEN, null, List.of(), "External link registration");
+        archive.submitForReview(externalDataset.getDatasetId());
+        archive.adminApproveAndPublish("bath_admin", externalDataset.getDatasetId());
+        System.out.println("Registered external dataset. External URL: " + externalDataset.getLatestVersion().getMetadata().getExternalRepositoryUrl());
+
+        // 10. Data Integrity and Fixity Check
+        System.out.println("\n--- 8. Data Fixity & Integrity Auditing ---");
+        FixityAuditReport audit = archive.auditFileIntegrity(file1.getFileId(), file1.getSha256Checksum(), file1.getFileName());
+        System.out.println("Fixity audit for " + audit.getFileName() + " passed: " + audit.isPassed() + " [SHA-256: " + audit.getExpectedSha256() + "]");
+
+        // 11. Discovery & Search (Web, Primo Gateway, Multilingual UI)
+        System.out.println("\n--- 9. Discovery, Primo Search, and Multilingual Interface ---");
+        List<Dataset> primoResults = archive.primoSearchEndpoint("photocatalysis");
+        System.out.println("Primo discovery hits for 'photocatalysis': " + primoResults.size());
+        for (Dataset d : primoResults) {
+            System.out.println(" - Found in Primo: " + d.getLatestVersion().getMetadata().getTitle());
+        }
+
+        System.out.println("UI Localization [EN]: " + archive.getLocalizationService().getMessage("ui.welcome", "en"));
+        System.out.println("UI Localization [FR]: " + archive.getLocalizationService().getMessage("ui.welcome", "fr"));
+        System.out.println("UI Localization [ES]: " + archive.getLocalizationService().getMessage("ui.welcome", "es"));
+
+        // 12. Citation Generation (APA & BibTeX)
+        System.out.println("\n--- 10. Citation Examples ---");
+        System.out.println("APA Citation:\n" + archive.getDoiService().formatApaCitation(dataset1, dataset1.getLatestVersion()));
+        System.out.println("BibTeX Citation:\n" + archive.getDoiService().formatBibtexCitation(dataset1, dataset1.getLatestVersion()));
+
+        // 13. Metrics Tracking & CRIS Reporting (Downloads segmented by Country and Sector, Citations)
+        System.out.println("\n--- 11. Impact Analytics & CRIS Tracking ---");
+        archive.getAnalyticsService().logMetric(dataset1.getDatasetId(), 2, UsageMetricRecord.Action.DOWNLOAD, "UK", "ACADEMIC");
+        archive.getAnalyticsService().logMetric(dataset1.getDatasetId(), 2, UsageMetricRecord.Action.DOWNLOAD, "UK", "COMMERCIAL");
+        archive.getAnalyticsService().logMetric(dataset1.getDatasetId(), 2, UsageMetricRecord.Action.DOWNLOAD, "DE", "ACADEMIC");
+        archive.getAnalyticsService().logMetric(dataset1.getDatasetId(), 2, UsageMetricRecord.Action.VIEW, "FR", "PUBLIC");
+        archive.getAnalyticsService().recordCitation(dataset1.getDatasetId());
+        archive.getAnalyticsService().recordCitation(dataset1.getDatasetId());
+
+        System.out.println("Total views: " + archive.getAnalyticsService().getTotalViews(dataset1.getDatasetId()));
+        System.out.println("Total downloads: " + archive.getAnalyticsService().getTotalDownloads(dataset1.getDatasetId()));
+        System.out.println("Citation count: " + archive.getAnalyticsService().getCitationCount(dataset1.getDatasetId()));
+        System.out.println("Downloads by country: " + archive.getAnalyticsService().getDownloadsByCountry(dataset1.getDatasetId()));
+        System.out.println("Downloads by sector: " + archive.getAnalyticsService().getDownloadsBySector(dataset1.getDatasetId()));
+
+        // 14. Funder Harvesting (OAI-PMH / Dublin Core)
+        System.out.println("\n--- 12. Funder Harvesting (OAI-PMH Dublin Core) ---");
+        List<MetadataHarvestingService.OaiRecord> epsrcHarvest = archive.getHarvestingService()
+                .harvestByFunder(new ArrayList<>(archive.getAllDatasets().values()), "EPSRC");
+        System.out.println("Harvested records for EPSRC: " + epsrcHarvest.size());
+        if (!epsrcHarvest.isEmpty()) {
+            System.out.println(epsrcHarvest.get(0).toDublinCoreXml());
+        }
+
+        // 15. Admin Wholesale Export and Disposal Approval
+        System.out.println("\n--- 13. System Portability & Disposal Policy Enforcement ---");
+        byte[] wholesaleBackup = archive.wholesaleExportArchive();
+        System.out.println("Exported wholesale archive package size: " + wholesaleBackup.length + " bytes");
+
+        // Disposal review and approval
+        archive.approveDisposal("bath_admin", facilityDataset.getDatasetId());
+        System.out.println("Facility Dataset status after approved disposal: " + facilityDataset.getStatus());
+
+        System.out.println("\n=== All specification user stories successfully demonstrated ===");
+    }
+}

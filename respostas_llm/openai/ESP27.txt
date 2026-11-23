@@ -1,0 +1,770 @@
+// File: Role.java
+import java.util.EnumSet;
+
+public enum Role {
+    CONTRIBUTOR,
+    APPROVER,
+    PUBLISHER;
+
+    public static EnumSet<Role> copyOf(Iterable<Role> roles) {
+        EnumSet<Role> result = EnumSet.noneOf(Role.class);
+        for (Role role : roles) {
+            result.add(role);
+        }
+        return result;
+    }
+}
+
+// File: AccountType.java
+public enum AccountType {
+    STANDARD,
+    SYSTEM_ADMINISTRATOR
+}
+
+// File: ContentType.java
+public enum ContentType {
+    TEXT,
+    IMAGE,
+    AUDIO,
+    VIDEO
+}
+
+// File: ContentOperation.java
+public enum ContentOperation {
+    CREATE,
+    IMPORT,
+    EDIT,
+    DELETE
+}
+
+// File: ActionStatus.java
+public enum ActionStatus {
+    SUBMITTED,
+    APPROVED,
+    REJECTED,
+    SCHEDULED,
+    PUBLISHED
+}
+
+// File: UserAccount.java
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+public final class UserAccount {
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    private final String username;
+    private final AccountType accountType;
+    private final Set<String> groups;
+    private final Map<String, EnumSet<Role>> productRoles = new HashMap<>();
+    private String name;
+    private String emailAddress;
+    private byte[] passwordSalt;
+    private byte[] passwordHash;
+    private boolean active = true;
+    private long historyCount;
+
+    UserAccount(
+            String username,
+            String password,
+            String name,
+            String emailAddress,
+            Set<String> groups,
+            AccountType accountType) {
+        this.username = requireText(username, "Username");
+        this.name = requireText(name, "Name");
+        this.emailAddress = requireText(emailAddress, "Email address");
+        if (groups == null || groups.isEmpty()) {
+            throw new IllegalArgumentException("At least one group membership is required");
+        }
+        this.groups = new HashSet<>();
+        for (String group : groups) {
+            this.groups.add(requireText(group, "Group"));
+        }
+        this.accountType = java.util.Objects.requireNonNull(accountType, "Account type");
+        setPassword(password);
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmailAddress() {
+        return emailAddress;
+    }
+
+    public Set<String> getGroups() {
+        return Collections.unmodifiableSet(groups);
+    }
+
+    public AccountType getAccountType() {
+        return accountType;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public boolean hasHistory() {
+        return historyCount > 0;
+    }
+
+    public Set<Role> getRolesForProduct(String productId) {
+        EnumSet<Role> roles = productRoles.get(productId);
+        return roles == null
+                ? Collections.emptySet()
+                : Collections.unmodifiableSet(EnumSet.copyOf(roles));
+    }
+
+    public boolean hasRole(String productId, Role role) {
+        EnumSet<Role> roles = productRoles.get(productId);
+        return roles != null && roles.contains(role);
+    }
+
+    boolean passwordMatches(String password) {
+        if (password == null) {
+            return false;
+        }
+        return MessageDigest.isEqual(passwordHash, hash(passwordSalt, password));
+    }
+
+    void setProductRoles(String productId, Set<Role> roles) {
+        String key = requireText(productId, "Product ID");
+        if (roles == null || roles.isEmpty()) {
+            productRoles.remove(key);
+        } else {
+            productRoles.put(key, Role.copyOf(roles));
+        }
+    }
+
+    void updateProfile(String name, String emailAddress) {
+        this.name = requireText(name, "Name");
+        this.emailAddress = requireText(emailAddress, "Email address");
+    }
+
+    void setPassword(String password) {
+        if (password == null || password.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long");
+        }
+        passwordSalt = new byte[16];
+        RANDOM.nextBytes(passwordSalt);
+        passwordHash = hash(passwordSalt, password);
+    }
+
+    void deactivate() {
+        active = false;
+    }
+
+    void activate() {
+        active = true;
+    }
+
+    void recordHistory() {
+        historyCount++;
+    }
+
+    private static byte[] hash(byte[] salt, String password) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update(salt);
+            return digest.digest(password.getBytes(StandardCharsets.UTF_8));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is unavailable", e);
+        }
+    }
+
+    private static String requireText(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(field + " is required");
+        }
+        return value.trim();
+    }
+}
+
+// File: Session.java
+public final class Session {
+    private final UserAccount account;
+
+    Session(UserAccount account) {
+        this.account = account;
+    }
+
+    public UserAccount getAccount() {
+        return account;
+    }
+
+    public String getUsername() {
+        return account.getUsername();
+    }
+}
+
+// File: AccountService.java
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+public final class AccountService {
+    private final Map<String, UserAccount> accounts = new HashMap<>();
+
+    public synchronized UserAccount createAccount(
+            String username,
+            String password,
+            String name,
+            String emailAddress,
+            Set<String> groups,
+            AccountType accountType) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username is required");
+        }
+        String key = username.trim();
+        if (accounts.containsKey(key)) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+        UserAccount account = new UserAccount(
+                key, password, name, emailAddress, groups, accountType);
+        accounts.put(key, account);
+        return account;
+    }
+
+    public synchronized Optional<Session> login(String username, String password) {
+        UserAccount account = accounts.get(username);
+        if (account == null || !account.isActive() || !account.passwordMatches(password)) {
+            return Optional.empty();
+        }
+        return Optional.of(new Session(account));
+    }
+
+    public synchronized void modifyProfile(Session session, String name, String emailAddress) {
+        UserAccount account = requireSession(session);
+        account.updateProfile(name, emailAddress);
+    }
+
+    public synchronized void changeOwnPassword(
+            Session session, String currentPassword, String newPassword) {
+        UserAccount account = requireSession(session);
+        if (!account.passwordMatches(currentPassword)) {
+            throw new SecurityException("Current password is incorrect");
+        }
+        account.setPassword(newPassword);
+    }
+
+    public synchronized void assignProductRoles(
+            Session administrator, String username, String productId, Set<Role> roles) {
+        requireAdministrator(administrator);
+        UserAccount target = requireAccount(username);
+        target.setProductRoles(productId, roles);
+    }
+
+    public synchronized void deactivate(Session administrator, String username) {
+        requireAdministrator(administrator);
+        UserAccount target = requireAccount(username);
+        if (target.getAccountType() == AccountType.SYSTEM_ADMINISTRATOR) {
+            throw new IllegalArgumentException("System administrator accounts cannot be deactivated");
+        }
+        target.deactivate();
+    }
+
+    public synchronized void reactivate(Session administrator, String username) {
+        requireAdministrator(administrator);
+        requireAccount(username).activate();
+    }
+
+    public synchronized void deleteAccount(Session administrator, String username) {
+        requireAdministrator(administrator);
+        UserAccount target = requireAccount(username);
+        if (target.getAccountType() == AccountType.SYSTEM_ADMINISTRATOR) {
+            throw new IllegalArgumentException("System administrator accounts cannot be deleted");
+        }
+        if (target.hasHistory()) {
+            throw new IllegalStateException("Accounts with history may only be deactivated");
+        }
+        accounts.remove(username);
+    }
+
+    public synchronized Optional<UserAccount> findAccount(String username) {
+        return Optional.ofNullable(accounts.get(username));
+    }
+
+    public synchronized Collection<UserAccount> getAccounts() {
+        return java.util.List.copyOf(accounts.values());
+    }
+
+    synchronized UserAccount requireSession(Session session) {
+        if (session == null) {
+            throw new SecurityException("An authenticated session is required");
+        }
+        UserAccount account = accounts.get(session.getUsername());
+        if (account == null || account != session.getAccount() || !account.isActive()) {
+            throw new SecurityException("Session is invalid or the account is inactive");
+        }
+        return account;
+    }
+
+    private void requireAdministrator(Session session) {
+        UserAccount account = requireSession(session);
+        if (account.getAccountType() != AccountType.SYSTEM_ADMINISTRATOR) {
+            throw new SecurityException("System administrator privileges are required");
+        }
+    }
+
+    private UserAccount requireAccount(String username) {
+        UserAccount account = accounts.get(username);
+        if (account == null) {
+            throw new IllegalArgumentException("Account not found: " + username);
+        }
+        return account;
+    }
+}
+
+// File: ContentItem.java
+import java.util.Objects;
+import java.util.UUID;
+
+public record ContentItem(String id, ContentType type, String payload) {
+    public ContentItem {
+        if (id == null || id.isBlank()) {
+            id = UUID.randomUUID().toString();
+        }
+        Objects.requireNonNull(type, "Content type");
+        if (payload == null || payload.isBlank()) {
+            throw new IllegalArgumentException("Content payload is required");
+        }
+    }
+
+    public ContentItem(ContentType type, String payload) {
+        this(UUID.randomUUID().toString(), type, payload);
+    }
+}
+
+// File: PublishingAction.java
+import java.time.Instant;
+import java.util.Objects;
+
+public final class PublishingAction {
+    private final String id;
+    private final String creatorUsername;
+    private final ContentOperation operation;
+    private final ContentItem contentItem;
+    private ActionStatus status = ActionStatus.SUBMITTED;
+    private String reviewerUsername;
+    private Instant scheduledTime;
+
+    PublishingAction(
+            String creatorUsername,
+            ContentOperation operation,
+            ContentItem contentItem) {
+        this.id = java.util.UUID.randomUUID().toString();
+        this.creatorUsername = Objects.requireNonNull(creatorUsername);
+        this.operation = Objects.requireNonNull(operation);
+        this.contentItem = Objects.requireNonNull(contentItem);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getCreatorUsername() {
+        return creatorUsername;
+    }
+
+    public ContentOperation getOperation() {
+        return operation;
+    }
+
+    public ContentItem getContentItem() {
+        return contentItem;
+    }
+
+    public ActionStatus getStatus() {
+        return status;
+    }
+
+    public String getReviewerUsername() {
+        return reviewerUsername;
+    }
+
+    public Instant getScheduledTime() {
+        return scheduledTime;
+    }
+
+    void approve(String reviewerUsername) {
+        requireStatus(ActionStatus.SUBMITTED);
+        this.reviewerUsername = reviewerUsername;
+        this.status = ActionStatus.APPROVED;
+    }
+
+    void reject(String reviewerUsername) {
+        requireStatus(ActionStatus.SUBMITTED);
+        this.reviewerUsername = reviewerUsername;
+        this.status = ActionStatus.REJECTED;
+    }
+
+    void schedule(Instant time) {
+        requireStatus(ActionStatus.APPROVED);
+        this.scheduledTime = Objects.requireNonNull(time);
+        this.status = ActionStatus.SCHEDULED;
+    }
+
+    void markPublished() {
+        if (status != ActionStatus.APPROVED && status != ActionStatus.SCHEDULED) {
+            throw new IllegalStateException("Only approved actions can be published");
+        }
+        status = ActionStatus.PUBLISHED;
+    }
+
+    private void requireStatus(ActionStatus expected) {
+        if (status != expected) {
+            throw new IllegalStateException("Action must have status " + expected);
+        }
+    }
+}
+
+// File: Campaign.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class Campaign {
+    private final String name;
+    private final String productId;
+    private final List<ContentItem> content = new ArrayList<>();
+    private final List<PublishingAction> actions = new ArrayList<>();
+    private final Map<Instant, List<PublishingAction>> schedule = new TreeMap<>();
+    private final Set<String> permittedUsers = ConcurrentHashMap.newKeySet();
+    private final Set<String> permittedGroups = ConcurrentHashMap.newKeySet();
+
+    public Campaign(String name, String productId) {
+        if (name == null || name.isBlank() || productId == null || productId.isBlank()) {
+            throw new IllegalArgumentException("Campaign name and product ID are required");
+        }
+        this.name = name.trim();
+        this.productId = productId.trim();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getProductId() {
+        return productId;
+    }
+
+    public synchronized List<ContentItem> getContent() {
+        return List.copyOf(content);
+    }
+
+    public synchronized List<PublishingAction> getActions() {
+        return List.copyOf(actions);
+    }
+
+    public synchronized Map<Instant, List<PublishingAction>> getSchedule() {
+        Map<Instant, List<PublishingAction>> copy = new TreeMap<>();
+        schedule.forEach((time, entries) -> copy.put(time, List.copyOf(entries)));
+        return Collections.unmodifiableMap(copy);
+    }
+
+    public void grantUser(String username) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username is required");
+        }
+        permittedUsers.add(username);
+    }
+
+    public void grantGroup(String group) {
+        if (group == null || group.isBlank()) {
+            throw new IllegalArgumentException("Group is required");
+        }
+        permittedGroups.add(group);
+    }
+
+    boolean allows(UserAccount account) {
+        if (permittedUsers.isEmpty() && permittedGroups.isEmpty()) {
+            return true;
+        }
+        if (permittedUsers.contains(account.getUsername())) {
+            return true;
+        }
+        return account.getGroups().stream().anyMatch(permittedGroups::contains);
+    }
+
+    synchronized void addAction(PublishingAction action) {
+        actions.add(action);
+    }
+
+    synchronized void schedule(PublishingAction action, Instant time) {
+        schedule.computeIfAbsent(time, ignored -> new ArrayList<>()).add(action);
+    }
+
+    synchronized void apply(PublishingAction action) {
+        ContentItem item = action.getContentItem();
+        switch (action.getOperation()) {
+            case CREATE, IMPORT -> {
+                if (content.stream().anyMatch(existing -> existing.id().equals(item.id()))) {
+                    throw new IllegalStateException("Content item already exists");
+                }
+                content.add(item);
+            }
+            case EDIT -> {
+                int index = findContentIndex(item.id());
+                if (index < 0) {
+                    throw new IllegalStateException("Content item to edit was not found");
+                }
+                content.set(index, item);
+            }
+            case DELETE -> {
+                int index = findContentIndex(item.id());
+                if (index < 0) {
+                    throw new IllegalStateException("Content item to delete was not found");
+                }
+                content.remove(index);
+            }
+        }
+        action.markPublished();
+    }
+
+    synchronized List<PublishingAction> dueActions(Instant throughTime) {
+        List<PublishingAction> result = new ArrayList<>();
+        for (Map.Entry<Instant, List<PublishingAction>> entry : schedule.entrySet()) {
+            if (entry.getKey().isAfter(throughTime)) {
+                break;
+            }
+            for (PublishingAction action : entry.getValue()) {
+                if (action.getStatus() == ActionStatus.SCHEDULED) {
+                    result.add(action);
+                }
+            }
+        }
+        return result;
+    }
+
+    private int findContentIndex(String contentId) {
+        for (int i = 0; i < content.size(); i++) {
+            if (content.get(i).id().equals(contentId)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+}
+
+// File: CampaignService.java
+import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
+
+public final class CampaignService {
+    private final AccountService accountService;
+
+    public CampaignService(AccountService accountService) {
+        this.accountService = Objects.requireNonNull(accountService);
+    }
+
+    public PublishingAction submitAction(
+            Session contributor,
+            Campaign campaign,
+            ContentOperation operation,
+            ContentItem contentItem) {
+        UserAccount account = authorize(contributor, campaign, Role.CONTRIBUTOR);
+        PublishingAction action = new PublishingAction(
+                account.getUsername(), operation, contentItem);
+        synchronized (campaign) {
+            campaign.addAction(action);
+        }
+        account.recordHistory();
+        return action;
+    }
+
+    public void approve(Session approver, Campaign campaign, PublishingAction action) {
+        UserAccount account = authorize(approver, campaign, Role.APPROVER);
+        requireCampaignAction(campaign, action);
+        action.approve(account.getUsername());
+    }
+
+    public void reject(Session approver, Campaign campaign, PublishingAction action) {
+        UserAccount account = authorize(approver, campaign, Role.APPROVER);
+        requireCampaignAction(campaign, action);
+        action.reject(account.getUsername());
+    }
+
+    public void publishNow(Session publisher, Campaign campaign, PublishingAction action) {
+        authorize(publisher, campaign, Role.PUBLISHER);
+        requireCampaignAction(campaign, action);
+        synchronized (campaign) {
+            campaign.apply(action);
+        }
+    }
+
+    public void schedule(
+            Session publisher, Campaign campaign, PublishingAction action, Instant time) {
+        authorize(publisher, campaign, Role.PUBLISHER);
+        requireCampaignAction(campaign, action);
+        if (time == null || time.isBefore(Instant.now())) {
+            throw new IllegalArgumentException("Scheduled time must be in the future");
+        }
+        synchronized (campaign) {
+            action.schedule(time);
+            campaign.schedule(action, time);
+        }
+    }
+
+    public int publishScheduledThrough(
+            Session publisher, Campaign campaign, Instant throughTime) {
+        authorize(publisher, campaign, Role.PUBLISHER);
+        Objects.requireNonNull(throughTime, "Through time");
+        List<PublishingAction> due = campaign.dueActions(throughTime);
+        int published = 0;
+        synchronized (campaign) {
+            for (PublishingAction action : due) {
+                campaign.apply(action);
+                published++;
+            }
+        }
+        return published;
+    }
+
+    private UserAccount authorize(Session session, Campaign campaign, Role role) {
+        Objects.requireNonNull(campaign, "Campaign");
+        UserAccount account = accountService.requireSession(session);
+        if (!account.hasRole(campaign.getProductId(), role)) {
+            throw new SecurityException("The required product role is missing: " + role);
+        }
+        if (!campaign.allows(account)) {
+            throw new SecurityException("The user is not permitted to access this campaign");
+        }
+        return account;
+    }
+
+    private void requireCampaignAction(Campaign campaign, PublishingAction action) {
+        if (action == null || !campaign.getActions().contains(action)) {
+            throw new IllegalArgumentException("Action does not belong to this campaign");
+        }
+    }
+}
+
+// File: ExternalAction.java
+import java.util.Map;
+
+public record ExternalAction(String type, Map<String, String> parameters) {
+    public ExternalAction {
+        if (type == null || type.isBlank()) {
+            throw new IllegalArgumentException("Action type is required");
+        }
+        parameters = parameters == null ? Map.of() : Map.copyOf(parameters);
+    }
+}
+
+// File: ExternalServiceAdapter.java
+import java.util.Map;
+
+public interface ExternalServiceAdapter {
+    String getServiceName();
+
+    boolean authenticate(String externalAccountId, Map<String, String> credentials);
+
+    void perform(String externalAccountId, ExternalAction action);
+}
+
+// File: ExternalAccountLink.java
+import java.util.Objects;
+
+public record ExternalAccountLink(
+        String mashbotUsername,
+        String serviceName,
+        String externalAccountId) {
+    public ExternalAccountLink {
+        if (mashbotUsername == null || mashbotUsername.isBlank()
+                || serviceName == null || serviceName.isBlank()
+                || externalAccountId == null || externalAccountId.isBlank()) {
+            throw new IllegalArgumentException("All external account link fields are required");
+        }
+    }
+
+    public static ExternalAccountLink authenticate(
+            String mashbotUsername,
+            String externalAccountId,
+            ExternalServiceAdapter adapter,
+            java.util.Map<String, String> credentials) {
+        Objects.requireNonNull(adapter, "External service adapter");
+        if (!adapter.authenticate(externalAccountId, credentials)) {
+            throw new SecurityException("External service authentication failed");
+        }
+        return new ExternalAccountLink(
+                mashbotUsername, adapter.getServiceName(), externalAccountId);
+    }
+}
+
+// File: Main.java
+import java.time.Instant;
+import java.util.Map;
+import java.util.Set;
+
+public class Main {
+    public static void main(String[] args) {
+        AccountService accounts = new AccountService();
+
+        UserAccount administrator = accounts.createAccount(
+                "admin", "admin-password", "System Administrator",
+                "admin@example.com", Set.of("management"),
+                AccountType.SYSTEM_ADMINISTRATOR);
+
+        UserAccount contributor = accounts.createAccount(
+                "alex", "contributor-password", "Alex Contributor",
+                "alex@example.com", Set.of("marketing"), AccountType.STANDARD);
+
+        UserAccount approver = accounts.createAccount(
+                "sam", "approver-password", "Sam Approver",
+                "sam@example.com", Set.of("marketing"), AccountType.STANDARD);
+
+        UserAccount publisher = accounts.createAccount(
+                "pat", "publisher-password", "Pat Publisher",
+                "pat@example.com", Set.of("marketing"), AccountType.STANDARD);
+
+        Session adminSession = accounts.login("admin", "admin-password").orElseThrow();
+        accounts.assignProductRoles(adminSession, "alex", "product-1", Set.of(Role.CONTRIBUTOR));
+        accounts.assignProductRoles(adminSession, "sam", "product-1", Set.of(Role.APPROVER));
+        accounts.assignProductRoles(adminSession, "pat", "product-1", Set.of(Role.PUBLISHER));
+
+        Session contributorSession = accounts.login("alex", "contributor-password").orElseThrow();
+        Session approverSession = accounts.login("sam", "approver-password").orElseThrow();
+        Session publisherSession = accounts.login("pat", "publisher-password").orElseThrow();
+
+        Campaign campaign = new Campaign("Spring Campaign", "product-1");
+        campaign.grantGroup("marketing");
+
+        CampaignService campaigns = new CampaignService(accounts);
+        ContentItem item = new ContentItem(ContentType.TEXT, "Welcome to our spring campaign");
+        PublishingAction action = campaigns.submitAction(
+                contributorSession, campaign, ContentOperation.CREATE, item);
+        campaigns.approve(approverSession, campaign, action);
+
+        // Demonstrate scheduling, then publish when the scheduled time is reached.
+        Instant scheduledTime = Instant.now().plusSeconds(60);
+        campaigns.schedule(publisherSession, campaign, action, scheduledTime);
+        campaigns.publishScheduledThrough(publisherSession, campaign, scheduledTime);
+
+        System.out.println("Campaign: " + campaign.getName());
+        System.out.println("Published content items: " + campaign.getContent().size());
+        System.out.println("External account links use the standardized adapter API: "
+                + ExternalServiceAdapter.class.getSimpleName());
+    }
+}

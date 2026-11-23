@@ -1,0 +1,2231 @@
+// File: Role.java
+public enum Role {
+    STAFF,
+    LOCAL_SYS_ADMIN,
+    LIBRARY_MANAGER,
+    LIBRARY_DIRECTOR,
+    GLOBAL_SYS_ADMIN
+}
+
+// File: CheckInType.java
+public enum CheckInType {
+    BOOK_DROP,
+    TERMINAL,
+    SELF_SERVICE
+}
+
+// File: CheckOutType.java
+public enum CheckOutType {
+    STAFF_CHECKOUT,
+    SELF_CHECKOUT,
+    STAFF_RENEWAL,
+    SELF_RENEWAL,
+    ONLINE_RENEWAL,
+    OPAC_RENEWAL
+}
+
+// File: HoldSource.java
+public enum HoldSource {
+    STAFF_DESK,
+    PUBLIC_COMPUTER,
+    REMOTE
+}
+
+// File: HoldStatus.java
+public enum HoldStatus {
+    ACTIVE,
+    FROZEN,
+    FROZEN_UNTIL,
+    FILLED
+}
+
+// File: ItemStatus.java
+public enum ItemStatus {
+    AVAILABLE,
+    CHECKED_OUT,
+    IN_TRANSIT,
+    MISSING,
+    DAMAGED,
+    DISCARD_WEED,
+    LONG_OVERDUE
+}
+
+// File: ChargeType.java
+public enum ChargeType {
+    OVERDUE_FINE,
+    DAMAGED_ITEM,
+    LOST_ITEM,
+    GENERAL_FEE
+}
+
+// File: PaymentMethod.java
+public enum PaymentMethod {
+    STAFF_DESK,
+    SELF_CHECK,
+    OPAC
+}
+
+// File: LibrarySystem.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class LibrarySystem {
+    private final String id;
+    private final String name;
+    private final List<Branch> branches = new ArrayList<>();
+
+    public LibrarySystem(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public List<Branch> getBranches() {
+        return branches;
+    }
+
+    public void addBranch(Branch branch) {
+        branches.add(branch);
+    }
+}
+
+// File: Branch.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class Branch {
+    private final String id;
+    private final String name;
+    private final String systemId;
+    private final String county;
+    private final int totalCapacity;
+    private final Map<String, Double> shelfSpaceAllocation = new HashMap<>(); // genre/format -> shelf capacity %
+
+    public Branch(String id, String name, String systemId, String county, int totalCapacity) {
+        this.id = id;
+        this.name = name;
+        this.systemId = systemId;
+        this.county = county;
+        this.totalCapacity = totalCapacity;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getSystemId() {
+        return systemId;
+    }
+
+    public String getCounty() {
+        return county;
+    }
+
+    public int totalCapacity() {
+        return totalCapacity;
+    }
+
+    public Map<String, Double> getShelfSpaceAllocation() {
+        return shelfSpaceAllocation;
+    }
+
+    public void setShelfSpaceAllocation(String category, double percentage) {
+        shelfSpaceAllocation.put(category, percentage);
+    }
+}
+
+// File: Terminal.java
+public class Terminal {
+    private final String id;
+    private final String branchId;
+    private final boolean isPublic;
+
+    public Terminal(String id, String branchId, boolean isPublic) {
+        this.id = id;
+        this.branchId = branchId;
+        this.isPublic = isPublic;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getBranchId() {
+        return branchId;
+    }
+
+    public boolean isPublic() {
+        return isPublic;
+    }
+}
+
+// File: StaffUser.java
+import java.util.HashSet;
+import java.util.Set;
+
+public class StaffUser {
+    private final String id;
+    private final String username;
+    private final String password;
+    private final String swipeCardId;
+    private final Role role;
+    private final String branchId;
+    private final String systemId;
+    private final Set<String> permissions = new HashSet<>();
+
+    public StaffUser(String id, String username, String password, String swipeCardId, Role role, String branchId, String systemId) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.swipeCardId = swipeCardId;
+        this.role = role;
+        this.branchId = branchId;
+        this.systemId = systemId;
+        assignDefaultPermissions();
+    }
+
+    private void assignDefaultPermissions() {
+        permissions.add("RUN_REPORT");
+        if (role == Role.LOCAL_SYS_ADMIN || role == Role.LIBRARY_MANAGER || role == Role.LIBRARY_DIRECTOR || role == Role.GLOBAL_SYS_ADMIN) {
+            permissions.add("CREATE_REPORT");
+            permissions.add("CLONE_REPORT");
+            permissions.add("MANAGE_FOLDERS");
+            permissions.add("ACCESS_ALL_TABLES");
+        }
+        if (role == Role.GLOBAL_SYS_ADMIN || role == Role.LOCAL_SYS_ADMIN) {
+            permissions.add("PURGE_RECORDS");
+            permissions.add("TRANSFER_BATCH");
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getSwipeCardId() {
+        return swipeCardId;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public String getBranchId() {
+        return branchId;
+    }
+
+    public String getSystemId() {
+        return systemId;
+    }
+
+    public boolean hasPermission(String permission) {
+        return permissions.contains(permission);
+    }
+
+    public void addPermission(String permission) {
+        permissions.add(permission);
+    }
+}
+
+// File: AuthenticationService.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class AuthenticationService {
+    private final Map<String, StaffUser> usersByUsername = new HashMap<>();
+    private final Map<String, StaffUser> usersByCard = new HashMap<>();
+
+    public void registerStaff(StaffUser staff) {
+        usersByUsername.put(staff.getUsername(), staff);
+        if (staff.getSwipeCardId() != null) {
+            usersByCard.put(staff.getSwipeCardId(), staff);
+        }
+    }
+
+    public StaffUser loginWithCredentials(String username, String password) {
+        StaffUser user = usersByUsername.get(username);
+        if (user != null && user.getPassword().equals(password)) {
+            return user;
+        }
+        return null;
+    }
+
+    public StaffUser loginWithCardSwipe(String swipeCardId) {
+        return usersByCard.get(swipeCardId);
+    }
+}
+
+// File: Patron.java
+import java.time.LocalDate;
+
+public class Patron {
+    private final String id;
+    private final String name;
+    private final boolean hasCard;
+    private final String ageRange;
+    private final String zipCode;
+    private final String county;
+    private final String homeBranchId;
+    private final String patronType;
+    private final String preferredLanguage;
+    private LocalDate lastActivityDate;
+
+    public Patron(String id, String name, boolean hasCard, String ageRange, String zipCode,
+                  String county, String homeBranchId, String patronType, String preferredLanguage,
+                  LocalDate lastActivityDate) {
+        this.id = id;
+        this.name = name;
+        this.hasCard = hasCard;
+        this.ageRange = ageRange;
+        this.zipCode = zipCode;
+        this.county = county;
+        this.homeBranchId = homeBranchId;
+        this.patronType = patronType;
+        this.preferredLanguage = preferredLanguage;
+        this.lastActivityDate = lastActivityDate;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public boolean isHasCard() {
+        return hasCard;
+    }
+
+    public String getAgeRange() {
+        return ageRange;
+    }
+
+    public String getZipCode() {
+        return zipCode;
+    }
+
+    public String getCounty() {
+        return county;
+    }
+
+    public String getHomeBranchId() {
+        return homeBranchId;
+    }
+
+    public String getPatronType() {
+        return patronType;
+    }
+
+    public String getPreferredLanguage() {
+        return preferredLanguage;
+    }
+
+    public LocalDate getLastActivityDate() {
+        return lastActivityDate;
+    }
+
+    public void setLastActivityDate(LocalDate lastActivityDate) {
+        this.lastActivityDate = lastActivityDate;
+    }
+}
+
+// File: BibRecord.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class BibRecord {
+    private final String id;
+    private final String title;
+    private final String author;
+    private final List<String> itemIds = new ArrayList<>();
+
+    public BibRecord(String id, String title, String author) {
+        this.id = id;
+        this.title = title;
+        this.author = author;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public List<String> getItemIds() {
+        return itemIds;
+    }
+
+    public void addItemId(String itemId) {
+        itemIds.add(itemId);
+    }
+
+    public void removeItemId(String itemId) {
+        itemIds.remove(itemId);
+    }
+}
+
+// File: ItemRecord.java
+import java.time.LocalDate;
+
+public class ItemRecord {
+    private final String id;
+    private final String bibId;
+    private String barcode;
+    private String callNumber;
+    private String itemType;
+    private String format;
+    private String genre;
+    private ItemStatus status;
+    private double price;
+    private String currentBranchId;
+    private String originalBranchId;
+    private String systemId;
+    private boolean uncataloged;
+    private LocalDate lastCheckoutDate;
+    private int daysInTransit;
+    private int monthsInStatus;
+    private int renewalCount;
+    private int checkoutCount;
+    private int daysToReturnTotal;
+
+    public ItemRecord(String id, String bibId, String barcode, String callNumber, String itemType,
+                      String format, String genre, ItemStatus status, double price,
+                      String currentBranchId, String systemId, boolean uncataloged) {
+        this.id = id;
+        this.bibId = bibId;
+        this.barcode = barcode;
+        this.callNumber = callNumber;
+        this.itemType = itemType;
+        this.format = format;
+        this.genre = genre;
+        this.status = status;
+        this.price = price;
+        this.currentBranchId = currentBranchId;
+        this.originalBranchId = currentBranchId;
+        this.systemId = systemId;
+        this.uncataloged = uncataloged;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getBibId() {
+        return bibId;
+    }
+
+    public String getBarcode() {
+        return barcode;
+    }
+
+    public String getCallNumber() {
+        return callNumber;
+    }
+
+    public void setCallNumber(String callNumber) {
+        this.callNumber = callNumber;
+    }
+
+    public String getItemType() {
+        return itemType;
+    }
+
+    public void setItemType(String itemType) {
+        this.itemType = itemType;
+    }
+
+    public String getFormat() {
+        return format;
+    }
+
+    public String getGenre() {
+        return genre;
+    }
+
+    public ItemStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ItemStatus status) {
+        this.status = status;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    public String getCurrentBranchId() {
+        return currentBranchId;
+    }
+
+    public void setCurrentBranchId(String currentBranchId) {
+        this.currentBranchId = currentBranchId;
+    }
+
+    public String getOriginalBranchId() {
+        return originalBranchId;
+    }
+
+    public void setOriginalBranchId(String originalBranchId) {
+        this.originalBranchId = originalBranchId;
+    }
+
+    public String getSystemId() {
+        return systemId;
+    }
+
+    public boolean isUncataloged() {
+        return uncataloged;
+    }
+
+    public LocalDate getLastCheckoutDate() {
+        return lastCheckoutDate;
+    }
+
+    public void setLastCheckoutDate(LocalDate lastCheckoutDate) {
+        this.lastCheckoutDate = lastCheckoutDate;
+    }
+
+    public int getDaysInTransit() {
+        return daysInTransit;
+    }
+
+    public void setDaysInTransit(int daysInTransit) {
+        this.daysInTransit = daysInTransit;
+    }
+
+    public int getMonthsInStatus() {
+        return monthsInStatus;
+    }
+
+    public void setMonthsInStatus(int monthsInStatus) {
+        this.monthsInStatus = monthsInStatus;
+    }
+
+    public int getRenewalCount() {
+        return renewalCount;
+    }
+
+    public void incrementRenewals() {
+        this.renewalCount++;
+    }
+
+    public int getCheckoutCount() {
+        return checkoutCount;
+    }
+
+    public void incrementCheckouts(int returnDays) {
+        this.checkoutCount++;
+        this.daysToReturnTotal += returnDays;
+    }
+
+    public double getAverageReturnDays() {
+        return checkoutCount == 0 ? 0.0 : (double) daysToReturnTotal / checkoutCount;
+    }
+}
+
+// File: HoldRequest.java
+import java.time.LocalDateTime;
+
+public class HoldRequest {
+    private final String id;
+    private final String bibId;
+    private final String itemId;
+    private final String patronId;
+    private final String pickupBranchId;
+    private final LocalDateTime requestDate;
+    private final HoldSource source;
+    private HoldStatus status;
+
+    public HoldRequest(String id, String bibId, String itemId, String patronId,
+                       String pickupBranchId, LocalDateTime requestDate, HoldSource source,
+                       HoldStatus status) {
+        this.id = id;
+        this.bibId = bibId;
+        this.itemId = itemId;
+        this.patronId = patronId;
+        this.pickupBranchId = pickupBranchId;
+        this.requestDate = requestDate;
+        this.source = source;
+        this.status = status;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getBibId() {
+        return bibId;
+    }
+
+    public String getItemId() {
+        return itemId;
+    }
+
+    public String getPatronId() {
+        return patronId;
+    }
+
+    public String getPickupBranchId() {
+        return pickupBranchId;
+    }
+
+    public LocalDateTime getRequestDate() {
+        return requestDate;
+    }
+
+    public HoldSource getSource() {
+        return source;
+    }
+
+    public HoldStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(HoldStatus status) {
+        this.status = status;
+    }
+}
+
+// File: TransactionRecord.java
+import java.time.LocalDateTime;
+
+public class TransactionRecord {
+    private final String id;
+    private final LocalDateTime timestamp;
+    private final String terminalId;
+    private final String branchId;
+    private final String systemId;
+    private final String patronId;
+    private final String itemId;
+    private final String transactionType; // CHECKOUT, CHECKIN, HOLD_PLACED, HOLD_FILLED, PAYMENT
+    private final CheckOutType checkOutType;
+    private final CheckInType checkInType;
+    private final HoldSource holdSource;
+    private final String patronAgeRange;
+    private final String patronType;
+    private final String patronCounty;
+    private final String patronZip;
+
+    public TransactionRecord(String id, LocalDateTime timestamp, String terminalId, String branchId,
+                             String systemId, String patronId, String itemId, String transactionType,
+                             CheckOutType checkOutType, CheckInType checkInType, HoldSource holdSource,
+                             String patronAgeRange, String patronType, String patronCounty, String patronZip) {
+        this.id = id;
+        this.timestamp = timestamp;
+        this.terminalId = terminalId;
+        this.branchId = branchId;
+        this.systemId = systemId;
+        this.patronId = patronId;
+        this.itemId = itemId;
+        this.transactionType = transactionType;
+        this.checkOutType = checkOutType;
+        this.checkInType = checkInType;
+        this.holdSource = holdSource;
+        this.patronAgeRange = patronAgeRange;
+        this.patronType = patronType;
+        this.patronCounty = patronCounty;
+        this.patronZip = patronZip;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public String getTerminalId() {
+        return terminalId;
+    }
+
+    public String getBranchId() {
+        return branchId;
+    }
+
+    public String getSystemId() {
+        return systemId;
+    }
+
+    public String getPatronId() {
+        return patronId;
+    }
+
+    public String getItemId() {
+        return itemId;
+    }
+
+    public String getTransactionType() {
+        return transactionType;
+    }
+
+    public CheckOutType getCheckOutType() {
+        return checkOutType;
+    }
+
+    public CheckInType getCheckInType() {
+        return checkInType;
+    }
+
+    public HoldSource getHoldSource() {
+        return holdSource;
+    }
+
+    public String getPatronAgeRange() {
+        return patronAgeRange;
+    }
+
+    public String getPatronType() {
+        return patronType;
+    }
+
+    public String getPatronCounty() {
+        return patronCounty;
+    }
+
+    public String getPatronZip() {
+        return patronZip;
+    }
+}
+
+// File: AnonymizedTransaction.java
+import java.time.LocalDateTime;
+
+public class AnonymizedTransaction {
+    private final String transactionType;
+    private final LocalDateTime timestamp;
+    private final String branchId;
+    private final String systemId;
+    private final String patronAgeRange;
+    private final String patronCounty;
+    private final String patronZip;
+    private final String patronType;
+
+    public AnonymizedTransaction(TransactionRecord original) {
+        this.transactionType = original.getTransactionType();
+        this.timestamp = original.getTimestamp();
+        this.branchId = original.getBranchId();
+        this.systemId = original.getSystemId();
+        this.patronAgeRange = original.getPatronAgeRange();
+        this.patronCounty = original.getPatronCounty();
+        this.patronZip = original.getPatronZip();
+        this.patronType = original.getPatronType();
+    }
+
+    public String getTransactionType() {
+        return transactionType;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public String getBranchId() {
+        return branchId;
+    }
+
+    public String getSystemId() {
+        return systemId;
+    }
+
+    public String getPatronAgeRange() {
+        return patronAgeRange;
+    }
+
+    public String getPatronCounty() {
+        return patronCounty;
+    }
+
+    public String getPatronZip() {
+        return patronZip;
+    }
+
+    public String getPatronType() {
+        return patronType;
+    }
+}
+
+// File: Charge.java
+import java.time.LocalDate;
+
+public class Charge {
+    private final String id;
+    private final String patronId;
+    private final String itemId;
+    private final String branchId;
+    private final ChargeType chargeType;
+    private final double amount;
+    private double balanceRemaining;
+    private final LocalDate dateAccrued;
+
+    public Charge(String id, String patronId, String itemId, String branchId,
+                  ChargeType chargeType, double amount, LocalDate dateAccrued) {
+        this.id = id;
+        this.patronId = patronId;
+        this.itemId = itemId;
+        this.branchId = branchId;
+        this.chargeType = chargeType;
+        this.amount = amount;
+        this.balanceRemaining = amount;
+        this.dateAccrued = dateAccrued;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getPatronId() {
+        return patronId;
+    }
+
+    public String getItemId() {
+        return itemId;
+    }
+
+    public String getBranchId() {
+        return branchId;
+    }
+
+    public ChargeType getChargeType() {
+        return chargeType;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    public double getBalanceRemaining() {
+        return balanceRemaining;
+    }
+
+    public void reduceBalance(double payment) {
+        this.balanceRemaining = Math.max(0.0, this.balanceRemaining - payment);
+    }
+
+    public LocalDate getDateAccrued() {
+        return dateAccrued;
+    }
+}
+
+// File: Payment.java
+import java.time.LocalDate;
+
+public class Payment {
+    private final String id;
+    private final String patronId;
+    private final String branchId;
+    private final double amount;
+    private final PaymentMethod method;
+    private final LocalDate date;
+
+    public Payment(String id, String patronId, String branchId, double amount, PaymentMethod method, LocalDate date) {
+        this.id = id;
+        this.patronId = patronId;
+        this.branchId = branchId;
+        this.amount = amount;
+        this.method = method;
+        this.date = date;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getPatronId() {
+        return patronId;
+    }
+
+    public String getBranchId() {
+        return branchId;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    public PaymentMethod getMethod() {
+        return method;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+}
+
+// File: AuditEntry.java
+import java.time.LocalDate;
+
+public class AuditEntry {
+    private final String entryId;
+    private final String paymentOrWaiverId;
+    private final String chargeId;
+    private final String patronId;
+    private final String branchId;
+    private final double amountApplied;
+    private final String actionType; // PAYMENT, WAIVER
+    private final LocalDate timestamp;
+
+    public AuditEntry(String entryId, String paymentOrWaiverId, String chargeId,
+                      String patronId, String branchId, double amountApplied,
+                      String actionType, LocalDate timestamp) {
+        this.entryId = entryId;
+        this.paymentOrWaiverId = paymentOrWaiverId;
+        this.chargeId = chargeId;
+        this.patronId = patronId;
+        this.branchId = branchId;
+        this.amountApplied = amountApplied;
+        this.actionType = actionType;
+        this.timestamp = timestamp;
+    }
+
+    public String getEntryId() {
+        return entryId;
+    }
+
+    public String getPaymentOrWaiverId() {
+        return paymentOrWaiverId;
+    }
+
+    public String getChargeId() {
+        return chargeId;
+    }
+
+    public String getPatronId() {
+        return patronId;
+    }
+
+    public String getBranchId() {
+        return branchId;
+    }
+
+    public double getAmountApplied() {
+        return amountApplied;
+    }
+
+    public String getActionType() {
+        return actionType;
+    }
+
+    public LocalDate getTimestamp() {
+        return timestamp;
+    }
+}
+
+// File: FinancialLedger.java
+import java.time.LocalDate;
+import java.util.*;
+
+public class FinancialLedger {
+    private final List<Charge> charges = new ArrayList<>();
+    private final List<Payment> payments = new ArrayList<>();
+    private final List<AuditEntry> auditEntries = new ArrayList<>();
+    private final Map<String, Double> waivedByBranch = new HashMap<>();
+
+    public void addCharge(Charge charge) {
+        charges.add(charge);
+    }
+
+    public void applyPayment(Payment payment, String chargeId) {
+        payments.add(payment);
+        for (Charge charge : charges) {
+            if (charge.getId().equals(chargeId)) {
+                double applied = Math.min(payment.getAmount(), charge.getBalanceRemaining());
+                charge.reduceBalance(applied);
+                auditEntries.add(new AuditEntry(
+                        UUID.randomUUID().toString(),
+                        payment.getId(),
+                        chargeId,
+                        payment.getPatronId(),
+                        payment.getBranchId(),
+                        applied,
+                        "PAYMENT",
+                        payment.getDate()
+                ));
+                break;
+            }
+        }
+    }
+
+    public void waiveCharge(String chargeId, String staffBranchId, double amount, LocalDate date) {
+        for (Charge charge : charges) {
+            if (charge.getId().equals(chargeId)) {
+                double applied = Math.min(amount, charge.getBalanceRemaining());
+                charge.reduceBalance(applied);
+                waivedByBranch.put(staffBranchId, waivedByBranch.getOrDefault(staffBranchId, 0.0) + applied);
+                auditEntries.add(new AuditEntry(
+                        UUID.randomUUID().toString(),
+                        "WAIVER-" + UUID.randomUUID().toString().substring(0, 5),
+                        chargeId,
+                        charge.getPatronId(),
+                        staffBranchId,
+                        applied,
+                        "WAIVER",
+                        date
+                ));
+                break;
+            }
+        }
+    }
+
+    public double getPatronBalance(String patronId) {
+        return charges.stream()
+                .filter(c -> c.getPatronId().equals(patronId))
+                .mapToDouble(Charge::getBalanceRemaining)
+                .sum();
+    }
+
+    public List<Charge> getCharges() {
+        return charges;
+    }
+
+    public List<Payment> getPayments() {
+        return payments;
+    }
+
+    public List<AuditEntry> getAuditEntries() {
+        return auditEntries;
+    }
+
+    public double getWaivedAmountForBranch(String branchId) {
+        return waivedByBranch.getOrDefault(branchId, 0.0);
+    }
+}
+
+// File: QueryCriteria.java
+import java.util.regex.Pattern;
+
+public class QueryCriteria {
+    private final String field;
+    private final String operator; // EQUALS, REGEX, GREATER_THAN, LESS_THAN, IN_PICKLIST
+    private final String value;
+
+    public QueryCriteria(String field, String operator, String value) {
+        this.field = field;
+        this.operator = operator;
+        this.value = value;
+    }
+
+    public String getField() {
+        return field;
+    }
+
+    public String getOperator() {
+        return operator;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public boolean matches(String fieldValue) {
+        if (fieldValue == null) return false;
+        return switch (operator) {
+            case "EQUALS" -> fieldValue.equalsIgnoreCase(value);
+            case "REGEX" -> Pattern.compile(value).matcher(fieldValue).find();
+            case "GREATER_THAN" -> Double.parseDouble(fieldValue) > Double.parseDouble(value);
+            case "LESS_THAN" -> Double.parseDouble(fieldValue) < Double.parseDouble(value);
+            case "IN_PICKLIST" -> {
+                String[] items = value.split(",");
+                for (String it : items) {
+                    if (it.trim().equalsIgnoreCase(fieldValue)) yield true;
+                }
+                yield false;
+            }
+            default -> false;
+        };
+    }
+
+    @Override
+    public String toString() {
+        return field + " " + operator + " '" + value + "'";
+    }
+}
+
+// File: QueryDefinition.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class QueryDefinition {
+    private final String targetRecordType; // ITEM, PATRON, BIB, TRANSACTION
+    private final List<String> selectedFields = new ArrayList<>();
+    private final List<QueryCriteria> criteria = new ArrayList<>();
+    private String booleanLogic = "AND"; // AND / OR
+
+    public QueryDefinition(String targetRecordType) {
+        this.targetRecordType = targetRecordType;
+    }
+
+    public String getTargetRecordType() {
+        return targetRecordType;
+    }
+
+    public List<String> getSelectedFields() {
+        return selectedFields;
+    }
+
+    public void addSelectedField(String field) {
+        selectedFields.add(field);
+    }
+
+    public List<QueryCriteria> getCriteria() {
+        return criteria;
+    }
+
+    public void addCriterion(QueryCriteria criterion) {
+        criteria.add(criterion);
+    }
+
+    public String getBooleanLogic() {
+        return booleanLogic;
+    }
+
+    public void setBooleanLogic(String booleanLogic) {
+        this.booleanLogic = booleanLogic;
+    }
+}
+
+// File: QueryResult.java
+import java.util.List;
+import java.util.Map;
+
+public class QueryResult {
+    private final QueryDefinition querySelections;
+    private final List<Map<String, String>> results;
+
+    public QueryResult(QueryDefinition querySelections, List<Map<String, String>> results) {
+        this.querySelections = querySelections;
+        this.results = results;
+    }
+
+    public QueryDefinition getQuerySelections() {
+        return querySelections;
+    }
+
+    public List<Map<String, String>> getResults() {
+        return results;
+    }
+}
+
+// File: ReportTemplate.java
+import java.util.HashSet;
+import java.util.Set;
+
+public class ReportTemplate {
+    private final String id;
+    private final String name;
+    private final String folderId;
+    private final QueryDefinition baseQuery;
+    private final Set<String> alterableFilters = new HashSet<>();
+    private final Set<String> alterableDisplayFields = new HashSet<>();
+
+    public ReportTemplate(String id, String name, String folderId, QueryDefinition baseQuery) {
+        this.id = id;
+        this.name = name;
+        this.folderId = folderId;
+        this.baseQuery = baseQuery;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getFolderId() {
+        return folderId;
+    }
+
+    public QueryDefinition getBaseQuery() {
+        return baseQuery;
+    }
+
+    public Set<String> getAlterableFilters() {
+        return alterableFilters;
+    }
+
+    public void allowFilterAlteration(String filterField) {
+        alterableFilters.add(filterField);
+    }
+
+    public Set<String> getAlterableDisplayFields() {
+        return alterableDisplayFields;
+    }
+
+    public void allowDisplayFieldAlteration(String displayField) {
+        alterableDisplayFields.add(displayField);
+    }
+
+    public boolean canAlterFilter(String field) {
+        return alterableFilters.contains(field);
+    }
+
+    public boolean canAlterDisplayField(String field) {
+        return alterableDisplayFields.contains(field);
+    }
+}
+
+// File: SharedFolder.java
+import java.util.HashSet;
+import java.util.Set;
+
+public class SharedFolder {
+    private final String id;
+    private final String name;
+    private final Set<String> allowedStaffIds = new HashSet<>();
+    private final Set<String> allowedSystemIds = new HashSet<>();
+
+    public SharedFolder(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void grantAccessToStaff(String staffId) {
+        allowedStaffIds.add(staffId);
+    }
+
+    public void grantAccessToSystem(String systemId) {
+        allowedSystemIds.add(systemId);
+    }
+
+    public boolean canAccess(StaffUser staff) {
+        if (staff.getRole() == Role.GLOBAL_SYS_ADMIN) return true;
+        return allowedStaffIds.contains(staff.getId()) || allowedSystemIds.contains(staff.getSystemId());
+    }
+}
+
+// File: QueuedReport.java
+public class QueuedReport {
+    private final String reportJobId;
+    private final String templateName;
+    private final String requestedByStaffId;
+    private int queuePosition;
+
+    public QueuedReport(String reportJobId, String templateName, String requestedByStaffId, int queuePosition) {
+        this.reportJobId = reportJobId;
+        this.templateName = templateName;
+        this.requestedByStaffId = requestedByStaffId;
+        this.queuePosition = queuePosition;
+    }
+
+    public String getReportJobId() {
+        return reportJobId;
+    }
+
+    public String getTemplateName() {
+        return templateName;
+    }
+
+    public String getRequestedByStaffId() {
+        return requestedByStaffId;
+    }
+
+    public int getQueuePosition() {
+        return queuePosition;
+    }
+
+    public void setQueuePosition(int queuePosition) {
+        this.queuePosition = queuePosition;
+    }
+}
+
+// File: ReportQueueService.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public class ReportQueueService {
+    private final List<QueuedReport> queue = new ArrayList<>();
+
+    public synchronized QueuedReport enqueueReport(String templateName, String staffId) {
+        int position = queue.size() + 1;
+        QueuedReport job = new QueuedReport(UUID.randomUUID().toString(), templateName, staffId, position);
+        queue.add(job);
+        return job;
+    }
+
+    public synchronized int getQueuePosition(String reportJobId) {
+        for (QueuedReport job : queue) {
+            if (job.getReportJobId().equals(reportJobId)) {
+                return job.getQueuePosition();
+            }
+        }
+        return -1;
+    }
+
+    public synchronized void processNext() {
+        if (!queue.isEmpty()) {
+            queue.remove(0);
+            for (int i = 0; i < queue.size(); i++) {
+                queue.get(i).setQueuePosition(i + 1);
+            }
+        }
+    }
+}
+
+// File: DeletionTracker.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+public class DeletionTracker {
+    public static class DeletionRecord {
+        private final String recordType; // ITEM, PATRON, BIB
+        private final String recordId;
+        private final String branchId;
+        private final String systemId;
+        private final LocalDate date;
+
+        public DeletionRecord(String recordType, String recordId, String branchId, String systemId, LocalDate date) {
+            this.recordType = recordType;
+            this.recordId = recordId;
+            this.branchId = branchId;
+            this.systemId = systemId;
+            this.date = date;
+        }
+
+        public String getRecordType() {
+            return recordType;
+        }
+
+        public String getRecordId() {
+            return recordId;
+        }
+
+        public String getBranchId() {
+            return branchId;
+        }
+
+        public String getSystemId() {
+            return systemId;
+        }
+
+        public LocalDate getDate() {
+            return date;
+        }
+    }
+
+    private final List<DeletionRecord> records = new ArrayList<>();
+
+    public void recordDeletion(String type, String id, String branchId, String systemId, LocalDate date) {
+        records.add(new DeletionRecord(type, id, branchId, systemId, date));
+    }
+
+    public long countDeletions(String branchId, String systemId, String type) {
+        return records.stream().filter(r -> {
+            boolean matchesBranch = (branchId == null || r.getBranchId().equals(branchId));
+            boolean matchesSys = (systemId == null || r.getSystemId().equals(systemId));
+            boolean matchesType = (type == null || r.getRecordType().equalsIgnoreCase(type));
+            return matchesBranch && matchesSys && matchesType;
+        }).count();
+    }
+}
+
+// File: LibraryRepository.java
+import java.util.*;
+
+public class LibraryRepository {
+    private final Map<String, LibrarySystem> systems = new HashMap<>();
+    private final Map<String, Branch> branches = new HashMap<>();
+    private final Map<String, Patron> patrons = new HashMap<>();
+    private final Map<String, BibRecord> bibs = new HashMap<>();
+    private final Map<String, ItemRecord> items = new HashMap<>();
+    private final List<HoldRequest> holds = new ArrayList<>();
+    private final List<TransactionRecord> transactions = new ArrayList<>();
+    private final List<AnonymizedTransaction> archivedDemographics = new ArrayList<>();
+
+    public void addSystem(LibrarySystem sys) {
+        systems.put(sys.getId(), sys);
+    }
+
+    public void addBranch(Branch branch) {
+        branches.put(branch.getId(), branch);
+        LibrarySystem sys = systems.get(branch.getSystemId());
+        if (sys != null) {
+            sys.addBranch(branch);
+        }
+    }
+
+    public void addPatron(Patron patron) {
+        patrons.put(patron.getId(), patron);
+    }
+
+    public void addBib(BibRecord bib) {
+        bibs.put(bib.getId(), bib);
+    }
+
+    public void addItem(ItemRecord item) {
+        items.put(item.getId(), item);
+        BibRecord bib = bibs.get(item.getBibId());
+        if (bib != null) {
+            bib.addItemId(item.getId());
+        }
+    }
+
+    public void addHold(HoldRequest hold) {
+        holds.add(hold);
+    }
+
+    public void addTransaction(TransactionRecord tx) {
+        transactions.add(tx);
+    }
+
+    public void archiveTransactionDemographics(TransactionRecord tx) {
+        archivedDemographics.add(new AnonymizedTransaction(tx));
+    }
+
+    public Map<String, LibrarySystem> getSystems() {
+        return systems;
+    }
+
+    public Map<String, Branch> getBranches() {
+        return branches;
+    }
+
+    public Map<String, Patron> getPatrons() {
+        return patrons;
+    }
+
+    public Map<String, BibRecord> getBibs() {
+        return bibs;
+    }
+
+    public Map<String, ItemRecord> getItems() {
+        return items;
+    }
+
+    public List<HoldRequest> getHolds() {
+        return holds;
+    }
+
+    public List<TransactionRecord> getTransactions() {
+        return transactions;
+    }
+
+    public List<AnonymizedTransaction> getArchivedDemographics() {
+        return archivedDemographics;
+    }
+}
+
+// File: ItemTransferUtility.java
+import java.time.LocalDate;
+import java.util.*;
+
+public class ItemTransferUtility {
+    public static class TransferJob {
+        private final String jobId;
+        private final List<String> itemIds;
+        private final String targetBranchId;
+        private final LocalDate revertDate;
+        private final boolean autoRevert;
+
+        public TransferJob(String jobId, List<String> itemIds, String targetBranchId, LocalDate revertDate, boolean autoRevert) {
+            this.jobId = jobId;
+            this.itemIds = itemIds;
+            this.targetBranchId = targetBranchId;
+            this.revertDate = revertDate;
+            this.autoRevert = autoRevert;
+        }
+
+        public String getJobId() {
+            return jobId;
+        }
+
+        public List<String> getItemIds() {
+            return itemIds;
+        }
+
+        public String getTargetBranchId() {
+            return targetBranchId;
+        }
+
+        public LocalDate getRevertDate() {
+            return revertDate;
+        }
+
+        public boolean isAutoRevert() {
+            return autoRevert;
+        }
+    }
+
+    private final Map<String, QueryDefinition> savedTransferQueries = new HashMap<>();
+    private final List<TransferJob> transferJobs = new ArrayList<>();
+
+    public void saveQuery(String queryName, QueryDefinition query) {
+        savedTransferQueries.put(queryName, query);
+    }
+
+    public QueryDefinition getSavedQuery(String queryName) {
+        return savedTransferQueries.get(queryName);
+    }
+
+    public List<ItemRecord> generatePullList(LibraryRepository repository, QueryDefinition query) {
+        List<ItemRecord> pullList = new ArrayList<>();
+        for (ItemRecord item : repository.getItems().values()) {
+            boolean match = true;
+            for (QueryCriteria crit : query.getCriteria()) {
+                String val = getItemFieldValue(item, crit.getField());
+                if (!crit.matches(val)) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                pullList.add(item);
+            }
+        }
+        return pullList;
+    }
+
+    public TransferJob transferBatch(LibraryRepository repo, List<String> itemIds, String targetBranchId, LocalDate revertDate) {
+        for (String id : itemIds) {
+            ItemRecord item = repo.getItems().get(id);
+            if (item != null) {
+                item.setCurrentBranchId(targetBranchId);
+            }
+        }
+        TransferJob job = new TransferJob(UUID.randomUUID().toString(), itemIds, targetBranchId, revertDate, revertDate != null);
+        transferJobs.add(job);
+        return job;
+    }
+
+    public void revertBatchIfDue(LibraryRepository repo, LocalDate today) {
+        for (TransferJob job : transferJobs) {
+            if (job.isAutoRevert() && !today.isBefore(job.getRevertDate())) {
+                for (String id : job.getItemIds()) {
+                    ItemRecord item = repo.getItems().get(id);
+                    if (item != null) {
+                        item.setCurrentBranchId(item.getOriginalBranchId());
+                    }
+                }
+            }
+        }
+    }
+
+    private String getItemFieldValue(ItemRecord item, String field) {
+        return switch (field.toLowerCase()) {
+            case "callnumber" -> item.getCallNumber();
+            case "itemtype" -> item.getItemType();
+            case "genre" -> item.getGenre();
+            case "format" -> item.getFormat();
+            case "branch" -> item.getCurrentBranchId();
+            case "status" -> item.getStatus().name();
+            default -> "";
+        };
+    }
+}
+
+// File: QueryExecutionEngine.java
+import java.util.*;
+
+public class QueryExecutionEngine {
+    public QueryResult executeQuery(StaffUser user, QueryDefinition query, LibraryRepository repository) {
+        // Enforce field/table access permissions
+        if (!user.hasPermission("ACCESS_ALL_TABLES") && query.getTargetRecordType().equalsIgnoreCase("PATRON")) {
+            throw new SecurityException("Staff member " + user.getUsername() + " not authorized to query Patron records directly.");
+        }
+
+        List<Map<String, String>> results = new ArrayList<>();
+        if ("ITEM".equalsIgnoreCase(query.getTargetRecordType())) {
+            for (ItemRecord item : repository.getItems().values()) {
+                if (evalItem(item, query)) {
+                    Map<String, String> row = new LinkedHashMap<>();
+                    for (String field : query.getSelectedFields()) {
+                        row.put(field, getItemValue(item, field));
+                    }
+                    results.add(row);
+                }
+            }
+        } else if ("PATRON".equalsIgnoreCase(query.getTargetRecordType())) {
+            for (Patron patron : repository.getPatrons().values()) {
+                if (evalPatron(patron, query)) {
+                    Map<String, String> row = new LinkedHashMap<>();
+                    for (String field : query.getSelectedFields()) {
+                        row.put(field, getPatronValue(patron, field));
+                    }
+                    results.add(row);
+                }
+            }
+        }
+        return new QueryResult(query, results);
+    }
+
+    private boolean evalItem(ItemRecord item, QueryDefinition query) {
+        if (query.getCriteria().isEmpty()) return true;
+        boolean isAnd = "AND".equalsIgnoreCase(query.getBooleanLogic());
+        for (QueryCriteria crit : query.getCriteria()) {
+            boolean matches = crit.matches(getItemValue(item, crit.getField()));
+            if (isAnd && !matches) return false;
+            if (!isAnd && matches) return true;
+        }
+        return isAnd;
+    }
+
+    private boolean evalPatron(Patron patron, QueryDefinition query) {
+        if (query.getCriteria().isEmpty()) return true;
+        boolean isAnd = "AND".equalsIgnoreCase(query.getBooleanLogic());
+        for (QueryCriteria crit : query.getCriteria()) {
+            boolean matches = crit.matches(getPatronValue(patron, crit.getField()));
+            if (isAnd && !matches) return false;
+            if (!isAnd && matches) return true;
+        }
+        return isAnd;
+    }
+
+    private String getItemValue(ItemRecord item, String field) {
+        return switch (field.toLowerCase()) {
+            case "id" -> item.getId();
+            case "barcode" -> item.getBarcode();
+            case "callnumber" -> item.getCallNumber();
+            case "status" -> item.getStatus().name();
+            case "price" -> String.valueOf(item.getPrice());
+            case "branch" -> item.getCurrentBranchId();
+            case "itemtype" -> item.getItemType();
+            case "genre" -> item.getGenre();
+            case "format" -> item.getFormat();
+            default -> "";
+        };
+    }
+
+    private String getPatronValue(Patron p, String field) {
+        return switch (field.toLowerCase()) {
+            case "id" -> p.getId();
+            case "name" -> p.getName();
+            case "county" -> p.getCounty();
+            case "agerange" -> p.getAgeRange();
+            case "zipcode" -> p.getZipCode();
+            case "homebranch" -> p.getHomeBranchId();
+            case "patrontype" -> p.getPatronType();
+            case "language" -> p.getPreferredLanguage();
+            default -> "";
+        };
+    }
+}
+
+// File: ReportingService.java
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+
+public class ReportingService {
+    private final LibraryRepository repository;
+    private final FinancialLedger ledger;
+    private final DeletionTracker deletionTracker;
+
+    public ReportingService(LibraryRepository repository, FinancialLedger ledger, DeletionTracker deletionTracker) {
+        this.repository = repository;
+        this.ledger = ledger;
+        this.deletionTracker = deletionTracker;
+    }
+
+    // PINES-005: Board Reports & Activity cross-tabulated
+    public Map<String, Object> generateBoardReport(String groupBy) {
+        Map<String, Object> report = new LinkedHashMap<>();
+        Map<String, Long> checkouts = new HashMap<>();
+        Map<String, Long> checkins = new HashMap<>();
+        Map<String, Long> holdsPlaced = new HashMap<>();
+        Map<String, Long> holdsFilled = new HashMap<>();
+
+        for (TransactionRecord tx : repository.getTransactions()) {
+            String key = switch (groupBy.toLowerCase()) {
+                case "branch" -> tx.getBranchId();
+                case "terminal" -> tx.getTerminalId();
+                case "system" -> tx.getSystemId();
+                case "hour" -> String.valueOf(tx.getTimestamp().getHour());
+                case "agerange" -> tx.getPatronAgeRange();
+                case "patrontype" -> tx.getPatronType();
+                case "location" -> tx.getPatronCounty();
+                default -> "All";
+            };
+
+            switch (tx.getTransactionType()) {
+                case "CHECKOUT" -> checkouts.put(key, checkouts.getOrDefault(key, 0L) + 1);
+                case "CHECKIN" -> checkins.put(key, checkins.getOrDefault(key, 0L) + 1);
+                case "HOLD_PLACED" -> holdsPlaced.put(key, holdsPlaced.getOrDefault(key, 0L) + 1);
+                case "HOLD_FILLED" -> holdsFilled.put(key, holdsFilled.getOrDefault(key, 0L) + 1);
+            }
+        }
+        report.put("checkouts", checkouts);
+        report.put("checkins", checkins);
+        report.put("holdsPlaced", holdsPlaced);
+        report.put("holdsFilled", holdsFilled);
+        return report;
+    }
+
+    // PINES-007: Periodic reports implementations
+    public List<BibRecord> getBibRecordsWithHolds() {
+        Set<String> bibIdsWithHolds = new HashSet<>();
+        for (HoldRequest hold : repository.getHolds()) {
+            if (hold.getStatus() == HoldStatus.ACTIVE) {
+                bibIdsWithHolds.add(hold.getBibId());
+            }
+        }
+        List<BibRecord> results = new ArrayList<>();
+        for (String id : bibIdsWithHolds) {
+            BibRecord bib = repository.getBibs().get(id);
+            if (bib != null) results.add(bib);
+        }
+        return results;
+    }
+
+    public List<ItemRecord> getItemsNotCheckedOutInDays(int days, LocalDate referenceDate) {
+        List<ItemRecord> results = new ArrayList<>();
+        for (ItemRecord item : repository.getItems().values()) {
+            if (item.getLastCheckoutDate() == null || ChronoUnit.DAYS.between(item.getLastCheckoutDate(), referenceDate) > days) {
+                results.add(item);
+            }
+        }
+        return results;
+    }
+
+    public List<HoldRequest> getItemLevelHolds() {
+        List<HoldRequest> results = new ArrayList<>();
+        for (HoldRequest hold : repository.getHolds()) {
+            if (hold.getItemId() != null) {
+                results.add(hold);
+            }
+        }
+        return results;
+    }
+
+    public List<ItemRecord> getItemsWithInvalidItemType(Set<String> validTypes) {
+        List<ItemRecord> results = new ArrayList<>();
+        for (ItemRecord item : repository.getItems().values()) {
+            if (!validTypes.contains(item.getItemType())) {
+                results.add(item);
+            }
+        }
+        return results;
+    }
+
+    public List<ItemRecord> getInTransitItemsWithOutstandingHold() {
+        Set<String> heldItemIds = new HashSet<>();
+        for (HoldRequest hold : repository.getHolds()) {
+            if (hold.getItemId() != null && hold.getStatus() == HoldStatus.ACTIVE) {
+                heldItemIds.add(hold.getItemId());
+            }
+        }
+        List<ItemRecord> results = new ArrayList<>();
+        for (ItemRecord item : repository.getItems().values()) {
+            if (item.getStatus() == ItemStatus.IN_TRANSIT && heldItemIds.contains(item.getId())) {
+                results.add(item);
+            }
+        }
+        return results;
+    }
+
+    public List<ItemRecord> getInTransitItemsExceedingDays(int days) {
+        List<ItemRecord> results = new ArrayList<>();
+        for (ItemRecord item : repository.getItems().values()) {
+            if (item.getStatus() == ItemStatus.IN_TRANSIT && item.getDaysInTransit() > days) {
+                results.add(item);
+            }
+        }
+        return results;
+    }
+
+    public List<ItemRecord> getLastCopiesInSystem(String systemId) {
+        Map<String, List<ItemRecord>> itemsByBib = new HashMap<>();
+        for (ItemRecord item : repository.getItems().values()) {
+            if (item.getSystemId().equals(systemId)) {
+                itemsByBib.computeIfAbsent(item.getBibId(), k -> new ArrayList<>()).add(item);
+            }
+        }
+        List<ItemRecord> lastCopies = new ArrayList<>();
+        for (List<ItemRecord> copies : itemsByBib.values()) {
+            if (copies.size() == 1) {
+                lastCopies.add(copies.get(0));
+            }
+        }
+        return lastCopies;
+    }
+
+    public List<ItemRecord> getItemsWithLongCallNumber(int maxLength) {
+        List<ItemRecord> results = new ArrayList<>();
+        for (ItemRecord item : repository.getItems().values()) {
+            if (item.getCallNumber() != null && item.getCallNumber().length() > maxLength) {
+                results.add(item);
+            }
+        }
+        return results;
+    }
+
+    public List<ItemRecord> getMissingItemsPerBranch(String branchId) {
+        List<ItemRecord> results = new ArrayList<>();
+        for (ItemRecord item : repository.getItems().values()) {
+            if ((branchId == null || item.getCurrentBranchId().equals(branchId)) &&
+                (item.getStatus() == ItemStatus.MISSING || item.getStatus() == ItemStatus.DAMAGED)) {
+                results.add(item);
+            }
+        }
+        return results;
+    }
+
+    public List<BibRecord> getBibsWithNoItems() {
+        List<BibRecord> results = new ArrayList<>();
+        for (BibRecord bib : repository.getBibs().values()) {
+            if (bib.getItemIds().isEmpty()) {
+                results.add(bib);
+            }
+        }
+        return results;
+    }
+
+    public List<Patron> getPatronsWithInvalidHomeLibrary() {
+        List<Patron> results = new ArrayList<>();
+        for (Patron p : repository.getPatrons().values()) {
+            if (!repository.getBranches().containsKey(p.getHomeBranchId())) {
+                results.add(p);
+            }
+        }
+        return results;
+    }
+
+    // PINES-012: Behavior and use analysis
+    public Map<String, Object> analyzeBranchUse(String branchId) {
+        Map<String, Object> stats = new HashMap<>();
+        long totalBranchCheckouts = 0;
+        long totalBranchRenewals = 0;
+
+        for (TransactionRecord tx : repository.getTransactions()) {
+            if (tx.getBranchId().equals(branchId) && "CHECKOUT".equals(tx.getTransactionType())) {
+                totalBranchCheckouts++;
+                if (tx.getCheckOutType() == CheckOutType.STAFF_RENEWAL ||
+                    tx.getCheckOutType() == CheckOutType.SELF_RENEWAL ||
+                    tx.getCheckOutType() == CheckOutType.ONLINE_RENEWAL ||
+                    tx.getCheckOutType() == CheckOutType.OPAC_RENEWAL) {
+                    totalBranchRenewals++;
+                }
+            }
+        }
+        double renewalPercent = totalBranchCheckouts == 0 ? 0 : (double) totalBranchRenewals / totalBranchCheckouts * 100.0;
+        stats.put("totalCheckouts", totalBranchCheckouts);
+        stats.put("totalRenewals", totalBranchRenewals);
+        stats.put("renewalPercentage", renewalPercent);
+        return stats;
+    }
+
+    // PINES-013: Demographic Statistics (Anonymized)
+    public Map<String, Long> getAnonymizedTransactionsByRegion() {
+        Map<String, Long> counts = new HashMap<>();
+        for (AnonymizedTransaction at : repository.getArchivedDemographics()) {
+            counts.put(at.getPatronCounty(), counts.getOrDefault(at.getPatronCounty(), 0L) + 1);
+        }
+        return counts;
+    }
+
+    public Map<String, Long> getAnonymizedTransactionsByAgeRange() {
+        Map<String, Long> counts = new HashMap<>();
+        for (AnonymizedTransaction at : repository.getArchivedDemographics()) {
+            counts.put(at.getPatronAgeRange(), counts.getOrDefault(at.getPatronAgeRange(), 0L) + 1);
+        }
+        return counts;
+    }
+
+    // PINES-014 & PINES-015: Material volume and Capacity
+    public Map<String, Object> getBranchVolumeReport(String branchId) {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        int total = 0;
+        int onShelf = 0;
+        int outCirc = 0;
+        int adultFiction = 0;
+        int boardBooks = 0;
+
+        for (ItemRecord item : repository.getItems().values()) {
+            if (item.getCurrentBranchId().equals(branchId)) {
+                total++;
+                if (item.getStatus() == ItemStatus.AVAILABLE) onShelf++;
+                if (item.getStatus() == ItemStatus.CHECKED_OUT) outCirc++;
+                if ("Adult Fiction".equalsIgnoreCase(item.getGenre())) adultFiction++;
+                if ("Board Book".equalsIgnoreCase(item.getFormat())) boardBooks++;
+            }
+        }
+        Branch branch = repository.getBranches().get(branchId);
+        int cap = branch != null ? branch.totalCapacity() : 0;
+        double capacityPercent = cap == 0 ? 0.0 : ((double) total / cap) * 100.0;
+
+        stats.put("totalItems", total);
+        stats.put("onShelf", onShelf);
+        stats.put("inCirculation", outCirc);
+        stats.put("adultFiction", adultFiction);
+        stats.put("boardBooks", boardBooks);
+        stats.put("totalCapacity", cap);
+        stats.put("capacityUtilizationPercent", capacityPercent);
+        return stats;
+    }
+
+    // PINES-016: Shelf Space Report
+    public Map<String, Map<String, Double>> getShelfSpaceReport(String branchId) {
+        Branch branch = repository.getBranches().get(branchId);
+        Map<String, Map<String, Double>> report = new HashMap<>();
+        Map<String, Integer> categoryItems = new HashMap<>();
+        Map<String, Integer> categoryCircs = new HashMap<>();
+        int totalItems = 0;
+        int totalCircs = 0;
+
+        for (ItemRecord item : repository.getItems().values()) {
+            if (item.getCurrentBranchId().equals(branchId)) {
+                totalItems++;
+                String cat = item.getFormat() + " - " + item.getGenre();
+                categoryItems.put(cat, categoryItems.getOrDefault(cat, 0) + 1);
+                categoryCircs.put(cat, categoryCircs.getOrDefault(cat, 0) + item.getCheckoutCount());
+                totalCircs += item.getCheckoutCount();
+            }
+        }
+
+        for (String cat : categoryItems.keySet()) {
+            Map<String, Double> breakdown = new HashMap<>();
+            double itemPct = totalItems == 0 ? 0.0 : ((double) categoryItems.get(cat) / totalItems) * 100.0;
+            double circPct = totalCircs == 0 ? 0.0 : ((double) categoryCircs.getOrDefault(cat, 0) / totalCircs) * 100.0;
+            double shelfPct = (branch != null) ? branch.getShelfSpaceAllocation().getOrDefault(cat, 0.0) : 0.0;
+
+            breakdown.put("percentCollection", itemPct);
+            breakdown.put("percentCirculation", circPct);
+            breakdown.put("percentShelfSpace", shelfPct);
+            report.put(cat, breakdown);
+        }
+        return report;
+    }
+
+    // PINES-021: Item Purging
+    public List<ItemRecord> identifyItemsToPurge(int missingMonthsThreshold) {
+        List<ItemRecord> candidates = new ArrayList<>();
+        for (ItemRecord item : repository.getItems().values()) {
+            if (item.getStatus() == ItemStatus.DISCARD_WEED ||
+               (item.getStatus() == ItemStatus.MISSING && item.getMonthsInStatus() >= missingMonthsThreshold)) {
+                candidates.add(item);
+            }
+        }
+        return candidates;
+    }
+
+    public void purgeItem(String itemId, StaffUser staff) {
+        ItemRecord item = repository.getItems().remove(itemId);
+        if (item != null) {
+            BibRecord bib = repository.getBibs().get(item.getBibId());
+            if (bib != null) {
+                bib.removeItemId(itemId);
+                if (bib.getItemIds().isEmpty()) {
+                    repository.getBibs().remove(bib.getId());
+                    deletionTracker.recordDeletion("BIB", bib.getId(), item.getCurrentBranchId(), item.getSystemId(), LocalDate.now());
+                }
+            }
+            deletionTracker.recordDeletion("ITEM", itemId, item.getCurrentBranchId(), item.getSystemId(), LocalDate.now());
+        }
+    }
+
+    // PINES-024: Inactive Patrons Report
+    public List<Patron> getInactivePatrons(int days, LocalDate today, String systemId) {
+        List<Patron> inactive = new ArrayList<>();
+        for (Patron p : repository.getPatrons().values()) {
+            Branch b = repository.getBranches().get(p.getHomeBranchId());
+            if (systemId == null || (b != null && b.getSystemId().equals(systemId))) {
+                if (p.getLastActivityDate() == null || ChronoUnit.DAYS.between(p.getLastActivityDate(), today) > days) {
+                    inactive.add(p);
+                }
+            }
+        }
+        return inactive;
+    }
+
+    // PINES-027, PINES-028, PINES-029: Detailed Counts
+    public Map<String, Long> getCheckInBreakdown() {
+        Map<String, Long> map = new HashMap<>();
+        for (TransactionRecord tx : repository.getTransactions()) {
+            if ("CHECKIN".equals(tx.getTransactionType()) && tx.getCheckInType() != null) {
+                map.put(tx.getCheckInType().name(), map.getOrDefault(tx.getCheckInType().name(), 0L) + 1);
+            }
+        }
+        return map;
+    }
+
+    public Map<String, Long> getCheckOutBreakdown() {
+        Map<String, Long> map = new HashMap<>();
+        for (TransactionRecord tx : repository.getTransactions()) {
+            if ("CHECKOUT".equals(tx.getTransactionType()) && tx.getCheckOutType() != null) {
+                map.put(tx.getCheckOutType().name(), map.getOrDefault(tx.getCheckOutType().name(), 0L) + 1);
+            }
+        }
+        return map;
+    }
+
+    public Map<String, Long> getHoldSourceBreakdown() {
+        Map<String, Long> map = new HashMap<>();
+        for (HoldRequest hold : repository.getHolds()) {
+            map.put(hold.getSource().name(), map.getOrDefault(hold.getSource().name(), 0L) + 1);
+        }
+        return map;
+    }
+
+    public Map<String, Long> getHoldStatusBreakdown() {
+        Map<String, Long> map = new HashMap<>();
+        for (HoldRequest hold : repository.getHolds()) {
+            map.put(hold.getStatus().name(), map.getOrDefault(hold.getStatus().name(), 0L) + 1);
+        }
+        return map;
+    }
+
+    // PINES-031: Value of items report
+    public double calculateCollectionValue(String filterStatus, String filterFormat, String branchId) {
+        double total = 0.0;
+        for (ItemRecord item : repository.getItems().values()) {
+            boolean statusMatch = (filterStatus == null || item.getStatus().name().equalsIgnoreCase(filterStatus));
+            boolean formatMatch = (filterFormat == null || item.getFormat().equalsIgnoreCase(filterFormat));
+            boolean branchMatch = (branchId == null || item.getCurrentBranchId().equalsIgnoreCase(branchId));
+
+            if (statusMatch && formatMatch && branchMatch) {
+                total += item.getPrice();
+            }
+        }
+        return total;
+    }
+
+    // PINES-034: Financial reports
+    public List<Patron> getPatronsWithBalanceExceeding(double minBalance) {
+        List<Patron> results = new ArrayList<>();
+        for (Patron p : repository.getPatrons().values()) {
+            if (ledger.getPatronBalance(p.getId()) > minBalance) {
+                results.add(p);
+            }
+        }
+        return results;
+    }
+
+    public Map<ChargeType, Double> getChargesAccruedByType() {
+        Map<ChargeType, Double> map = new HashMap<>();
+        for (Charge charge : ledger.getCharges()) {
+            map.put(charge.getChargeType(), map.getOrDefault(charge.getChargeType(), 0.0) + charge.getAmount());
+        }
+        return map;
+    }
+
+    public Map<PaymentMethod, Double> getPaymentsByMethod() {
+        Map<PaymentMethod, Double> map = new HashMap<>();
+        for (Payment payment : ledger.getPayments()) {
+            map.put(payment.getMethod(), map.getOrDefault(payment.getMethod(), 0.0) + payment.getAmount());
+        }
+        return map;
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=== PINES Integrated Library System Starting Up ===");
+
+        // Setup base repository and ledger
+        LibraryRepository repo = new LibraryRepository();
+        FinancialLedger ledger = new FinancialLedger();
+        DeletionTracker deletionTracker = new DeletionTracker();
+        ReportingService reportingService = new ReportingService(repo, ledger, deletionTracker);
+        AuthenticationService authService = new AuthenticationService();
+        ReportQueueService queueService = new ReportQueueService();
+        QueryExecutionEngine queryEngine = new QueryExecutionEngine();
+        ItemTransferUtility transferUtility = new ItemTransferUtility();
+
+        // 1. Organization Setup
+        LibrarySystem pcls = new LibrarySystem("SYS-01", "Peach County Library System");
+        repo.addSystem(pcls);
+
+        Branch branchA = new Branch("BR-A", "Athens Regional Library", "SYS-01", "Clarke", 50000);
+        Branch branchB = new Branch("BR-B", "Bogart Branch", "SYS-01", "Oconee", 20000);
+        branchA.setShelfSpaceAllocation("Book - Adult Fiction", 35.0);
+        branchA.setShelfSpaceAllocation("Book - Children", 25.0);
+        branchA.setShelfSpaceAllocation("DVD - Movie", 15.0);
+
+        repo.addBranch(branchA);
+        repo.addBranch(branchB);
+
+        // 2. Staff & Streamlined Login (PINES-001)
+        StaffUser adminUser = new StaffUser("ST-01", "ladmin", "pass123", "CARD-9991", Role.LOCAL_SYS_ADMIN, "BR-A", "SYS-01");
+        StaffUser clerkUser = new StaffUser("ST-02", "deskclerk", "pass123", "CARD-2234", Role.STAFF, "BR-A", "SYS-01");
+        authService.registerStaff(adminUser);
+        authService.registerStaff(clerkUser);
+
+        StaffUser loggedInViaSwipe = authService.loginWithCardSwipe("CARD-9991");
+        System.out.println("Login Test (PINES-001): Swiped Card for Staff " + (loggedInViaSwipe != null ? loggedInViaSwipe.getUsername() : "Failed"));
+
+        // 3. Patrons Setup (PINES-023)
+        Patron p1 = new Patron("P-01", "Alice Miller", true, "30-39", "30601", "Clarke", "BR-A", "ADULT", "ENG", LocalDate.now().minusDays(10));
+        Patron p2 = new Patron("P-02", "Bob Jones", true, "12-18", "30602", "Clarke", "BR-A", "JUVENILE", "SPA", LocalDate.now().minusDays(150));
+        Patron p3 = new Patron("P-03", "Charlie Brown", false, "65+", "30677", "Oconee", "INVALID-BR", "SENIOR", "ENG", LocalDate.now().minusDays(400));
+        repo.addPatron(p1);
+        repo.addPatron(p2);
+        repo.addPatron(p3);
+
+        // 4. Bib & Item Catalog Setup
+        BibRecord bib1 = new BibRecord("BIB-100", "Gone with the Wind", "Margaret Mitchell");
+        BibRecord bib2 = new BibRecord("BIB-200", "To Kill a Mockingbird", "Harper Lee");
+        BibRecord bib3 = new BibRecord("BIB-300", "Empty Bib With No Items", "Anonymous");
+        repo.addBib(bib1);
+        repo.addBib(bib2);
+        repo.addBib(bib3);
+
+        ItemRecord item1 = new ItemRecord("ITEM-01", "BIB-100", "30001001", "FIC MIT", "BOOK", "Book", "Adult Fiction", ItemStatus.AVAILABLE, 24.95, "BR-A", "SYS-01", false);
+        ItemRecord item2 = new ItemRecord("ITEM-02", "BIB-100", "30001002", "FIC MIT", "BOOK", "Book", "Adult Fiction", ItemStatus.IN_TRANSIT, 24.95, "BR-A", "SYS-01", false);
+        item2.setDaysInTransit(14); // > X days in transit
+        ItemRecord item3 = new ItemRecord("ITEM-03", "BIB-200", "30002001", "FIC LEE", "BOOK", "Book", "Adult Fiction", ItemStatus.MISSING, 18.50, "BR-A", "SYS-01", false);
+        item3.setMonthsInStatus(7); // missing > 6 months
+        ItemRecord item4 = new ItemRecord("ITEM-04", "BIB-200", "30002002", "SUPER_LONG_CALL_NUM_1234567890_OVERFLOW", "INVALID_TYPE", "DVD", "Movie", ItemStatus.AVAILABLE, 29.99, "BR-B", "SYS-01", false);
+        ItemRecord item5 = new ItemRecord("ITEM-05", "BIB-100", "30009999", "UNCAT-BOARD", "BOARD", "Board Book", "Children", ItemStatus.AVAILABLE, 7.99, "BR-A", "SYS-01", true);
+
+        item1.incrementCheckouts(7);
+        item1.incrementRenewals();
+        item1.setLastCheckoutDate(LocalDate.now().minusDays(20));
+
+        repo.addItem(item1);
+        repo.addItem(item2);
+        repo.addItem(item3);
+        repo.addItem(item4);
+        repo.addItem(item5);
+
+        // 5. Holds Setup (PINES-029, PINES-030)
+        HoldRequest h1 = new HoldRequest("H-1", "BIB-100", "ITEM-02", "P-01", "BR-A", LocalDateTime.now().minusDays(2), HoldSource.REMOTE, HoldStatus.ACTIVE);
+        HoldRequest h2 = new HoldRequest("H-2", "BIB-200", null, "P-02", "BR-A", LocalDateTime.now().minusDays(1), HoldSource.PUBLIC_COMPUTER, HoldStatus.FROZEN);
+        repo.addHold(h1);
+        repo.addHold(h2);
+
+        // 6. Transactions & Demographics Archive (PINES-006, PINES-013, PINES-025, PINES-026, PINES-027, PINES-028)
+        TransactionRecord tx1 = new TransactionRecord("TX-1", LocalDateTime.now().minusHours(2), "TERM-1", "BR-A", "SYS-01",
+                "P-01", "ITEM-01", "CHECKOUT", CheckOutType.STAFF_CHECKOUT, null, null, "30-39", "ADULT", "Clarke", "30601");
+        TransactionRecord tx2 = new TransactionRecord("TX-2", LocalDateTime.now().minusHours(1), "TERM-1", "BR-A", "SYS-01",
+                "P-01", "ITEM-01", "CHECKOUT", CheckOutType.ONLINE_RENEWAL, null, null, "30-39", "ADULT", "Clarke", "30601");
+        TransactionRecord tx3 = new TransactionRecord("TX-3", LocalDateTime.now().minusMinutes(30), "TERM-2", "BR-A", "SYS-01",
+                "P-01", "ITEM-01", "CHECKIN", null, CheckInType.BOOK_DROP, null, "30-39", "ADULT", "Clarke", "30601");
+
+        repo.addTransaction(tx1);
+        repo.addTransaction(tx2);
+        repo.addTransaction(tx3);
+
+        // Archive protecting privacy
+        repo.archiveTransactionDemographics(tx1);
+        repo.archiveTransactionDemographics(tx2);
+        repo.archiveTransactionDemographics(tx3);
+
+        // 7. Financial & Auditing Setup (PINES-031 to PINES-035)
+        Charge c1 = new Charge("CHG-1", "P-01", "ITEM-03", "BR-A", ChargeType.LOST_ITEM, 18.50, LocalDate.now().minusDays(15));
+        Charge c2 = new Charge("CHG-2", "P-02", "ITEM-01", "BR-A", ChargeType.OVERDUE_FINE, 4.00, LocalDate.now().minusDays(5));
+        ledger.addCharge(c1);
+        ledger.addCharge(c2);
+
+        Payment pay1 = new Payment("PAY-1", "P-01", "BR-A", 10.00, PaymentMethod.OPAC, LocalDate.now());
+        ledger.applyPayment(pay1, "CHG-1");
+        ledger.waiveCharge("CHG-2", "BR-A", 4.00, LocalDate.now());
+
+        System.out.println("Patron P-01 balance after $10 payment: $" + ledger.getPatronBalance("P-01"));
+        System.out.println("Patron P-02 balance after full waiver: $" + ledger.getPatronBalance("P-02"));
+        System.out.println("Audit trail entries count: " + ledger.getAuditEntries().size());
+
+        // 8. Report Template, Permission & Query Execution (PINES-002, 003, 004, 008, 009)
+        SharedFolder adminFolder = new SharedFolder("FLD-01", "System Administrator Reports");
+        adminFolder.grantAccessToSystem("SYS-01");
+
+        QueryDefinition weedingQuery = new QueryDefinition("ITEM");
+        weedingQuery.addSelectedField("id");
+        weedingQuery.addSelectedField("callNumber");
+        weedingQuery.addSelectedField("status");
+        weedingQuery.addCriterion(new QueryCriteria("status", "EQUALS", "AVAILABLE"));
+
+        ReportTemplate weedTemplate = new ReportTemplate("TPL-01", "Weeding Candidates", "FLD-01", weedingQuery);
+        weedTemplate.allowFilterAlteration("callNumber");
+        weedTemplate.allowDisplayFieldAlteration("barcode");
+
+        System.out.println("\nTemplate Filter check: can alter callNumber? " + weedTemplate.canAlterFilter("callNumber") +
+                " | can alter status? " + weedTemplate.canAlterFilter("status"));
+
+        QueuedReport queued = queueService.enqueueReport(weedTemplate.getName(), clerkUser.getId());
+        System.out.println("Enqueued Report Job: " + queued.getReportJobId() + " at Queue Position: " + queueService.getQueuePosition(queued.getReportJobId()));
+
+        QueryResult qResult = queryEngine.executeQuery(clerkUser, weedingQuery, repo);
+        System.out.println("Query Selection Display (PINES-008): " + qResult.getQuerySelections().getCriteria());
+        System.out.println("Query Result Size: " + qResult.getResults().size());
+
+        // 9. Board Reports & Demographics (PINES-005, PINES-012, PINES-013)
+        System.out.println("\nBoard Report (by branch): " + reportingService.generateBoardReport("branch"));
+        System.out.println("Branch A Use Analysis (PINES-012): " + reportingService.analyzeBranchUse("BR-A"));
+        System.out.println("Anonymized Transactions by County (PINES-013): " + reportingService.getAnonymizedTransactionsByRegion());
+
+        // 10. Periodic Reports (PINES-007)
+        System.out.println("\nPeriodic Reports:");
+        System.out.println("1. Bib Records with holds: " + reportingService.getBibRecordsWithHolds().size());
+        System.out.println("2. In-transit items > 5 days (PINES-020): " + reportingService.getInTransitItemsExceedingDays(5).size());
+        System.out.println("3. Last copies in SYS-01: " + reportingService.getLastCopiesInSystem("SYS-01").size());
+        System.out.println("4. Items with invalid item type: " + reportingService.getItemsWithInvalidItemType(Set.of("BOOK", "BOARD")).size());
+        System.out.println("5. In-transit items with outstanding hold: " + reportingService.getInTransitItemsWithOutstandingHold().size());
+        System.out.println("6. Long call numbers (> 20 chars): " + reportingService.getItemsWithLongCallNumber(20).size());
+        System.out.println("7. Missing/Damaged items: " + reportingService.getMissingItemsPerBranch("BR-A").size());
+        System.out.println("8. Bib records with NO items attached: " + reportingService.getBibsWithNoItems().size());
+        System.out.println("9. Patrons with invalid home library: " + reportingService.getPatronsWithInvalidHomeLibrary().size());
+
+        // 11. Inventory & Shelf Space (PINES-014, PINES-015, PINES-016, PINES-017)
+        System.out.println("\nBranch A Volume & Capacity: " + reportingService.getBranchVolumeReport("BR-A"));
+        System.out.println("Branch A Shelf Space Analysis: " + reportingService.getShelfSpaceReport("BR-A"));
+
+        // 12. Batch Item Transfer Utility (PINES-018)
+        ItemTransferUtility.TransferJob transferJob = transferUtility.transferBatch(repo, List.of("ITEM-01"), "BR-B", LocalDate.now().plusDays(30));
+        System.out.println("Transferred ITEM-01 to BR-B for outreach: " + repo.getItems().get("ITEM-01").getCurrentBranchId());
+        transferUtility.revertBatchIfDue(repo, LocalDate.now().plusDays(35));
+        System.out.println("After Reversion Date, ITEM-01 location reverted to: " + repo.getItems().get("ITEM-01").getCurrentBranchId());
+
+        // 13. Record Purging & Deletions Tracking (PINES-021, PINES-022)
+        List<ItemRecord> purgeCandidates = reportingService.identifyItemsToPurge(6);
+        System.out.println("\nPurge Candidates (missing > 6 months or weed): " + purgeCandidates.size());
+        if (!purgeCandidates.isEmpty()) {
+            reportingService.purgeItem(purgeCandidates.get(0).getId(), adminUser);
+            System.out.println("Purged item " + purgeCandidates.get(0).getId() + ". Deletion records tracked: " + deletionTracker.countDeletions(null, "SYS-01", "ITEM"));
+        }
+
+        // 14. Inactive Patrons & Financial Reports (PINES-024, PINES-031, PINES-034)
+        System.out.println("Inactive patrons (> 90 days): " + reportingService.getInactivePatrons(90, LocalDate.now(), "SYS-01").size());
+        System.out.println("Total Collection Value: $" + reportingService.calculateCollectionValue(null, null, null));
+        System.out.println("Patrons with balance > $5: " + reportingService.getPatronsWithBalanceExceeding(5.00).size());
+        System.out.println("Accrued Charges by Type: " + reportingService.getChargesAccruedByType());
+        System.out.println("Payments by Method: " + reportingService.getPaymentsByMethod());
+
+        System.out.println("\n=== All PINES System Requirements Demonstrated Successfully ===");
+    }
+}

@@ -1,0 +1,2039 @@
+```java
+// File: Language.java
+public enum Language {
+    SWEDISH,
+    ENGLISH,
+    SPANISH,
+    FRENCH
+}
+```
+
+```java
+// File: ViewMode.java
+public enum ViewMode {
+    MAP,
+    LIST
+}
+```
+
+```java
+// File: SearchOption.java
+public enum SearchOption {
+    PRICE,
+    DESTINATION,
+    RESTAURANT_TYPE,
+    SPECIFIC_DISH,
+    FREE_TEXT
+}
+```
+
+```java
+// File: SortField.java
+public enum SortField {
+    NAME,
+    PRICE,
+    DISTANCE,
+    RESTAURANT_TYPE,
+    DISH
+}
+```
+
+```java
+// File: SortDirection.java
+public enum SortDirection {
+    ASCENDING,
+    DESCENDING
+}
+```
+
+```java
+// File: GeoPoint.java
+public class GeoPoint {
+    private final double latitude;
+    private final double longitude;
+
+    public GeoPoint(double latitude, double longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    public double distanceKmTo(GeoPoint other) {
+        if (other == null) {
+            return Double.MAX_VALUE;
+        }
+        double earthRadiusKm = 6371.0;
+        double latDistance = Math.toRadians(other.latitude - latitude);
+        double lonDistance = Math.toRadians(other.longitude - longitude);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(latitude)) * Math.cos(Math.toRadians(other.latitude))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadiusKm * c;
+    }
+
+    @Override
+    public String toString() {
+        return "(" + latitude + ", " + longitude + ")";
+    }
+}
+```
+
+```java
+// File: Dish.java
+public class Dish {
+    private String name;
+    private String description;
+    private double price;
+
+    public Dish(String name, String description, double price) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + price + ")";
+    }
+}
+```
+
+```java
+// File: RestaurantType.java
+public class RestaurantType {
+    private String name;
+
+    public RestaurantType(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof RestaurantType)) {
+            return false;
+        }
+        RestaurantType other = (RestaurantType) obj;
+        return name != null ? name.equalsIgnoreCase(other.name) : other.name == null;
+    }
+
+    @Override
+    public int hashCode() {
+        return name == null ? 0 : name.toLowerCase().hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+}
+```
+
+```java
+// File: Restaurant.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Restaurant {
+    private final String id;
+    private String name;
+    private String address;
+    private String phone;
+    private String email;
+    private String mobile;
+    private double averagePrice;
+    private String description;
+    private String webPage;
+    private RestaurantType type;
+    private GeoPoint location;
+    private String pictureUrl;
+    private List<Dish> menu;
+
+    public Restaurant(String id, String name, String address, String phone, String email,
+                      double averagePrice, RestaurantType type, GeoPoint location) {
+        this.id = id;
+        this.name = name;
+        this.address = address;
+        this.phone = phone;
+        this.email = email;
+        this.averagePrice = averagePrice;
+        this.type = type;
+        this.location = location;
+        this.menu = new ArrayList<>();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getMobile() {
+        return mobile;
+    }
+
+    public void setMobile(String mobile) {
+        this.mobile = mobile;
+    }
+
+    public double getAveragePrice() {
+        return averagePrice;
+    }
+
+    public void setAveragePrice(double averagePrice) {
+        this.averagePrice = averagePrice;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getWebPage() {
+        return webPage;
+    }
+
+    public void setWebPage(String webPage) {
+        this.webPage = webPage;
+    }
+
+    public RestaurantType getType() {
+        return type;
+    }
+
+    public void setType(RestaurantType type) {
+        this.type = type;
+    }
+
+    public GeoPoint getLocation() {
+        return location;
+    }
+
+    public void setLocation(GeoPoint location) {
+        this.location = location;
+    }
+
+    public String getPictureUrl() {
+        return pictureUrl;
+    }
+
+    public void setPictureUrl(String pictureUrl) {
+        this.pictureUrl = pictureUrl;
+    }
+
+    public List<Dish> getMenu() {
+        return menu;
+    }
+
+    public void setMenu(List<Dish> menu) {
+        this.menu = menu == null ? new ArrayList<>() : new ArrayList<>(menu);
+    }
+
+    public void addDish(Dish dish) {
+        if (dish != null) {
+            menu.add(dish);
+        }
+    }
+
+    public boolean hasDish(String dishName) {
+        if (dishName == null) {
+            return false;
+        }
+        for (Dish dish : menu) {
+            if (dish.getName() != null && dish.getName().equalsIgnoreCase(dishName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void removeDish(String dishName) {
+        if (dishName != null) {
+            menu.removeIf(d -> d.getName() != null && d.getName().equalsIgnoreCase(dishName));
+        }
+    }
+
+    public boolean matchesFreeText(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return true;
+        }
+        String search = text.toLowerCase();
+        if (contains(name, search) || contains(description, search) || contains(address, search)) {
+            return true;
+        }
+        if (type != null && contains(type.getName(), search)) {
+            return true;
+        }
+        for (Dish dish : menu) {
+            if (contains(dish.getName(), search) || contains(dish.getDescription(), search)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean contains(String value, String search) {
+        return value != null && value.toLowerCase().contains(search);
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+}
+```
+
+```java
+// File: User.java
+public class User {
+    private final String username;
+    private String password;
+    private String email;
+    private String phone;
+    private Language language;
+
+    public User(String username, String password, String email, String phone) {
+        this.username = username;
+        this.password = password;
+        this.email = email;
+        this.phone = phone;
+        this.language = Language.ENGLISH;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public Language getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(Language language) {
+        this.language = language;
+    }
+
+    public void updateProfile(String password, String email, String phone) {
+        if (password != null) {
+            this.password = password;
+        }
+        if (email != null) {
+            this.email = email;
+        }
+        if (phone != null) {
+            this.phone = phone;
+        }
+    }
+
+    public String getProfilePage() {
+        return "User profile: username=" + username + ", email=" + email
+                + ", phone=" + phone + ", language=" + language;
+    }
+}
+```
+
+```java
+// File: RestaurantOwner.java
+public class RestaurantOwner {
+    private final String username;
+    private String password;
+    private String address;
+    private String email;
+    private String phone;
+    private String mobile;
+    private boolean verified;
+    private boolean verificationApplied;
+    private boolean loggedIn;
+    private Language language;
+    private Restaurant restaurant;
+
+    public RestaurantOwner(String username, String password, String address, String email,
+                           String phone, String mobile) {
+        this.username = username;
+        this.password = password;
+        this.address = address;
+        this.email = email;
+        this.phone = phone;
+        this.mobile = mobile;
+        this.language = Language.ENGLISH;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public String getMobile() {
+        return mobile;
+    }
+
+    public boolean isVerified() {
+        return verified;
+    }
+
+    public boolean isVerificationApplied() {
+        return verificationApplied;
+    }
+
+    public boolean isLoggedIn() {
+        return loggedIn;
+    }
+
+    public void setLoggedIn(boolean loggedIn) {
+        this.loggedIn = loggedIn;
+    }
+
+    public Language getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(Language language) {
+        this.language = language;
+    }
+
+    public Restaurant getRestaurant() {
+        return restaurant;
+    }
+
+    public void setRestaurant(Restaurant restaurant) {
+        this.restaurant = restaurant;
+    }
+
+    public void applyForVerification() {
+        if (!verified) {
+            verificationApplied = true;
+        }
+    }
+
+    public void verify() {
+        verified = true;
+        verificationApplied = false;
+    }
+
+    public void reject() {
+        verified = false;
+        verificationApplied = false;
+        loggedIn = false;
+    }
+
+    public void updateContact(String password, String address, String email, String phone, String mobile) {
+        if (password != null) {
+            this.password = password;
+        }
+        if (address != null) {
+            this.address = address;
+        }
+        if (email != null) {
+            this.email = email;
+        }
+        if (phone != null) {
+            this.phone = phone;
+        }
+        if (mobile != null) {
+            this.mobile = mobile;
+        }
+    }
+}
+```
+
+```java
+// File: Administrator.java
+public class Administrator {
+    private final String username;
+    private final String password;
+    private boolean loggedIn;
+    private Language language;
+
+    public Administrator(String username, String password) {
+        this.username = username;
+        this.password = password;
+        this.language = Language.ENGLISH;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public boolean isLoggedIn() {
+        return loggedIn;
+    }
+
+    public void setLoggedIn(boolean loggedIn) {
+        this.loggedIn = loggedIn;
+    }
+
+    public Language getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(Language language) {
+        this.language = language;
+    }
+}
+```
+
+```java
+// File: EmailService.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class EmailService {
+    private final List<String> sentEmails;
+
+    public EmailService() {
+        this.sentEmails = new ArrayList<>();
+    }
+
+    public void sendPasswordEmail(String recipientEmail, String password) {
+        sentEmails.add("Password email to " + recipientEmail + ": " + password);
+    }
+
+    public void sendConfirmationEmail(String recipientEmail, String username) {
+        sentEmails.add("Confirmation email to " + recipientEmail + " for " + username);
+    }
+
+    public void sendRejectionEmail(String recipientEmail, String username) {
+        sentEmails.add("Rejection email to " + recipientEmail + " for " + username);
+    }
+
+    public List<String> getSentEmails() {
+        return new ArrayList<>(sentEmails);
+    }
+}
+```
+
+```java
+// File: RestaurantRepository.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class RestaurantRepository {
+    private final List<Restaurant> restaurants;
+    private final List<RestaurantType> restaurantTypes;
+    private final List<Dish> dishes;
+
+    public RestaurantRepository() {
+        this.restaurants = new ArrayList<>();
+        this.restaurantTypes = new ArrayList<>();
+        this.dishes = new ArrayList<>();
+    }
+
+    public void addRestaurant(Restaurant restaurant) {
+        if (restaurant != null) {
+            restaurants.add(restaurant);
+        }
+    }
+
+    public boolean removeRestaurant(Restaurant restaurant) {
+        return restaurant != null && restaurants.remove(restaurant);
+    }
+
+    public Restaurant findRestaurantById(String id) {
+        for (Restaurant restaurant : restaurants) {
+            if (restaurant.getId().equals(id)) {
+                return restaurant;
+            }
+        }
+        return null;
+    }
+
+    public List<Restaurant> findRestaurantsByName(String name) {
+        List<Restaurant> result = new ArrayList<>();
+        if (name != null) {
+            for (Restaurant restaurant : restaurants) {
+                if (restaurant.getName() != null && restaurant.getName().equalsIgnoreCase(name)) {
+                    result.add(restaurant);
+                }
+            }
+        }
+        return result;
+    }
+
+    public List<Restaurant> getRestaurants() {
+        return new ArrayList<>(restaurants);
+    }
+
+    public void addRestaurantType(RestaurantType type) {
+        if (type != null) {
+            restaurantTypes.add(type);
+        }
+    }
+
+    public RestaurantType findRestaurantTypeByName(String name) {
+        for (RestaurantType type : restaurantTypes) {
+            if (type.getName() != null && type.getName().equalsIgnoreCase(name)) {
+                return type;
+            }
+        }
+        return null;
+    }
+
+    public boolean deleteRestaurantType(RestaurantType type) {
+        if (type == null) {
+            return false;
+        }
+        boolean removed = restaurantTypes.remove(type);
+        if (removed) {
+            for (Restaurant restaurant : restaurants) {
+                if (type.equals(restaurant.getType())) {
+                    restaurant.setType(null);
+                }
+            }
+        }
+        return removed;
+    }
+
+    public List<RestaurantType> getRestaurantTypes() {
+        return new ArrayList<>(restaurantTypes);
+    }
+
+    public void addDish(Dish dish) {
+        if (dish != null) {
+            dishes.add(dish);
+        }
+    }
+
+    public Dish findDishByName(String name) {
+        for (Dish dish : dishes) {
+            if (dish.getName() != null && dish.getName().equalsIgnoreCase(name)) {
+                return dish;
+            }
+        }
+        return null;
+    }
+
+    public boolean deleteDish(Dish dish) {
+        if (dish == null) {
+            return false;
+        }
+        boolean removed = dishes.remove(dish);
+        if (removed) {
+            for (Restaurant restaurant : restaurants) {
+                restaurant.removeDish(dish.getName());
+            }
+        }
+        return removed;
+    }
+
+    public List<Dish> getDishes() {
+        return new ArrayList<>(dishes);
+    }
+}
+```
+
+```java
+// File: UserRepository.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class UserRepository {
+    private final List<User> users;
+
+    public UserRepository() {
+        this.users = new ArrayList<>();
+    }
+
+    public void add(User user) {
+        if (user != null) {
+            users.add(user);
+        }
+    }
+
+    public User findByUsername(String username) {
+        for (User user : users) {
+            if (user.getUsername().equals(username)) {
+                return user;
+            }
+        }
+        return null;
+    }
+
+    public User findByEmail(String email) {
+        for (User user : users) {
+            if (user.getEmail() != null && user.getEmail().equalsIgnoreCase(email)) {
+                return user;
+            }
+        }
+        return null;
+    }
+
+    public boolean delete(String username) {
+        return users.removeIf(user -> user.getUsername().equals(username));
+    }
+
+    public List<User> getUsers() {
+        return new ArrayList<>(users);
+    }
+}
+```
+
+```java
+// File: OwnerRepository.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class OwnerRepository {
+    private final List<RestaurantOwner> owners;
+
+    public OwnerRepository() {
+        this.owners = new ArrayList<>();
+    }
+
+    public void add(RestaurantOwner owner) {
+        if (owner != null) {
+            owners.add(owner);
+        }
+    }
+
+    public RestaurantOwner findByUsername(String username) {
+        for (RestaurantOwner owner : owners) {
+            if (owner.getUsername().equals(username)) {
+                return owner;
+            }
+        }
+        return null;
+    }
+
+    public RestaurantOwner findByEmail(String email) {
+        for (RestaurantOwner owner : owners) {
+            if (owner.getEmail() != null && owner.getEmail().equalsIgnoreCase(email)) {
+                return owner;
+            }
+        }
+        return null;
+    }
+
+    public boolean remove(RestaurantOwner owner) {
+        return owner != null && owners.remove(owner);
+    }
+
+    public List<RestaurantOwner> getOwners() {
+        return new ArrayList<>(owners);
+    }
+}
+```
+
+```java
+// File: SearchCriteria.java
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
+
+public class SearchCriteria {
+    private final Set<SearchOption> selectedOptions;
+    private int minPrice;
+    private int maxPrice;
+    private int minDistanceKm;
+    private int maxDistanceKm;
+    private RestaurantType restaurantType;
+    private Dish specificDish;
+    private String freeText;
+
+    public SearchCriteria() {
+        this.selectedOptions = EnumSet.noneOf(SearchOption.class);
+        this.minPrice = 0;
+        this.maxPrice = Integer.MAX_VALUE;
+        this.minDistanceKm = 0;
+        this.maxDistanceKm = 10;
+        this.freeText = "";
+    }
+
+    public boolean hasOption(SearchOption option) {
+        return selectedOptions.contains(option);
+    }
+
+    public Set<SearchOption> getSelectedOptions() {
+        return Collections.unmodifiableSet(selectedOptions);
+    }
+
+    public int getMinPrice() {
+        return minPrice;
+    }
+
+    public int getMaxPrice() {
+        return maxPrice;
+    }
+
+    public int getMinDistanceKm() {
+        return minDistanceKm;
+    }
+
+    public int getMaxDistanceKm() {
+        return maxDistanceKm;
+    }
+
+    public RestaurantType getRestaurantType() {
+        return restaurantType;
+    }
+
+    public Dish getSpecificDish() {
+        return specificDish;
+    }
+
+    public String getFreeText() {
+        return freeText;
+    }
+
+    public void setPriceRange(int minPrice, int maxPrice) {
+        if (minPrice < 0 || maxPrice < minPrice) {
+            throw new IllegalArgumentException("Invalid price range");
+        }
+        this.minPrice = minPrice;
+        this.maxPrice = maxPrice;
+        selectedOptions.add(SearchOption.PRICE);
+    }
+
+    public void setDestinationRange(int minDistanceKm, int maxDistanceKm) {
+        if (minDistanceKm < 0 || maxDistanceKm < minDistanceKm) {
+            throw new IllegalArgumentException("Invalid distance range");
+        }
+        this.minDistanceKm = minDistanceKm;
+        this.maxDistanceKm = maxDistanceKm;
+        selectedOptions.add(SearchOption.DESTINATION);
+    }
+
+    public void setRestaurantType(RestaurantType restaurantType) {
+        this.restaurantType = restaurantType;
+        if (restaurantType != null) {
+            selectedOptions.add(SearchOption.RESTAURANT_TYPE);
+        }
+    }
+
+    public void setSpecificDish(Dish specificDish) {
+        this.specificDish = specificDish;
+        if (specificDish != null) {
+            selectedOptions.add(SearchOption.SPECIFIC_DISH);
+        }
+    }
+
+    public void setFreeText(String freeText) {
+        this.freeText = freeText == null ? "" : freeText;
+        selectedOptions.add(SearchOption.FREE_TEXT);
+    }
+
+    public ViewMode getDefaultView() {
+        if (selectedOptions.contains(SearchOption.DESTINATION)
+                || selectedOptions.contains(SearchOption.RESTAURANT_TYPE)
+                || selectedOptions.contains(SearchOption.SPECIFIC_DISH)
+                || selectedOptions.contains(SearchOption.FREE_TEXT)) {
+            return ViewMode.MAP;
+        }
+        if (selectedOptions.contains(SearchOption.PRICE)) {
+            return ViewMode.LIST;
+        }
+        return ViewMode.MAP;
+    }
+}
+```
+
+```java
+// File: RestaurantResult.java
+public class RestaurantResult {
+    private final Restaurant restaurant;
+    private final double distanceKm;
+
+    public RestaurantResult(Restaurant restaurant, double distanceKm) {
+        this.restaurant = restaurant;
+        this.distanceKm = distanceKm;
+    }
+
+    public Restaurant getRestaurant() {
+        return restaurant;
+    }
+
+    public double getDistanceKm() {
+        return distanceKm;
+    }
+
+    public String getInformationLink() {
+        return "app://restaurants/" + restaurant.getId() + "/info";
+    }
+
+    public String toListElement(Language language) {
+        return String.format("%s | phone: %s | type: %s | %.1f km | average price: %.2f | %s | web: %s | info: %s",
+                restaurant.getName(),
+                restaurant.getPhone(),
+                restaurant.getType() == null ? "" : restaurant.getType().getName(),
+                distanceKm,
+                restaurant.getAveragePrice(),
+                restaurant.getDescription() == null ? "" : restaurant.getDescription(),
+                restaurant.getWebPage() == null ? "" : restaurant.getWebPage(),
+                getInformationLink());
+    }
+
+    @Override
+    public String toString() {
+        return toListElement(Language.ENGLISH);
+    }
+}
+```
+
+```java
+// File: FilterCriteria.java
+public class FilterCriteria {
+    private Double maxDistanceKm;
+    private Double maxPrice;
+    private RestaurantType restaurantType;
+    private Dish dish;
+
+    public Double getMaxDistanceKm() {
+        return maxDistanceKm;
+    }
+
+    public void setMaxDistanceKm(Double maxDistanceKm) {
+        this.maxDistanceKm = maxDistanceKm;
+    }
+
+    public Double getMaxPrice() {
+        return maxPrice;
+    }
+
+    public void setMaxPrice(Double maxPrice) {
+        this.maxPrice = maxPrice;
+    }
+
+    public RestaurantType getRestaurantType() {
+        return restaurantType;
+    }
+
+    public void setRestaurantType(RestaurantType restaurantType) {
+        this.restaurantType = restaurantType;
+    }
+
+    public Dish getDish() {
+        return dish;
+    }
+
+    public void setDish(Dish dish) {
+        this.dish = dish;
+    }
+
+    public boolean isEmpty() {
+        return maxDistanceKm == null && maxPrice == null && restaurantType == null && dish == null;
+    }
+}
+```
+
+```java
+// File: SearchResult.java
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+public class SearchResult {
+    public static final int MAX_RESULTS = 100;
+
+    private final SearchCriteria criteria;
+    private final GeoPoint userLocation;
+    private final List<RestaurantResult> baseResults;
+    private final FilterCriteria activeFilter;
+    private List<RestaurantResult> visibleResults;
+    private SortField currentSort;
+    private SortDirection currentSortDirection;
+
+    public SearchResult(SearchCriteria criteria, List<RestaurantResult> results, GeoPoint userLocation) {
+        this.criteria = criteria;
+        this.userLocation = userLocation;
+        this.baseResults = new ArrayList<>(results);
+        this.activeFilter = new FilterCriteria();
+        if (criteria != null && criteria.hasOption(SearchOption.PRICE)) {
+            this.currentSort = SortField.PRICE;
+        } else {
+            this.currentSort = SortField.DISTANCE;
+        }
+        this.currentSortDirection = SortDirection.ASCENDING;
+        recomputeVisible();
+    }
+
+    public ViewMode getDefaultView() {
+        return criteria == null ? ViewMode.MAP : criteria.getDefaultView();
+    }
+
+    public boolean hasResults() {
+        return !baseResults.isEmpty();
+    }
+
+    public List<RestaurantResult> getVisibleResults() {
+        return new ArrayList<>(visibleResults);
+    }
+
+    public List<RestaurantResult> getPins() {
+        return getVisibleResults();
+    }
+
+    public List<RestaurantResult> getBaseResults() {
+        return new ArrayList<>(baseResults);
+    }
+
+    public FilterCriteria getActiveFilter() {
+        return activeFilter;
+    }
+
+    public void applyFilter(FilterCriteria filter) {
+        if (filter == null) {
+            return;
+        }
+        activeFilter.setMaxDistanceKm(filter.getMaxDistanceKm());
+        activeFilter.setMaxPrice(filter.getMaxPrice());
+        activeFilter.setRestaurantType(filter.getRestaurantType());
+        activeFilter.setDish(filter.getDish());
+        recomputeVisible();
+    }
+
+    public void sort(SortField field) {
+        if (field == null) {
+            return;
+        }
+        if (currentSort == field) {
+            currentSortDirection = currentSortDirection == SortDirection.ASCENDING
+                    ? SortDirection.DESCENDING : SortDirection.ASCENDING;
+        } else {
+            currentSort = field;
+            currentSortDirection = SortDirection.ASCENDING;
+        }
+        recomputeVisible();
+    }
+
+    private void recomputeVisible() {
+        List<RestaurantResult> filtered = new ArrayList<>();
+        for (RestaurantResult result : baseResults) {
+            if (matchesFilter(result)) {
+                filtered.add(result);
+            }
+        }
+        filtered.sort(buildComparator(currentSort));
+        int limit = Math.min(MAX_RESULTS, filtered.size());
+        visibleResults = new ArrayList<>(filtered.subList(0, limit));
+    }
+
+    private boolean matchesFilter(RestaurantResult result) {
+        Restaurant restaurant = result.getRestaurant();
+        if (activeFilter.getMaxDistanceKm() != null
+                && result.getDistanceKm() > activeFilter.getMaxDistanceKm()) {
+            return false;
+        }
+        if (activeFilter.getMaxPrice() != null
+                && restaurant.getAveragePrice() > activeFilter.getMaxPrice()) {
+            return false;
+        }
+        if (activeFilter.getRestaurantType() != null) {
+            if (restaurant.getType() == null
+                    || !restaurant.getType().equals(activeFilter.getRestaurantType())) {
+                return false;
+            }
+        }
+        if (activeFilter.getDish() != null && !restaurant.hasDish(activeFilter.getDish().getName())) {
+            return false;
+        }
+        return true;
+    }
+
+    private Comparator<RestaurantResult> buildComparator(SortField field) {
+        Comparator<RestaurantResult> byDistance = Comparator.comparingDouble(RestaurantResult::getDistanceKm);
+        Comparator<RestaurantResult> byPrice = Comparator.comparingDouble(r -> r.getRestaurant().getAveragePrice());
+        Comparator<RestaurantResult> byType = Comparator.comparing(
+                r -> lower(r.getRestaurant().getType() == null ? "" : r.getRestaurant().getType().getName()));
+        Comparator<RestaurantResult> byDish = Comparator.comparing(r -> lower(dishName(r)));
+        Comparator<RestaurantResult> byName = Comparator.comparing(r -> lower(r.getRestaurant().getName()));
+
+        Comparator<RestaurantResult> comparator;
+        switch (field) {
+            case NAME:
+                comparator = byName.thenComparing(byPrice).thenComparing(byDistance);
+                break;
+            case PRICE:
+                comparator = byPrice.thenComparing(byDistance).thenComparing(byType).thenComparing(byDish);
+                break;
+            case RESTAURANT_TYPE:
+                comparator = byType.thenComparing(byDistance).thenComparing(byPrice).thenComparing(byDish);
+                break;
+            case DISH:
+                comparator = byDish.thenComparing(byDistance).thenComparing(byPrice).thenComparing(byType);
+                break;
+            case DISTANCE:
+            default:
+                comparator = byDistance.thenComparing(byPrice).thenComparing(byType).thenComparing(byDish);
+                break;
+        }
+
+        if (currentSortDirection == SortDirection.DESCENDING) {
+            comparator = comparator.reversed();
+        }
+        return comparator;
+    }
+
+    private static String lower(String value) {
+        return value == null ? "" : value.toLowerCase();
+    }
+
+    private String dishName(RestaurantResult result) {
+        if (criteria != null && criteria.getSpecificDish() != null) {
+            return criteria.getSpecificDish().getName();
+        }
+        if (result.getRestaurant().getMenu().isEmpty()) {
+            return "";
+        }
+        return result.getRestaurant().getMenu().get(0).getName();
+    }
+}
+```
+
+```java
+// File: RestaurantSearchService.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class RestaurantSearchService {
+    private final RestaurantRepository restaurantRepository;
+
+    public RestaurantSearchService(RestaurantRepository restaurantRepository) {
+        this.restaurantRepository = restaurantRepository;
+    }
+
+    public SearchResult search(SearchCriteria criteria, GeoPoint userLocation) {
+        if (criteria == null) {
+            criteria = new SearchCriteria();
+        }
+        GeoPoint location = userLocation == null ? new GeoPoint(0, 0) : userLocation;
+        List<RestaurantResult> matches = new ArrayList<>();
+
+        for (Restaurant restaurant : restaurantRepository.getRestaurants()) {
+            double distance = restaurant.getLocation() == null
+                    ? 0.0 : location.distanceKmTo(restaurant.getLocation());
+
+            if (criteria.hasOption(SearchOption.PRICE)
+                    && (restaurant.getAveragePrice() < criteria.getMinPrice()
+                    || restaurant.getAveragePrice() > criteria.getMaxPrice())) {
+                continue;
+            }
+
+            if (criteria.hasOption(SearchOption.DESTINATION)
+                    && (distance < criteria.getMinDistanceKm()
+                    || distance > criteria.getMaxDistanceKm())) {
+                continue;
+            }
+
+            if (criteria.hasOption(SearchOption.RESTAURANT_TYPE)
+                    && criteria.getRestaurantType() != null) {
+                if (restaurant.getType() == null
+                        || !restaurant.getType().equals(criteria.getRestaurantType())) {
+                    continue;
+                }
+            }
+
+            if (criteria.hasOption(SearchOption.SPECIFIC_DISH)
+                    && criteria.getSpecificDish() != null) {
+                if (!restaurant.hasDish(criteria.getSpecificDish().getName())) {
+                    continue;
+                }
+            }
+
+            if (criteria.hasOption(SearchOption.FREE_TEXT)) {
+                String text = criteria.getFreeText();
+                if (text != null && !text.trim().isEmpty() && !restaurant.matchesFreeText(text)) {
+                    continue;
+                }
+            }
+
+            matches.add(new RestaurantResult(restaurant, distance));
+        }
+
+        return new SearchResult(criteria, matches, userLocation);
+    }
+}
+```
+
+```java
+// File: InformationPage.java
+public class InformationPage {
+    private final Restaurant restaurant;
+    private final Language language;
+
+    public InformationPage(Restaurant restaurant, Language language) {
+        this.restaurant = restaurant;
+        this.language = language;
+    }
+
+    public Restaurant getRestaurant() {
+        return restaurant;
+    }
+
+    public String render() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Information page (").append(language).append(")\n");
+        builder.append("Picture: ").append(restaurant.getPictureUrl()).append("\n");
+        builder.append("Name: ").append(restaurant.getName()).append("\n");
+        builder.append("Address: ").append(restaurant.getAddress()).append("\n");
+        builder.append("Phone: ").append(restaurant.getPhone()).append("\n");
+        builder.append("E-mail: ").append(restaurant.getEmail()).append("\n");
+        builder.append("Type of food: ")
+                .append(restaurant.getType() == null ? "" : restaurant.getType().getName()).append("\n");
+        builder.append("Average price: ").append(restaurant.getAveragePrice()).append("\n");
+        builder.append("Description: ").append(restaurant.getDescription()).append("\n");
+        builder.append("Menu:\n");
+        for (Dish dish : restaurant.getMenu()) {
+            builder.append("- ").append(dish.getName())
+                    .append(": ").append(dish.getDescription())
+                    .append(" (").append(dish.getPrice()).append(")\n");
+        }
+        return builder.toString();
+    }
+}
+```
+
+```java
+// File: GPSNavigationProgram.java
+public class GPSNavigationProgram {
+    private GeoPoint destination;
+    private boolean navigating;
+
+    public void startNavigation(GeoPoint destination) {
+        this.destination = destination;
+        this.navigating = destination != null;
+    }
+
+    public boolean arrive() {
+        if (!navigating) {
+            return false;
+        }
+        navigating = false;
+        return true;
+    }
+
+    public boolean isNavigating() {
+        return navigating;
+    }
+
+    public GeoPoint getDestination() {
+        return destination;
+    }
+}
+```
+
+```java
+// File: AppStore.java
+public class AppStore {
+    private final RestaurantRepository restaurantRepository;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
+    private final double price;
+    private String latestVersion;
+
+    public AppStore(RestaurantRepository restaurantRepository, UserRepository userRepository,
+                    EmailService emailService) {
+        this.restaurantRepository = restaurantRepository;
+        this.userRepository = userRepository;
+        this.emailService = emailService;
+        this.price = 0.0;
+        this.latestVersion = "1.0";
+    }
+
+    public boolean isFree() {
+        return price == 0.0;
+    }
+
+    public MobileApplication download() {
+        return new MobileApplication(restaurantRepository, userRepository, emailService, latestVersion);
+    }
+
+    public void releaseNewVersion(String version) {
+        this.latestVersion = version;
+    }
+
+    public boolean checkForUpdate(MobileApplication application) {
+        return application != null && !application.getVersion().equals(latestVersion);
+    }
+
+    public MobileApplication downloadUpdate(MobileApplication application) {
+        if (application != null) {
+            application.updateVersion(latestVersion);
+        }
+        return application;
+    }
+}
+```
+
+```java
+// File: MobileApplication.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class MobileApplication {
+    private final UserRepository userRepository;
+    private final EmailService emailService;
+    private final RestaurantSearchService searchService;
+    private User currentUser;
+    private boolean loggedIn;
+    private boolean searchPageVisible;
+    private SearchResult currentResult;
+    private ViewMode currentView;
+    private String version;
+    private String storedUsername;
+    private String storedPassword;
+    private final GPSNavigationProgram navigationProgram;
+    private String lastMessage;
+
+    public MobileApplication(RestaurantRepository restaurantRepository, UserRepository userRepository,
+                             EmailService emailService, String version) {
+        this.userRepository = userRepository;
+        this.emailService = emailService;
+        this.searchService = new RestaurantSearchService(restaurantRepository);
+        this.currentView = ViewMode.MAP;
+        this.version = version;
+        this.navigationProgram = new GPSNavigationProgram();
+        this.lastMessage = "";
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void updateVersion(String version) {
+        this.version = version;
+    }
+
+    public boolean checkForNewRelease(AppStore appStore) {
+        return appStore != null && appStore.checkForUpdate(this);
+    }
+
+    public String downloadNewRelease(AppStore appStore) {
+        if (appStore != null) {
+            appStore.downloadUpdate(this);
+        }
+        lastMessage = "Application updated to version " + version;
+        return version;
+    }
+
+    public boolean register(String username, String password, String email, String phone) {
+        if (username == null || username.trim().isEmpty()
+                || password == null || password.trim().isEmpty()
+                || email == null || email.trim().isEmpty()) {
+            lastMessage = "Username, password and e-mail address are required.";
+            return false;
+        }
+        if (userRepository.findByUsername(username) != null) {
+            lastMessage = "Username already exists.";
+            return false;
+        }
+        userRepository.add(new User(username, password, email, phone));
+        lastMessage = "Registration successful.";
+        return true;
+    }
+
+    public String retrievePassword(String email) {
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            lastMessage = "No user found with that e-mail address.";
+            return lastMessage;
+        }
+        emailService.sendPasswordEmail(user.getEmail(), user.getPassword());
+        lastMessage = "Password sent by e-mail.";
+        return lastMessage;
+    }
+
+    public boolean login(String username, String password) {
+        User user = userRepository.findByUsername(username);
+        if (user == null || !user.getPassword().equals(password)) {
+            lastMessage = "Invalid username or password.";
+            return false;
+        }
+        currentUser = user;
+        loggedIn = true;
+        storedUsername = username;
+        storedPassword = password;
+        searchPageVisible = true;
+        currentResult = null;
+        lastMessage = "Logged in. Search page is shown first.";
+        return true;
+    }
+
+    public boolean autoLogin() {
+        if (loggedIn) {
+            return true;
+        }
+        if (storedUsername == null || storedPassword == null) {
+            return false;
+        }
+        User user = userRepository.findByUsername(storedUsername);
+        if (user != null && user.getPassword().equals(storedPassword)) {
+            currentUser = user;
+            loggedIn = true;
+            searchPageVisible = true;
+            lastMessage = "Automatically logged in.";
+            return true;
+        }
+        return false;
+    }
+
+    public void logout() {
+        loggedIn = false;
+        currentUser = null;
+        currentResult = null;
+        searchPageVisible = false;
+        lastMessage = "Logged out.";
+    }
+
+    public boolean isLoggedIn() {
+        return loggedIn;
+    }
+
+    public User getCurrentUser() {
+        return currentUser;
+    }
+
+    public boolean isSearchPageFirst() {
+        return loggedIn && searchPageVisible;
+    }
+
+    public boolean search(SearchCriteria criteria, GeoPoint userLocation) {
+        if (!loggedIn) {
+            lastMessage = "A user must be logged in to search.";
+            return false;
+        }
+        currentResult = searchService.search(criteria, userLocation);
+        if (!currentResult.hasResults()) {
+            searchPageVisible = true;
+            currentView = currentResult.getDefaultView();
+            lastMessage = "No match found. Please perform a new search.";
+            return false;
+        }
+        currentView = currentResult.getDefaultView();
+        searchPageVisible = false;
+        lastMessage = "Search completed. Results are shown in " + currentView + " view.";
+        return true;
+    }
+
+    public boolean searchByPrice(String minText, String maxText, GeoPoint userLocation) {
+        try {
+            int min = Integer.parseInt(minText.trim());
+            int max = Integer.parseInt(maxText.trim());
+            if (min < 0 || max < min) {
+                throw new NumberFormatException();
+            }
+            SearchCriteria criteria = new SearchCriteria();
+            criteria.setPriceRange(min, max);
+            return search(criteria, userLocation);
+        } catch (NumberFormatException | NullPointerException ex) {
+            lastMessage = "Invalid input. Please enter integers for the price range.";
+            return false;
+        }
+    }
+
+    public boolean searchByDestination(String minText, String maxText, GeoPoint userLocation) {
+        try {
+            String minValue = minText == null || minText.trim().isEmpty() ? "0" : minText.trim();
+            String maxValue = maxText == null || maxText.trim().isEmpty() ? "10" : maxText.trim();
+            int min = Integer.parseInt(minValue);
+            int max = Integer.parseInt(maxValue);
+            if (min < 0 || max < min) {
+                throw new NumberFormatException();
+            }
+            SearchCriteria criteria = new SearchCriteria();
+            criteria.setDestinationRange(min, max);
+            return search(criteria, userLocation);
+        } catch (NumberFormatException ex) {
+            lastMessage = "Invalid input. Please enter integers for the distance range.";
+            return false;
+        }
+    }
+
+    public boolean searchByRestaurantType(RestaurantType type, GeoPoint userLocation) {
+        SearchCriteria criteria = new SearchCriteria();
+        criteria.setRestaurantType(type);
+        return search(criteria, userLocation);
+    }
+
+    public boolean searchBySpecificDish(Dish dish, GeoPoint userLocation) {
+        SearchCriteria criteria = new SearchCriteria();
+        criteria.setSpecificDish(dish);
+        return search(criteria, userLocation);
+    }
+
+    public boolean freeTextSearch(String text, GeoPoint userLocation) {
+        SearchCriteria criteria = new SearchCriteria();
+        criteria.setFreeText(text);
+        return search(criteria, userLocation);
+    }
+
+    public boolean switchView() {
+        if (currentResult == null) {
+            return false;
+        }
+        currentView = currentView == ViewMode.MAP ? ViewMode.LIST : ViewMode.MAP;
+        lastMessage = "Switched to " + currentView + " view.";
+        return true;
+    }
+
+    public ViewMode getCurrentView() {
+        return currentView;
+    }
+
+    public List<RestaurantResult> getDisplayedResults() {
+        if (currentResult == null) {
+            return new ArrayList<>();
+        }
+        return currentResult.getVisibleResults();
+    }
+
+    public List<RestaurantResult> getMapPins() {
+        return getDisplayedResults();
+    }
+
+    public FilterCriteria showFilteringMenu() {
+        return currentResult == null ? new FilterCriteria() : currentResult.getActiveFilter();
+    }
+
+    public boolean applyFilter(FilterCriteria filter) {
+        if (currentResult == null || filter == null) {
+            return false;
+        }
+        currentResult.applyFilter(filter);
+        lastMessage = "Filter applied to existing results.";
+        return true;
+    }
+
+    public boolean sortResults(SortField field) {
+        if (currentResult == null || field == null) {
+            return false;
+        }
+        currentResult.sort(field);
+        currentView = ViewMode.LIST;
+        lastMessage = "Results sorted by " + field + ".";
+        return true;
+    }
+
+    public boolean selectRestaurant(Restaurant restaurant) {
+        if (restaurant == null) {
+            return false;
+        }
+        navigationProgram.startNavigation(restaurant.getLocation());
+        lastMessage = "Restaurant location sent to GPS navigation.";
+        return true;
+    }
+
+    public boolean isNavigating() {
+        return navigationProgram.isNavigating();
+    }
+
+    public boolean arriveAtDestination() {
+        boolean arrived = navigationProgram.arrive();
+        if (arrived) {
+            lastMessage = "Destination reached. You can go back to the search page.";
+        }
+        return arrived;
+    }
+
+    public boolean backToSearchPage() {
+        searchPageVisible = true;
+        currentResult = null;
+        lastMessage = "Back on search page.";
+        return true;
+    }
+
+    public InformationPage openInformationPage(Restaurant restaurant) {
+        Language language = currentUser == null ? Language.ENGLISH : currentUser.getLanguage();
+        return new InformationPage(restaurant, language);
+    }
+
+    public boolean editProfile(String password, String email, String phone) {
+        if (!loggedIn || currentUser == null) {
+            return false;
+        }
+        currentUser.updateProfile(password, email, phone);
+        lastMessage = "Profile updated.";
+        return true;
+    }
+
+    public void setLanguage(Language language) {
+        if (currentUser != null && language != null) {
+            currentUser.setLanguage(language);
+        }
+    }
+
+    public String getUserProfilePage() {
+        if (currentUser == null) {
+            return "No user is logged in.";
+        }
+        return currentUser.getProfilePage();
+    }
+
+    public String getLastMessage() {
+        return lastMessage;
+    }
+
+    public SearchResult getCurrentResult() {
+        return currentResult;
+    }
+}
+```
+
+```java
+// File: WebPortal.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class WebPortal {
+    private final UserRepository userRepository;
+    private final OwnerRepository ownerRepository;
+    private final RestaurantRepository restaurantRepository;
+    private final EmailService emailService;
+    private final List<Administrator> administrators;
+
+    public WebPortal(UserRepository userRepository, OwnerRepository ownerRepository,
+                     RestaurantRepository restaurantRepository, EmailService emailService) {
+        this.userRepository = userRepository;
+        this.ownerRepository = ownerRepository;
+        this.restaurantRepository = restaurantRepository;
+        this.emailService = emailService;
+        this.administrators = new ArrayList<>();
+    }
+
+    public Administrator addAdministrator(String username, String password) {
+        Administrator administrator = new Administrator(username, password);
+        administrators.add(administrator);
+        return administrator;
+    }
+
+    public Administrator loginAdmin(String username, String password) {
+        for (Administrator administrator : administrators) {
+            if (administrator.getUsername().equals(username)
+                    && administrator.getPassword().equals(password)) {
+                administrator.setLoggedIn(true);
+                return administrator;
+            }
+        }
+        return null;
+    }
+
+    public RestaurantOwner loginOwner(String username, String password) {
+        RestaurantOwner owner = ownerRepository.findByUsername(username);
+        if (owner != null && owner.isVerified() && owner.getPassword().equals(password)) {
+            owner.setLoggedIn(true);
+            return owner;
+        }
+        return null;
+    }
+
+    public RestaurantOwner registerOwner(String username, String password, String address,
+                                         String email, String phone, String mobile) {
+        if (ownerRepository.findByUsername(username) != null) {
+            return null;
+        }
+        RestaurantOwner owner = new RestaurantOwner(username, password, address, email, phone, mobile);
+        owner.applyForVerification();
+        ownerRepository.add(owner);
+        return owner;
+    }
+
+    public boolean retrieveOwnerPassword(String email) {
+        RestaurantOwner owner = ownerRepository.findByEmail(email);
+        if (owner == null) {
+            return false;
+        }
+        emailService.sendPasswordEmail(owner.getEmail(), owner.getPassword());
+        return true;
+    }
+
+    public boolean verifyOwner(Administrator administrator, String ownerUsername) {
+        requireAdmin(administrator);
+        RestaurantOwner owner = ownerRepository.findByUsername(ownerUsername);
+        if (owner == null) {
+            return false;
+        }
+        owner.verify();
+        emailService.sendConfirmationEmail(owner.getEmail(), owner.getUsername());
+        return true;
+    }
+
+    public boolean rejectOwner(Administrator administrator, String ownerUsername) {
+        requireAdmin(administrator);
+        RestaurantOwner owner = ownerRepository.findByUsername(ownerUsername);
+        if (owner == null) {
+            return false;
+        }
+        owner.reject();
+        emailService.sendRejectionEmail(owner.getEmail(), owner.getUsername());
+        return true;
+    }
+
+    public void selectOwnerLanguage(RestaurantOwner owner, Language language) {
+        if (owner != null && language != null) {
+            owner.setLanguage(language);
+        }
+    }
+
+    public void selectAdminLanguage(Administrator administrator, Language language) {
+        if (administrator != null && language != null) {
+            administrator.setLanguage(language);
+        }
+    }
+
+    public String getWebPortalText(Administrator administrator) {
+        return "Web portal text in " + administrator.getLanguage();
+    }
+
+    public String getWebPortalText(RestaurantOwner owner) {
+        return "Web portal text in " + owner.getLanguage();
+    }
+
+    public RestaurantType addRestaurantType(Administrator administrator, String name) {
+        requireAdmin(administrator);
+        RestaurantType type = new RestaurantType(name);
+        restaurantRepository.addRestaurantType(type);
+        return type;
+    }
+
+    public boolean editRestaurantType(Administrator administrator, RestaurantType type, String newName) {
+        requireAdmin(administrator);
+        if (type == null || newName == null || newName.trim().isEmpty()) {
+            return false;
+        }
+        type.setName(newName);
+        return true;
+    }
+
+    public boolean deleteRestaurantType(Administrator administrator, RestaurantType type) {
+        requireAdmin(administrator);
+        return restaurantRepository.deleteRestaurantType(type);
+    }
+
+    public Dish addDish(Administrator administrator, String name, String description, double price) {
+        requireAdmin(administrator);
+        Dish dish = new Dish(name, description, price);
+        restaurantRepository.addDish(dish);
+        return dish;
+    }
+
+    public boolean editDish(Administrator administrator, Dish dish, String name,
+                            String description, double price) {
+        requireAdmin(administrator);
+        if (dish == null) {
+            return false;
+        }
+        dish.setName(name);
+        dish.setDescription(description);
+        dish.setPrice(price);
+        return true;
+    }
+
+    public boolean deleteDish(Administrator administrator, Dish dish) {
+        requireAdmin(administrator);
+        return restaurantRepository.deleteDish(dish);
+    }
+
+    public void addRestaurantInformation(RestaurantOwner owner, Restaurant restaurant) {
+        requireOwner(owner);
+        owner.setRestaurant(restaurant);
+        restaurantRepository.addRestaurant(restaurant);
+    }
+
+    public boolean editRestaurantInformation(RestaurantOwner owner, Restaurant restaurant) {
+        requireOwner(owner);
+        if (owner.getRestaurant() == null || restaurant == null) {
+            return false;
+        }
+        owner.setRestaurant(restaurant);
+        return true;
+    }
+
+    public boolean deleteRestaurantInformation(RestaurantOwner owner) {
+        requireOwner(owner);
+        Restaurant restaurant = owner.getRestaurant();
+        if (restaurant != null) {
+            restaurantRepository.removeRestaurant(restaurant);
+            owner.setRestaurant(null);
+        }
+        return true;
+    }
+
+    public void addRestaurantInformation(Administrator administrator, Restaurant restaurant) {
+        requireAdmin(administrator);
+        restaurantRepository.addRestaurant(restaurant);
+    }
+
+    public boolean editRestaurantInformation(Administrator administrator, Restaurant restaurant) {
+        requireAdmin(administrator);
+        return restaurant != null;
+    }
+
+    public boolean deleteRestaurantInformation(Administrator administrator, Restaurant restaurant) {
+        requireAdmin(administrator);
+        return restaurantRepository.removeRestaurant(restaurant);
+    }
+
+    public boolean editUser(Administrator administrator, String username, String password,
+                            String email, String phone) {
+        requireAdmin(administrator);
+        User user = userRepository.findByUsername(username);
+        if (user == null) {
+            return false;
+        }
+        user.updateProfile(password, email, phone);
+        return true;
+    }
+
+    public boolean deleteUser(Administrator administrator, String username) {
+        requireAdmin(administrator);
+        return userRepository.delete(username);
+    }
+
+    public RestaurantOwner addOwner(Administrator administrator, String username, String password,
+                                    String address, String email, String phone, String mobile) {
+        requireAdmin(administrator);
+        if (ownerRepository.findByUsername(username) != null) {
+            return null;
+        }
+        RestaurantOwner owner = new RestaurantOwner(username, password, address, email, phone, mobile);
+        owner.verify();
+        ownerRepository.add(owner);
+        return owner;
+    }
+
+    public boolean editOwner(Administrator administrator, String username, String password,
+                             String address, String email, String phone, String mobile) {
+        requireAdmin(administrator);
+        RestaurantOwner owner = ownerRepository.findByUsername(username);
+        if (owner == null) {
+            return false;
+        }
+        owner.updateContact(password, address, email, phone, mobile);
+        return true;
+    }
+
+    public boolean deleteOwner(Administrator administrator, String username) {
+        requireAdmin(administrator);
+        RestaurantOwner owner = ownerRepository.findByUsername(username);
+        if (owner == null) {
+            return false;
+        }
+        if (owner.getRestaurant() != null) {
+            restaurantRepository.removeRestaurant(owner.getRestaurant());
+        }
+        return ownerRepository.remove(owner);
+    }
+
+    private void requireAdmin(Administrator administrator) {
+        if (administrator == null || !administrator.isLoggedIn()) {
+            throw new IllegalStateException("Administrator must be logged in.");
+        }
+    }
+
+    private void requireOwner(RestaurantOwner owner) {
+        if (owner == null || !owner.isLoggedIn() || !owner.isVerified()) {
+            throw new IllegalStateException("Restaurant owner must be logged in and verified.");
+        }
+    }
+}
+```
+
+```java
+// File: Main.java
+public class Main {
+    public static void main(String[] args) {
+        RestaurantRepository restaurantRepository = new RestaurantRepository();
+        UserRepository userRepository = new UserRepository();
+        OwnerRepository ownerRepository = new OwnerRepository();
+        EmailService emailService = new EmailService();
+        WebPortal webPortal = new WebPortal(userRepository, ownerRepository, restaurantRepository, emailService);
+
+        Administrator admin = webPortal.addAdministrator("admin", "admin123");
+        admin = webPortal.loginAdmin("admin", "admin123");
+
+        RestaurantType italian = webPortal.addRestaurantType(admin, "Italian");
+        RestaurantType sushi = webPortal.addRestaurantType(admin, "Sushi");
+        Dish pizza = webPortal.addDish(admin, "Pizza", "Cheese pizza", 12.0);
+        Dish sushiDish = webPortal.addDish(admin, "Sushi", "Salmon sushi", 20.0);
+
+        RestaurantOwner owner = webPortal.registerOwner("owner1", "pass", "Owner Street 1",
+                "owner1@example.com", "111222", "555666");
+        webPortal.verifyOwner(admin, "owner1");
+        owner = webPortal.loginOwner("owner1", "pass");
+
+        Restaurant pizzaPlace = new Restaurant("R1", "Pizza Place", "1 Main Street",
+                "111222", "pizza@example.com", 12.0, italian, new GeoPoint(59.3293, 18.0686));
+        pizzaPlace.setDescription("Italian pizza restaurant.");
+        pizzaPlace.setWebPage("http://pizza.example.com");
+        pizzaPlace.setPictureUrl("http://pizza.example.com/pic.jpg");
+        pizzaPlace.addDish(pizza);
+        webPortal.addRestaurantInformation(owner, pizzaPlace);
+
+        Restaurant sushiCorner = new Restaurant("R2", "Sushi Corner", "2 Market Street",
+                "333444", "sushi@example.com", 20.0, sushi, new GeoPoint(59.3320, 18.0650));
+        sushiCorner.setDescription("Fresh sushi and Japanese food.");
+        sushiCorner.setWebPage("http://sushi.example.com");
+        sushiCorner.addDish(sushiDish);
+        webPortal.addRestaurantInformation(admin, sushiCorner);
+
+        Restaurant budgetDiner = new Restaurant("R3", "Budget Diner", "3 Small Street",
+                "555666", "budget@example.com", 8.0, italian, new GeoPoint(59.3340, 18.0700));
+        budgetDiner.setDescription("Cheap and tasty pasta.");
+        budgetDiner.setWebPage("http://budget.example.com");
+        budgetDiner.addDish(new Dish("Pasta", "Tomato pasta", 8.0));
+        webPortal.addRestaurantInformation(admin, budgetDiner);
+
+        AppStore appStore = new AppStore(restaurantRepository, userRepository, emailService);
+        MobileApplication app = appStore.download();
+        System.out.println("Free app download: " + appStore.isFree() + ", version " + app.getVersion());
+
+        app.register("alice", "secret", "alice@example.com", "0700000000");
+        System.out.println("Login: " + app.login("alice", "secret"));
+        app.logout();
+        System.out.println("Auto-login: " + app.autoLogin());
+        System.out.println("Search page first: " + app.isSearchPageFirst());
+
+        GeoPoint userLocation = new GeoPoint(59.3300, 18.0680);
+        boolean found = app.searchByPrice("0", "15", userLocation);
+        System.out.println("Price search found: " + found + ", view: " + app.getCurrentView());
+        app.sortResults(SortField.NAME);
+        System.out.println("Sorted results: " + app.getDisplayedResults());
+
+        FilterCriteria filter = new FilterCriteria();
+        filter.setMaxDistanceKm(2.0);
+        app.applyFilter(filter);
+        System.out.println("Filtered results: " + app.getDisplayedResults());
+        app.switchView();
+        System.out.println("Switched view: " + app.getCurrentView());
+
+        InformationPage infoPage = app.openInformationPage(pizzaPlace);
+        System.out.println(infoPage.render());
+
+        app.selectRestaurant(pizzaPlace);
+        System.out.println("Navigating: " + app.isNavigating());
+        app.arriveAtDestination();
+        app.backToSearchPage();
+        System.out.println("Back to search page: " + app.isSearchPageFirst());
+
+        app.editProfile("newSecret", "alice.new@example.com", "0711111111");
+        app.setLanguage(Language.SPANISH);
+        System.out.println(app.getUserProfilePage());
+        app.retrievePassword("alice.new@example.com");
+
+        appStore.releaseNewVersion("1.0.1");
+        System.out.println("Update available: " + app.checkForNewRelease(appStore));
+        app.downloadNewRelease(appStore);
+        System.out.println("New version: " + app.getVersion());
+
+        webPortal.editUser(admin, "alice", "changed", "alice.changed@example.com", "0722222222");
+        webPortal.deleteUser(admin, "alice");
+
+        RestaurantOwner rejected = webPortal.registerOwner("owner2", "pass", "Owner Street 2",
+                "owner2@example.com", "222333", "666777");
+        webPortal.rejectOwner(admin, "owner2");
+        System.out.println("Rejected owner can login: "
+                + (webPortal.loginOwner("owner2", "pass") != null));
+
+        RestaurantOwner managedOwner = webPortal.addOwner(admin, "owner3", "pass", "Street 3",
+                "owner3@example.com", "333444", "777888");
+        webPortal.editOwner(admin, "owner3", "newpass", "Street 3B",
+                "owner3@example.com", "333444", "777888");
+        webPortal.deleteOwner(admin, "owner3");
+
+        System.out.println("Emails sent: " + emailService.getSentEmails());
+    }
+}
+```

@@ -1,0 +1,1124 @@
+// File: Main.java
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        KeePassInstaller installer = new KeePassInstaller();
+        installer.download();
+        installer.install();
+        System.out.println("KeePass installed: " + installer.isInstalled());
+
+        String longMasterPassword = "This master password is a whole sentence and can be longer than one hundred characters without any limit. It remains valid for the demo database.";
+        MasterPassword masterPassword = new MasterPassword(longMasterPassword);
+        System.out.println("Master password length: " + masterPassword.length());
+
+        Path keyFilePath = Files.createTempFile("keepass-demo-key", ".key");
+        Files.writeString(keyFilePath, "demo key material");
+        KeyFile keyFile = new KeyFile(keyFilePath);
+
+        DatabaseCredentials credentials = new DatabaseCredentials(masterPassword, keyFile);
+        Path databasePath = Paths.get("demo-passwords.kdb");
+        PasswordDatabase database = new PasswordDatabase("Personal", databasePath, credentials);
+
+        boolean unlocked = database.unlock(longMasterPassword, new KeyFile(keyFilePath));
+        System.out.println("Database unlocked: " + unlocked);
+
+        Group emails = database.createRootGroup("Emails");
+        Entry mailEntry = database.addEntry(
+                emails,
+                "Mail Account",
+                "abcUser",
+                "https://mail.example",
+                "secret-abc-123",
+                "secret-abc-123",
+                "Auto-Type: {USERNAME}{TAB}{PASSWORD}{ENTER}\nAuto-Type: {PASSWORD}"
+        );
+
+        database.selectGroup(emails);
+        Group cards = database.createSubgroup("Credit Cards");
+        TanEntry tanEntry = new TanEntry(
+                cards,
+                "Bank TAN",
+                "bankUser",
+                "https://bank.example",
+                "tan-pass",
+                "tan-pass",
+                "One-time bank code",
+                "123456"
+        );
+        database.addEntry(tanEntry);
+
+        List<Entry> searchResults = database.findAll("abc");
+        System.out.println("Search results for abc: " + searchResults.size());
+
+        database.selectGroup(emails);
+        List<Entry> groupResults = database.findInSelectedGroup("abc");
+        System.out.println("Search results in selected group: " + groupResults.size());
+
+        database.selectEntry(mailEntry);
+        System.out.println("Selected entry: " + database.viewSelectedEntry());
+        database.modifySelectedTitle("Primary Mail Account");
+        database.updateSelectedPassword("new-secret-abc-456", "new-secret-abc-456");
+        Entry duplicate = database.duplicateSelectedEntry();
+        System.out.println("Duplicated entry: " + duplicate.getTitle());
+
+        database.selectEntry(tanEntry);
+        try {
+            database.modifySelectedTitle("Should fail");
+        } catch (UnsupportedOperationException ex) {
+            System.out.println("TAN title change rejected: " + ex.getMessage());
+        }
+
+        tanEntry.useTan();
+        try {
+            tanEntry.useTan();
+        } catch (IllegalStateException ex) {
+            System.out.println("TAN reuse rejected: " + ex.getMessage());
+        }
+
+        AutoType autoType = AutoType.firstFromNote(mailEntry.getNotes());
+        System.out.println("First auto-type: " + autoType.getSequence());
+
+        LanguageDownloader downloader = new LanguageDownloader();
+        System.out.println(downloader.downloadTranslation("Spanish", true, true));
+
+        CommandLineOptions options = CommandLineOptions.parse("\"C:\\My Data\\passwords.kdb\"");
+        System.out.println("Command line database: " + options.getDatabaseFile());
+
+        try {
+            CommandLineOptions.parse("C:\\My Data\\passwords.kdb");
+        } catch (IllegalArgumentException ex) {
+            System.out.println("Unquoted command line path rejected: " + ex.getMessage());
+        }
+
+        DatabaseManager manager = new DatabaseManager();
+        manager.addDatabase(database);
+        System.out.println("Selected database preview: " + manager.getSelectedDatabase().getName());
+
+        GlobalHotKey hotKey = new GlobalHotKey("Ctrl+Alt+K");
+        System.out.println("Global hot key: " + hotKey.getCombination());
+
+        DatabaseFileFormat format = DatabaseFileFormat.KDB;
+        System.out.println("Format specialized: " + format.isSpecializedPasswordDatabaseFormat()
+                + ", low-level layout only: " + format.isLowLevelLayoutOnly());
+
+        System.out.println("Database entries:");
+        System.out.println(database.printEntries());
+    }
+}
+
+// File: KeePassInstaller.java
+public final class KeePassInstaller {
+    private boolean downloaded;
+    private boolean installed;
+
+    public void download() {
+        downloaded = true;
+    }
+
+    public void install() {
+        if (!downloaded) {
+            throw new IllegalStateException("KeePass must be downloaded before installation.");
+        }
+        installed = true;
+    }
+
+    public boolean isDownloaded() {
+        return downloaded;
+    }
+
+    public boolean isInstalled() {
+        return installed;
+    }
+}
+
+// File: MasterPassword.java
+public final class MasterPassword {
+    private final String value;
+
+    public MasterPassword(String value) {
+        if (value == null) {
+            throw new IllegalArgumentException("Master password cannot be null.");
+        }
+        this.value = value;
+    }
+
+    public boolean matches(String candidate) {
+        return value.equals(candidate);
+    }
+
+    public int length() {
+        return value.length();
+    }
+
+    public String getValue() {
+        return value;
+    }
+}
+
+// File: KeyFile.java
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public final class KeyFile {
+    private final Path path;
+
+    public KeyFile(Path path) {
+        if (path == null) {
+            throw new IllegalArgumentException("Key file path cannot be null.");
+        }
+        this.path = path;
+    }
+
+    public boolean isPresent() {
+        return Files.exists(path) && Files.isRegularFile(path) && Files.isReadable(path);
+    }
+
+    public Path getPath() {
+        return path;
+    }
+}
+
+// File: DatabaseCredentials.java
+public final class DatabaseCredentials {
+    private final MasterPassword masterPassword;
+    private final KeyFile keyFile;
+
+    public DatabaseCredentials(MasterPassword masterPassword, KeyFile keyFile) {
+        if (masterPassword == null && keyFile == null) {
+            throw new IllegalArgumentException("At least one unlock credential is required.");
+        }
+        this.masterPassword = masterPassword;
+        this.keyFile = keyFile;
+    }
+
+    public boolean requiresMasterPassword() {
+        return masterPassword != null;
+    }
+
+    public boolean requiresKeyFile() {
+        return keyFile != null;
+    }
+
+    public boolean isComposite() {
+        return requiresMasterPassword() && requiresKeyFile();
+    }
+
+    public boolean unlock(String providedPassword, KeyFile providedKeyFile) {
+        if (requiresMasterPassword()) {
+            if (providedPassword == null || !masterPassword.matches(providedPassword)) {
+                return false;
+            }
+        }
+
+        if (requiresKeyFile()) {
+            if (providedKeyFile == null || !providedKeyFile.isPresent()) {
+                return false;
+            }
+            if (!keyFile.getPath().toAbsolutePath().normalize()
+                    .equals(providedKeyFile.getPath().toAbsolutePath().normalize())) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+
+// File: DatabaseFileValidator.java
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public final class DatabaseFileValidator {
+    private DatabaseFileValidator() {
+    }
+
+    public static void validate(Path file) {
+        if (file == null) {
+            throw new IllegalArgumentException("Database file cannot be null.");
+        }
+
+        Path fileNamePath = file.getFileName();
+        if (fileNamePath == null) {
+            throw new IllegalArgumentException("Database file must have a name.");
+        }
+
+        String fileName = fileNamePath.toString();
+        String lowerName = fileName.toLowerCase();
+        if (!lowerName.endsWith(".kdb")) {
+            throw new IllegalArgumentException("Database file must be of type name.kdb.");
+        }
+        if (fileName.length() <= ".kdb".length()) {
+            throw new IllegalArgumentException("Database file must have a non-empty name before .kdb.");
+        }
+        if (Files.exists(file) && !Files.isReadable(file)) {
+            throw new IllegalArgumentException("Database file must be readable.");
+        }
+    }
+}
+
+// File: DatabaseManager.java
+import java.util.ArrayList;
+import java.util.List;
+
+public final class DatabaseManager {
+    private final List<PasswordDatabase> databases = new ArrayList<>();
+    private PasswordDatabase selectedDatabase;
+
+    public void addDatabase(PasswordDatabase database) {
+        if (database == null) {
+            throw new IllegalArgumentException("Database cannot be null.");
+        }
+
+        int existingIndex = -1;
+        for (int i = 0; i < databases.size(); i++) {
+            if (databases.get(i).getName().equals(database.getName())) {
+                existingIndex = i;
+                break;
+            }
+        }
+
+        if (existingIndex >= 0) {
+            PasswordDatabase previous = databases.get(existingIndex);
+            databases.set(existingIndex, database);
+            if (selectedDatabase == previous) {
+                selectedDatabase = database;
+            }
+        } else {
+            databases.add(database);
+        }
+
+        if (selectedDatabase == null) {
+            selectedDatabase = database;
+        }
+    }
+
+    public void selectDatabase(String name) {
+        for (PasswordDatabase database : databases) {
+            if (database.getName().equals(name)) {
+                selectedDatabase = database;
+                return;
+            }
+        }
+        throw new IllegalArgumentException("Database not found: " + name);
+    }
+
+    public PasswordDatabase getSelectedDatabase() {
+        return selectedDatabase;
+    }
+
+    public List<PasswordDatabase> getDatabases() {
+        return new ArrayList<>(databases);
+    }
+}
+
+// File: PasswordDatabase.java
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+public final class PasswordDatabase {
+    private final String name;
+    private final Path filePath;
+    private final DatabaseCredentials credentials;
+    private final List<Group> groups = new ArrayList<>();
+    private boolean unlocked;
+    private Group selectedGroup;
+    private Entry selectedEntry;
+
+    public PasswordDatabase(String name, Path filePath, DatabaseCredentials credentials) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Database name is required.");
+        }
+        if (credentials == null) {
+            throw new IllegalArgumentException("Database credentials are required.");
+        }
+        DatabaseFileValidator.validate(filePath);
+        this.name = name;
+        this.filePath = filePath;
+        this.credentials = credentials;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Path getFilePath() {
+        return filePath;
+    }
+
+    public boolean isUnlocked() {
+        return unlocked;
+    }
+
+    public boolean unlock(String masterPassword, KeyFile keyFile) {
+        if (unlocked) {
+            return true;
+        }
+        if (credentials.unlock(masterPassword, keyFile)) {
+            unlocked = true;
+            return true;
+        }
+        return false;
+    }
+
+    public void lock() {
+        unlocked = false;
+        selectedGroup = null;
+        selectedEntry = null;
+    }
+
+    private void requireUnlocked() {
+        if (!unlocked) {
+            throw new IllegalStateException("Database is locked.");
+        }
+    }
+
+    public Group createRootGroup(String name) {
+        requireUnlocked();
+        validateGroupName(name);
+        Group group = new Group(name, null);
+        groups.add(group);
+        selectedGroup = group;
+        return group;
+    }
+
+    public Group createSubgroup(String name) {
+        requireUnlocked();
+        if (selectedGroup == null) {
+            throw new IllegalStateException("A subgroup cannot be created when no group is selected.");
+        }
+        validateGroupName(name);
+        Group subgroup = selectedGroup.addSubgroup(name);
+        selectedGroup = subgroup;
+        return subgroup;
+    }
+
+    private void validateGroupName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("A name is required for a group or subgroup.");
+        }
+    }
+
+    public void renameSelectedGroup(String newName) {
+        requireUnlocked();
+        if (selectedGroup == null) {
+            throw new IllegalStateException("No group is selected.");
+        }
+        validateGroupName(newName);
+        selectedGroup.rename(newName);
+    }
+
+    public void selectGroup(Group group) {
+        requireUnlocked();
+        if (group == null) {
+            throw new IllegalArgumentException("Group cannot be null.");
+        }
+        if (!containsGroup(group)) {
+            throw new IllegalArgumentException("Group does not belong to this database.");
+        }
+        selectedGroup = group;
+    }
+
+    public void clearSelectedGroup() {
+        requireUnlocked();
+        selectedGroup = null;
+    }
+
+    public Group getSelectedGroup() {
+        return selectedGroup;
+    }
+
+    public void addEntry(Entry entry) {
+        requireUnlocked();
+        if (entry == null) {
+            throw new IllegalArgumentException("Entry cannot be null.");
+        }
+        Group group = entry.getGroup();
+        if (!containsGroup(group)) {
+            throw new IllegalArgumentException("Entry must belong to a group in this database.");
+        }
+        group.addEntry(entry);
+    }
+
+    public Entry addEntry(
+            Group group,
+            String title,
+            String username,
+            String url,
+            String password,
+            String repeatPassword,
+            String notes
+    ) {
+        requireUnlocked();
+        if (group == null) {
+            throw new IllegalArgumentException("An entry must belong to a group.");
+        }
+        if (!containsGroup(group)) {
+            throw new IllegalArgumentException("Group does not belong to this database.");
+        }
+        Entry entry = new Entry(group, title, username, url, password, repeatPassword, notes);
+        group.addEntry(entry);
+        return entry;
+    }
+
+    public void selectEntry(Entry entry) {
+        requireUnlocked();
+        if (entry == null) {
+            throw new IllegalArgumentException("Entry cannot be null.");
+        }
+        if (!containsEntry(entry)) {
+            throw new IllegalArgumentException("Entry does not belong to this database.");
+        }
+        selectedEntry = entry;
+    }
+
+    public Entry getSelectedEntry() {
+        return selectedEntry;
+    }
+
+    public String viewSelectedEntry() {
+        requireUnlocked();
+        requireSelectedEntry();
+        return selectedEntry.toString();
+    }
+
+    public void modifySelectedTitle(String title) {
+        requireUnlocked();
+        requireSelectedEntry();
+        selectedEntry.setTitle(title);
+    }
+
+    public void modifySelectedUsername(String username) {
+        requireUnlocked();
+        requireSelectedEntry();
+        selectedEntry.setUsername(username);
+    }
+
+    public void modifySelectedUrl(String url) {
+        requireUnlocked();
+        requireSelectedEntry();
+        selectedEntry.setUrl(url);
+    }
+
+    public void updateSelectedPassword(String newPassword, String repeatPassword) {
+        requireUnlocked();
+        requireSelectedEntry();
+        selectedEntry.updatePassword(newPassword, repeatPassword);
+    }
+
+    private void requireSelectedEntry() {
+        if (selectedEntry == null) {
+            throw new IllegalStateException("An entry must be selected.");
+        }
+    }
+
+    public Entry duplicateSelectedEntry() {
+        requireUnlocked();
+        requireSelectedEntry();
+        Entry copy = selectedEntry.duplicate();
+        selectedEntry.getGroup().addEntry(copy);
+        return copy;
+    }
+
+    public void deleteSelectedEntry() {
+        requireUnlocked();
+        requireSelectedEntry();
+        selectedEntry.getGroup().removeEntry(selectedEntry);
+        selectedEntry = null;
+    }
+
+    public List<Entry> findAll(String word) {
+        requireUnlocked();
+        if (word == null || word.trim().isEmpty()) {
+            throw new IllegalArgumentException("A search word is required.");
+        }
+        List<Entry> matches = new ArrayList<>();
+        for (Entry entry : getAllEntries()) {
+            if (entry.matches(word)) {
+                matches.add(entry);
+            }
+        }
+        return matches;
+    }
+
+    public List<Entry> findInSelectedGroup(String word) {
+        requireUnlocked();
+        if (selectedGroup == null) {
+            throw new IllegalStateException("No group is selected.");
+        }
+        if (word == null || word.trim().isEmpty()) {
+            throw new IllegalArgumentException("A search word must be placed in the find field.");
+        }
+        return selectedGroup.search(word);
+    }
+
+    public List<Entry> findInGroup(Group group, String word) {
+        requireUnlocked();
+        if (group == null) {
+            throw new IllegalArgumentException("Group cannot be null.");
+        }
+        if (word == null || word.trim().isEmpty()) {
+            throw new IllegalArgumentException("A search word must be placed in the find field.");
+        }
+        return group.search(word);
+    }
+
+    public String printEntries() {
+        requireUnlocked();
+        List<Entry> entries = getAllEntries();
+        if (entries.isEmpty()) {
+            throw new IllegalStateException("There are no entries in the database to print.");
+        }
+        StringBuilder builder = new StringBuilder();
+        for (Entry entry : entries) {
+            builder.append(entry).append(System.lineSeparator());
+        }
+        return builder.toString();
+    }
+
+    public List<Entry> getAllEntries() {
+        List<Entry> result = new ArrayList<>();
+        for (Group group : groups) {
+            result.addAll(group.getAllEntriesRecursive());
+        }
+        return result;
+    }
+
+    public List<Group> getGroups() {
+        return new ArrayList<>(groups);
+    }
+
+    public boolean containsGroup(Group group) {
+        if (group == null) {
+            return false;
+        }
+        for (Group root : groups) {
+            if (root.containsGroupRecursive(group)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean containsEntry(Entry entry) {
+        if (entry == null) {
+            return false;
+        }
+        for (Group root : groups) {
+            if (root.containsEntryRecursive(entry)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+// File: Group.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Group {
+    private String name;
+    private final Group parent;
+    private final List<Group> subgroups = new ArrayList<>();
+    private final List<Entry> entries = new ArrayList<>();
+
+    public Group(String name, Group parent) {
+        validateName(name);
+        this.name = name;
+        this.parent = parent;
+    }
+
+    private static void validateName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("A name is required.");
+        }
+    }
+
+    public Group addSubgroup(String name) {
+        validateName(name);
+        Group subgroup = new Group(name, this);
+        subgroups.add(subgroup);
+        return subgroup;
+    }
+
+    public void rename(String newName) {
+        validateName(newName);
+        this.name = newName;
+    }
+
+    public void addEntry(Entry entry) {
+        if (entry == null) {
+            throw new IllegalArgumentException("Entry cannot be null.");
+        }
+        if (entry.getGroup() != this) {
+            throw new IllegalArgumentException("Entry must belong to this group.");
+        }
+        entries.add(entry);
+    }
+
+    public void removeEntry(Entry entry) {
+        entries.remove(entry);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Group getParent() {
+        return parent;
+    }
+
+    public List<Entry> getEntries() {
+        return new ArrayList<>(entries);
+    }
+
+    public List<Group> getSubgroups() {
+        return new ArrayList<>(subgroups);
+    }
+
+    public List<Entry> search(String word) {
+        if (word == null || word.trim().isEmpty()) {
+            throw new IllegalArgumentException("A search word must be placed in the find field.");
+        }
+        List<Entry> result = new ArrayList<>();
+        collectMatches(word, result);
+        return result;
+    }
+
+    private void collectMatches(String word, List<Entry> result) {
+        for (Entry entry : entries) {
+            if (entry.matches(word)) {
+                result.add(entry);
+            }
+        }
+        for (Group subgroup : subgroups) {
+            subgroup.collectMatches(word, result);
+        }
+    }
+
+    public List<Entry> getAllEntriesRecursive() {
+        List<Entry> result = new ArrayList<>(entries);
+        for (Group subgroup : subgroups) {
+            result.addAll(subgroup.getAllEntriesRecursive());
+        }
+        return result;
+    }
+
+    public boolean containsEntryRecursive(Entry entry) {
+        if (entries.contains(entry)) {
+            return true;
+        }
+        for (Group subgroup : subgroups) {
+            if (subgroup.containsEntryRecursive(entry)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean containsGroupRecursive(Group target) {
+        if (this == target) {
+            return true;
+        }
+        for (Group subgroup : subgroups) {
+            if (subgroup.containsGroupRecursive(target)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+// File: Entry.java
+public class Entry {
+    private final Group group;
+    private String title;
+    private String username;
+    private String url;
+    private String password;
+    private String notes;
+
+    public Entry(
+            Group group,
+            String title,
+            String username,
+            String url,
+            String password,
+            String repeatPassword,
+            String notes
+    ) {
+        if (group == null) {
+            throw new IllegalArgumentException("An entry must belong to a group to be created.");
+        }
+        validatePasswords(password, repeatPassword);
+        this.group = group;
+        this.title = safe(title);
+        this.username = safe(username);
+        this.url = safe(url);
+        this.password = password == null ? "" : password;
+        this.notes = safe(notes);
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static void validatePasswords(String password, String repeatPassword) {
+        String first = password == null ? "" : password;
+        String second = repeatPassword == null ? "" : repeatPassword;
+
+        if (!first.isEmpty() && second.isEmpty()) {
+            throw new IllegalArgumentException("Repeat password is required when password field is completed.");
+        }
+        if (!first.equals(second)) {
+            throw new IllegalArgumentException("Password field and repeat password field must be identical.");
+        }
+    }
+
+    public Group getGroup() {
+        return group;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = safe(title);
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = safe(username);
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = safe(url);
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void updatePassword(String newPassword, String repeatPassword) {
+        validatePasswords(newPassword, repeatPassword);
+        this.password = newPassword == null ? "" : newPassword;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = safe(notes);
+    }
+
+    public boolean matches(String word) {
+        if (word == null || word.trim().isEmpty()) {
+            throw new IllegalArgumentException("A search word is required.");
+        }
+        String lowerWord = word.toLowerCase();
+        return contains(title, lowerWord)
+                || contains(username, lowerWord)
+                || contains(url, lowerWord)
+                || contains(password, lowerWord)
+                || contains(notes, lowerWord);
+    }
+
+    private static boolean contains(String value, String lowerWord) {
+        return value != null && value.toLowerCase().contains(lowerWord);
+    }
+
+    public Entry duplicate() {
+        return new Entry(group, title, username, url, password, password, notes);
+    }
+
+    @Override
+    public String toString() {
+        return "Entry{title='" + title + '\''
+                + ", username='" + username + '\''
+                + ", url='" + url + '\''
+                + ", password='" + password + '\''
+                + ", notes='" + notes + '\''
+                + '}';
+    }
+}
+
+// File: TanEntry.java
+public final class TanEntry extends Entry {
+    private final String tan;
+    private boolean used;
+
+    public TanEntry(
+            Group group,
+            String title,
+            String username,
+            String url,
+            String password,
+            String repeatPassword,
+            String notes,
+            String tan
+    ) {
+        super(group, title, username, url, password, repeatPassword, notes);
+        if (tan == null || tan.trim().isEmpty()) {
+            throw new IllegalArgumentException("TAN cannot be empty.");
+        }
+        this.tan = tan;
+    }
+
+    @Override
+    public void setTitle(String title) {
+        throw new UnsupportedOperationException("Title cannot be changed in a TAN entry.");
+    }
+
+    @Override
+    public void setUsername(String username) {
+        throw new UnsupportedOperationException("Username cannot be changed in a TAN entry.");
+    }
+
+    @Override
+    public void setUrl(String url) {
+        throw new UnsupportedOperationException("URL cannot be changed in a TAN entry.");
+    }
+
+    public String getTan() {
+        return tan;
+    }
+
+    public boolean isExpired() {
+        return used;
+    }
+
+    public void useTan() {
+        if (used) {
+            throw new IllegalStateException("TAN has expired and can never be used again.");
+        }
+        used = true;
+    }
+
+    @Override
+    public Entry duplicate() {
+        TanEntry copy = new TanEntry(
+                getGroup(),
+                getTitle(),
+                getUsername(),
+                getUrl(),
+                getPassword(),
+                getPassword(),
+                getNotes(),
+                tan
+        );
+        if (used) {
+            copy.used = true;
+        }
+        return copy;
+    }
+}
+
+// File: AutoType.java
+public final class AutoType {
+    public static final String PREFIX = "Auto-Type:";
+    private final String sequence;
+
+    public AutoType(String sequence) {
+        if (sequence == null || !sequence.startsWith(PREFIX)) {
+            throw new IllegalArgumentException("The prefix \"Auto-Type:\" is required in front of each sequence.");
+        }
+
+        String keystrokes = sequence.substring(PREFIX.length());
+        if (keystrokes.length() > 59) {
+            throw new IllegalArgumentException("Sequence length must not be more than 59 characters.");
+        }
+        this.sequence = sequence;
+    }
+
+    public static AutoType firstFromNote(String note) {
+        if (note == null) {
+            return null;
+        }
+        String[] lines = note.split("\\R");
+        for (String line : lines) {
+            if (line.startsWith(PREFIX)) {
+                return new AutoType(line);
+            }
+        }
+        return null;
+    }
+
+    public String getSequence() {
+        return sequence;
+    }
+
+    public String getKeystrokes() {
+        return sequence.substring(PREFIX.length());
+    }
+}
+
+// File: LanguageDownloader.java
+public final class LanguageDownloader {
+    public String downloadTranslation(String language, boolean internetConnection, boolean browserAvailable) {
+        if (language == null || language.trim().isEmpty()) {
+            throw new IllegalArgumentException("Language cannot be empty.");
+        }
+        if (!internetConnection) {
+            throw new IllegalStateException("An internet connection is required to download new language translations.");
+        }
+        if (!browserAvailable) {
+            throw new IllegalStateException("A browser is required to download new language translations.");
+        }
+        return "Downloaded language translation: " + language;
+    }
+}
+
+// File: CommandLineToken.java
+public final class CommandLineToken {
+    private final String text;
+    private final boolean quoted;
+
+    public CommandLineToken(String text, boolean quoted) {
+        this.text = text;
+        this.quoted = quoted;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public boolean isQuoted() {
+        return quoted;
+    }
+}
+
+// File: CommandLineOptions.java
+import java.util.ArrayList;
+import java.util.List;
+
+public final class CommandLineOptions {
+    private final String databaseFile;
+
+    private CommandLineOptions(String databaseFile) {
+        this.databaseFile = databaseFile;
+    }
+
+    public static CommandLineOptions parse(String commandLine) {
+        String line = commandLine == null ? "" : commandLine;
+        List<CommandLineToken> tokens = tokenize(line);
+        List<CommandLineToken> databaseTokens = new ArrayList<>();
+
+        for (CommandLineToken token : tokens) {
+            if (token.getText().toLowerCase().endsWith(".kdb")) {
+                if (token.getText().contains(" ") && !token.isQuoted()) {
+                    throw new IllegalArgumentException("A path containing spaces must be enclosed in quotes.");
+                }
+                databaseTokens.add(token);
+            }
+        }
+
+        if (databaseTokens.size() > 1) {
+            throw new IllegalArgumentException("Only one database file is allowed in command line options.");
+        }
+
+        if (databaseTokens.size() == 1 && tokens.size() > 1 && !databaseTokens.get(0).isQuoted()) {
+            for (CommandLineToken token : tokens) {
+                if (token != databaseTokens.get(0) && !token.getText().startsWith("-")) {
+                    throw new IllegalArgumentException("A path containing spaces must be enclosed in quotes.");
+                }
+            }
+        }
+
+        String databaseFile = databaseTokens.isEmpty() ? null : databaseTokens.get(0).getText();
+        return new CommandLineOptions(databaseFile);
+    }
+
+    public String getDatabaseFile() {
+        return databaseFile;
+    }
+
+    private static List<CommandLineToken> tokenize(String commandLine) {
+        List<CommandLineToken> tokens = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        boolean tokenWasQuoted = false;
+
+        for (int i = 0; i < commandLine.length(); i++) {
+            char c = commandLine.charAt(i);
+            if (c == '"') {
+                inQuotes = !inQuotes;
+                tokenWasQuoted = true;
+            } else if (Character.isWhitespace(c) && !inQuotes) {
+                if (current.length() > 0 || tokenWasQuoted) {
+                    tokens.add(new CommandLineToken(current.toString(), tokenWasQuoted));
+                    current.setLength(0);
+                    tokenWasQuoted = false;
+                }
+            } else {
+                current.append(c);
+            }
+        }
+
+        if (inQuotes) {
+            throw new IllegalArgumentException("Unclosed quote in command line options.");
+        }
+
+        if (current.length() > 0 || tokenWasQuoted) {
+            tokens.add(new CommandLineToken(current.toString(), tokenWasQuoted));
+        }
+
+        return tokens;
+    }
+}
+
+// File: GlobalHotKey.java
+public final class GlobalHotKey {
+    private final String combination;
+
+    public GlobalHotKey(String combination) {
+        if (combination == null || combination.trim().isEmpty()) {
+            throw new IllegalArgumentException("Global hot key combination is required.");
+        }
+        this.combination = combination;
+    }
+
+    public String getCombination() {
+        return combination;
+    }
+}
+
+// File: DatabaseFileFormat.java
+public enum DatabaseFileFormat {
+    KDB("kdb", false, true);
+
+    private final String extension;
+    private final boolean specializedPasswordDatabaseFormat;
+    private final boolean lowLevelLayoutOnly;
+
+    DatabaseFileFormat(String extension, boolean specializedPasswordDatabaseFormat, boolean lowLevelLayoutOnly) {
+        this.extension = extension;
+        this.specializedPasswordDatabaseFormat = specializedPasswordDatabaseFormat;
+        this.lowLevelLayoutOnly = lowLevelLayoutOnly;
+    }
+
+    public String getExtension() {
+        return extension;
+    }
+
+    public boolean isSpecializedPasswordDatabaseFormat() {
+        return specializedPasswordDatabaseFormat;
+    }
+
+    public boolean isLowLevelLayoutOnly() {
+        return lowLevelLayoutOnly;
+    }
+}

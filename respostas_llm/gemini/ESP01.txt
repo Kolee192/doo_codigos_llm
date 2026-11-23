@@ -1,0 +1,2239 @@
+// File: UserRole.java
+public enum UserRole {
+    PUBLIC_USER,
+    APPLICANT,
+    CUSTOMER,
+    STAFF,
+    PLANNING_STAFF,
+    ZONING_STAFF,
+    PLAN_REVIEW_STAFF,
+    PLAN_REVIEW_SUPERVISOR,
+    INSPECTOR,
+    INSPECTION_SUPERVISOR,
+    ENFORCEMENT_STAFF,
+    TECHNICAL_STAFF
+}
+
+// File: ApplicationStatus.java
+public enum ApplicationStatus {
+    SUBMITTED,
+    INCOMPLETE,
+    COMPLETENESS_VERIFIED,
+    UNDER_DETAILED_REVIEW,
+    ON_HOLD,
+    HEARING_SCHEDULED,
+    APPROVED,
+    DENIED,
+    FINAL_ACTION_COMPLETED
+}
+
+// File: PlanReviewStatus.java
+public enum PlanReviewStatus {
+    ASSIGNED,
+    IN_PROGRESS,
+    APPROVED,
+    FAILED,
+    DENIED,
+    RESUBMITTED
+}
+
+// File: InspectionStatus.java
+public enum InspectionStatus {
+    REQUESTED,
+    SCHEDULED,
+    ASSIGNED,
+    PASSED,
+    FAILED
+}
+
+// File: BondStatus.java
+public enum BondStatus {
+    POSTED,
+    HELD,
+    RELEASED,
+    FORFEITED
+}
+
+// File: User.java
+public class User {
+    private final String userId;
+    private final String username;
+    private final String fullName;
+    private final String email;
+    private final UserRole role;
+
+    public User(String userId, String username, String fullName, String email, UserRole role) {
+        this.userId = userId;
+        this.username = username;
+        this.fullName = fullName;
+        this.email = email;
+        this.role = role;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" + "userId='" + userId + '\'' + ", username='" + username + '\'' + ", role=" + role + '}';
+    }
+}
+
+// File: CondoUnit.java
+public class CondoUnit {
+    private final String unitId;
+    private final String unitNumber;
+    private final String parentParcelPin;
+    private final String childParcelPin;
+    private final String address;
+
+    public CondoUnit(String unitId, String unitNumber, String parentParcelPin, String childParcelPin, String address) {
+        this.unitId = unitId;
+        this.unitNumber = unitNumber;
+        this.parentParcelPin = parentParcelPin;
+        this.childParcelPin = childParcelPin;
+        this.address = address;
+    }
+
+    public String getUnitId() {
+        return unitId;
+    }
+
+    public String getUnitNumber() {
+        return unitNumber;
+    }
+
+    public String getParentParcelPin() {
+        return parentParcelPin;
+    }
+
+    public String getChildParcelPin() {
+        return childParcelPin;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    @Override
+    public String toString() {
+        return "CondoUnit{" + "unitNumber='" + unitNumber + '\'' + ", childParcelPin='" + childParcelPin + '\'' + ", address='" + address + '\'' + '}';
+    }
+}
+
+// File: Property.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Property {
+    private String parcelPin;
+    private String address;
+    private String currentOwner;
+    private final List<String> historicOwners;
+    private final List<String> permitNumbers;
+    private final List<String> applicationIds;
+    private final List<CondoUnit> condoUnits;
+    private String gisLayerReference;
+
+    public Property(String parcelPin, String address, String currentOwner) {
+        this.parcelPin = parcelPin;
+        this.address = address;
+        this.currentOwner = currentOwner;
+        this.historicOwners = new ArrayList<>();
+        this.permitNumbers = new ArrayList<>();
+        this.applicationIds = new ArrayList<>();
+        this.condoUnits = new ArrayList<>();
+        this.gisLayerReference = "GIS_LAYER_BASE";
+    }
+
+    public String getParcelPin() {
+        return parcelPin;
+    }
+
+    public void setParcelPin(String parcelPin) {
+        this.parcelPin = parcelPin;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getCurrentOwner() {
+        return currentOwner;
+    }
+
+    public void setCurrentOwner(String currentOwner) {
+        if (this.currentOwner != null && !this.currentOwner.isEmpty()) {
+            this.historicOwners.add(this.currentOwner);
+        }
+        this.currentOwner = currentOwner;
+    }
+
+    public List<String> getHistoricOwners() {
+        return historicOwners;
+    }
+
+    public List<String> getPermitNumbers() {
+        return permitNumbers;
+    }
+
+    public List<String> getApplicationIds() {
+        return applicationIds;
+    }
+
+    public List<CondoUnit> getCondoUnits() {
+        return condoUnits;
+    }
+
+    public String getGisLayerReference() {
+        return gisLayerReference;
+    }
+
+    public void setGisLayerReference(String gisLayerReference) {
+        this.gisLayerReference = gisLayerReference;
+    }
+
+    @Override
+    public String toString() {
+        return "Property{" +
+                "parcelPin='" + parcelPin + '\'' +
+                ", address='" + address + '\'' +
+                ", currentOwner='" + currentOwner + '\'' +
+                ", historicOwners=" + historicOwners +
+                ", permitNumbers=" + permitNumbers +
+                ", applicationIds=" + applicationIds +
+                ", condoUnits=" + condoUnits.size() +
+                ", gisLayer='" + gisLayerReference + '\'' +
+                '}';
+    }
+}
+
+// File: CountyService.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class CountyService {
+    private final String serviceId;
+    private final String serviceName;
+    private final String description;
+    private final List<String> requirements;
+    private final double baseFee;
+
+    public CountyService(String serviceId, String serviceName, String description, double baseFee) {
+        this.serviceId = serviceId;
+        this.serviceName = serviceName;
+        this.description = description;
+        this.requirements = new ArrayList<>();
+        this.baseFee = baseFee;
+    }
+
+    public String getServiceId() {
+        return serviceId;
+    }
+
+    public String getServiceName() {
+        return serviceName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public List<String> getRequirements() {
+        return requirements;
+    }
+
+    public void addRequirement(String requirement) {
+        this.requirements.add(requirement);
+    }
+
+    public double getBaseFee() {
+        return baseFee;
+    }
+
+    @Override
+    public String toString() {
+        return "CountyService{" + "serviceId='" + serviceId + '\'' + ", serviceName='" + serviceName + '\'' + ", baseFee=$" + baseFee + ", requirements=" + requirements + '}';
+    }
+}
+
+// File: Document.java
+import java.time.LocalDateTime;
+
+public class Document {
+    private final String documentId;
+    private final String title;
+    private final String fileType;
+    private final String uploadedBy;
+    private final LocalDateTime uploadTimestamp;
+
+    public Document(String documentId, String title, String fileType, String uploadedBy) {
+        this.documentId = documentId;
+        this.title = title;
+        this.fileType = fileType;
+        this.uploadedBy = uploadedBy;
+        this.uploadTimestamp = LocalDateTime.now();
+    }
+
+    public String getDocumentId() {
+        return documentId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getFileType() {
+        return fileType;
+    }
+
+    public String getUploadedBy() {
+        return uploadedBy;
+    }
+
+    public LocalDateTime getUploadTimestamp() {
+        return uploadTimestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "Document{" + "documentId='" + documentId + '\'' + ", title='" + title + '\'' + ", fileType='" + fileType + '\'' + '}';
+    }
+}
+
+// File: InternalNote.java
+import java.time.LocalDateTime;
+
+public class InternalNote {
+    private final String noteId;
+    private final String authorStaffId;
+    private final String noteContent;
+    private final LocalDateTime createdAt;
+
+    public InternalNote(String noteId, String authorStaffId, String noteContent) {
+        this.noteId = noteId;
+        this.authorStaffId = authorStaffId;
+        this.noteContent = noteContent;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    public String getNoteId() {
+        return noteId;
+    }
+
+    public String getAuthorStaffId() {
+        return authorStaffId;
+    }
+
+    public String getNoteContent() {
+        return noteContent;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + createdAt + "] Staff " + authorStaffId + ": " + noteContent;
+    }
+}
+
+// File: Hold.java
+import java.time.LocalDateTime;
+
+public class Hold {
+    private final String holdId;
+    private final String reason;
+    private final String placedByStaffId;
+    private final LocalDateTime placedAt;
+    private boolean active;
+    private LocalDateTime releasedAt;
+    private String releasedByStaffId;
+
+    public Hold(String holdId, String reason, String placedByStaffId) {
+        this.holdId = holdId;
+        this.reason = reason;
+        this.placedByStaffId = placedByStaffId;
+        this.placedAt = LocalDateTime.now();
+        this.active = true;
+    }
+
+    public String getHoldId() {
+        return holdId;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public String getPlacedByStaffId() {
+        return placedByStaffId;
+    }
+
+    public LocalDateTime getPlacedAt() {
+        return placedAt;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void release(String staffId) {
+        this.active = false;
+        this.releasedAt = LocalDateTime.now();
+        this.releasedByStaffId = staffId;
+    }
+
+    @Override
+    public String toString() {
+        return "Hold{" + "id='" + holdId + '\'' + ", reason='" + reason + '\'' + ", active=" + active + '}';
+    }
+}
+
+// File: Proffer.java
+import java.time.LocalDateTime;
+
+public class Proffer {
+    private final String profferId;
+    private String statement;
+    private boolean approved;
+    private boolean satisfied;
+    private final LocalDateTime submittedAt;
+
+    public Proffer(String profferId, String statement) {
+        this.profferId = profferId;
+        this.statement = statement;
+        this.approved = false;
+        this.satisfied = false;
+        this.submittedAt = LocalDateTime.now();
+    }
+
+    public String getProfferId() {
+        return profferId;
+    }
+
+    public String getStatement() {
+        return statement;
+    }
+
+    public void setStatement(String statement) {
+        this.statement = statement;
+    }
+
+    public boolean isApproved() {
+        return approved;
+    }
+
+    public void setApproved(boolean approved) {
+        this.approved = approved;
+    }
+
+    public boolean isSatisfied() {
+        return satisfied;
+    }
+
+    public void setSatisfied(boolean satisfied) {
+        this.satisfied = satisfied;
+    }
+
+    @Override
+    public String toString() {
+        return "Proffer{" + "profferId='" + profferId + '\'' + ", statement='" + statement + '\'' + ", approved=" + approved + ", satisfied=" + satisfied + '}';
+    }
+}
+
+// File: Ordinance.java
+import java.time.LocalDate;
+
+public class Ordinance {
+    private final String ordinanceId;
+    private String title;
+    private String description;
+    private String codeSection;
+    private LocalDate effectiveDate;
+
+    public Ordinance(String ordinanceId, String title, String description, String codeSection, LocalDate effectiveDate) {
+        this.ordinanceId = ordinanceId;
+        this.title = title;
+        this.description = description;
+        this.codeSection = codeSection;
+        this.effectiveDate = effectiveDate;
+    }
+
+    public String getOrdinanceId() {
+        return ordinanceId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getCodeSection() {
+        return codeSection;
+    }
+
+    public void setCodeSection(String codeSection) {
+        this.codeSection = codeSection;
+    }
+
+    public LocalDate getEffectiveDate() {
+        return effectiveDate;
+    }
+
+    public void setEffectiveDate(LocalDate effectiveDate) {
+        this.effectiveDate = effectiveDate;
+    }
+
+    @Override
+    public String toString() {
+        return "Ordinance{" + "id='" + ordinanceId + '\'' + ", section='" + codeSection + '\'' + ", title='" + title + '\'' + '}';
+    }
+}
+
+// File: PlanningStudy.java
+import java.time.LocalDate;
+
+public class PlanningStudy {
+    private final String studyId;
+    private final String title;
+    private final String targetLocation;
+    private String workInProcess;
+    private String outcome;
+    private final LocalDate startDate;
+
+    public PlanningStudy(String studyId, String title, String targetLocation) {
+        this.studyId = studyId;
+        this.title = title;
+        this.targetLocation = targetLocation;
+        this.workInProcess = "Initiated";
+        this.outcome = "In progress";
+        this.startDate = LocalDate.now();
+    }
+
+    public String getStudyId() {
+        return studyId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getTargetLocation() {
+        return targetLocation;
+    }
+
+    public String getWorkInProcess() {
+        return workInProcess;
+    }
+
+    public void setWorkInProcess(String workInProcess) {
+        this.workInProcess = workInProcess;
+    }
+
+    public String getOutcome() {
+        return outcome;
+    }
+
+    public void setOutcome(String outcome) {
+        this.outcome = outcome;
+    }
+
+    @Override
+    public String toString() {
+        return "PlanningStudy{" + "id='" + studyId + '\'' + ", title='" + title + '\'' + ", location='" + targetLocation + '\'' + ", status='" + workInProcess + '\'' + ", outcome='" + outcome + '\'' + '}';
+    }
+}
+
+// File: ZoningInfoRequest.java
+import java.time.LocalDateTime;
+
+public class ZoningInfoRequest {
+    private final String requestId;
+    private final String applicantId;
+    private final String inquiry;
+    private String response;
+    private String processedByStaffId;
+    private final LocalDateTime requestedAt;
+    private LocalDateTime respondedAt;
+
+    public ZoningInfoRequest(String requestId, String applicantId, String inquiry) {
+        this.requestId = requestId;
+        this.applicantId = applicantId;
+        this.inquiry = inquiry;
+        this.requestedAt = LocalDateTime.now();
+    }
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public String getApplicantId() {
+        return applicantId;
+    }
+
+    public String getInquiry() {
+        return inquiry;
+    }
+
+    public String getResponse() {
+        return response;
+    }
+
+    public void setResponse(String response, String staffId) {
+        this.response = response;
+        this.processedByStaffId = staffId;
+        this.respondedAt = LocalDateTime.now();
+    }
+
+    public String getProcessedByStaffId() {
+        return processedByStaffId;
+    }
+
+    public LocalDateTime getRequestedAt() {
+        return requestedAt;
+    }
+
+    public LocalDateTime getRespondedAt() {
+        return respondedAt;
+    }
+
+    @Override
+    public String toString() {
+        return "ZoningInfoRequest{" + "requestId='" + requestId + '\'' + ", inquiry='" + inquiry + '\'' + ", response='" + response + '\'' + '}';
+    }
+}
+
+// File: Hearing.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Hearing {
+    private final String hearingId;
+    private final String applicationId;
+    private LocalDateTime scheduledDateTime;
+    private final String governingBody;
+    private final List<String> requiredAffidavits;
+    private final List<String> satisfiedAffidavits;
+    private boolean applicantReady;
+    private boolean staffReady;
+    private String decision;
+    private String appealOutcome;
+
+    public Hearing(String hearingId, String applicationId, LocalDateTime scheduledDateTime, String governingBody) {
+        this.hearingId = hearingId;
+        this.applicationId = applicationId;
+        this.scheduledDateTime = scheduledDateTime;
+        this.governingBody = governingBody;
+        this.requiredAffidavits = new ArrayList<>();
+        this.satisfiedAffidavits = new ArrayList<>();
+        this.applicantReady = false;
+        this.staffReady = false;
+    }
+
+    public String getHearingId() {
+        return hearingId;
+    }
+
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public LocalDateTime getScheduledDateTime() {
+        return scheduledDateTime;
+    }
+
+    public void setScheduledDateTime(LocalDateTime scheduledDateTime) {
+        this.scheduledDateTime = scheduledDateTime;
+    }
+
+    public String getGoverningBody() {
+        return governingBody;
+    }
+
+    public void addRequiredAffidavit(String affidavitType) {
+        this.requiredAffidavits.add(affidavitType);
+    }
+
+    public void satisfyAffidavit(String affidavitType) {
+        if (!this.satisfiedAffidavits.contains(affidavitType)) {
+            this.satisfiedAffidavits.add(affidavitType);
+        }
+    }
+
+    public boolean areAffidavitsComplete() {
+        return satisfiedAffidavits.containsAll(requiredAffidavits);
+    }
+
+    public boolean isApplicantReady() {
+        return applicantReady;
+    }
+
+    public void setApplicantReady(boolean applicantReady) {
+        this.applicantReady = applicantReady;
+    }
+
+    public boolean isStaffReady() {
+        return staffReady;
+    }
+
+    public void setStaffReady(boolean staffReady) {
+        this.staffReady = staffReady;
+    }
+
+    public String getDecision() {
+        return decision;
+    }
+
+    public void setDecision(String decision) {
+        this.decision = decision;
+    }
+
+    public String getAppealOutcome() {
+        return appealOutcome;
+    }
+
+    public void setAppealOutcome(String appealOutcome) {
+        this.appealOutcome = appealOutcome;
+    }
+
+    @Override
+    public String toString() {
+        return "Hearing{" + "hearingId='" + hearingId + '\'' + ", applicationId='" + applicationId + '\'' + ", scheduledDateTime=" + scheduledDateTime + ", governingBody='" + governingBody + '\'' + ", decision='" + decision + '\'' + ", appealOutcome='" + appealOutcome + '\'' + '}';
+    }
+}
+
+// File: CodeModificationRequest.java
+public class CodeModificationRequest {
+    private final String modificationId;
+    private final String requestedCodeSection;
+    private final String justification;
+    private boolean reviewed;
+    private boolean approved;
+
+    public CodeModificationRequest(String modificationId, String requestedCodeSection, String justification) {
+        this.modificationId = modificationId;
+        this.requestedCodeSection = requestedCodeSection;
+        this.justification = justification;
+        this.reviewed = false;
+        this.approved = false;
+    }
+
+    public String getModificationId() {
+        return modificationId;
+    }
+
+    public String getRequestedCodeSection() {
+        return requestedCodeSection;
+    }
+
+    public String getJustification() {
+        return justification;
+    }
+
+    public boolean isReviewed() {
+        return reviewed;
+    }
+
+    public boolean isApproved() {
+        return approved;
+    }
+
+    public void review(boolean approved) {
+        this.reviewed = true;
+        this.approved = approved;
+    }
+
+    @Override
+    public String toString() {
+        return "CodeModificationRequest{" + "id='" + modificationId + '\'' + ", codeSection='" + requestedCodeSection + '\'' + ", approved=" + approved + '}';
+    }
+}
+
+// File: PlanReviewTask.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class PlanReviewTask {
+    private final String taskId;
+    private final String planName;
+    private String assignedReviewerId;
+    private PlanReviewStatus status;
+    private final List<String> conditionsAndClearances;
+    private final List<String> requiredCorrections;
+
+    public PlanReviewTask(String taskId, String planName) {
+        this.taskId = taskId;
+        this.planName = planName;
+        this.status = PlanReviewStatus.ASSIGNED;
+        this.conditionsAndClearances = new ArrayList<>();
+        this.requiredCorrections = new ArrayList<>();
+    }
+
+    public String getTaskId() {
+        return taskId;
+    }
+
+    public String getPlanName() {
+        return planName;
+    }
+
+    public String getAssignedReviewerId() {
+        return assignedReviewerId;
+    }
+
+    public void setAssignedReviewerId(String assignedReviewerId) {
+        this.assignedReviewerId = assignedReviewerId;
+    }
+
+    public PlanReviewStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PlanReviewStatus status) {
+        this.status = status;
+    }
+
+    public List<String> getConditionsAndClearances() {
+        return conditionsAndClearances;
+    }
+
+    public void addCondition(String condition) {
+        this.conditionsAndClearances.add(condition);
+    }
+
+    public List<String> getRequiredCorrections() {
+        return requiredCorrections;
+    }
+
+    public void addRequiredCorrection(String correction) {
+        this.requiredCorrections.add(correction);
+    }
+
+    @Override
+    public String toString() {
+        return "PlanReviewTask{" + "taskId='" + taskId + '\'' + ", planName='" + planName + '\'' + ", reviewer='" + assignedReviewerId + '\'' + ", status=" + status + '}';
+    }
+}
+
+// File: Inspection.java
+import java.time.LocalDateTime;
+
+public class Inspection {
+    private final String inspectionId;
+    private final String applicationId;
+    private final String inspectionType;
+    private String inspectorId;
+    private LocalDateTime scheduledTime;
+    private InspectionStatus status;
+    private String inspectionResult;
+    private String comments;
+
+    public Inspection(String inspectionId, String applicationId, String inspectionType) {
+        this.inspectionId = inspectionId;
+        this.applicationId = applicationId;
+        this.inspectionType = inspectionType;
+        this.status = InspectionStatus.REQUESTED;
+    }
+
+    public String getInspectionId() {
+        return inspectionId;
+    }
+
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public String getInspectionType() {
+        return inspectionType;
+    }
+
+    public String getInspectorId() {
+        return inspectorId;
+    }
+
+    public void setInspectorId(String inspectorId) {
+        this.inspectorId = inspectorId;
+        this.status = InspectionStatus.ASSIGNED;
+    }
+
+    public LocalDateTime getScheduledTime() {
+        return scheduledTime;
+    }
+
+    public void setScheduledTime(LocalDateTime scheduledTime) {
+        this.scheduledTime = scheduledTime;
+        if (this.status == InspectionStatus.REQUESTED) {
+            this.status = InspectionStatus.SCHEDULED;
+        }
+    }
+
+    public InspectionStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(InspectionStatus status) {
+        this.status = status;
+    }
+
+    public String getInspectionResult() {
+        return inspectionResult;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public void recordResults(boolean passed, String comments) {
+        this.status = passed ? InspectionStatus.PASSED : InspectionStatus.FAILED;
+        this.inspectionResult = passed ? "PASSED" : "FAILED";
+        this.comments = comments;
+    }
+
+    @Override
+    public String toString() {
+        return "Inspection{" + "id='" + inspectionId + '\'' + ", type='" + inspectionType + '\'' + ", inspector='" + inspectorId + '\'' + ", status=" + status + ", result='" + inspectionResult + '\'' + '}';
+    }
+}
+
+// File: Bond.java
+public class Bond {
+    private final String bondId;
+    private final String applicationId;
+    private final double amount;
+    private BondStatus status;
+
+    public Bond(String bondId, String applicationId, double amount) {
+        this.bondId = bondId;
+        this.applicationId = applicationId;
+        this.amount = amount;
+        this.status = BondStatus.POSTED;
+    }
+
+    public String getBondId() {
+        return bondId;
+    }
+
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    public BondStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(BondStatus status) {
+        this.status = status;
+    }
+
+    @Override
+    public String toString() {
+        return "Bond{" + "bondId='" + bondId + '\'' + ", amount=$" + amount + ", status=" + status + '}';
+    }
+}
+
+// File: Permit.java
+import java.time.LocalDate;
+
+public class Permit {
+    private final String permitNumber;
+    private final String applicationId;
+    private final String parcelPin;
+    private final String permitType;
+    private final LocalDate issueDate;
+    private final String issuedByStaffId;
+
+    public Permit(String permitNumber, String applicationId, String parcelPin, String permitType, String issuedByStaffId) {
+        this.permitNumber = permitNumber;
+        this.applicationId = applicationId;
+        this.parcelPin = parcelPin;
+        this.permitType = permitType;
+        this.issueDate = LocalDate.now();
+        this.issuedByStaffId = issuedByStaffId;
+    }
+
+    public String getPermitNumber() {
+        return permitNumber;
+    }
+
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public String getParcelPin() {
+        return parcelPin;
+    }
+
+    public String getPermitType() {
+        return permitType;
+    }
+
+    public LocalDate getIssueDate() {
+        return issueDate;
+    }
+
+    public String getIssuedByStaffId() {
+        return issuedByStaffId;
+    }
+
+    @Override
+    public String toString() {
+        return "Permit{" + "permitNumber='" + permitNumber + '\'' + ", type='" + permitType + '\'' + ", parcelPin='" + parcelPin + '\'' + ", issueDate=" + issueDate + '}';
+    }
+}
+
+// File: Violation.java
+import java.time.LocalDateTime;
+
+public class Violation {
+    private final String violationId;
+    private final String parcelPin;
+    private final String responsibleParty;
+    private final String description;
+    private double fineAmount;
+    private boolean noticeSent;
+    private boolean citationPosted;
+    private final LocalDateTime dateIssued;
+
+    public Violation(String violationId, String parcelPin, String responsibleParty, String description) {
+        this.violationId = violationId;
+        this.parcelPin = parcelPin;
+        this.responsibleParty = responsibleParty;
+        this.description = description;
+        this.fineAmount = 0.0;
+        this.noticeSent = false;
+        this.citationPosted = false;
+        this.dateIssued = LocalDateTime.now();
+    }
+
+    public String getViolationId() {
+        return violationId;
+    }
+
+    public String getParcelPin() {
+        return parcelPin;
+    }
+
+    public String getResponsibleParty() {
+        return responsibleParty;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public double getFineAmount() {
+        return fineAmount;
+    }
+
+    public void setFineAmount(double fineAmount) {
+        this.fineAmount = fineAmount;
+    }
+
+    public boolean isNoticeSent() {
+        return noticeSent;
+    }
+
+    public void setNoticeSent(boolean noticeSent) {
+        this.noticeSent = noticeSent;
+    }
+
+    public boolean isCitationPosted() {
+        return citationPosted;
+    }
+
+    public void setCitationPosted(boolean citationPosted) {
+        this.citationPosted = citationPosted;
+    }
+
+    @Override
+    public String toString() {
+        return "Violation{" + "violationId='" + violationId + '\'' + ", parcelPin='" + parcelPin + '\'' + ", noticeSent=" + noticeSent + ", citationPosted=" + citationPosted + ", fineAmount=$" + fineAmount + '}';
+    }
+}
+
+// File: Meeting.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Meeting {
+    private final String meetingId;
+    private final String title;
+    private LocalDateTime meetingTime;
+    private final List<String> attendeeIds;
+    private String outcomeNotes;
+
+    public Meeting(String meetingId, String title, LocalDateTime meetingTime) {
+        this.meetingId = meetingId;
+        this.title = title;
+        this.meetingTime = meetingTime;
+        this.attendeeIds = new ArrayList<>();
+    }
+
+    public String getMeetingId() {
+        return meetingId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public LocalDateTime getMeetingTime() {
+        return meetingTime;
+    }
+
+    public void setMeetingTime(LocalDateTime meetingTime) {
+        this.meetingTime = meetingTime;
+    }
+
+    public List<String> getAttendeeIds() {
+        return attendeeIds;
+    }
+
+    public void addAttendee(String attendeeId) {
+        this.attendeeIds.add(attendeeId);
+    }
+
+    public String getOutcomeNotes() {
+        return outcomeNotes;
+    }
+
+    public void setOutcomeNotes(String outcomeNotes) {
+        this.outcomeNotes = outcomeNotes;
+    }
+
+    @Override
+    public String toString() {
+        return "Meeting{" + "meetingId='" + meetingId + '\'' + ", title='" + title + '\'' + ", meetingTime=" + meetingTime + ", outcomeNotes='" + outcomeNotes + '\'' + '}';
+    }
+}
+
+// File: PreApplicationRequest.java
+import java.time.LocalDateTime;
+
+public class PreApplicationRequest {
+    private final String requestId;
+    private final String applicantId;
+    private final String serviceType;
+    private final String details;
+    private String responseNotes;
+    private LocalDateTime scheduledMeetingTime;
+
+    public PreApplicationRequest(String requestId, String applicantId, String serviceType, String details) {
+        this.requestId = requestId;
+        this.applicantId = applicantId;
+        this.serviceType = serviceType;
+        this.details = details;
+    }
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public String getApplicantId() {
+        return applicantId;
+    }
+
+    public String getServiceType() {
+        return serviceType;
+    }
+
+    public String getDetails() {
+        return details;
+    }
+
+    public String getResponseNotes() {
+        return responseNotes;
+    }
+
+    public void setResponseNotes(String responseNotes) {
+        this.responseNotes = responseNotes;
+    }
+
+    public LocalDateTime getScheduledMeetingTime() {
+        return scheduledMeetingTime;
+    }
+
+    public void setScheduledMeetingTime(LocalDateTime scheduledMeetingTime) {
+        this.scheduledMeetingTime = scheduledMeetingTime;
+    }
+
+    @Override
+    public String toString() {
+        return "PreApplicationRequest{" + "requestId='" + requestId + '\'' + ", applicantId='" + applicantId + '\'' + ", responseNotes='" + responseNotes + '\'' + '}';
+    }
+}
+
+// File: CountyApplication.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class CountyApplication {
+    private final String applicationId;
+    private final String applicantId;
+    private final String parcelPin;
+    private final String serviceId;
+    private String description;
+    private ApplicationStatus status;
+    private double feeAssessed;
+    private double feePaid;
+    private String assignedDetailedReviewerId;
+    private String staffReport;
+    private boolean comprehensivePlanConsistent;
+    private boolean zoningComplianceVerified;
+    private boolean occupancyGranted;
+
+    private final List<Document> supportingDocuments;
+    private final List<InternalNote> internalNotes;
+    private final List<Hold> holds;
+    private final List<String> formalResponses;
+    private final List<Proffer> draftProffers;
+    private final List<PlanReviewTask> planReviews;
+    private final List<CodeModificationRequest> codeModifications;
+    private final List<Bond> bonds;
+    private final Map<String, Object> customAttributes;
+
+    public CountyApplication(String applicationId, String applicantId, String parcelPin, String serviceId, String description, double feeAssessed) {
+        this.applicationId = applicationId;
+        this.applicantId = applicantId;
+        this.parcelPin = parcelPin;
+        this.serviceId = serviceId;
+        this.description = description;
+        this.status = ApplicationStatus.SUBMITTED;
+        this.feeAssessed = feeAssessed;
+        this.feePaid = 0.0;
+        this.occupancyGranted = false;
+        this.supportingDocuments = new ArrayList<>();
+        this.internalNotes = new ArrayList<>();
+        this.holds = new ArrayList<>();
+        this.formalResponses = new ArrayList<>();
+        this.draftProffers = new ArrayList<>();
+        this.planReviews = new ArrayList<>();
+        this.codeModifications = new ArrayList<>();
+        this.bonds = new ArrayList<>();
+        this.customAttributes = new HashMap<>();
+    }
+
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public String getApplicantId() {
+        return applicantId;
+    }
+
+    public String getParcelPin() {
+        return parcelPin;
+    }
+
+    public String getServiceId() {
+        return serviceId;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public ApplicationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ApplicationStatus status) {
+        this.status = status;
+    }
+
+    public double getFeeAssessed() {
+        return feeAssessed;
+    }
+
+    public double getFeePaid() {
+        return feePaid;
+    }
+
+    public void recordPayment(double amount) {
+        this.feePaid += amount;
+    }
+
+    public boolean isFeeFullyPaid() {
+        return feePaid >= feeAssessed;
+    }
+
+    public String getAssignedDetailedReviewerId() {
+        return assignedDetailedReviewerId;
+    }
+
+    public void setAssignedDetailedReviewerId(String assignedDetailedReviewerId) {
+        this.assignedDetailedReviewerId = assignedDetailedReviewerId;
+    }
+
+    public String getStaffReport() {
+        return staffReport;
+    }
+
+    public void setStaffReport(String staffReport) {
+        this.staffReport = staffReport;
+    }
+
+    public boolean isComprehensivePlanConsistent() {
+        return comprehensivePlanConsistent;
+    }
+
+    public void setComprehensivePlanConsistent(boolean comprehensivePlanConsistent) {
+        this.comprehensivePlanConsistent = comprehensivePlanConsistent;
+    }
+
+    public boolean isZoningComplianceVerified() {
+        return zoningComplianceVerified;
+    }
+
+    public void setZoningComplianceVerified(boolean zoningComplianceVerified) {
+        this.zoningComplianceVerified = zoningComplianceVerified;
+    }
+
+    public boolean isOccupancyGranted() {
+        return occupancyGranted;
+    }
+
+    public void setOccupancyGranted(boolean occupancyGranted) {
+        this.occupancyGranted = occupancyGranted;
+    }
+
+    public List<Document> getSupportingDocuments() {
+        return supportingDocuments;
+    }
+
+    public List<InternalNote> getInternalNotes() {
+        return internalNotes;
+    }
+
+    public List<Hold> getHolds() {
+        return holds;
+    }
+
+    public boolean hasActiveHold() {
+        return holds.stream().anyMatch(Hold::isActive);
+    }
+
+    public List<String> getFormalResponses() {
+        return formalResponses;
+    }
+
+    public List<Proffer> getDraftProffers() {
+        return draftProffers;
+    }
+
+    public List<PlanReviewTask> getPlanReviews() {
+        return planReviews;
+    }
+
+    public List<CodeModificationRequest> getCodeModifications() {
+        return codeModifications;
+    }
+
+    public List<Bond> getBonds() {
+        return bonds;
+    }
+
+    public Map<String, Object> getCustomAttributes() {
+        return customAttributes;
+    }
+
+    @Override
+    public String toString() {
+        return "CountyApplication{" +
+                "id='" + applicationId + '\'' +
+                ", serviceId='" + serviceId + '\'' +
+                ", status=" + status +
+                ", feesPaid=" + feePaid + "/" + feeAssessed +
+                ", activeHolds=" + hasActiveHold() +
+                '}';
+    }
+}
+
+// File: CountyLandManagementSystem.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+public class CountyLandManagementSystem {
+    private final Map<String, User> users = new HashMap<>();
+    private final Map<String, Property> properties = new HashMap<>();
+    private final Map<String, CountyService> services = new HashMap<>();
+    private final Map<String, CountyApplication> applications = new HashMap<>();
+    private final Map<String, PreApplicationRequest> preAppRequests = new HashMap<>();
+    private final Map<String, Ordinance> ordinances = new HashMap<>();
+    private final Map<String, PlanningStudy> planningStudies = new HashMap<>();
+    private final Map<String, ZoningInfoRequest> zoningInfoRequests = new HashMap<>();
+    private final Map<String, Hearing> hearings = new HashMap<>();
+    private final Map<String, Inspection> inspections = new HashMap<>();
+    private final Map<String, Violation> violations = new HashMap<>();
+    private final Map<String, Meeting> meetings = new HashMap<>();
+    private final Map<String, Permit> permits = new HashMap<>();
+    private final List<String> geospatialChangeAlerts = new ArrayList<>();
+
+    private int idSequence = 1000;
+
+    private synchronized String nextId(String prefix) {
+        return prefix + "-" + (++idSequence);
+    }
+
+    // 1. Public User: Search for Information
+    public List<String> searchPublicInformation(String keyword) {
+        String query = keyword.toLowerCase();
+        List<String> results = new ArrayList<>();
+
+        for (Property p : properties.values()) {
+            if (p.getParcelPin().toLowerCase().contains(query) || p.getAddress().toLowerCase().contains(query)) {
+                results.add("Property: " + p.getParcelPin() + " (" + p.getAddress() + ")");
+            }
+        }
+        for (CountyService s : services.values()) {
+            if (s.getServiceName().toLowerCase().contains(query) || s.getDescription().toLowerCase().contains(query)) {
+                results.add("Service: " + s.getServiceName() + " - " + s.getDescription());
+            }
+        }
+        for (Ordinance o : ordinances.values()) {
+            if (o.getTitle().toLowerCase().contains(query) || o.getDescription().toLowerCase().contains(query)) {
+                results.add("Ordinance: " + o.getTitle() + " (" + o.getCodeSection() + ")");
+            }
+        }
+        return results;
+    }
+
+    // 2. Prospective Applicant: Research requirements and select service
+    public CountyService getServiceDetails(String serviceId) {
+        return services.get(serviceId);
+    }
+
+    public List<CountyService> listServices() {
+        return new ArrayList<>(services.values());
+    }
+
+    // 3. Applicant: Request Pre-Application Assistance
+    public PreApplicationRequest requestPreApplicationAssistance(String applicantId, String serviceType, String details) {
+        String reqId = nextId("PRE");
+        PreApplicationRequest request = new PreApplicationRequest(reqId, applicantId, serviceType, details);
+        preAppRequests.put(reqId, request);
+        return request;
+    }
+
+    public void respondToPreApplication(String requestId, String responseNotes, LocalDateTime meetingTime) {
+        PreApplicationRequest req = preAppRequests.get(requestId);
+        if (req != null) {
+            req.setResponseNotes(responseNotes);
+            req.setScheduledMeetingTime(meetingTime);
+        }
+    }
+
+    // 4. Customer: Create Portal User Account
+    public User registerUser(String username, String fullName, String email, UserRole role) {
+        String userId = nextId("USR");
+        User user = new User(userId, username, fullName, email, role);
+        users.put(userId, user);
+        return user;
+    }
+
+    public User getUser(String userId) {
+        return users.get(userId);
+    }
+
+    // 5. Applicant: Submit Application
+    public CountyApplication submitApplication(String applicantId, String parcelPin, String serviceId, String description) {
+        CountyService service = services.get(serviceId);
+        double fee = service != null ? service.getBaseFee() : 100.0;
+        String appId = nextId("APP");
+        CountyApplication app = new CountyApplication(appId, applicantId, parcelPin, serviceId, description, fee);
+        applications.put(appId, app);
+
+        Property property = properties.get(parcelPin);
+        if (property != null) {
+            property.getApplicationIds().add(appId);
+        }
+        return app;
+    }
+
+    // 6. Applicant: Submit Supporting Documentation
+    public Document submitSupportingDocumentation(String applicationId, String title, String fileType, String uploadedBy) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            String docId = nextId("DOC");
+            Document doc = new Document(docId, title, fileType, uploadedBy);
+            app.getSupportingDocuments().add(doc);
+            return doc;
+        }
+        return null;
+    }
+
+    // 7. Applicant: Pay Fee
+    public boolean payFee(String applicationId, double amount) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            app.recordPayment(amount);
+            return true;
+        }
+        return false;
+    }
+
+    // 8. Applicant: Check Status of a transaction
+    public String checkStatus(String applicationId) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            return "Application " + applicationId + " Status: " + app.getStatus() +
+                    ", Holds: " + (app.hasActiveHold() ? "ACTIVE" : "NONE") +
+                    ", Fees: $" + app.getFeePaid() + "/$" + app.getFeeAssessed();
+        }
+        return "Not found";
+    }
+
+    // 9. Applicant: Modify Application
+    public boolean modifyApplication(String applicationId, String updatedDescription) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null && !app.hasActiveHold() && app.getStatus() != ApplicationStatus.FINAL_ACTION_COMPLETED) {
+            app.setDescription(updatedDescription);
+            return true;
+        }
+        return false;
+    }
+
+    // 10. Staff: Completeness Review
+    public void performCompletenessReview(String applicationId, boolean isComplete) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            if (isComplete) {
+                app.setStatus(ApplicationStatus.COMPLETENESS_VERIFIED);
+            } else {
+                app.setStatus(ApplicationStatus.INCOMPLETE);
+            }
+        }
+    }
+
+    // 11. Staff: Record Internal Note
+    public InternalNote recordInternalNote(String applicationId, String staffId, String noteText) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            InternalNote note = new InternalNote(nextId("NOTE"), staffId, noteText);
+            app.getInternalNotes().add(note);
+            return note;
+        }
+        return null;
+    }
+
+    // 12. Staff: Assign Application for Detailed Review
+    public void assignApplicationForDetailedReview(String applicationId, String reviewerStaffId) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            app.setAssignedDetailedReviewerId(reviewerStaffId);
+            app.setStatus(ApplicationStatus.UNDER_DETAILED_REVIEW);
+        }
+    }
+
+    // 13. Staff: Apply Hold
+    public Hold applyHold(String applicationId, String reason, String staffId) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            Hold hold = new Hold(nextId("HLD"), reason, staffId);
+            app.getHolds().add(hold);
+            app.setStatus(ApplicationStatus.ON_HOLD);
+            return hold;
+        }
+        return null;
+    }
+
+    // 14. Staff: Remove Hold
+    public boolean removeHold(String applicationId, String holdId, String staffId) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            for (Hold h : app.getHolds()) {
+                if (h.getHoldId().equals(holdId) && h.isActive()) {
+                    h.release(staffId);
+                    if (!app.hasActiveHold()) {
+                        app.setStatus(ApplicationStatus.UNDER_DETAILED_REVIEW);
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // 15. Staff: Send Formal Response to Applicant
+    public void sendFormalResponse(String applicationId, String message) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            app.getFormalResponses().add("[" + LocalDateTime.now() + "] " + message);
+        }
+    }
+
+    // 16. Staff: Track Draft Proffers
+    public Proffer addDraftProffer(String applicationId, String statement) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            Proffer proffer = new Proffer(nextId("PRF"), statement);
+            app.getDraftProffers().add(proffer);
+            return proffer;
+        }
+        return null;
+    }
+
+    // 17. Staff: Manage Approved Proffers
+    public void approveProffer(String applicationId, String profferId, boolean approved) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            for (Proffer p : app.getDraftProffers()) {
+                if (p.getProfferId().equals(profferId)) {
+                    p.setApproved(approved);
+                }
+            }
+        }
+    }
+
+    public void markProfferSatisfied(String applicationId, String profferId, boolean satisfied) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            for (Proffer p : app.getDraftProffers()) {
+                if (p.getProfferId().equals(profferId)) {
+                    p.setSatisfied(satisfied);
+                }
+            }
+        }
+    }
+
+    // 18. Staff: Manage Ordinances
+    public Ordinance addOrUpdateOrdinance(String ordinanceId, String title, String description, String codeSection, LocalDate effectiveDate) {
+        Ordinance ord = new Ordinance(ordinanceId, title, description, codeSection, effectiveDate);
+        ordinances.put(ordinanceId, ord);
+        return ord;
+    }
+
+    public List<Ordinance> listOrdinances() {
+        return new ArrayList<>(ordinances.values());
+    }
+
+    // 19. Staff: Schedule a Meeting
+    public Meeting scheduleMeeting(String title, LocalDateTime dateTime, List<String> attendeeIds) {
+        Meeting meeting = new Meeting(nextId("MTG"), title, dateTime);
+        for (String att : attendeeIds) {
+            meeting.addAttendee(att);
+        }
+        meetings.put(meeting.getMeetingId(), meeting);
+        return meeting;
+    }
+
+    // 20. Staff: Final Action Status
+    public void denoteFinalAction(String applicationId, boolean approved) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            app.setStatus(approved ? ApplicationStatus.APPROVED : ApplicationStatus.DENIED);
+            app.setStatus(ApplicationStatus.FINAL_ACTION_COMPLETED);
+        }
+    }
+
+    // 21. Planning Staff: Track Plan Amendments and Studies
+    public PlanningStudy createPlanningStudy(String title, String targetLocation) {
+        PlanningStudy study = new PlanningStudy(nextId("STD"), title, targetLocation);
+        planningStudies.put(study.getStudyId(), study);
+        return study;
+    }
+
+    public void updatePlanningStudy(String studyId, String workStatus, String outcome) {
+        PlanningStudy study = planningStudies.get(studyId);
+        if (study != null) {
+            study.setWorkInProcess(workStatus);
+            study.setOutcome(outcome);
+        }
+    }
+
+    // 22. Planning Staff: Generate Planning-related Reports
+    public String generatePlanningReport(String filterLocation) {
+        StringBuilder sb = new StringBuilder("=== Planning Studies Report ===\n");
+        for (PlanningStudy s : planningStudies.values()) {
+            if (filterLocation == null || s.getTargetLocation().equalsIgnoreCase(filterLocation)) {
+                sb.append(s.toString()).append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
+    // 23. Planning Staff: Comprehensive Plan Consistency
+    public void evaluateComprehensivePlanConsistency(String applicationId, boolean isConsistent) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            app.setComprehensivePlanConsistent(isConsistent);
+        }
+    }
+
+    // 24. Staff: Perform Staff Review (Zoning Compliance)
+    public void performZoningStaffReview(String applicationId, boolean compliant) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            app.setZoningComplianceVerified(compliant);
+        }
+    }
+
+    // 25. Zoning Staff: Process Request for Zoning Information
+    public ZoningInfoRequest submitZoningInfoRequest(String applicantId, String inquiry) {
+        String id = nextId("ZREQ");
+        ZoningInfoRequest req = new ZoningInfoRequest(id, applicantId, inquiry);
+        zoningInfoRequests.put(id, req);
+        return req;
+    }
+
+    public void processZoningInfoRequest(String requestId, String staffId, String response) {
+        ZoningInfoRequest req = zoningInfoRequests.get(requestId);
+        if (req != null) {
+            req.setResponse(response, staffId);
+        }
+    }
+
+    // 26. Zoning Staff: Issue Zoning-Related Permit
+    public Permit issueZoningPermit(String applicationId, String staffId) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null && app.isZoningComplianceVerified() && !app.hasActiveHold()) {
+            String permitNum = nextId("ZPERMIT");
+            Permit permit = new Permit(permitNum, applicationId, app.getParcelPin(), "ZONING", staffId);
+            permits.put(permitNum, permit);
+            Property p = properties.get(app.getParcelPin());
+            if (p != null) {
+                p.getPermitNumbers().add(permitNum);
+            }
+            return permit;
+        }
+        return null;
+    }
+
+    // 27. Staff: Develop Staff Report
+    public void developStaffReport(String applicationId, String reportContent) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            app.setStaffReport(reportContent);
+        }
+    }
+
+    // 28. Staff: Manage Hearing Calendars
+    public List<Hearing> listHearings() {
+        return new ArrayList<>(hearings.values());
+    }
+
+    // 29. Staff: Assign Hearing Date
+    public Hearing assignHearingDate(String applicationId, LocalDateTime dateTime, String governingBody) {
+        Hearing hearing = new Hearing(nextId("HRG"), applicationId, dateTime, governingBody);
+        hearings.put(hearing.getHearingId(), hearing);
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            app.setStatus(ApplicationStatus.HEARING_SCHEDULED);
+        }
+        return hearing;
+    }
+
+    // 30. Staff: Manage Affidavits
+    public void addRequiredAffidavit(String hearingId, String affidavitType) {
+        Hearing h = hearings.get(hearingId);
+        if (h != null) {
+            h.addRequiredAffidavit(affidavitType);
+        }
+    }
+
+    // 31. Applicant: Satisfy Hearing Requirements
+    public void satisfyHearingRequirement(String hearingId, String affidavitType) {
+        Hearing h = hearings.get(hearingId);
+        if (h != null) {
+            h.satisfyAffidavit(affidavitType);
+        }
+    }
+
+    // 32. Staff: Prepare and Support Hearing Execution
+    public void prepareHearingExecution(String hearingId, boolean applicantReady, boolean staffReady) {
+        Hearing h = hearings.get(hearingId);
+        if (h != null) {
+            h.setApplicantReady(applicantReady);
+            h.setStaffReady(staffReady);
+        }
+    }
+
+    // 33. Staff: Capture Hearing Decision
+    public void captureHearingDecision(String hearingId, String decision) {
+        Hearing h = hearings.get(hearingId);
+        if (h != null) {
+            h.setDecision(decision);
+            CountyApplication app = applications.get(h.getApplicationId());
+            if (app != null) {
+                if ("APPROVED".equalsIgnoreCase(decision)) {
+                    app.setStatus(ApplicationStatus.APPROVED);
+                } else if ("DENIED".equalsIgnoreCase(decision)) {
+                    app.setStatus(ApplicationStatus.DENIED);
+                }
+            }
+        }
+    }
+
+    // 34. Staff: Process Appeals
+    public void processHearingAppeal(String hearingId, String outcome) {
+        Hearing h = hearings.get(hearingId);
+        if (h != null) {
+            h.setAppealOutcome(outcome);
+            CountyApplication app = applications.get(h.getApplicationId());
+            if (app != null && "UPHELD_APPROVAL".equalsIgnoreCase(outcome)) {
+                app.setStatus(ApplicationStatus.APPROVED);
+            }
+        }
+    }
+
+    // 35. Plan Review Staff: Assign Plans for Review
+    public PlanReviewTask assignPlanReview(String applicationId, String planName, String reviewerStaffId) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            PlanReviewTask task = new PlanReviewTask(nextId("PLN"), planName);
+            task.setAssignedReviewerId(reviewerStaffId);
+            app.getPlanReviews().add(task);
+            return task;
+        }
+        return null;
+    }
+
+    // 36. Plan Review Supervisor: Manage Plan Reviewer Workload
+    public Map<String, Long> getPlanReviewerWorkload() {
+        return applications.values().stream()
+                .flatMap(app -> app.getPlanReviews().stream())
+                .filter(task -> task.getStatus() != PlanReviewStatus.APPROVED && task.getAssignedReviewerId() != null)
+                .collect(Collectors.groupingBy(PlanReviewTask::getAssignedReviewerId, Collectors.counting()));
+    }
+
+    // 37. Applicant: Request Plan Review Meeting
+    public Meeting requestPlanReviewMeeting(String applicantId, LocalDateTime preferredTime) {
+        Meeting meeting = scheduleMeeting("Plan Review Consultation", preferredTime, List.of(applicantId));
+        return meeting;
+    }
+
+    // 38. Plan Review Staff: Conduct Plan Review Meeting and record outcome
+    public void recordMeetingOutcome(String meetingId, String notes) {
+        Meeting meeting = meetings.get(meetingId);
+        if (meeting != null) {
+            meeting.setOutcomeNotes(notes);
+        }
+    }
+
+    // 39. Plan Review Staff: Review Plans
+    public void reviewPlan(String applicationId, String taskId, PlanReviewStatus status, List<String> conditions, List<String> corrections) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            for (PlanReviewTask task : app.getPlanReviews()) {
+                if (task.getTaskId().equals(taskId)) {
+                    task.setStatus(status);
+                    if (conditions != null) {
+                        conditions.forEach(task::addCondition);
+                    }
+                    if (corrections != null) {
+                        corrections.forEach(task::addRequiredCorrection);
+                    }
+                }
+            }
+        }
+    }
+
+    // 40. Applicant: Resubmit Plans
+    public void resubmitPlan(String applicationId, String taskId) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            for (PlanReviewTask task : app.getPlanReviews()) {
+                if (task.getTaskId().equals(taskId)) {
+                    task.setStatus(PlanReviewStatus.RESUBMITTED);
+                }
+            }
+        }
+    }
+
+    // 41. Plan Review Staff: Review Code Modifications
+    public CodeModificationRequest submitCodeModification(String applicationId, String codeSection, String justification) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            CodeModificationRequest req = new CodeModificationRequest(nextId("CMOD"), codeSection, justification);
+            app.getCodeModifications().add(req);
+            return req;
+        }
+        return null;
+    }
+
+    public void reviewCodeModification(String applicationId, String modificationId, boolean approved) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            for (CodeModificationRequest mod : app.getCodeModifications()) {
+                if (mod.getModificationId().equals(modificationId)) {
+                    mod.review(approved);
+                }
+            }
+        }
+    }
+
+    // 42. Plan Review Staff: Track Completion of Required Plan Reviews
+    public boolean areAllPlanReviewsApproved(String applicationId) {
+        CountyApplication app = applications.get(applicationId);
+        if (app == null || app.getPlanReviews().isEmpty()) {
+            return false;
+        }
+        return app.getPlanReviews().stream().allMatch(p -> p.getStatus() == PlanReviewStatus.APPROVED);
+    }
+
+    // 43. Development Staff: Issue Development-related Permit
+    public Permit issueDevelopmentPermit(String applicationId, String staffId) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null && areAllPlanReviewsApproved(applicationId) && app.isFeeFullyPaid() && !app.hasActiveHold()) {
+            String permitNum = nextId("DEVPERMIT");
+            Permit permit = new Permit(permitNum, applicationId, app.getParcelPin(), "BUILDING_DEVELOPMENT", staffId);
+            permits.put(permitNum, permit);
+            Property prop = properties.get(app.getParcelPin());
+            if (prop != null) {
+                prop.getPermitNumbers().add(permitNum);
+            }
+            return permit;
+        }
+        return null;
+    }
+
+    // 44. Staff: Manage Bonds
+    public Bond postBond(String applicationId, double amount) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            Bond bond = new Bond(nextId("BND"), applicationId, amount);
+            app.getBonds().add(bond);
+            return bond;
+        }
+        return null;
+    }
+
+    public void releaseBond(String applicationId, String bondId) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            for (Bond b : app.getBonds()) {
+                if (b.getBondId().equals(bondId)) {
+                    b.setStatus(BondStatus.RELEASED);
+                }
+            }
+        }
+    }
+
+    // 45. Applicant: Complete Building Development Project (Release bond & occupancy)
+    public boolean completeDevelopmentProject(String applicationId) {
+        CountyApplication app = applications.get(applicationId);
+        if (app != null) {
+            // Release all active bonds
+            for (Bond b : app.getBonds()) {
+                if (b.getStatus() == BondStatus.POSTED || b.getStatus() == BondStatus.HELD) {
+                    b.setStatus(BondStatus.RELEASED);
+                }
+            }
+            app.setOccupancyGranted(true);
+            return true;
+        }
+        return false;
+    }
+
+    // 46. Customer: Request Inspection
+    public Inspection requestInspection(String applicationId, String inspectionType) {
+        Inspection inspection = new Inspection(nextId("INSP"), applicationId, inspectionType);
+        inspections.put(inspection.getInspectionId(), inspection);
+        return inspection;
+    }
+
+    // 47. Inspection Staff: Create Inspection
+    public Inspection scheduleInspection(String inspectionId, LocalDateTime scheduledTime) {
+        Inspection inspection = inspections.get(inspectionId);
+        if (inspection != null) {
+            inspection.setScheduledTime(scheduledTime);
+        }
+        return inspection;
+    }
+
+    // 48. Inspection Supervisor: Assign Inspections & Manage Workload
+    public void assignInspection(String inspectionId, String inspectorId) {
+        Inspection inspection = inspections.get(inspectionId);
+        if (inspection != null) {
+            inspection.setInspectorId(inspectorId);
+        }
+    }
+
+    public Map<String, Long> getInspectorWorkload() {
+        return inspections.values().stream()
+                .filter(i -> i.getStatus() != InspectionStatus.PASSED && i.getInspectorId() != null)
+                .collect(Collectors.groupingBy(Inspection::getInspectorId, Collectors.counting()));
+    }
+
+    // 49. Inspector: Conduct Inspection
+    public void conductInspection(String inspectionId, boolean passed, String comments) {
+        Inspection inspection = inspections.get(inspectionId);
+        if (inspection != null) {
+            inspection.recordResults(passed, comments);
+        }
+    }
+
+    // 50. Enforcement Staff: Issue Notice of Violation
+    public Violation issueNoticeOfViolation(String parcelPin, String responsibleParty, String description) {
+        Violation violation = new Violation(nextId("VIO"), parcelPin, responsibleParty, description);
+        violations.put(violation.getViolationId(), violation);
+        return violation;
+    }
+
+    // 51. Staff: Search Property Information
+    public Property searchProperty(String parcelPin) {
+        return properties.get(parcelPin);
+    }
+
+    // 52. Staff: Geospatial Change Notification
+    public void notifyGeospatialChange(String parcelPin, String description) {
+        String alert = "[" + LocalDateTime.now() + "] Parcel " + parcelPin + " geospatial change: " + description;
+        geospatialChangeAlerts.add(alert);
+    }
+
+    public List<String> getGeospatialChangeAlerts() {
+        return new ArrayList<>(geospatialChangeAlerts);
+    }
+
+    // 53. County Staff: Custom Query / Report
+    public List<CountyApplication> customApplicationQuery(Predicate<CountyApplication> filter) {
+        return applications.values().stream().filter(filter).collect(Collectors.toList());
+    }
+
+    // 54. Staff: Create Condo Unit
+    public CondoUnit createCondoUnit(String parentParcelPin, String childParcelPin, String unitNumber, String address) {
+        Property parentProperty = properties.get(parentParcelPin);
+        if (parentProperty != null) {
+            CondoUnit unit = new CondoUnit(nextId("CND"), unitNumber, parentParcelPin, childParcelPin, address);
+            parentProperty.getCondoUnits().add(unit);
+            Property childProperty = new Property(childParcelPin, address, parentProperty.getCurrentOwner());
+            properties.put(childParcelPin, childProperty);
+            return unit;
+        }
+        return null;
+    }
+
+    // 55. Technical Staff: Update GIS Property Management (Split/Merged PIN)
+    public void updateGisPropertyManagement(String oldParcelPin, String newParcelPin, String newGisLayer) {
+        Property prop = properties.get(oldParcelPin);
+        if (prop != null) {
+            properties.remove(oldParcelPin);
+            prop.setParcelPin(newParcelPin);
+            prop.setGisLayerReference(newGisLayer);
+            properties.put(newParcelPin, prop);
+            notifyGeospatialChange(newParcelPin, "Split/Merged from " + oldParcelPin + " to GIS layer " + newGisLayer);
+        }
+    }
+
+    // 56. Staff: Send or Post Citations and Fines
+    public void postCitationAndFine(String violationId, double fineAmount) {
+        Violation v = violations.get(violationId);
+        if (v != null) {
+            v.setFineAmount(fineAmount);
+            v.setCitationPosted(true);
+            v.setNoticeSent(true);
+        }
+    }
+
+    // Helpers to bootstrap data
+    public void addProperty(Property property) {
+        properties.put(property.getParcelPin(), property);
+    }
+
+    public void addService(CountyService service) {
+        services.put(service.getServiceId(), service);
+    }
+
+    public CountyApplication getApplication(String appId) {
+        return applications.get(appId);
+    }
+
+    public Violation getViolation(String violationId) {
+        return violations.get(violationId);
+    }
+
+    public Hearing getHearing(String hearingId) {
+        return hearings.get(hearingId);
+    }
+
+    public Meeting getMeeting(String meetingId) {
+        return meetings.get(meetingId);
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=== County Land Development & Permitting System Demo ===");
+        CountyLandManagementSystem countySystem = new CountyLandManagementSystem();
+
+        // 1. Initial Setup: Properties, Services, Ordinances
+        Property prop1 = new Property("PIN-1001", "123 Main St", "John Landowner");
+        countySystem.addProperty(prop1);
+
+        CountyService rezoningService = new CountyService("SRV-REZONING", "Rezoning & Special Exception", "Zoning change request", 500.0);
+        rezoningService.addRequirement("Site Survey");
+        rezoningService.addRequirement("Traffic Study");
+        countySystem.addService(rezoningService);
+
+        CountyService buildingPermitService = new CountyService("SRV-BLDG", "Commercial Building Permit", "Building plan authorization", 1200.0);
+        buildingPermitService.addRequirement("Architectural Plans");
+        buildingPermitService.addRequirement("Structural Engineering Specs");
+        countySystem.addService(buildingPermitService);
+
+        countySystem.addOrUpdateOrdinance("ORD-2023-01", "Setback Requirements", "Minimum 25ft setback for commercial properties", "Sec. 14-B", LocalDate.of(2023, 1, 1));
+
+        // 2. Public User Search
+        System.out.println("\n--- 1. Public Search ---");
+        List<String> searchResults = countySystem.searchPublicInformation("Main St");
+        searchResults.forEach(System.out::println);
+
+        // 3. User Registration
+        System.out.println("\n--- 2. User Registration ---");
+        User applicant = countySystem.registerUser("alice_dev", "Alice Developer", "alice@example.com", UserRole.APPLICANT);
+        User planner = countySystem.registerUser("bob_planner", "Bob Smith", "bob@county.gov", UserRole.PLANNING_STAFF);
+        User reviewer = countySystem.registerUser("carol_eng", "Carol Reviewer", "carol@county.gov", UserRole.PLAN_REVIEW_STAFF);
+        User inspector = countySystem.registerUser("dave_insp", "Dave Inspector", "dave@county.gov", UserRole.INSPECTOR);
+        System.out.println("Registered applicant: " + applicant);
+
+        // 4. Pre-Application Assistance
+        System.out.println("\n--- 3. Pre-Application Assistance ---");
+        PreApplicationRequest preApp = countySystem.requestPreApplicationAssistance(applicant.getUserId(), "SRV-REZONING", "Discussing mixed-use development");
+        System.out.println("Submitted pre-app assistance request: " + preApp.getRequestId());
+        countySystem.respondToPreApplication(preApp.getRequestId(), "Preliminary review scheduled", LocalDateTime.now().plusDays(3));
+        System.out.println("Staff responded: " + preApp.getResponseNotes());
+
+        // 5. Submit Application, Docs, Pay Fee
+        System.out.println("\n--- 4. Application Submission, Document, Fee ---");
+        CountyApplication app = countySystem.submitApplication(applicant.getUserId(), "PIN-1001", "SRV-REZONING", "Mixed Use Residential/Retail");
+        System.out.println("Application created: " + app.getApplicationId() + " Status: " + app.getStatus());
+
+        countySystem.submitSupportingDocumentation(app.getApplicationId(), "Concept Site Plan", "PDF", applicant.getUserId());
+        countySystem.payFee(app.getApplicationId(), 500.0);
+        System.out.println("Applicant status check: " + countySystem.checkStatus(app.getApplicationId()));
+
+        // 6. Completeness Review and Internal Note
+        System.out.println("\n--- 5. Staff Completeness Review & Notes ---");
+        countySystem.performCompletenessReview(app.getApplicationId(), true);
+        countySystem.recordInternalNote(app.getApplicationId(), planner.getUserId(), "Documentation verified complete.");
+        countySystem.assignApplicationForDetailedReview(app.getApplicationId(), planner.getUserId());
+        System.out.println("After completeness: " + app.getStatus());
+
+        // 7. Holds Management
+        System.out.println("\n--- 6. Hold and Release ---");
+        Hold hold = countySystem.applyHold(app.getApplicationId(), "Pending revised environmental assessment", planner.getUserId());
+        System.out.println("Hold applied: " + hold.getHoldId() + ", Application status: " + app.getStatus());
+        countySystem.removeHold(app.getApplicationId(), hold.getHoldId(), planner.getUserId());
+        System.out.println("Hold released, status: " + app.getStatus());
+
+        // 8. Planning Consistency & Staff Report
+        System.out.println("\n--- 7. Planning Staff Review & Proffers ---");
+        countySystem.evaluateComprehensivePlanConsistency(app.getApplicationId(), true);
+        countySystem.performZoningStaffReview(app.getApplicationId(), true);
+        Proffer proffer = countySystem.addDraftProffer(app.getApplicationId(), "Applicant shall dedicate 10ft easement for pedestrian walkway");
+        countySystem.approveProffer(app.getApplicationId(), proffer.getProfferId(), true);
+        countySystem.developStaffReport(app.getApplicationId(), "Favorable recommendation based on Master Plan compliance.");
+
+        // 9. Hearings Management
+        System.out.println("\n--- 8. Public Hearing Process ---");
+        Hearing hearing = countySystem.assignHearingDate(app.getApplicationId(), LocalDateTime.now().plusWeeks(2), "Board of Zoning Appeals");
+        countySystem.addRequiredAffidavit(hearing.getHearingId(), "Proof of Neighbor Notification");
+        countySystem.satisfyHearingRequirement(hearing.getHearingId(), "Proof of Neighbor Notification");
+        countySystem.prepareHearingExecution(hearing.getHearingId(), true, true);
+        countySystem.captureHearingDecision(hearing.getHearingId(), "APPROVED");
+        System.out.println("Hearing captured decision: " + hearing.getDecision() + ", App status: " + app.getStatus());
+
+        // 10. Zoning Permit Issuance
+        System.out.println("\n--- 9. Issue Zoning Permit ---");
+        Permit zoningPermit = countySystem.issueZoningPermit(app.getApplicationId(), planner.getUserId());
+        System.out.println("Zoning Permit Issued: " + zoningPermit);
+
+        // 11. Plan Review and Workload
+        System.out.println("\n--- 10. Plan Review Lifecycle ---");
+        PlanReviewTask planTask = countySystem.assignPlanReview(app.getApplicationId(), "Civil Engineering Set v1", reviewer.getUserId());
+        System.out.println("Plan review workload: " + countySystem.getPlanReviewerWorkload());
+        countySystem.reviewPlan(app.getApplicationId(), planTask.getTaskId(), PlanReviewStatus.APPROVED, List.of("Maintain silt fencing"), null);
+        System.out.println("Plan reviews all approved? " + countySystem.areAllPlanReviewsApproved(app.getApplicationId()));
+
+        // 12. Bonds, Development Permit & Project Completion
+        System.out.println("\n--- 11. Bonds, Development Permit & Occupancy ---");
+        Bond bond = countySystem.postBond(app.getApplicationId(), 25000.0);
+        Permit devPermit = countySystem.issueDevelopmentPermit(app.getApplicationId(), planner.getUserId());
+        System.out.println("Development permit issued: " + devPermit);
+
+        // Request and Conduct Inspection
+        Inspection insp = countySystem.requestInspection(app.getApplicationId(), "Final Building Code Compliance");
+        countySystem.assignInspection(insp.getInspectionId(), inspector.getUserId());
+        countySystem.conductInspection(insp.getInspectionId(), true, "Construction adheres to all standards");
+        System.out.println("Inspection conducted: " + insp);
+
+        // Project Completion
+        countySystem.completeDevelopmentProject(app.getApplicationId());
+        countySystem.denoteFinalAction(app.getApplicationId(), true);
+        System.out.println("Bond status: " + bond.getStatus() + ", Occupancy granted: " + app.isOccupancyGranted() + ", Final Action Status: " + app.getStatus());
+
+        // 13. Enforcement, Notice of Violation & Citations
+        System.out.println("\n--- 12. Enforcement & Citations ---");
+        Violation violation = countySystem.issueNoticeOfViolation("PIN-1001", "John Landowner", "Unauthorized debris burning on site");
+        countySystem.postCitationAndFine(violation.getViolationId(), 250.0);
+        System.out.println("Violation processed: " + violation);
+
+        // 14. Condo Unit Creation and GIS Updates
+        System.out.println("\n--- 13. Condominiums & GIS Parcel Management ---");
+        CondoUnit condo = countySystem.createCondoUnit("PIN-1001", "PIN-1001-C1", "Unit 101", "123 Main St, Suite 101");
+        System.out.println("Created Condo: " + condo);
+        countySystem.updateGisPropertyManagement("PIN-1001", "PIN-1001-M", "GIS_LAYER_PARCEL_SPLIT_2023");
+        System.out.println("Geospatial alerts: " + countySystem.getGeospatialChangeAlerts());
+
+        // 15. Custom Query / Reporting
+        System.out.println("\n--- 14. Custom Query & Planning Report ---");
+        List<CountyApplication> paidCompletedApps = countySystem.customApplicationQuery(
+                a -> a.isFeeFullyPaid() && a.getStatus() == ApplicationStatus.FINAL_ACTION_COMPLETED
+        );
+        System.out.println("Custom query returned applications count: " + paidCompletedApps.size());
+        System.out.println("Demo completed successfully.");
+    }
+}

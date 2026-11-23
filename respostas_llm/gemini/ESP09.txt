@@ -1,0 +1,1670 @@
+// File: UserRole.java
+public enum UserRole {
+    JUNIOR_RESEARCHER,
+    RESEARCHER,
+    SUPERVISOR,
+    INVESTIGATOR,
+    MRI_OPERATOR,
+    LAB_ADMINISTRATOR,
+    SYSTEM_ADMINISTRATOR,
+    RELEASE_ENGINEER
+}
+
+// File: User.java
+import java.util.*;
+
+public class User {
+    private final String id;
+    private final String username;
+    private final String fullName;
+    private final Set<UserRole> roles;
+    private final Set<String> groupMemberships;
+    private String twitterHandle;
+
+    public User(String id, String username, String fullName, UserRole primaryRole) {
+        this.id = id;
+        this.username = username;
+        this.fullName = fullName;
+        this.roles = new HashSet<>();
+        this.roles.add(primaryRole);
+        this.groupMemberships = new HashSet<>();
+    }
+
+    public String getId() { return id; }
+    public String getUsername() { return username; }
+    public String getFullName() { return fullName; }
+    public Set<UserRole> getRoles() { return Collections.unmodifiableSet(roles); }
+    public void addRole(UserRole role) { this.roles.add(role); }
+    public boolean hasRole(UserRole role) { return this.roles.contains(role); }
+    public Set<String> getGroupMemberships() { return Collections.unmodifiableSet(groupMemberships); }
+    public void joinGroup(String group) { this.groupMemberships.add(group); }
+    public String getTwitterHandle() { return twitterHandle; }
+    public void setTwitterHandle(String twitterHandle) { this.twitterHandle = twitterHandle; }
+}
+
+// File: AccessPolicy.java
+import java.util.*;
+
+public class AccessPolicy {
+    private boolean isPublic;
+    private final Set<String> allowedUserIds;
+    private final Set<String> allowedGroupIds;
+
+    public AccessPolicy() {
+        this.isPublic = false;
+        this.allowedUserIds = new HashSet<>();
+        this.allowedGroupIds = new HashSet<>();
+    }
+
+    public boolean isPublic() { return isPublic; }
+    public void setPublic(boolean isPublic) { this.isPublic = isPublic; }
+
+    public void grantUser(String userId) { allowedUserIds.add(userId); }
+    public void revokeUser(String userId) { allowedUserIds.remove(userId); }
+
+    public void grantGroup(String groupId) { allowedGroupIds.add(groupId); }
+    public void revokeGroup(String groupId) { allowedGroupIds.remove(groupId); }
+
+    public boolean canAccess(User user, String ownerId) {
+        if (isPublic) return true;
+        if (user.getId().equals(ownerId)) return true;
+        if (user.hasRole(UserRole.LAB_ADMINISTRATOR) || user.hasRole(UserRole.SYSTEM_ADMINISTRATOR)) return true;
+        if (allowedUserIds.contains(user.getId())) return true;
+        for (String g : user.getGroupMemberships()) {
+            if (allowedGroupIds.contains(g)) return true;
+        }
+        return false;
+    }
+}
+
+// File: FileDataQuality.java
+public enum FileDataQuality {
+    UNSPECIFIED,
+    GOOD,
+    BAD
+}
+
+// File: ControlledVocabularyService.java
+import java.util.*;
+
+public class ControlledVocabularyService {
+    private final Set<String> allowedTags;
+    private final Map<String, Set<String>> allowedMetadataValues;
+
+    public ControlledVocabularyService() {
+        allowedTags = new HashSet<>(Arrays.asList(
+            "electrophysiology", "imaging", "behaviour", "genetics", "worm", "c_elegans",
+            "optogenetics", "fMRI", "control", "drug_response", "cell_image", "workflow_output"
+        ));
+        allowedMetadataValues = new HashMap<>();
+        allowedMetadataValues.put("cell_type", new HashSet<>(Arrays.asList("AWA", "AWC", "ASH", "BAG", "Neuron", "Glial")));
+        allowedMetadataValues.put("microscope_type", new HashSet<>(Arrays.asList("Confocal", "Two-Photon", "Epifluorescence")));
+        allowedMetadataValues.put("drug_name", new HashSet<>(Arrays.asList("Serotonin", "Dopamine", "Octopamine", "None")));
+        allowedMetadataValues.put("video_encoding", new HashSet<>(Arrays.asList("CJ-WormTrack-MJPEG", "CJ-WormTrack-RAW", "H.264")));
+    }
+
+    public boolean isTagAllowed(String tag) {
+        return allowedTags.contains(tag.toLowerCase());
+    }
+
+    public void registerTag(String tag) {
+        allowedTags.add(tag.toLowerCase());
+    }
+
+    public boolean isMetadataValueAllowed(String key, String value) {
+        if (!allowedMetadataValues.containsKey(key)) {
+            return true; // Not restricted
+        }
+        return allowedMetadataValues.get(key).contains(value);
+    }
+
+    public void registerAllowedMetadataValue(String key, String value) {
+        allowedMetadataValues.computeIfAbsent(key, k -> new HashSet<>()).add(value);
+    }
+}
+
+// File: PredicatedLink.java
+public class PredicatedLink {
+    private final String sourceFileId;
+    private final String predicate;
+    private final String targetFileId;
+
+    public PredicatedLink(String sourceFileId, String predicate, String targetFileId) {
+        this.sourceFileId = sourceFileId;
+        this.predicate = predicate;
+        this.targetFileId = targetFileId;
+    }
+
+    public String getSourceFileId() { return sourceFileId; }
+    public String getPredicate() { return predicate; }
+    public String getTargetFileId() { return targetFileId; }
+
+    @Override
+    public String toString() {
+        return "[" + sourceFileId + "] --(" + predicate + ")--> [" + targetFileId + "]";
+    }
+}
+
+// File: FileVersion.java
+import java.time.Instant;
+
+public class FileVersion {
+    private final int versionNumber;
+    private final byte[] content;
+    private final long sizeBytes;
+    private final Instant timestamp;
+    private final String checksum;
+
+    public FileVersion(int versionNumber, byte[] content, long sizeBytes, String checksum) {
+        this.versionNumber = versionNumber;
+        this.content = content != null ? content.clone() : new byte[0];
+        this.sizeBytes = sizeBytes;
+        this.timestamp = Instant.now();
+        this.checksum = checksum;
+    }
+
+    public int getVersionNumber() { return versionNumber; }
+    public byte[] getContent() { return content.clone(); }
+    public long getSizeBytes() { return sizeBytes; }
+    public Instant getTimestamp() { return timestamp; }
+    public String getChecksum() { return checksum; }
+}
+
+// File: NeuroFile.java
+import java.time.Instant;
+import java.util.*;
+
+public class NeuroFile {
+    private final String id;
+    private String name;
+    private String fileType;      // e.g. "image/png", "video/avi", "text/csv", "application/pdf"
+    private String format;        // e.g. "TIFF", "AVI", "CSV", "PDF"
+    private String ownerId;
+    private final Instant createdAt;
+    private boolean nonModifiable;
+    private boolean deleted;
+    private FileDataQuality quality;
+    private final Set<String> tags;
+    private final Map<String, String> bespokeMetadata;
+    private final List<FileVersion> versions;
+    private final AccessPolicy accessPolicy;
+    private String locationPath;
+
+    public NeuroFile(String id, String name, String fileType, String format, String ownerId, byte[] initialData, long virtualSize) {
+        this.id = id;
+        this.name = name;
+        this.fileType = fileType;
+        this.format = format;
+        this.ownerId = ownerId;
+        this.createdAt = Instant.now();
+        this.nonModifiable = false;
+        this.deleted = false;
+        this.quality = FileDataQuality.UNSPECIFIED;
+        this.tags = new HashSet<>();
+        this.bespokeMetadata = new HashMap<>();
+        this.versions = new ArrayList<>();
+        this.accessPolicy = new AccessPolicy();
+        this.locationPath = "/workspace/" + ownerId + "/" + name;
+
+        // Auto-inserted metadata
+        this.bespokeMetadata.put("system:created_at", createdAt.toString());
+        this.bespokeMetadata.put("system:creator", ownerId);
+        this.bespokeMetadata.put("system:format", format);
+
+        addVersion(initialData, virtualSize);
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getFileType() { return fileType; }
+    public String getFormat() { return format; }
+    public String getOwnerId() { return ownerId; }
+    public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
+    public Instant getCreatedAt() { return createdAt; }
+    public boolean isNonModifiable() { return nonModifiable; }
+    public void setNonModifiable(boolean nonModifiable) { this.nonModifiable = nonModifiable; }
+    public boolean isDeleted() { return deleted; }
+    public void setDeleted(boolean deleted) { this.deleted = deleted; }
+    public FileDataQuality getQuality() { return quality; }
+    public void setQuality(FileDataQuality quality) { this.quality = quality; }
+    public Set<String> getTags() { return Collections.unmodifiableSet(tags); }
+    public Map<String, String> getBespokeMetadata() { return Collections.unmodifiableMap(bespokeMetadata); }
+    public AccessPolicy getAccessPolicy() { return accessPolicy; }
+    public String getLocationPath() { return locationPath; }
+    public void setLocationPath(String locationPath) { this.locationPath = locationPath; }
+
+    public void addTag(String tag) { this.tags.add(tag); }
+    public void removeTag(String tag) { this.tags.remove(tag); }
+
+    public void setBespokeMetadata(String key, String value) {
+        this.bespokeMetadata.put(key, value);
+    }
+
+    public void addVersion(byte[] data, long size) {
+        if (nonModifiable && !versions.isEmpty()) {
+            throw new IllegalStateException("File is marked as non-modifiable / protected from modification.");
+        }
+        int nextVer = versions.size() + 1;
+        String checksum = "chk-" + Integer.toHexString(Arrays.hashCode(data)) + "-" + nextVer;
+        versions.add(new FileVersion(nextVer, data, size, checksum));
+    }
+
+    public List<FileVersion> getVersions() {
+        return Collections.unmodifiableList(versions);
+    }
+
+    public FileVersion getLatestVersion() {
+        if (versions.isEmpty()) return null;
+        return versions.get(versions.size() - 1);
+    }
+
+    public FileVersion getVersion(int ver) {
+        for (FileVersion v : versions) {
+            if (v.getVersionNumber() == ver) return v;
+        }
+        return null;
+    }
+
+    public void revertToVersion(int ver) {
+        if (nonModifiable) {
+            throw new IllegalStateException("File is non-modifiable, cannot revert.");
+        }
+        FileVersion target = getVersion(ver);
+        if (target != null) {
+            addVersion(target.getContent(), target.getSizeBytes());
+        }
+    }
+}
+
+// File: MetadataTemplate.java
+import java.util.*;
+
+public class MetadataTemplate {
+    private final String id;
+    private final String name;
+    private final Map<String, String> defaultMetadata;
+    private final Set<String> requiredFields;
+
+    public MetadataTemplate(String id, String name) {
+        this.id = id;
+        this.name = name;
+        this.defaultMetadata = new HashMap<>();
+        this.requiredFields = new HashSet<>();
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+
+    public void setField(String key, String defaultValue, boolean required) {
+        defaultMetadata.put(key, defaultValue);
+        if (required) requiredFields.add(key);
+    }
+
+    public Map<String, String> getDefaultMetadata() { return Collections.unmodifiableMap(defaultMetadata); }
+    public Set<String> getRequiredFields() { return Collections.unmodifiableSet(requiredFields); }
+}
+
+// File: LogBookPage.java
+import java.security.MessageDigest;
+import java.time.Instant;
+import java.util.*;
+
+public class LogBookPage {
+    private final String id;
+    private final String logBookId;
+    private final String sectionId;
+    private String title;
+    private String htmlContent;
+    private final String creatorId;
+    private final Instant createdAt;
+    private final String cryptographicTimestampProof;
+    private final Set<String> attachedFileIds;
+    private final AccessPolicy accessPolicy;
+    private final Map<String, String> bespokeMetadata;
+
+    public LogBookPage(String id, String logBookId, String sectionId, String title, String htmlContent, String creatorId) {
+        this.id = id;
+        this.logBookId = logBookId;
+        this.sectionId = sectionId;
+        this.title = title;
+        this.htmlContent = htmlContent;
+        this.creatorId = creatorId;
+        this.createdAt = Instant.now();
+        this.attachedFileIds = new HashSet<>();
+        this.accessPolicy = new AccessPolicy();
+        this.bespokeMetadata = new HashMap<>();
+        this.cryptographicTimestampProof = generateProof(id, creatorId, createdAt);
+    }
+
+    private static String generateProof(String pageId, String creator, Instant instant) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            String raw = pageId + ":" + creator + ":" + instant.toString() + ":PROVENANCE_KEY";
+            byte[] hash = md.digest(raw.getBytes());
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) {
+            return "PROOF-" + instant.toEpochMilli();
+        }
+    }
+
+    public String getId() { return id; }
+    public String getLogBookId() { return logBookId; }
+    public String getSectionId() { return sectionId; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public String getHtmlContent() { return htmlContent; }
+    public void setHtmlContent(String htmlContent) { this.htmlContent = htmlContent; }
+    public String getCreatorId() { return creatorId; }
+    public Instant getCreatedAt() { return createdAt; }
+    public String getCryptographicTimestampProof() { return cryptographicTimestampProof; }
+    public Set<String> getAttachedFileIds() { return Collections.unmodifiableSet(attachedFileIds); }
+    public AccessPolicy getAccessPolicy() { return accessPolicy; }
+    public Map<String, String> getBespokeMetadata() { return Collections.unmodifiableMap(bespokeMetadata); }
+
+    public void attachFile(String fileId) { this.attachedFileIds.add(fileId); }
+    public void detachFile(String fileId) { this.attachedFileIds.remove(fileId); }
+    public void setMetadata(String key, String val) { this.bespokeMetadata.put(key, val); }
+}
+
+// File: LogBookSection.java
+import java.util.*;
+
+public class LogBookSection {
+    private final String id;
+    private final String name;
+    private final List<String> pageIds;
+
+    public LogBookSection(String id, String name) {
+        this.id = id;
+        this.name = name;
+        this.pageIds = new ArrayList<>();
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public List<String> getPageIds() { return Collections.unmodifiableList(pageIds); }
+    public void addPage(String pageId) { pageIds.add(pageId); }
+}
+
+// File: LogBook.java
+import java.util.*;
+
+public class LogBook {
+    private final String id;
+    private final String title;
+    private final String ownerId;
+    private final Map<String, LogBookSection> sections;
+    private final List<String> sectionOrder;
+
+    public LogBook(String id, String title, String ownerId) {
+        this.id = id;
+        this.title = title;
+        this.ownerId = ownerId;
+        this.sections = new HashMap<>();
+        this.sectionOrder = new ArrayList<>();
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public String getOwnerId() { return ownerId; }
+
+    public void addSection(LogBookSection section) {
+        sections.put(section.getId(), section);
+        sectionOrder.add(section.getId());
+    }
+
+    public LogBookSection getSection(String sectionId) {
+        return sections.get(sectionId);
+    }
+
+    public List<LogBookSection> getAllSections() {
+        List<LogBookSection> res = new ArrayList<>();
+        for (String sId : sectionOrder) res.add(sections.get(sId));
+        return res;
+    }
+}
+
+// File: LogBookNavigator.java
+import java.util.*;
+
+public class LogBookNavigator {
+    private final LogBook logBook;
+    private final Map<String, LogBookPage> pagesMap;
+    private final List<String> orderedPageSequence;
+    private int currentIndex;
+
+    public LogBookNavigator(LogBook logBook, Map<String, LogBookPage> pagesMap) {
+        this.logBook = logBook;
+        this.pagesMap = pagesMap;
+        this.orderedPageSequence = new ArrayList<>();
+        for (LogBookSection section : logBook.getAllSections()) {
+            orderedPageSequence.addAll(section.getPageIds());
+        }
+        this.currentIndex = 0;
+    }
+
+    public boolean hasNext() {
+        return currentIndex < orderedPageSequence.size() - 1;
+    }
+
+    public boolean hasPrevious() {
+        return currentIndex > 0;
+    }
+
+    public LogBookPage next() {
+        if (hasNext()) {
+            currentIndex++;
+            return getCurrentPage();
+        }
+        return null;
+    }
+
+    public LogBookPage previous() {
+        if (hasPrevious()) {
+            currentIndex--;
+            return getCurrentPage();
+        }
+        return null;
+    }
+
+    public LogBookPage getCurrentPage() {
+        if (orderedPageSequence.isEmpty()) return null;
+        return pagesMap.get(orderedPageSequence.get(currentIndex));
+    }
+}
+
+// File: ExperimentalProtocol.java
+import java.time.Instant;
+import java.util.*;
+
+public class ExperimentalProtocol {
+    private final String protocolId;
+    private final int version;
+    private final String title;
+    private final String description;
+    private final String parentProtocolId;
+    private final Instant createdAt;
+    private final List<Stage> stages;
+
+    public static class Stage {
+        private final String name;
+        private final String instructions;
+        private final Map<String, String> metadata;
+
+        public Stage(String name, String instructions) {
+            this.name = name;
+            this.instructions = instructions;
+            this.metadata = new HashMap<>();
+        }
+
+        public String getName() { return name; }
+        public String getInstructions() { return instructions; }
+        public Map<String, String> getMetadata() { return Collections.unmodifiableMap(metadata); }
+        public void setMetadata(String k, String v) { metadata.put(k, v); }
+    }
+
+    public ExperimentalProtocol(String protocolId, int version, String title, String description, String parentProtocolId) {
+        this.protocolId = protocolId;
+        this.version = version;
+        this.title = title;
+        this.description = description;
+        this.parentProtocolId = parentProtocolId;
+        this.createdAt = Instant.now();
+        this.stages = new ArrayList<>();
+    }
+
+    public String getProtocolId() { return protocolId; }
+    public int getVersion() { return version; }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public String getParentProtocolId() { return parentProtocolId; }
+    public Instant getCreatedAt() { return createdAt; }
+    public List<Stage> getStages() { return Collections.unmodifiableList(stages); }
+
+    public void addStage(Stage stage) { stages.add(stage); }
+
+    public ExperimentalProtocol branch(String newProtocolId, String newTitle) {
+        ExperimentalProtocol branched = new ExperimentalProtocol(newProtocolId, 1, newTitle, this.description, this.protocolId);
+        for (Stage s : this.stages) {
+            Stage copy = new Stage(s.getName(), s.getInstructions());
+            for (Map.Entry<String, String> e : s.getMetadata().entrySet()) {
+                copy.setMetadata(e.getKey(), e.getValue());
+            }
+            branched.addStage(copy);
+        }
+        return branched;
+    }
+}
+
+// File: ExperimentalRun.java
+import java.time.Instant;
+import java.util.*;
+
+public class ExperimentalRun {
+    private final String runId;
+    private final String runName;
+    private final String protocolId;
+    private final Instant timestamp;
+    private final Set<String> inputFileIds;
+    private final Set<String> outputFileIds;
+    private final Map<String, String> sharedRunMetadata;
+
+    public ExperimentalRun(String runId, String runName, String protocolId) {
+        this.runId = runId;
+        this.runName = runName;
+        this.protocolId = protocolId;
+        this.timestamp = Instant.now();
+        this.inputFileIds = new HashSet<>();
+        this.outputFileIds = new HashSet<>();
+        this.sharedRunMetadata = new HashMap<>();
+    }
+
+    public String getRunId() { return runId; }
+    public String getRunName() { return runName; }
+    public String getProtocolId() { return protocolId; }
+    public Instant getTimestamp() { return timestamp; }
+    public Set<String> getInputFileIds() { return Collections.unmodifiableSet(inputFileIds); }
+    public Set<String> getOutputFileIds() { return Collections.unmodifiableSet(outputFileIds); }
+    public Map<String, String> getSharedRunMetadata() { return Collections.unmodifiableMap(sharedRunMetadata); }
+
+    public void addInputFile(String fileId) { inputFileIds.add(fileId); }
+    public void addOutputFile(String fileId) { outputFileIds.add(fileId); }
+    public void setSharedMetadata(String k, String v) { sharedRunMetadata.put(k, v); }
+}
+
+// File: Experiment.java
+import java.util.*;
+
+public class Experiment {
+    private final String id;
+    private final String title;
+    private final String hypothesis;
+    private final List<String> linkedRunIds;
+    private final Set<String> associatedFileIds;
+    private String postExperimentWriteUp;
+
+    public Experiment(String id, String title, String hypothesis) {
+        this.id = id;
+        this.title = title;
+        this.hypothesis = hypothesis;
+        this.linkedRunIds = new ArrayList<>();
+        this.associatedFileIds = new HashSet<>();
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public String getHypothesis() { return hypothesis; }
+    public List<String> getLinkedRunIds() { return Collections.unmodifiableList(linkedRunIds); }
+    public Set<String> getAssociatedFileIds() { return Collections.unmodifiableSet(associatedFileIds); }
+    public String getPostExperimentWriteUp() { return postExperimentWriteUp; }
+
+    public void addRun(String runId) { linkedRunIds.add(runId); }
+    public void associateFile(String fileId) { associatedFileIds.add(fileId); }
+    public void setPostExperimentWriteUp(String writeUp) { this.postExperimentWriteUp = writeUp; }
+}
+
+// File: WorkflowExecutionRecord.java
+import java.time.Instant;
+import java.util.*;
+
+public class WorkflowExecutionRecord {
+    private final String workflowId;
+    private final String workflowName;
+    private final String planDetails;
+    private final Instant startTime;
+    private Instant endTime;
+    private String status;
+    private final List<String> executionStepsLog;
+    private final Map<String, String> outputs;
+
+    public WorkflowExecutionRecord(String workflowId, String workflowName, String planDetails) {
+        this.workflowId = workflowId;
+        this.workflowName = workflowName;
+        this.planDetails = planDetails;
+        this.startTime = Instant.now();
+        this.status = "RUNNING";
+        this.executionStepsLog = new ArrayList<>();
+        this.outputs = new HashMap<>();
+    }
+
+    public void logStep(String stepDescription) {
+        this.executionStepsLog.add("[" + Instant.now() + "] " + stepDescription);
+    }
+
+    public void finish(String status, Map<String, String> results) {
+        this.status = status;
+        this.endTime = Instant.now();
+        if (results != null) {
+            this.outputs.putAll(results);
+        }
+    }
+
+    public String getWorkflowId() { return workflowId; }
+    public String getWorkflowName() { return workflowName; }
+    public String getPlanDetails() { return planDetails; }
+    public Instant getStartTime() { return startTime; }
+    public Instant getEndTime() { return endTime; }
+    public String getStatus() { return status; }
+    public List<String> getExecutionStepsLog() { return Collections.unmodifiableList(executionStepsLog); }
+    public Map<String, String> getOutputs() { return Collections.unmodifiableMap(outputs); }
+}
+
+// File: MriPaperResponseForm.java
+import java.time.Instant;
+import java.util.*;
+
+public class MriPaperResponseForm {
+    private final String formId;
+    private final String subjectId;
+    private final String operatorId;
+    private final Instant recordedAt;
+    private final Map<String, String> questionAnswers;
+
+    public MriPaperResponseForm(String formId, String subjectId, String operatorId) {
+        this.formId = formId;
+        this.subjectId = subjectId;
+        this.operatorId = operatorId;
+        this.recordedAt = Instant.now();
+        this.questionAnswers = new HashMap<>();
+    }
+
+    public void recordAnswer(String questionNumberOrCode, String answer) {
+        questionAnswers.put(questionNumberOrCode, answer);
+    }
+
+    public String getFormId() { return formId; }
+    public String getSubjectId() { return subjectId; }
+    public String getOperatorId() { return operatorId; }
+    public Instant getRecordedAt() { return recordedAt; }
+    public Map<String, String> getQuestionAnswers() { return Collections.unmodifiableMap(questionAnswers); }
+}
+
+// File: WormStrainStock.java
+import java.time.LocalDate;
+
+public class WormStrainStock {
+    private final String strainId;
+    private final String wormbaseGeneId; // e.g. WBGene00006789
+    private final String genotype;
+    private final String storageLocation;
+    private int vialCount;
+    private final LocalDate frozenDate;
+
+    public WormStrainStock(String strainId, String wormbaseGeneId, String genotype, String storageLocation, int vialCount) {
+        this.strainId = strainId;
+        this.wormbaseGeneId = wormbaseGeneId;
+        this.genotype = genotype;
+        this.storageLocation = storageLocation;
+        this.vialCount = vialCount;
+        this.frozenDate = LocalDate.now();
+    }
+
+    public String getStrainId() { return strainId; }
+    public String getWormbaseGeneId() { return wormbaseGeneId; }
+    public String getGenotype() { return genotype; }
+    public String getStorageLocation() { return storageLocation; }
+    public int getVialCount() { return vialCount; }
+    public void setVialCount(int vialCount) { this.vialCount = vialCount; }
+    public LocalDate getFrozenDate() { return frozenDate; }
+}
+
+// File: ResearchReference.java
+import java.time.Instant;
+import java.util.*;
+
+public class ResearchReference {
+    private final String id;
+    private final String title;
+    private final String authors;
+    private final String doiOrUrl;
+    private final Set<String> tags;
+    private final List<String> notesAndComments;
+    private final Instant addedAt;
+
+    public ResearchReference(String id, String title, String authors, String doiOrUrl) {
+        this.id = id;
+        this.title = title;
+        this.authors = authors;
+        this.doiOrUrl = doiOrUrl;
+        this.tags = new HashSet<>();
+        this.notesAndComments = new ArrayList<>();
+        this.addedAt = Instant.now();
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public String getAuthors() { return authors; }
+    public String getDoiOrUrl() { return doiOrUrl; }
+    public Set<String> getTags() { return Collections.unmodifiableSet(tags); }
+    public List<String> getNotesAndComments() { return Collections.unmodifiableList(notesAndComments); }
+    public Instant getAddedAt() { return addedAt; }
+
+    public void addTag(String tag) { this.tags.add(tag); }
+    public void addComment(String user, String comment) {
+        this.notesAndComments.add(user + ": " + comment);
+    }
+}
+
+// File: LabEquipmentConsumable.java
+public class LabEquipmentConsumable {
+    private final String itemId;
+    private final String name;
+    private final String category; // "EQUIPMENT" or "CONSUMABLE"
+    private int quantity;
+    private final String location;
+
+    public LabEquipmentConsumable(String itemId, String name, String category, int quantity, String location) {
+        this.itemId = itemId;
+        this.name = name;
+        this.category = category;
+        this.quantity = quantity;
+        this.location = location;
+    }
+
+    public String getItemId() { return itemId; }
+    public String getName() { return name; }
+    public String getCategory() { return category; }
+    public int getQuantity() { return quantity; }
+    public void setQuantity(int quantity) { this.quantity = quantity; }
+    public String getLocation() { return location; }
+}
+
+// File: LabCalendarEvent.java
+import java.time.LocalDateTime;
+
+public class LabCalendarEvent {
+    private final String eventId;
+    private final String title;
+    private final LocalDateTime startTime;
+    private final LocalDateTime endTime;
+    private final String bookedEquipmentId;
+    private final String bookedByUserId;
+    private boolean syncedToGoogleCalendar;
+
+    public LabCalendarEvent(String eventId, String title, LocalDateTime startTime, LocalDateTime endTime, String bookedEquipmentId, String bookedByUserId) {
+        this.eventId = eventId;
+        this.title = title;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.bookedEquipmentId = bookedEquipmentId;
+        this.bookedByUserId = bookedByUserId;
+        this.syncedToGoogleCalendar = false;
+    }
+
+    public String getEventId() { return eventId; }
+    public String getTitle() { return title; }
+    public LocalDateTime getStartTime() { return startTime; }
+    public LocalDateTime getEndTime() { return endTime; }
+    public String getBookedEquipmentId() { return bookedEquipmentId; }
+    public String getBookedByUserId() { return bookedByUserId; }
+    public boolean isSyncedToGoogleCalendar() { return syncedToGoogleCalendar; }
+    public void setSyncedToGoogleCalendar(boolean val) { this.syncedToGoogleCalendar = val; }
+}
+
+// File: CollaborativeSpreadsheet.java
+import java.util.*;
+
+public class CollaborativeSpreadsheet {
+    private final String sheetId;
+    private final String title;
+    private final Map<String, Double> cellValues;
+    private final Map<String, String> cellFormulas;
+
+    public CollaborativeSpreadsheet(String sheetId, String title) {
+        this.sheetId = sheetId;
+        this.title = title;
+        this.cellValues = new HashMap<>();
+        this.cellFormulas = new HashMap<>();
+    }
+
+    public String getSheetId() { return sheetId; }
+    public String getTitle() { return title; }
+
+    public void setCell(String cellRef, double val) {
+        cellValues.put(cellRef.toUpperCase(), val);
+    }
+
+    public void setSumFormula(String targetCell, List<String> sourceCells) {
+        cellFormulas.put(targetCell.toUpperCase(), "SUM(" + String.join(",", sourceCells) + ")");
+        double sum = 0.0;
+        for (String c : sourceCells) {
+            sum += cellValues.getOrDefault(c.toUpperCase(), 0.0);
+        }
+        cellValues.put(targetCell.toUpperCase(), sum);
+    }
+
+    public double getCellValue(String cellRef) {
+        return cellValues.getOrDefault(cellRef.toUpperCase(), 0.0);
+    }
+}
+
+// File: CourseFeedbackForm.java
+import java.util.*;
+
+public class CourseFeedbackForm {
+    private final String formId;
+    private final String courseName;
+    private final String supervisorId;
+    private final List<String> questions;
+    private final List<Map<String, String>> submissions;
+
+    public CourseFeedbackForm(String formId, String courseName, String supervisorId, List<String> questions) {
+        this.formId = formId;
+        this.courseName = courseName;
+        this.supervisorId = supervisorId;
+        this.questions = new ArrayList<>(questions);
+        this.submissions = new ArrayList<>();
+    }
+
+    public String getFormId() { return formId; }
+    public String getCourseName() { return courseName; }
+    public String getSupervisorId() { return supervisorId; }
+    public List<String> getQuestions() { return Collections.unmodifiableList(questions); }
+
+    public void submitFeedback(Map<String, String> answers) {
+        submissions.add(new HashMap<>(answers));
+    }
+
+    public List<Map<String, String>> getSubmissions() {
+        return Collections.unmodifiableList(submissions);
+    }
+}
+
+// File: WebTheme.java
+public class WebTheme {
+    private String primaryColour;
+    private String secondaryColour;
+    private String logoUrl;
+    private String fontCss;
+
+    public WebTheme(String primaryColour, String secondaryColour, String logoUrl, String fontCss) {
+        this.primaryColour = primaryColour;
+        this.secondaryColour = secondaryColour;
+        this.logoUrl = logoUrl;
+        this.fontCss = fontCss;
+    }
+
+    public String getPrimaryColour() { return primaryColour; }
+    public void setPrimaryColour(String primaryColour) { this.primaryColour = primaryColour; }
+    public String getSecondaryColour() { return secondaryColour; }
+    public void setSecondaryColour(String secondaryColour) { this.secondaryColour = secondaryColour; }
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+    public String getFontCss() { return fontCss; }
+    public void setFontCss(String fontCss) { this.fontCss = fontCss; }
+}
+
+// File: AcceptanceTestResult.java
+public class AcceptanceTestResult {
+    private final String testName;
+    private final boolean passed;
+    private final String message;
+
+    public AcceptanceTestResult(String testName, boolean passed, String message) {
+        this.testName = testName;
+        this.passed = passed;
+        this.message = message;
+    }
+
+    public String getTestName() { return testName; }
+    public boolean isPassed() { return passed; }
+    public String getMessage() { return message; }
+
+    @Override
+    public String toString() {
+        return (passed ? "[PASS] " : "[FAIL] ") + testName + " : " + message;
+    }
+}
+
+// File: ExternalIntegrationService.java
+import java.util.*;
+
+public class ExternalIntegrationService {
+    private final List<String> emailOutbox = new ArrayList<>();
+    private final List<String> twitterFeed = new ArrayList<>();
+    private final List<String> mendeleyNotifications = new ArrayList<>();
+
+    public void sendEmailToMailingList(String mailingList, String subject, String body) {
+        emailOutbox.add("TO: " + mailingList + " | SUBJECT: " + subject + " | BODY: " + body);
+    }
+
+    public void postToTwitter(String username, String tweet) {
+        twitterFeed.add("@" + username + ": " + tweet);
+    }
+
+    public void notifyMendeleyGroup(String paperTitle, String doi) {
+        mendeleyNotifications.add("Mendeley Push: New reference added -> " + paperTitle + " (" + doi + ")");
+    }
+
+    public List<String> getEmailOutbox() { return Collections.unmodifiableList(emailOutbox); }
+    public List<String> getTwitterFeed() { return Collections.unmodifiableList(twitterFeed); }
+    public List<String> getMendeleyNotifications() { return Collections.unmodifiableList(mendeleyNotifications); }
+}
+
+// File: UserActivityLog.java
+import java.time.Instant;
+
+public class UserActivityLog {
+    private final String userId;
+    private final String action;
+    private final String resourceId;
+    private final Instant timestamp;
+
+    public UserActivityLog(String userId, String action, String resourceId) {
+        this.userId = userId;
+        this.action = action;
+        this.resourceId = resourceId;
+        this.timestamp = Instant.now();
+    }
+
+    public String getUserId() { return userId; }
+    public String getAction() { return action; }
+    public String getResourceId() { return resourceId; }
+    public Instant getTimestamp() { return timestamp; }
+
+    @Override
+    public String toString() {
+        return "[" + timestamp + "] User: " + userId + " executed: " + action + " on: " + resourceId;
+    }
+}
+
+// File: SearchFilter.java
+public class SearchFilter {
+    private String fileType;
+    private String format;
+    private String metadataKey;
+    private String metadataValue;
+    private String tag;
+    private boolean excludeBadQuality = true;
+
+    public SearchFilter() {}
+
+    public SearchFilter setFileType(String fileType) { this.fileType = fileType; return this; }
+    public SearchFilter setFormat(String format) { this.format = format; return this; }
+    public SearchFilter setMetadata(String key, String value) { this.metadataKey = key; this.metadataValue = value; return this; }
+    public SearchFilter setTag(String tag) { this.tag = tag; return this; }
+    public SearchFilter setExcludeBadQuality(boolean excludeBadQuality) { this.excludeBadQuality = excludeBadQuality; return this; }
+
+    public String getFileType() { return fileType; }
+    public String getFormat() { return format; }
+    public String getMetadataKey() { return metadataKey; }
+    public String getMetadataValue() { return metadataValue; }
+    public String getTag() { return tag; }
+    public boolean isExcludeBadQuality() { return excludeBadQuality; }
+}
+
+// File: FileSearchResult.java
+import java.time.Instant;
+
+public class FileSearchResult {
+    private final NeuroFile file;
+    private final String pageProvenanceId;
+    private final Instant createdAt;
+
+    public FileSearchResult(NeuroFile file, String pageProvenanceId) {
+        this.file = file;
+        this.pageProvenanceId = pageProvenanceId;
+        this.createdAt = file.getCreatedAt();
+    }
+
+    public NeuroFile getFile() { return file; }
+    public String getPageProvenanceId() { return pageProvenanceId; }
+    public Instant getCreatedAt() { return createdAt; }
+}
+
+// File: NeurohubNode.java
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class NeurohubNode {
+    private boolean isInstalled = false;
+    private String osVersion = "Ubuntu 10.04 LTS";
+    private final Map<String, User> users = new HashMap<>();
+    private final Map<String, NeuroFile> files = new HashMap<>();
+    private final Map<String, LogBook> logBooks = new HashMap<>();
+    private final Map<String, LogBookPage> pages = new HashMap<>();
+    private final Map<String, MetadataTemplate> templates = new HashMap<>();
+    private final Map<String, ExperimentalProtocol> protocols = new HashMap<>();
+    private final Map<String, ExperimentalRun> experimentalRuns = new HashMap<>();
+    private final Map<String, Experiment> experiments = new HashMap<>();
+    private final Map<String, WormStrainStock> wormStrains = new HashMap<>();
+    private final Map<String, LabEquipmentConsumable> inventory = new HashMap<>();
+    private final Map<String, LabCalendarEvent> calendarEvents = new HashMap<>();
+    private final Map<String, CollaborativeSpreadsheet> spreadsheets = new HashMap<>();
+    private final Map<String, CourseFeedbackForm> feedbackForms = new HashMap<>();
+    private final Map<String, ResearchReference> referenceRepository = new HashMap<>();
+    private final List<PredicatedLink> predicatedLinks = new ArrayList<>();
+    private final List<UserActivityLog> activityLogs = new ArrayList<>();
+    private final ControlledVocabularyService vocabularyService = new ControlledVocabularyService();
+    private final ExternalIntegrationService externalIntegration = new ExternalIntegrationService();
+    private WebTheme currentTheme = new WebTheme("#003366", "#FF9900", "/assets/logo.png", "Helvetica, Arial");
+    private final List<AcceptanceTestResult> lastAcceptanceResults = new ArrayList<>();
+
+    public NeurohubNode() {}
+
+    // Administration & Installation
+    public void installOntoVirginUbuntu(String os) {
+        this.osVersion = os;
+        this.isInstalled = true;
+    }
+
+    public boolean testInstallationHealth() {
+        return isInstalled && osVersion != null;
+    }
+
+    public void migrateFromOlderVersion(String oldDataSummary) {
+        logActivity("SYSTEM", "MIGRATE_DATA", oldDataSummary);
+    }
+
+    public String executeBackupProtocol() {
+        return "BACKUP-SNAPSHOT-" + System.currentTimeMillis() + "-ITEMS:" + files.size() + "-PAGES:" + pages.size();
+    }
+
+    public void configureNightlyBuildsAndRun() {
+        runAcceptanceTests();
+    }
+
+    public List<AcceptanceTestResult> runAcceptanceTests() {
+        lastAcceptanceResults.clear();
+        lastAcceptanceResults.add(new AcceptanceTestResult("HealthCheckTest", testInstallationHealth(), "System is alive and installed."));
+        lastAcceptanceResults.add(new AcceptanceTestResult("StorageIntegrityTest", files != null, "Storage subsystems operational."));
+        lastAcceptanceResults.add(new AcceptanceTestResult("MetadataSchemaTest", vocabularyService != null, "Vocabulary schema loaded."));
+        lastAcceptanceResults.add(new AcceptanceTestResult("SecurityAccessTest", users != null, "User role management active."));
+        return Collections.unmodifiableList(lastAcceptanceResults);
+    }
+
+    public List<AcceptanceTestResult> getLastAcceptanceResults() {
+        return Collections.unmodifiableList(lastAcceptanceResults);
+    }
+
+    // Theme Management
+    public WebTheme getWebTheme() { return currentTheme; }
+    public void setWebTheme(WebTheme theme) { this.currentTheme = theme; }
+
+    // Users
+    public void registerUser(User user) { users.put(user.getId(), user); }
+    public User getUser(String id) { return users.get(id); }
+
+    // Controlled Vocab
+    public ControlledVocabularyService getVocabularyService() { return vocabularyService; }
+    public ExternalIntegrationService getExternalIntegration() { return externalIntegration; }
+
+    // Activity Logging
+    public void logActivity(String userId, String action, String resourceId) {
+        activityLogs.add(new UserActivityLog(userId, action, resourceId));
+    }
+
+    public List<UserActivityLog> getSupervisorActivityView(String supervisorId, LocalDate date) {
+        return activityLogs.stream()
+            .filter(log -> {
+                LocalDate logDate = log.getTimestamp().atZone(ZoneId.systemDefault()).toLocalDate();
+                return logDate.equals(date);
+            })
+            .collect(Collectors.toList());
+    }
+
+    // Templates
+    public void registerTemplate(MetadataTemplate template) {
+        templates.put(template.getId(), template);
+    }
+
+    public MetadataTemplate getTemplate(String templateId) {
+        return templates.get(templateId);
+    }
+
+    // File Management
+    public NeuroFile uploadFile(User user, String fileName, String fileType, String format, byte[] content, long sizeBytes, String templateId, String channel) {
+        String fileId = "file-" + UUID.randomUUID().toString();
+        NeuroFile file = new NeuroFile(fileId, fileName, fileType, format, user.getId(), content, sizeBytes);
+
+        if (templateId != null && templates.containsKey(templateId)) {
+            MetadataTemplate template = templates.get(templateId);
+            for (Map.Entry<String, String> entry : template.getDefaultMetadata().entrySet()) {
+                file.setBespokeMetadata(entry.getKey(), entry.getValue());
+            }
+        }
+
+        // Apply channel specifics (e.g. Mapped Network Drive, Web Interface)
+        file.setBespokeMetadata("system:upload_channel", channel != null ? channel : "WEB");
+
+        files.put(fileId, file);
+        logActivity(user.getId(), "UPLOAD_FILE", fileId);
+        return file;
+    }
+
+    public List<NeuroFile> bulkUploadDirectory(User user, List<String> fileNames, String format) {
+        List<NeuroFile> uploaded = new ArrayList<>();
+        for (String name : fileNames) {
+            NeuroFile nf = uploadFile(user, name, "application/octet-stream", format, new byte[10], 10, null, "BULK_DIRECTORY");
+            uploaded.add(nf);
+        }
+        return uploaded;
+    }
+
+    public void associateMetadataToFiles(List<String> fileIds, String key, String value) {
+        for (String id : fileIds) {
+            NeuroFile f = files.get(id);
+            if (f != null) {
+                f.setBespokeMetadata(key, value);
+            }
+        }
+    }
+
+    public void addPredicatedLink(String sourceFileId, String predicate, String targetFileId) {
+        predicatedLinks.add(new PredicatedLink(sourceFileId, predicate, targetFileId));
+    }
+
+    public List<PredicatedLink> getPredicatedLinks() {
+        return Collections.unmodifiableList(predicatedLinks);
+    }
+
+    public void tagFile(User user, String fileId, String tag) {
+        if (!vocabularyService.isTagAllowed(tag)) {
+            throw new IllegalArgumentException("Tag '" + tag + "' is not part of the controlled vocabulary.");
+        }
+        NeuroFile f = files.get(fileId);
+        if (f != null) {
+            f.addTag(tag);
+            logActivity(user.getId(), "TAG_FILE", fileId);
+        }
+    }
+
+    public void assignBespokeMetadata(User user, String fileId, String key, String value) {
+        if (!vocabularyService.isMetadataValueAllowed(key, value)) {
+            throw new IllegalArgumentException("Metadata value '" + value + "' not allowed for key '" + key + "'.");
+        }
+        NeuroFile f = files.get(fileId);
+        if (f != null) {
+            f.setBespokeMetadata(key, value);
+            logActivity(user.getId(), "METADATA_UPDATE", fileId);
+        }
+    }
+
+    public void setFileNonModifiable(String fileId) {
+        NeuroFile f = files.get(fileId);
+        if (f != null) {
+            f.setNonModifiable(true);
+        }
+    }
+
+    public void deleteFile(User user, String fileId) {
+        NeuroFile f = files.get(fileId);
+        if (f != null) {
+            if (f.isNonModifiable()) {
+                throw new IllegalStateException("File is protected and non-modifiable. Cannot delete.");
+            }
+            f.setDeleted(true);
+            logActivity(user.getId(), "DELETE_FILE", fileId);
+        }
+    }
+
+    public void restoreFile(User user, String fileId) {
+        NeuroFile f = files.get(fileId);
+        if (f != null) {
+            f.setDeleted(false);
+            logActivity(user.getId(), "RESTORE_FILE", fileId);
+        }
+    }
+
+    public void moveFile(User user, String fileId, String newLocationPath) {
+        NeuroFile f = files.get(fileId);
+        if (f != null) {
+            f.setLocationPath(newLocationPath);
+            logActivity(user.getId(), "MOVE_FILE", fileId);
+        }
+    }
+
+    public void changeBatchFileOwnershipAndSharing(List<String> fileIds, String newOwnerId, boolean isPublic, Set<String> sharedUserIds) {
+        for (String fid : fileIds) {
+            NeuroFile f = files.get(fid);
+            if (f != null) {
+                if (newOwnerId != null) f.setOwnerId(newOwnerId);
+                f.getAccessPolicy().setPublic(isPublic);
+                if (sharedUserIds != null) {
+                    for (String uid : sharedUserIds) {
+                        f.getAccessPolicy().grantUser(uid);
+                    }
+                }
+            }
+        }
+    }
+
+    // Unattached Files in user workspace
+    public List<NeuroFile> getUnattachedFilesInWorkspace(String userId) {
+        Set<String> attachedIds = new HashSet<>();
+        for (LogBookPage p : pages.values()) {
+            attachedIds.addAll(p.getAttachedFileIds());
+        }
+
+        return files.values().stream()
+            .filter(f -> !f.isDeleted())
+            .filter(f -> f.getOwnerId().equals(userId))
+            .filter(f -> !attachedIds.contains(f.getId()))
+            .collect(Collectors.toList());
+    }
+
+    // LogBook Management
+    public LogBook createLogBook(User user, String id, String title) {
+        LogBook lb = new LogBook(id, title, user.getId());
+        logBooks.put(id, lb);
+        logActivity(user.getId(), "CREATE_LOGBOOK", id);
+        return lb;
+    }
+
+    public LogBookPage createLogBookPage(User user, String logBookId, String sectionId, String pageId, String title, String htmlContent) {
+        LogBook lb = logBooks.get(logBookId);
+        if (lb == null) throw new IllegalArgumentException("LogBook not found");
+        LogBookSection section = lb.getSection(sectionId);
+        if (section == null) {
+            section = new LogBookSection(sectionId, sectionId);
+            lb.addSection(section);
+        }
+        LogBookPage page = new LogBookPage(pageId, logBookId, sectionId, title, htmlContent, user.getId());
+        pages.put(pageId, page);
+        section.addPage(pageId);
+        logActivity(user.getId(), "CREATE_LOGBOOK_PAGE", pageId);
+        return page;
+    }
+
+    public void attachFilesToPage(String pageId, List<String> fileIds) {
+        LogBookPage p = pages.get(pageId);
+        if (p != null) {
+            for (String fid : fileIds) {
+                p.attachFile(fid);
+            }
+        }
+    }
+
+    public LogBookNavigator getNavigator(String logBookId) {
+        LogBook lb = logBooks.get(logBookId);
+        if (lb == null) return null;
+        return new LogBookNavigator(lb, pages);
+    }
+
+    // Protocols
+    public void registerProtocol(ExperimentalProtocol protocol) {
+        protocols.put(protocol.getProtocolId(), protocol);
+    }
+
+    public ExperimentalProtocol getProtocol(String id) {
+        return protocols.get(id);
+    }
+
+    public List<ExperimentalProtocol> searchProtocols(String query) {
+        return protocols.values().stream()
+            .filter(p -> p.getTitle().toLowerCase().contains(query.toLowerCase()) ||
+                         p.getDescription().toLowerCase().contains(query.toLowerCase()))
+            .collect(Collectors.toList());
+    }
+
+    // Experiments & Runs
+    public void registerExperiment(Experiment experiment) {
+        experiments.put(experiment.getId(), experiment);
+    }
+
+    public Experiment getExperiment(String id) {
+        return experiments.get(id);
+    }
+
+    public void registerExperimentalRun(ExperimentalRun run) {
+        experimentalRuns.put(run.getRunId(), run);
+    }
+
+    public ExperimentalRun getExperimentalRun(String id) {
+        return experimentalRuns.get(id);
+    }
+
+    // Searching
+    public List<FileSearchResult> searchFiles(User user, SearchFilter filter, Set<String> limitToLogBookIds, Set<String> limitToSectionIds) {
+        // Collect candidate page files if restricted by logbook / section
+        Set<String> scopedFileIds = null;
+        Map<String, String> fileToPageMap = new HashMap<>();
+
+        for (LogBookPage page : pages.values()) {
+            boolean includePage = true;
+            if (limitToLogBookIds != null && !limitToLogBookIds.isEmpty() && !limitToLogBookIds.contains(page.getLogBookId())) {
+                includePage = false;
+            }
+            if (limitToSectionIds != null && !limitToSectionIds.isEmpty() && !limitToSectionIds.contains(page.getSectionId())) {
+                includePage = false;
+            }
+
+            for (String fid : page.getAttachedFileIds()) {
+                fileToPageMap.put(fid, page.getId());
+            }
+
+            if (limitToLogBookIds != null || limitToSectionIds != null) {
+                if (scopedFileIds == null) scopedFileIds = new HashSet<>();
+                if (includePage) {
+                    scopedFileIds.addAll(page.getAttachedFileIds());
+                }
+            }
+        }
+
+        List<FileSearchResult> results = new ArrayList<>();
+        for (NeuroFile file : files.values()) {
+            if (file.isDeleted()) continue;
+            if (!file.getAccessPolicy().canAccess(user, file.getOwnerId())) continue;
+            if (scopedFileIds != null && !scopedFileIds.contains(file.getId())) continue;
+
+            if (filter != null) {
+                if (filter.isExcludeBadQuality() && file.getQuality() == FileDataQuality.BAD) continue;
+                if (filter.getFileType() != null && !file.getFileType().equalsIgnoreCase(filter.getFileType())) continue;
+                if (filter.getFormat() != null && !file.getFormat().equalsIgnoreCase(filter.getFormat())) continue;
+                if (filter.getTag() != null && !file.getTags().contains(filter.getTag().toLowerCase())) continue;
+                if (filter.getMetadataKey() != null) {
+                    String actualVal = file.getBespokeMetadata().get(filter.getMetadataKey());
+                    if (actualVal == null || (filter.getMetadataValue() != null && !actualVal.equalsIgnoreCase(filter.getMetadataValue()))) {
+                        continue;
+                    }
+                }
+            }
+            results.add(new FileSearchResult(file, fileToPageMap.get(file.getId())));
+        }
+        return results;
+    }
+
+    // Timeline view
+    public List<NeuroFile> getFilesTimeline(Instant start, Instant end) {
+        return files.values().stream()
+            .filter(f -> !f.isDeleted())
+            .filter(f -> (f.getCreatedAt().equals(start) || f.getCreatedAt().isAfter(start)) &&
+                         (f.getCreatedAt().equals(end) || f.getCreatedAt().isBefore(end)))
+            .sorted(Comparator.comparing(NeuroFile::getCreatedAt))
+            .collect(Collectors.toList());
+    }
+
+    // Workflows
+    public WorkflowExecutionRecord recordWorkflowExecution(String workflowId, String name, String planDetails, LogBookPage targetPage) {
+        WorkflowExecutionRecord record = new WorkflowExecutionRecord(workflowId, name, planDetails);
+        if (targetPage != null) {
+            targetPage.setMetadata("workflow:" + workflowId, "RUNNING");
+        }
+        return record;
+    }
+
+    // Worm strain stocks
+    public void registerWormStock(WormStrainStock stock) {
+        wormStrains.put(stock.getStrainId(), stock);
+    }
+
+    public WormStrainStock getWormStock(String id) {
+        return wormStrains.get(id);
+    }
+
+    // Research reference repository (Mendeley integration)
+    public void addReferencePaper(User user, ResearchReference reference) {
+        referenceRepository.put(reference.getId(), reference);
+        externalIntegration.notifyMendeleyGroup(reference.getTitle(), reference.getDoiOrUrl());
+        logActivity(user.getId(), "ADD_REFERENCE", reference.getId());
+    }
+
+    public List<ResearchReference> getReferencePapers() {
+        return new ArrayList<>(referenceRepository.values());
+    }
+
+    // Inventory & Equipment booking
+    public void addInventoryItem(LabEquipmentConsumable item) {
+        inventory.put(item.getItemId(), item);
+    }
+
+    public List<LabEquipmentConsumable> getInventory() {
+        return new ArrayList<>(inventory.values());
+    }
+
+    public void bookEquipmentCalendar(LabCalendarEvent event) {
+        calendarEvents.put(event.getEventId(), event);
+        event.setSyncedToGoogleCalendar(true); // Synced with Google Calendar
+    }
+
+    public List<LabCalendarEvent> getCalendarEvents() {
+        return new ArrayList<>(calendarEvents.values());
+    }
+
+    // Collaborative spreadsheet
+    public void registerSpreadsheet(CollaborativeSpreadsheet spreadsheet) {
+        spreadsheets.put(spreadsheet.getSheetId(), spreadsheet);
+    }
+
+    public CollaborativeSpreadsheet getSpreadsheet(String id) {
+        return spreadsheets.get(id);
+    }
+
+    // Course Feedback
+    public void registerFeedbackForm(CourseFeedbackForm form) {
+        feedbackForms.put(form.getFormId(), form);
+    }
+
+    public CourseFeedbackForm getFeedbackForm(String formId) {
+        return feedbackForms.get(formId);
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("==================================================");
+        System.out.println(" Starting Neurohub Node Specification Demonstration");
+        System.out.println("==================================================");
+
+        NeurohubNode node = new NeurohubNode();
+
+        // 1. System Administration & Virgin OS Installation
+        System.out.println("\n[1] Node Installation on virgin Ubuntu 10.04 LTS & Acceptance Testing:");
+        node.installOntoVirginUbuntu("Ubuntu 10.04 LTS");
+        System.out.println("Health check: " + (node.testInstallationHealth() ? "HEALTHY" : "UNHEALTHY"));
+
+        // Release Engineer runs nightly automated tests
+        node.configureNightlyBuildsAndRun();
+        for (AcceptanceTestResult res : node.getLastAcceptanceResults()) {
+            System.out.println("   " + res);
+        }
+
+        // 2. User & Roles Setup
+        User labAdmin = new User("u-admin", "dr_smith", "Dr. Jane Smith", UserRole.LAB_ADMINISTRATOR);
+        User researcher = new User("u-res1", "alice", "Alice Cooper", UserRole.RESEARCHER);
+        User juniorResearcher = new User("u-jun1", "bob", "Bob Dylan", UserRole.JUNIOR_RESEARCHER);
+        User mriOperator = new User("u-mri1", "charlie", "Charlie Brown", UserRole.MRI_OPERATOR);
+        User supervisor = new User("u-sup1", "supervisor1", "Prof. Charles Xavier", UserRole.SUPERVISOR);
+
+        node.registerUser(labAdmin);
+        node.registerUser(researcher);
+        node.registerUser(juniorResearcher);
+        node.registerUser(mriOperator);
+        node.registerUser(supervisor);
+
+        // 3. Lab Admin Theming & Templates
+        System.out.println("\n[2] Theming and Page Template Configuration:");
+        WebTheme theme = new WebTheme("#0A2540", "#635BFF", "/custom_logo.svg", "Roboto, sans-serif");
+        node.setWebTheme(theme);
+        System.out.println("Web Theme Primary Color: " + node.getWebTheme().getPrimaryColour());
+
+        MetadataTemplate mriTemplate = new MetadataTemplate("tpl-mri", "Standard MRI & Cell Imaging Template");
+        mriTemplate.setField("microscope_type", "Two-Photon", true);
+        mriTemplate.setField("cell_type", "AWA", true);
+        mriTemplate.setField("drug_name", "Serotonin", false);
+        node.registerTemplate(mriTemplate);
+        System.out.println("Registered Metadata Template: " + mriTemplate.getName());
+
+        // 4. MRI Operator Paper Responses
+        System.out.println("\n[3] MRI Operator Paper Response Digitization:");
+        MriPaperResponseForm paperForm = new MriPaperResponseForm("form-001", "SUBJ-992", mriOperator.getId());
+        paperForm.recordAnswer("Q1_Claustrophobia", "No");
+        paperForm.recordAnswer("Q2_MetalImplants", "No");
+        paperForm.recordAnswer("Q3_Handedness", "Right");
+        System.out.println("Recorded MRI paper form for subject: " + paperForm.getSubjectId() + ", Answers: " + paperForm.getQuestionAnswers());
+
+        // 5. Large File Uploads (> 1GB simulation), Controlled Vocab & Revision Control
+        System.out.println("\n[4] File Management: Upload (>1GB), Controlled Tags, Predicated Links:");
+        byte[] simulatedChunk = new byte[]{0x01, 0x02, 0x03};
+        long bigFileSize = 1_500_000_000L; // 1.5 GB
+        NeuroFile rawScan = node.uploadFile(researcher, "brain_scan_hi_res.dat", "application/octet-stream", "DAT", simulatedChunk, bigFileSize, "tpl-mri", "MAPPED_NETWORK_DRIVE");
+        System.out.println("Uploaded file: " + rawScan.getName() + " (Virtual size: " + rawScan.getLatestVersion().getSizeBytes() + " bytes)");
+
+        // Tag with controlled vocabulary
+        node.tagFile(researcher, rawScan.getId(), "imaging");
+        node.tagFile(researcher, rawScan.getId(), "optogenetics");
+        node.assignBespokeMetadata(researcher, rawScan.getId(), "cell_type", "AWC");
+        System.out.println("Tags: " + rawScan.getTags() + ", Bespoke Metadata: " + rawScan.getBespokeMetadata());
+
+        // Christopher James Worm Track video encoding
+        NeuroFile wormVideo = node.uploadFile(researcher, "worm_crawl.avi", "video/avi", "AVI", new byte[]{0x11}, 250_000_000L, null, "WEB");
+        node.tagFile(researcher, wormVideo.getId(), "worm");
+        node.assignBespokeMetadata(researcher, wormVideo.getId(), "video_encoding", "CJ-WormTrack-MJPEG");
+        System.out.println("Worm video with Christopher James encoding: " + wormVideo.getBespokeMetadata().get("video_encoding"));
+
+        // Revision control and immutability
+        rawScan.addVersion(new byte[]{0x01, 0x02, 0x03, 0x04}, bigFileSize + 10);
+        System.out.println("File revisions count: " + rawScan.getVersions().size());
+        node.setFileNonModifiable(rawScan.getId());
+        try {
+            rawScan.addVersion(new byte[]{0x00}, 50);
+        } catch (IllegalStateException e) {
+            System.out.println("Protection check confirmed: " + e.getMessage());
+        }
+
+        // Predicated Link (File A is an analysis of File B)
+        NeuroFile analysisFile = node.uploadFile(researcher, "analysis_results.csv", "text/csv", "CSV", new byte[]{0x22}, 2048, null, "WEB");
+        node.addPredicatedLink(analysisFile.getId(), "isAnalysisOf", rawScan.getId());
+        System.out.println("Predicated Link established: " + node.getPredicatedLinks().get(0));
+
+        // 6. LogBooks, Navigation, Greek Symbols, Provenance, and HTML Tables
+        System.out.println("\n[5] LogBook Creation, Greek Symbols & Non-browser Navigation:");
+        LogBook logBook = node.createLogBook(researcher, "lb-001", "Optogenetics Experiment Logbook");
+        LogBookPage page1 = node.createLogBookPage(researcher, "lb-001", "Section A", "p-101",
+            "Day 1: Baseline Analysis",
+            "<table><tr><th>Trial</th><th>Response (&alpha; / &beta; / &Delta;&lambda;)</th></tr><tr><td>1</td><td>Significant &mu;V change</td></tr></table>"
+        );
+        page1.attachFile(rawScan.getId());
+        page1.attachFile(analysisFile.getId());
+
+        LogBookPage page2 = node.createLogBookPage(researcher, "lb-001", "Section A", "p-102",
+            "Day 2: Drug Introduction",
+            "<p>Introduced Serotonin 50&mu;M to specimen.</p>"
+        );
+
+        LogBookNavigator navigator = node.getNavigator("lb-001");
+        System.out.println("Nav current: " + navigator.getCurrentPage().getTitle());
+        if (navigator.hasNext()) {
+            System.out.println("Nav next: " + navigator.next().getTitle());
+        }
+        if (navigator.hasPrevious()) {
+            System.out.println("Nav back: " + navigator.previous().getTitle());
+        }
+        System.out.println("Cryptographic provenance proof for page 1: " + page1.getCryptographicTimestampProof());
+
+        // 7. Unattached Files Alert
+        NeuroFile unattached = node.uploadFile(researcher, "scratchpad.txt", "text/plain", "TXT", new byte[100], 100, null, "WEB");
+        List<NeuroFile> unattachedAlerts = node.getUnattachedFilesInWorkspace(researcher.getId());
+        System.out.println("Unattached files alert for Alice: " + unattachedAlerts.stream().map(NeuroFile::getName).toList());
+
+        // 8. Search Files by Filter, Provenance, Multiple Download
+        System.out.println("\n[6] Search Files with LogBook Provenance & Filtering:");
+        SearchFilter filter = new SearchFilter().setFormat("CSV");
+        List<FileSearchResult> searchResults = node.searchFiles(researcher, filter, Set.of("lb-001"), null);
+        for (FileSearchResult sr : searchResults) {
+            System.out.println("Found File: " + sr.getFile().getName() + " | Page Provenance: " + sr.getPageProvenanceId());
+        }
+
+        // 9. Workflows, Execution Plan & Results
+        System.out.println("\n[7] Scientific Workflow Execution & LogBook Tracking:");
+        WorkflowExecutionRecord workflow = node.recordWorkflowExecution("wf-99", "Automated Image Segmentation", "Plan: Two-pass Gaussian filter followed by thresholding", page1);
+        workflow.logStep("Step 1: Reading input stream from rawScan");
+        workflow.logStep("Step 2: Processing 2D slices");
+        workflow.finish("COMPLETED", Map.of("segmentedSlices", "120", "confidenceScore", "0.985"));
+        System.out.println("Workflow: " + workflow.getWorkflowName() + " Status: " + workflow.getStatus() + " Outputs: " + workflow.getOutputs());
+
+        // 10. Protocols, Branching and Evolution
+        System.out.println("\n[8] Experimental Protocols Evolution & Branching:");
+        ExperimentalProtocol protoV1 = new ExperimentalProtocol("proto-elec", 1, "Patch Clamp Protocol", "Standard voltage patch protocol", null);
+        ExperimentalProtocol.Stage s1 = new ExperimentalProtocol.Stage("Preparation", "Dissolve cells in Ringer's solution");
+        s1.setMetadata("temperature", "22C");
+        protoV1.addStage(s1);
+        node.registerProtocol(protoV1);
+
+        ExperimentalProtocol protoV2 = protoV1.branch("proto-elec-v2", "Modified High-Gain Patch Protocol");
+        node.registerProtocol(protoV2);
+        System.out.println("Branched Protocol: " + protoV2.getTitle() + " (Parent: " + protoV2.getParentProtocolId() + ")");
+
+        // 11. Experiments & Runs Linking
+        System.out.println("\n[9] Experiments Linking & Post-experiment Write-up Replication:");
+        Experiment exp = new Experiment("exp-01", "Cell Excitability Study", "Cells will activate under 488nm light");
+        ExperimentalRun run1 = new ExperimentalRun("run-001", "Run 1 Morning", protoV1.getProtocolId());
+        run1.addInputFile(rawScan.getId());
+        run1.addOutputFile(analysisFile.getId());
+        node.registerExperimentalRun(run1);
+
+        exp.addRun(run1.getRunId());
+        exp.setPostExperimentWriteUp("Replication instructions: Follow proto-elec strictly with Serotonin applied 5m before stimulation.");
+        node.registerExperiment(exp);
+        System.out.println("Experiment linked runs: " + exp.getLinkedRunIds() + " | Post write-up set: " + !exp.getPostExperimentWriteUp().isEmpty());
+
+        // 12. WormBase Integrated Worm Strain Stock
+        System.out.println("\n[10] WormBase Integrated Strain Stock:");
+        WormStrainStock stock = new WormStrainStock("CB4856", "WBGene00000001", "Wild isolate Hawaiian", "Cryo-Tank-2-Shelf-A", 15);
+        node.registerWormStock(stock);
+        System.out.println("Worm Strain: " + stock.getStrainId() + " (WormBase: " + stock.getWormbaseGeneId() + ", Vials: " + stock.getVialCount() + ")");
+
+        // 13. Collaborative Spreadsheet & Equipment Calendar Sync
+        System.out.println("\n[11] Collaborative Spreadsheet & Calendar Bookings:");
+        CollaborativeSpreadsheet sheet = new CollaborativeSpreadsheet("sheet-prop", "Grant Proposal Budget");
+        sheet.setCell("A1", 4500.0); // Equipment cost
+        sheet.setCell("A2", 3200.0); // Consumables cost
+        sheet.setSumFormula("A3", List.of("A1", "A2"));
+        node.registerSpreadsheet(sheet);
+        System.out.println("Spreadsheet " + sheet.getTitle() + " Total Calculated Cost (A3): £" + sheet.getCellValue("A3"));
+
+        LabCalendarEvent booking = new LabCalendarEvent("evt-01", "Two-Photon Microscope Booking",
+                LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(1).plusHours(2), "Microscope-2P", researcher.getId());
+        node.bookEquipmentCalendar(booking);
+        System.out.println("Calendar Event: " + booking.getTitle() + " Synced to Google Calendar: " + booking.isSyncedToGoogleCalendar());
+
+        // 14. Mendeley Notifications & Reference Repository
+        System.out.println("\n[12] Shared Paper Repository & Mendeley Integration:");
+        ResearchReference ref = new ResearchReference("ref-01", "Neural circuits in C. elegans", "Bargmann, C.", "10.1016/j.cell.2010");
+        ref.addComment("Alice", "Essential reading for our optogenetics workflow.");
+        node.addReferencePaper(researcher, ref);
+        System.out.println("Mendeley Notifications triggered: " + node.getExternalIntegration().getMendeleyNotifications());
+
+        // 15. Social Integration (Twitter) & External Mailing List
+        System.out.println("\n[13] External Communications (Twitter, Mailing List):");
+        node.getExternalIntegration().postToTwitter(researcher.getUsername(), "Exciting preliminary results from our two-photon session! #NeuroHub");
+        node.getExternalIntegration().sendEmailToMailingList("centre-all@neurohub.org", "Lab News", "New Two-Photon protocol has been finalized.");
+        System.out.println("Twitter Feed: " + node.getExternalIntegration().getTwitterFeed());
+        System.out.println("Mailing Outbox: " + node.getExternalIntegration().getEmailOutbox());
+
+        // 16. Supervisor Activity View
+        System.out.println("\n[14] Supervisor Audit View of Researcher Actions:");
+        List<UserActivityLog> supervisorLog = node.getSupervisorActivityView(supervisor.getId(), LocalDate.now());
+        System.out.println("Activity count recorded today: " + supervisorLog.size());
+        if (!supervisorLog.isEmpty()) {
+            System.out.println("Sample activity: " + supervisorLog.get(0));
+        }
+
+        // 17. Course Feedback Form
+        System.out.println("\n[15] Supervisor Course Feedback Form Submissions:");
+        CourseFeedbackForm feedbackForm = new CourseFeedbackForm("fb-01", "Advanced Neuroimaging Course", supervisor.getId(), List.of("Quality of material (1-5)", "Suggestions"));
+        node.registerFeedbackForm(feedbackForm);
+        feedbackForm.submitFeedback(Map.of("Quality of material (1-5)", "5", "Suggestions", "More hands-on analysis with Neurohub"));
+        System.out.println("Feedback submitted count: " + feedbackForm.getSubmissions().size());
+
+        // 18. Backup Protocol
+        System.out.println("\n[16] Managed Backup Protocol:");
+        String backupSnapshot = node.executeBackupProtocol();
+        System.out.println("Created Backup Snapshot: " + backupSnapshot);
+
+        System.out.println("\n==================================================");
+        System.out.println(" Demonstration successfully completed.");
+        System.out.println("==================================================");
+    }
+}

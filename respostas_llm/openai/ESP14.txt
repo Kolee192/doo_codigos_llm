@@ -1,0 +1,1103 @@
+// File: RightsStatement.java
+import java.util.Objects;
+
+public class RightsStatement {
+    private final String name;
+    private final String identifier;
+    private final String url;
+    private final String description;
+
+    public RightsStatement(String name, String identifier, String url, String description) {
+        this.name = Objects.requireNonNull(name, "name");
+        this.identifier = identifier == null ? "" : identifier;
+        this.url = url == null ? "" : url;
+        this.description = description == null ? "" : description;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getIdentifier() {
+        return identifier;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return name + (url.isBlank() ? "" : " (" + url + ")");
+    }
+}
+
+// File: UserGroup.java
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+public class UserGroup {
+    private final String id;
+    private final String name;
+    private final Set<String> permissions = new HashSet<>();
+    private final Set<String> memberUserIds = new HashSet<>();
+
+    public UserGroup(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void grantPermission(String permission) {
+        permissions.add(permission);
+    }
+
+    public boolean hasPermission(String permission) {
+        return permissions.contains(permission);
+    }
+
+    public Set<String> getPermissions() {
+        return Collections.unmodifiableSet(permissions);
+    }
+
+    public void addMember(String userId) {
+        memberUserIds.add(userId);
+    }
+
+    public void removeMember(String userId) {
+        memberUserIds.remove(userId);
+    }
+
+    public Set<String> getMemberUserIds() {
+        return Collections.unmodifiableSet(memberUserIds);
+    }
+}
+
+// File: User.java
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+public class User {
+    private final String id;
+    private final String displayName;
+    private final String email;
+    private final Set<String> groupIds = new HashSet<>();
+    private final Set<String> roles = new HashSet<>();
+
+    public User(String id, String displayName, String email) {
+        this.id = id;
+        this.displayName = displayName;
+        this.email = email;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void addGroup(String groupId) {
+        groupIds.add(groupId);
+    }
+
+    public void removeGroup(String groupId) {
+        groupIds.remove(groupId);
+    }
+
+    public Set<String> getGroupIds() {
+        return Collections.unmodifiableSet(groupIds);
+    }
+
+    public void addRole(String role) {
+        roles.add(role);
+    }
+
+    public Set<String> getRoles() {
+        return Collections.unmodifiableSet(roles);
+    }
+}
+
+// File: DigitalAsset.java
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class DigitalAsset {
+    private final String id;
+    private String title;
+    private String collection;
+    private String materialType;
+    private String mimeType;
+    private byte[] content;
+    private final Map<String, String> metadata = new HashMap<>();
+    private final Set<String> tags = new HashSet<>();
+    private final Set<String> allowedUserIds = new HashSet<>();
+    private final Set<String> allowedIpAddresses = new HashSet<>();
+    private final Set<String> metadataVisibleToGroups = new HashSet<>();
+    private final List<Redaction> redactions = new ArrayList<>();
+
+    private RightsStatement rightsStatement;
+    private boolean restricted;
+    private boolean restrictedFromView;
+    private String restrictionDetails = "";
+    private LocalDate restrictionEndDate;
+    private boolean preservationMaster;
+    private boolean colorScan;
+    private boolean partiallyDigitized;
+    private String ocrText = "";
+    private Instant digitizedAt;
+    private String parentAssetId;
+    private String fingerprint;
+
+    public DigitalAsset(String id, String title, String collection, String materialType,
+                        String mimeType, byte[] content) {
+        this.id = id;
+        this.title = title == null ? "" : title;
+        this.collection = collection == null ? "" : collection;
+        this.materialType = materialType == null ? "other" : materialType;
+        this.mimeType = mimeType == null ? "application/octet-stream" : mimeType;
+        this.content = content == null ? new byte[0] : content.clone();
+        this.digitizedAt = Instant.now();
+        metadata.put("fileSize", Long.toString(this.content.length));
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title == null ? "" : title;
+    }
+
+    public String getCollection() {
+        return collection;
+    }
+
+    public void setCollection(String collection) {
+        this.collection = collection == null ? "" : collection;
+    }
+
+    public String getMaterialType() {
+        return materialType;
+    }
+
+    public void setMaterialType(String materialType) {
+        this.materialType = materialType;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public byte[] getContent() {
+        return content.clone();
+    }
+
+    public void replaceContent(byte[] content) {
+        this.content = content == null ? new byte[0] : content.clone();
+        metadata.put("fileSize", Long.toString(this.content.length));
+    }
+
+    public long getFileSize() {
+        return content.length;
+    }
+
+    public Map<String, String> getMetadata() {
+        return Collections.unmodifiableMap(metadata);
+    }
+
+    public void setMetadata(String key, String value) {
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("Metadata key must not be blank");
+        }
+        if (value == null) {
+            metadata.remove(key);
+        } else {
+            metadata.put(key, value);
+        }
+    }
+
+    public String getMetadataValue(String key) {
+        return metadata.get(key);
+    }
+
+    public Set<String> getTags() {
+        return Collections.unmodifiableSet(tags);
+    }
+
+    public void addTag(String tag) {
+        if (tag != null && !tag.isBlank()) {
+            tags.add(tag.trim());
+        }
+    }
+
+    public void removeTag(String tag) {
+        tags.remove(tag);
+    }
+
+    public RightsStatement getRightsStatement() {
+        return rightsStatement;
+    }
+
+    public void setRightsStatement(RightsStatement rightsStatement) {
+        this.rightsStatement = rightsStatement;
+    }
+
+    public boolean isRestricted() {
+        expireRestrictionIfNeeded();
+        return restricted;
+    }
+
+    public boolean isRestrictedFromView() {
+        expireRestrictionIfNeeded();
+        return restrictedFromView;
+    }
+
+    public void setRestricted(boolean restricted, boolean restrictedFromView, String details,
+                              LocalDate endDate) {
+        this.restricted = restricted;
+        this.restrictedFromView = restrictedFromView;
+        this.restrictionDetails = details == null ? "" : details;
+        this.restrictionEndDate = endDate;
+    }
+
+    public String getRestrictionDetails() {
+        return restrictionDetails;
+    }
+
+    public LocalDate getRestrictionEndDate() {
+        return restrictionEndDate;
+    }
+
+    public void allowUser(String userId) {
+        allowedUserIds.add(userId);
+    }
+
+    public void allowIpAddress(String ipAddress) {
+        allowedIpAddresses.add(ipAddress);
+    }
+
+    public boolean isUserExplicitlyAllowed(String userId) {
+        return userId != null && allowedUserIds.contains(userId);
+    }
+
+    public boolean isIpExplicitlyAllowed(String ipAddress) {
+        return ipAddress != null && allowedIpAddresses.contains(ipAddress);
+    }
+
+    public boolean hasExplicitUserOrIpAllowList() {
+        return !allowedUserIds.isEmpty() || !allowedIpAddresses.isEmpty();
+    }
+
+    public void restrictMetadataToGroups(Set<String> groupIds) {
+        metadataVisibleToGroups.clear();
+        if (groupIds != null) {
+            metadataVisibleToGroups.addAll(groupIds);
+        }
+    }
+
+    public boolean hasMetadataGroupRestriction() {
+        return !metadataVisibleToGroups.isEmpty();
+    }
+
+    public boolean canViewMetadata(User user) {
+        if (metadataVisibleToGroups.isEmpty()) {
+            return true;
+        }
+        if (user == null) {
+            return false;
+        }
+        return metadataVisibleToGroups.stream().anyMatch(user.getGroupIds()::contains);
+    }
+
+    public void setPreservationMaster(boolean preservationMaster) {
+        this.preservationMaster = preservationMaster;
+    }
+
+    public boolean isPreservationMaster() {
+        return preservationMaster;
+    }
+
+    public void setColorScan(boolean colorScan) {
+        this.colorScan = colorScan;
+    }
+
+    public boolean isColorScan() {
+        return colorScan;
+    }
+
+    public void setPartiallyDigitized(boolean partiallyDigitized) {
+        this.partiallyDigitized = partiallyDigitized;
+    }
+
+    public boolean isPartiallyDigitized() {
+        return partiallyDigitized;
+    }
+
+    public void setOcrText(String ocrText) {
+        this.ocrText = ocrText == null ? "" : ocrText;
+    }
+
+    public String getOcrText() {
+        return ocrText;
+    }
+
+    public Instant getDigitizedAt() {
+        return digitizedAt;
+    }
+
+    public void setDigitizedAt(Instant digitizedAt) {
+        this.digitizedAt = digitizedAt;
+    }
+
+    public String getParentAssetId() {
+        return parentAssetId;
+    }
+
+    public void setParentAssetId(String parentAssetId) {
+        this.parentAssetId = parentAssetId;
+    }
+
+    public String getFingerprint() {
+        return fingerprint;
+    }
+
+    public void setFingerprint(String fingerprint) {
+        this.fingerprint = fingerprint;
+    }
+
+    public void addRedaction(String textToRedact, LocalDate visibleAfter) {
+        if (textToRedact != null && !textToRedact.isEmpty()) {
+            redactions.add(new Redaction(textToRedact, visibleAfter));
+        }
+    }
+
+    public String getRedactedText(LocalDate onDate) {
+        String result = new String(content, java.nio.charset.StandardCharsets.UTF_8);
+        for (Redaction redaction : redactions) {
+            if (redaction.visibleAfter == null || onDate == null || onDate.isBefore(redaction.visibleAfter)) {
+                result = result.replace(redaction.text, "[REDACTED]");
+            }
+        }
+        return result;
+    }
+
+    private void expireRestrictionIfNeeded() {
+        if (restricted && restrictionEndDate != null && !LocalDate.now().isBefore(restrictionEndDate)) {
+            restricted = false;
+            restrictedFromView = false;
+            restrictionDetails = "";
+            restrictionEndDate = null;
+            allowedUserIds.clear();
+            allowedIpAddresses.clear();
+        }
+    }
+
+    private static final class Redaction {
+        private final String text;
+        private final LocalDate visibleAfter;
+
+        private Redaction(String text, LocalDate visibleAfter) {
+            this.text = text;
+            this.visibleAfter = visibleAfter;
+        }
+    }
+}
+
+// File: Citation.java
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class Citation {
+    private final String assetId;
+    private final Map<String, String> fields = new LinkedHashMap<>();
+
+    public Citation(DigitalAsset asset) {
+        assetId = asset.getId();
+        fields.put("title", asset.getTitle());
+        fields.put("collection", asset.getCollection());
+        fields.put("identifier", asset.getId());
+        fields.put("repository", "RAC");
+        fields.put("date", asset.getMetadataValue("date") == null ? "" : asset.getMetadataValue("date"));
+    }
+
+    public String getAssetId() {
+        return assetId;
+    }
+
+    public Map<String, String> getFields() {
+        return Map.copyOf(fields);
+    }
+
+    public String toChicagoStyle() {
+        return "\"" + fields.get("title") + "\", " + fields.get("collection")
+                + ", RAC, digital object " + assetId + ".";
+    }
+
+    public String toBibTeX() {
+        return "@misc{" + assetId + ",\n"
+                + "  title = {" + fields.get("title") + "},\n"
+                + "  howpublished = {" + fields.get("collection") + ", RAC},\n"
+                + "  note = {Digital object " + assetId + "}\n}";
+    }
+}
+
+// File: LicenseRequest.java
+import java.time.Instant;
+
+public class LicenseRequest {
+    public enum Status {
+        SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED, COMPLETED
+    }
+
+    private final String id;
+    private final String assetId;
+    private final String requesterId;
+    private final String intendedUse;
+    private final Instant submittedAt;
+    private Status status;
+
+    public LicenseRequest(String id, String assetId, String requesterId, String intendedUse) {
+        this.id = id;
+        this.assetId = assetId;
+        this.requesterId = requesterId;
+        this.intendedUse = intendedUse == null ? "" : intendedUse;
+        this.submittedAt = Instant.now();
+        this.status = Status.SUBMITTED;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getAssetId() {
+        return assetId;
+    }
+
+    public String getRequesterId() {
+        return requesterId;
+    }
+
+    public String getIntendedUse() {
+        return intendedUse;
+    }
+
+    public Instant getSubmittedAt() {
+        return submittedAt;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+}
+
+// File: UsageEvent.java
+import java.time.Instant;
+
+public class UsageEvent {
+    private final String assetId;
+    private final String userId;
+    private final String action;
+    private final Instant occurredAt;
+
+    public UsageEvent(String assetId, String userId, String action) {
+        this.assetId = assetId;
+        this.userId = userId;
+        this.action = action;
+        this.occurredAt = Instant.now();
+    }
+
+    public String getAssetId() {
+        return assetId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public Instant getOccurredAt() {
+        return occurredAt;
+    }
+}
+
+// File: Repository.java
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import javax.imageio.ImageIO;
+
+public class Repository {
+    private final Map<String, DigitalAsset> assets = new LinkedHashMap<>();
+    private final Map<String, User> users = new HashMap<>();
+    private final Map<String, UserGroup> groups = new HashMap<>();
+    private final Map<String, Set<String>> rolePermissions = new HashMap<>();
+    private final Map<String, LicenseRequest> licenseRequests = new LinkedHashMap<>();
+    private final List<UsageEvent> usageEvents = new ArrayList<>();
+    private final Map<String, RightsStatement> rightsStatements = new LinkedHashMap<>();
+    private final Map<String, String> fieldVisibilityGroups = new HashMap<>();
+
+    public Repository() {
+        addRightsStatement(new RightsStatement(
+                "Copyright undetermined", "copyright-undetermined", "", "Copyright status has not been determined."));
+        addRightsStatement(new RightsStatement(
+                "Public domain", "public-domain", "https://creativecommons.org/publicdomain/mark/1.0/",
+                "No known copyright restrictions."));
+        addRightsStatement(new RightsStatement(
+                "All rights reserved", "all-rights-reserved", "", "Permission may be required for reuse."));
+    }
+
+    public synchronized DigitalAsset upload(String title, String collection, String materialType,
+                                            String mimeType, byte[] content) {
+        String id = UUID.randomUUID().toString();
+        DigitalAsset asset = new DigitalAsset(id, title, collection, materialType, mimeType, content);
+        asset.setFingerprint(sha256(asset.getContent()));
+        asset.setMetadata("uploadedAt", Instant.now().toString());
+        asset.setMetadata("fileSize", Long.toString(asset.getFileSize()));
+        assets.put(id, asset);
+        return asset;
+    }
+
+    public synchronized List<DigitalAsset> uploadBatch(Collection<UploadItem> items) {
+        List<DigitalAsset> uploaded = new ArrayList<>();
+        if (items == null) {
+            return uploaded;
+        }
+        for (UploadItem item : items) {
+            uploaded.add(upload(item.title(), item.collection(), item.materialType(),
+                    item.mimeType(), item.content()));
+        }
+        return uploaded;
+    }
+
+    public synchronized DigitalAsset getAsset(String id) {
+        return assets.get(id);
+    }
+
+    public synchronized List<DigitalAsset> getAllAssets() {
+        return List.copyOf(assets.values());
+    }
+
+    public synchronized void batchEditMetadata(Collection<String> assetIds, Map<String, String> updates) {
+        for (String id : assetIds) {
+            DigitalAsset asset = assets.get(id);
+            if (asset != null) {
+                updates.forEach(asset::setMetadata);
+            }
+        }
+    }
+
+    public synchronized void restrictAsset(String assetId, boolean fromView, String details,
+                                           java.time.LocalDate endDate) {
+        requireAsset(assetId).setRestricted(true, fromView, details, endDate);
+    }
+
+    public synchronized void restrictCollection(String collection, boolean fromView, String details,
+                                                java.time.LocalDate endDate) {
+        for (DigitalAsset asset : assets.values()) {
+            if (asset.getCollection().equalsIgnoreCase(collection)) {
+                asset.setRestricted(true, fromView, details, endDate);
+            }
+        }
+    }
+
+    public synchronized void setRights(String assetId, RightsStatement statement) {
+        requireAsset(assetId).setRightsStatement(statement);
+    }
+
+    public synchronized void addRightsStatement(RightsStatement statement) {
+        rightsStatements.put(statement.getIdentifier(), statement);
+    }
+
+    public synchronized List<RightsStatement> getRightsStatements() {
+        return List.copyOf(rightsStatements.values());
+    }
+
+    public synchronized void createGroup(String id, String name) {
+        groups.put(id, new UserGroup(id, name));
+    }
+
+    public synchronized void createRole(String roleName, Set<String> permissions) {
+        rolePermissions.put(roleName, Set.copyOf(permissions));
+    }
+
+    public synchronized void addUser(User user) {
+        users.put(user.getId(), user);
+    }
+
+    public synchronized void addUserToGroup(String userId, String groupId) {
+        User user = Objects.requireNonNull(users.get(userId), "Unknown user");
+        UserGroup group = Objects.requireNonNull(groups.get(groupId), "Unknown group");
+        user.addGroup(groupId);
+        group.addMember(userId);
+    }
+
+    public synchronized void assignRole(String userId, String roleName) {
+        User user = Objects.requireNonNull(users.get(userId), "Unknown user");
+        user.addRole(roleName);
+    }
+
+    public synchronized void grantGroupPermission(String groupId, String permission) {
+        Objects.requireNonNull(groups.get(groupId), "Unknown group").grantPermission(permission);
+    }
+
+    public synchronized boolean userHasPermission(String userId, String permission) {
+        User user = users.get(userId);
+        if (user == null) {
+            return false;
+        }
+        for (String groupId : user.getGroupIds()) {
+            UserGroup group = groups.get(groupId);
+            if (group != null && group.hasPermission(permission)) {
+                return true;
+            }
+        }
+        for (String role : user.getRoles()) {
+            if (rolePermissions.getOrDefault(role, Set.of()).contains(permission)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public synchronized void restrictMetadataFieldToGroup(String field, String groupId) {
+        fieldVisibilityGroups.put(field, groupId);
+    }
+
+    public synchronized Map<String, String> visibleMetadata(String assetId, User user) {
+        DigitalAsset asset = requireAsset(assetId);
+        Map<String, String> result = new LinkedHashMap<>();
+        if (!asset.canViewMetadata(user)) {
+            return result;
+        }
+        for (Map.Entry<String, String> entry : asset.getMetadata().entrySet()) {
+            String requiredGroup = fieldVisibilityGroups.get(entry.getKey());
+            if (requiredGroup == null || (user != null && user.getGroupIds().contains(requiredGroup))) {
+                result.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return result;
+    }
+
+    public synchronized boolean canAccess(String assetId, User user, String ipAddress) {
+        DigitalAsset asset = assets.get(assetId);
+        if (asset == null) {
+            return false;
+        }
+        if (!asset.canViewMetadata(user)) {
+            return false;
+        }
+
+        boolean userAllowed = asset.isUserExplicitlyAllowed(user == null ? null : user.getId());
+        boolean ipAllowed = asset.isIpExplicitlyAllowed(ipAddress);
+        if (asset.hasExplicitUserOrIpAllowList() && !userAllowed && !ipAllowed) {
+            return false;
+        }
+        if (asset.isRestricted() || asset.isRestrictedFromView()) {
+            return userAllowed || ipAllowed
+                    || (user != null && userHasPermission(user.getId(), "view-restricted"));
+        }
+        return true;
+    }
+
+    public synchronized byte[] download(String assetId, User user, String ipAddress) {
+        if (!canAccess(assetId, user, ipAddress)) {
+            throw new SecurityException("Access denied");
+        }
+        DigitalAsset asset = requireAsset(assetId);
+        usageEvents.add(new UsageEvent(assetId, user == null ? null : user.getId(), "download"));
+        return asset.getContent();
+    }
+
+    public synchronized void recordUse(String assetId, User user, String action) {
+        requireAsset(assetId);
+        usageEvents.add(new UsageEvent(assetId, user == null ? null : user.getId(), action));
+    }
+
+    public synchronized List<UsageEvent> getUsageForAsset(String assetId) {
+        return usageEvents.stream().filter(event -> event.getAssetId().equals(assetId)).toList();
+    }
+
+    public synchronized List<UsageEvent> getDownloadsForUser(String userId) {
+        return usageEvents.stream()
+                .filter(event -> Objects.equals(event.getUserId(), userId))
+                .filter(event -> event.getAction().equals("download"))
+                .toList();
+    }
+
+    public synchronized List<DigitalAsset> searchKeyword(String keyword, User user) {
+        String query = keyword == null ? "" : keyword.toLowerCase();
+        return assets.values().stream()
+                .filter(asset -> canAccess(asset.getId(), user, null))
+                .filter(asset -> searchableText(asset).contains(query))
+                .toList();
+    }
+
+    public synchronized List<DigitalAsset> searchOcr(String keyword, User user) {
+        String query = keyword == null ? "" : keyword.toLowerCase();
+        return assets.values().stream()
+                .filter(asset -> canAccess(asset.getId(), user, null))
+                .filter(asset -> asset.getOcrText().toLowerCase().contains(query))
+                .toList();
+    }
+
+    public synchronized List<DigitalAsset> searchByTag(String tag, User user) {
+        return assets.values().stream()
+                .filter(asset -> canAccess(asset.getId(), user, null))
+                .filter(asset -> asset.getTags().stream().anyMatch(t -> t.equalsIgnoreCase(tag)))
+                .toList();
+    }
+
+    public synchronized List<DigitalAsset> searchByMetadata(String field, String value, User user) {
+        String query = value == null ? "" : value.toLowerCase();
+        return assets.values().stream()
+                .filter(asset -> canAccess(asset.getId(), user, null))
+                .filter(asset -> asset.getMetadataValue(field) != null)
+                .filter(asset -> asset.getMetadataValue(field).toLowerCase().contains(query))
+                .toList();
+    }
+
+    public synchronized List<DigitalAsset> searchByRights(String statementIdentifier, User user) {
+        return assets.values().stream()
+                .filter(asset -> canAccess(asset.getId(), user, null))
+                .filter(asset -> asset.getRightsStatement() != null)
+                .filter(asset -> asset.getRightsStatement().getIdentifier().equals(statementIdentifier))
+                .toList();
+    }
+
+    public synchronized List<DigitalAsset> browseCollection(String collection, User user) {
+        return assets.values().stream()
+                .filter(asset -> asset.getCollection().equalsIgnoreCase(collection))
+                .filter(asset -> canAccess(asset.getId(), user, null))
+                .sorted(Comparator.comparing(DigitalAsset::getTitle))
+                .toList();
+    }
+
+    public synchronized List<DigitalAsset> findNonPublicAssets() {
+        return assets.values().stream()
+                .filter(asset -> asset.isRestricted() || asset.isRestrictedFromView())
+                .toList();
+    }
+
+    public synchronized DigitalAsset createAccessCopy(String assetId) {
+        DigitalAsset source = requireAsset(assetId);
+        DigitalAsset copy = upload(source.getTitle() + " (access copy)", source.getCollection(),
+                source.getMaterialType(), source.getMimeType(), source.getContent());
+        copy.setParentAssetId(source.getId());
+        copy.setPreservationMaster(false);
+        copy.setRightsStatement(source.getRightsStatement());
+        copy.setMetadata("derivativeType", "access");
+        return copy;
+    }
+
+    public synchronized DigitalAsset createDerivative(String assetId, String derivativeType) {
+        DigitalAsset source = requireAsset(assetId);
+        DigitalAsset derivative = upload(source.getTitle() + " (" + derivativeType + ")",
+                source.getCollection(), source.getMaterialType(), source.getMimeType(), source.getContent());
+        derivative.setParentAssetId(source.getId());
+        derivative.setPreservationMaster(false);
+        derivative.setRightsStatement(source.getRightsStatement());
+        derivative.setMetadata("derivativeType", derivativeType);
+        return derivative;
+    }
+
+    public synchronized DigitalAsset rotateImage(String assetId, double degrees) throws IOException {
+        DigitalAsset asset = requireAsset(assetId);
+        BufferedImage source = readImage(asset);
+        if (source == null) {
+            throw new IOException("Asset is not a supported image");
+        }
+        double radians = Math.toRadians(degrees);
+        double sin = Math.abs(Math.sin(radians));
+        double cos = Math.abs(Math.cos(radians));
+        int width = (int) Math.floor(source.getWidth() * cos + source.getHeight() * sin);
+        int height = (int) Math.floor(source.getHeight() * cos + source.getWidth() * sin);
+        BufferedImage rotated = new BufferedImage(width, height,
+                source.getColorModel().hasAlpha() ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = rotated.createGraphics();
+        graphics.translate((width - source.getWidth()) / 2.0, (height - source.getHeight()) / 2.0);
+        graphics.rotate(radians, source.getWidth() / 2.0, source.getHeight() / 2.0);
+        graphics.drawRenderedImage(source, null);
+        graphics.dispose();
+        writeImage(asset, rotated);
+        return asset;
+    }
+
+    public synchronized DigitalAsset adjustContrast(String assetId, float scale, float offset) throws IOException {
+        DigitalAsset asset = requireAsset(assetId);
+        BufferedImage source = readImage(asset);
+        if (source == null) {
+            throw new IOException("Asset is not a supported image");
+        }
+        BufferedImage adjusted = new BufferedImage(source.getWidth(), source.getHeight(),
+                source.getColorModel().hasAlpha() ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < source.getHeight(); y++) {
+            for (int x = 0; x < source.getWidth(); x++) {
+                int argb = source.getRGB(x, y);
+                int alpha = (argb >>> 24) & 0xff;
+                int red = adjustChannel((argb >>> 16) & 0xff, scale, offset);
+                int green = adjustChannel((argb >>> 8) & 0xff, scale, offset);
+                int blue = adjustChannel(argb & 0xff, scale, offset);
+                adjusted.setRGB(x, y, (alpha << 24) | (red << 16) | (green << 8) | blue);
+            }
+        }
+        writeImage(asset, adjusted);
+        return asset;
+    }
+
+    public synchronized List<DigitalAsset> findByUploadedImage(byte[] image, User user) {
+        String fingerprint = sha256(image == null ? new byte[0] : image);
+        return assets.values().stream()
+                .filter(asset -> canAccess(asset.getId(), user, null))
+                .filter(asset -> fingerprint.equals(asset.getFingerprint()))
+                .toList();
+    }
+
+    public synchronized Citation citation(String assetId) {
+        return new Citation(requireAsset(assetId));
+    }
+
+    public synchronized LicenseRequest submitLicenseRequest(String assetId, String requesterId,
+                                                             String intendedUse) {
+        requireAsset(assetId);
+        LicenseRequest request = new LicenseRequest(UUID.randomUUID().toString(), assetId,
+                requesterId, intendedUse);
+        licenseRequests.put(request.getId(), request);
+        return request;
+    }
+
+    public synchronized List<LicenseRequest> getLicenseRequests() {
+        return List.copyOf(licenseRequests.values());
+    }
+
+    public synchronized String shareLink(String assetId) {
+        requireAsset(assetId);
+        return "https://rac.example.org/digital/" + assetId;
+    }
+
+    public synchronized String exportDescriptiveDataCsv(User user) {
+        StringBuilder csv = new StringBuilder("id,title,collection,materialType,rights\n");
+        for (DigitalAsset asset : assets.values()) {
+            if (canAccess(asset.getId(), user, null)) {
+                csv.append(csv(asset.getId())).append(',')
+                        .append(csv(asset.getTitle())).append(',')
+                        .append(csv(asset.getCollection())).append(',')
+                        .append(csv(asset.getMaterialType())).append(',')
+                        .append(csv(asset.getRightsStatement() == null
+                                ? "" : asset.getRightsStatement().getIdentifier()))
+                        .append('\n');
+            }
+        }
+        return csv.toString();
+    }
+
+    public synchronized boolean isAlreadyDigitized(String fingerprint) {
+        return assets.values().stream().anyMatch(asset -> Objects.equals(asset.getFingerprint(), fingerprint));
+    }
+
+    public synchronized void tagAsset(String assetId, String tag) {
+        requireAsset(assetId).addTag(tag);
+    }
+
+    public synchronized void setOcrText(String assetId, String text) {
+        requireAsset(assetId).setOcrText(text);
+    }
+
+    public synchronized void addRedaction(String assetId, String text, java.time.LocalDate visibleAfter) {
+        requireAsset(assetId).addRedaction(text, visibleAfter);
+    }
+
+    public synchronized String getRedactedText(String assetId, java.time.LocalDate date) {
+        return requireAsset(assetId).getRedactedText(date);
+    }
+
+    public synchronized void setAssetMetadata(String assetId, String key, String value) {
+        requireAsset(assetId).setMetadata(key, value);
+    }
+
+    public synchronized void setGroupRestriction(String assetId, Set<String> allowedGroupIds) {
+        DigitalAsset asset = requireAsset(assetId);
+        asset.restrictMetadataToGroups(allowedGroupIds);
+    }
+
+    public synchronized void markScanned(String assetId, boolean preservationMaster, boolean color) {
+        DigitalAsset asset = requireAsset(assetId);
+        asset.setPreservationMaster(preservationMaster);
+        asset.setColorScan(color);
+        asset.setDigitizedAt(Instant.now());
+    }
+
+    public synchronized void addAccrual(String collection, String title, String materialType,
+                                        String mimeType, byte[] content) {
+        upload(title, collection, materialType, mimeType, content);
+    }
+
+    private DigitalAsset requireAsset(String id) {
+        DigitalAsset asset = assets.get(id);
+        if (asset == null) {
+            throw new IllegalArgumentException("Unknown asset: " + id);
+        }
+        return asset;
+    }
+
+    private String searchableText(DigitalAsset asset) {
+        StringBuilder text = new StringBuilder(asset.getTitle()).append(' ')
+                .append(asset.getCollection()).append(' ')
+                .append(asset.getMaterialType()).append(' ')
+                .append(asset.getOcrText());
+        asset.getMetadata().forEach((key, value) -> text.append(' ').append(key).append(' ').append(value));
+        asset.getTags().forEach(tag -> text.append(' ').append(tag));
+        return text.toString().toLowerCase();
+    }
+
+    private BufferedImage readImage(DigitalAsset asset) throws IOException {
+        return ImageIO.read(new ByteArrayInputStream(asset.getContent()));
+    }
+
+    private void writeImage(DigitalAsset asset, BufferedImage image) throws IOException {
+        String format = asset.getMimeType().toLowerCase().contains("png") ? "png" : "jpg";
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        if (!ImageIO.write(image, format, output)) {
+            throw new IOException("No image writer for " + format);
+        }
+        asset.replaceContent(output.toByteArray());
+        asset.setMetadata("fileSize", Long.toString(asset.getFileSize()));
+        asset.setMetadata("modifiedAt", Instant.now().toString());
+        asset.setFingerprint(sha256(asset.getContent()));
+    }
+
+    private static int adjustChannel(int value, float scale, float offset) {
+        return Math.max(0, Math.min(255, Math.round(value * scale + offset)));
+    }
+
+    private static String sha256(byte[] data) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(data));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static String csv(String value) {
+        String safe = value == null ? "" : value.replace("\"", "\"\"");
+        return "\"" + safe + "\"";
+    }
+
+    public record UploadItem(String title, String collection, String materialType,
+                             String mimeType, byte[] content) {
+        public UploadItem {
+            content = content == null ? new byte[0] : content.clone();
+        }
+
+        @Override
+        public byte[] content() {
+            return content.clone();
+        }
+    }
+}
+
+// File: Main.java
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.Set;
+
+public class Main {
+    public static void main(String[] args) {
+        Repository repository = new Repository();
+
+        User researcher = new User("user-1", "Alex Researcher", "alex@example.org");
+        repository.addUser(researcher);
+
+        DigitalAsset photo = repository.upload(
+                "Community archive photograph",
+                "Community Collection",
+                "image",
+                "image/jpeg",
+                "A scanned archival photograph".getBytes(StandardCharsets.UTF_8));
+
+        photo.addTag("community");
+        photo.addTag("photograph");
+        photo.setMetadata("photographer", "Unknown");
+        photo.setMetadata("date", "1948");
+        photo.setOcrText("Community gathering, 1948");
+
+        RightsStatement publicDomain = repository.getRightsStatements().stream()
+                .filter(statement -> statement.getIdentifier().equals("public-domain"))
+                .findFirst()
+                .orElseThrow();
+        repository.setRights(photo.getId(), publicDomain);
+        photo.setPreservationMaster(true);
+        photo.setColorScan(true);
+
+        System.out.println("Search results: " + repository.searchKeyword("community", researcher).size());
+        System.out.println("Citation: " + repository.citation(photo.getId()).toChicagoStyle());
+        System.out.println("Share link: " + repository.shareLink(photo.getId()));
+
+        LicenseRequest request = repository.submitLicenseRequest(
+                photo.getId(), researcher.getId(), "Publication in a research report");
+        System.out.println("License request status: " + request.getStatus());
+
+        repository.restrictAsset(photo.getId(), true, "Temporary donor restriction",
+                LocalDate.now().plusDays(30));
+        System.out.println("Metadata export:\n" + repository.exportDescriptiveDataCsv(researcher));
+
+        repository.batchEditMetadata(
+                Set.of(photo.getId()),
+                Map.of("processingStatus", "reviewed"));
+    }
+}

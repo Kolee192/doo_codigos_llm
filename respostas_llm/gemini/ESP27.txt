@@ -1,0 +1,1199 @@
+// File: UserAccountType.java
+public enum UserAccountType {
+    STANDARD,
+    SYSTEM_ADMINISTRATOR
+}
+// File: AccountRole.java
+public enum AccountRole {
+    CONTRIBUTOR,
+    APPROVER,
+    PUBLISHER
+}
+// File: ContentType.java
+public enum ContentType {
+    TEXT,
+    IMAGE,
+    AUDIO,
+    VIDEO
+}
+// File: ActionType.java
+public enum ActionType {
+    CREATE,
+    IMPORT,
+    EDIT,
+    DELETE,
+    PUBLISH
+}
+// File: ActionStatus.java
+public enum ActionStatus {
+    DRAFT,
+    SUBMITTED_FOR_APPROVAL,
+    APPROVED,
+    REJECTED,
+    SCHEDULED,
+    EXECUTED
+}
+// File: Product.java
+import java.util.Objects;
+
+public class Product {
+    private final String id;
+    private final String name;
+
+    public Product(String id, String name) {
+        if (id == null || id.isBlank()) throw new IllegalArgumentException("Product ID cannot be empty");
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Product name cannot be empty");
+        this.id = id;
+        this.name = name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Product product = (Product) o;
+        return Objects.equals(id, product.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "Product{" + "id='" + id + '\'' + ", name='" + name + '\'' + '}';
+    }
+}
+// File: Content.java
+import java.util.Objects;
+
+public abstract class Content {
+    private final String id;
+    private String title;
+    private final ContentType type;
+
+    public Content(String id, String title, ContentType type) {
+        if (id == null || id.isBlank()) throw new IllegalArgumentException("Content ID cannot be empty");
+        if (title == null || title.isBlank()) throw new IllegalArgumentException("Content title cannot be empty");
+        if (type == null) throw new IllegalArgumentException("Content type cannot be null");
+        this.id = id;
+        this.title = title;
+        this.type = type;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        if (title == null || title.isBlank()) throw new IllegalArgumentException("Content title cannot be empty");
+        this.title = title;
+    }
+
+    public ContentType getType() {
+        return type;
+    }
+
+    public abstract String getPayloadSummary();
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Content content = (Content) o;
+        return Objects.equals(id, content.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "Content[" + type + "]{id='" + id + "', title='" + title + "', payload=" + getPayloadSummary() + "}";
+    }
+}
+// File: TextContent.java
+public class TextContent extends Content {
+    private String body;
+
+    public TextContent(String id, String title, String body) {
+        super(id, title, ContentType.TEXT);
+        this.body = body != null ? body : "";
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public void setBody(String body) {
+        this.body = body != null ? body : "";
+    }
+
+    @Override
+    public String getPayloadSummary() {
+        return "\"" + (body.length() > 30 ? body.substring(0, 27) + "..." : body) + "\"";
+    }
+}
+// File: ImageContent.java
+public class ImageContent extends Content {
+    private String imageUrl;
+    private String resolution;
+
+    public ImageContent(String id, String title, String imageUrl, String resolution) {
+        super(id, title, ContentType.IMAGE);
+        this.imageUrl = imageUrl != null ? imageUrl : "";
+        this.resolution = resolution != null ? resolution : "unknown";
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl != null ? imageUrl : "";
+    }
+
+    public String getResolution() {
+        return resolution;
+    }
+
+    public void setResolution(String resolution) {
+        this.resolution = resolution != null ? resolution : "unknown";
+    }
+
+    @Override
+    public String getPayloadSummary() {
+        return "Image(url=" + imageUrl + ", res=" + resolution + ")";
+    }
+}
+// File: AudioContent.java
+public class AudioContent extends Content {
+    private String audioUrl;
+    private int durationSeconds;
+
+    public AudioContent(String id, String title, String audioUrl, int durationSeconds) {
+        super(id, title, ContentType.AUDIO);
+        this.audioUrl = audioUrl != null ? audioUrl : "";
+        this.durationSeconds = Math.max(durationSeconds, 0);
+    }
+
+    public String getAudioUrl() {
+        return audioUrl;
+    }
+
+    public void setAudioUrl(String audioUrl) {
+        this.audioUrl = audioUrl != null ? audioUrl : "";
+    }
+
+    public int getDurationSeconds() {
+        return durationSeconds;
+    }
+
+    public void setDurationSeconds(int durationSeconds) {
+        this.durationSeconds = Math.max(durationSeconds, 0);
+    }
+
+    @Override
+    public String getPayloadSummary() {
+        return "Audio(url=" + audioUrl + ", duration=" + durationSeconds + "s)";
+    }
+}
+// File: VideoContent.java
+public class VideoContent extends Content {
+    private String videoUrl;
+    private String format;
+    private int durationSeconds;
+
+    public VideoContent(String id, String title, String videoUrl, String format, int durationSeconds) {
+        super(id, title, ContentType.VIDEO);
+        this.videoUrl = videoUrl != null ? videoUrl : "";
+        this.format = format != null ? format : "mp4";
+        this.durationSeconds = Math.max(durationSeconds, 0);
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl != null ? videoUrl : "";
+    }
+
+    public String getFormat() {
+        return format;
+    }
+
+    public void setFormat(String format) {
+        this.format = format != null ? format : "mp4";
+    }
+
+    public int getDurationSeconds() {
+        return durationSeconds;
+    }
+
+    public void setDurationSeconds(int durationSeconds) {
+        this.durationSeconds = Math.max(durationSeconds, 0);
+    }
+
+    @Override
+    public String getPayloadSummary() {
+        return "Video(url=" + videoUrl + ", format=" + format + ", duration=" + durationSeconds + "s)";
+    }
+}
+// File: ExternalServiceAccount.java
+import java.util.Objects;
+
+public class ExternalServiceAccount {
+    private final String serviceName;
+    private final String externalAccountId;
+    private final String username;
+    private boolean authenticated;
+
+    public ExternalServiceAccount(String serviceName, String externalAccountId, String username) {
+        if (serviceName == null || serviceName.isBlank()) throw new IllegalArgumentException("Service name cannot be empty");
+        if (externalAccountId == null || externalAccountId.isBlank()) throw new IllegalArgumentException("Account ID cannot be empty");
+        this.serviceName = serviceName;
+        this.externalAccountId = externalAccountId;
+        this.username = username != null ? username : externalAccountId;
+        this.authenticated = false;
+    }
+
+    public String getServiceName() {
+        return serviceName;
+    }
+
+    public String getExternalAccountId() {
+        return externalAccountId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public boolean isAuthenticated() {
+        return authenticated;
+    }
+
+    public void setAuthenticated(boolean authenticated) {
+        this.authenticated = authenticated;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ExternalServiceAccount that = (ExternalServiceAccount) o;
+        return Objects.equals(serviceName, that.serviceName) && Objects.equals(externalAccountId, that.externalAccountId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(serviceName, externalAccountId);
+    }
+
+    @Override
+    public String toString() {
+        return serviceName + ":" + username + (authenticated ? " [Authenticated]" : " [Unauthenticated]");
+    }
+}
+// File: ExternalServiceAuthenticator.java
+public interface ExternalServiceAuthenticator {
+    boolean authenticate(User user, ExternalServiceAccount account, String credential);
+}
+// File: ExternalServiceClient.java
+public interface ExternalServiceClient {
+    String getServiceName();
+    boolean publish(ExternalServiceAccount account, Content content);
+}
+// File: MockExternalSocialClient.java
+public class MockExternalSocialClient implements ExternalServiceAuthenticator, ExternalServiceClient {
+    private final String serviceName;
+
+    public MockExternalSocialClient(String serviceName) {
+        this.serviceName = serviceName;
+    }
+
+    @Override
+    public String getServiceName() {
+        return serviceName;
+    }
+
+    @Override
+    public boolean authenticate(User user, ExternalServiceAccount account, String credential) {
+        if (account == null || credential == null || credential.isBlank()) {
+            return false;
+        }
+        boolean success = credential.startsWith("valid_auth_token");
+        account.setAuthenticated(success);
+        return success;
+    }
+
+    @Override
+    public boolean publish(ExternalServiceAccount account, Content content) {
+        if (account == null || !account.isAuthenticated()) {
+            System.out.println("[" + serviceName + "] Cannot publish: external account is not authenticated.");
+            return false;
+        }
+        System.out.println("[" + serviceName + "] Successfully published content (" + content.getTitle() + ") to " + account.getUsername());
+        return true;
+    }
+}
+// File: CampaignAction.java
+import java.time.LocalDateTime;
+
+public class CampaignAction {
+    private final String id;
+    private final ActionType type;
+    private final Content targetContent;
+    private final String initiatorUsername;
+    private final LocalDateTime createdTimestamp;
+    private ActionStatus status;
+    private String approverUsername;
+    private LocalDateTime executionTimestamp;
+
+    public CampaignAction(String id, ActionType type, Content targetContent, String initiatorUsername) {
+        if (id == null || id.isBlank()) throw new IllegalArgumentException("Action ID cannot be empty");
+        if (type == null) throw new IllegalArgumentException("ActionType cannot be null");
+        if (initiatorUsername == null || initiatorUsername.isBlank()) throw new IllegalArgumentException("Initiator cannot be empty");
+        this.id = id;
+        this.type = type;
+        this.targetContent = targetContent;
+        this.initiatorUsername = initiatorUsername;
+        this.createdTimestamp = LocalDateTime.now();
+        this.status = ActionStatus.DRAFT;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public ActionType getType() {
+        return type;
+    }
+
+    public Content getTargetContent() {
+        return targetContent;
+    }
+
+    public String getInitiatorUsername() {
+        return initiatorUsername;
+    }
+
+    public LocalDateTime getCreatedTimestamp() {
+        return createdTimestamp;
+    }
+
+    public ActionStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ActionStatus status) {
+        this.status = status;
+    }
+
+    public String getApproverUsername() {
+        return approverUsername;
+    }
+
+    public void setApproverUsername(String approverUsername) {
+        this.approverUsername = approverUsername;
+    }
+
+    public LocalDateTime getExecutionTimestamp() {
+        return executionTimestamp;
+    }
+
+    public void setExecutionTimestamp(LocalDateTime executionTimestamp) {
+        this.executionTimestamp = executionTimestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "CampaignAction{" +
+                "id='" + id + '\'' +
+                ", type=" + type +
+                ", content=" + (targetContent != null ? targetContent.getTitle() : "none") +
+                ", initiator='" + initiatorUsername + '\'' +
+                ", status=" + status +
+                ", approver='" + approverUsername + '\'' +
+                '}';
+    }
+}
+// File: CampaignSchedule.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
+public class CampaignSchedule {
+    private final Map<LocalDateTime, List<CampaignAction>> scheduleMap = new TreeMap<>();
+
+    public synchronized void scheduleAction(LocalDateTime time, CampaignAction action) {
+        if (time == null || action == null) {
+            throw new IllegalArgumentException("Time and action cannot be null");
+        }
+        scheduleMap.computeIfAbsent(time, k -> new ArrayList<>()).add(action);
+        action.setStatus(ActionStatus.SCHEDULED);
+        action.setExecutionTimestamp(time);
+    }
+
+    public synchronized Map<LocalDateTime, List<CampaignAction>> getSchedule() {
+        Map<LocalDateTime, List<CampaignAction>> view = new TreeMap<>();
+        for (Map.Entry<LocalDateTime, List<CampaignAction>> entry : scheduleMap.entrySet()) {
+            view.put(entry.getKey(), Collections.unmodifiableList(entry.getValue()));
+        }
+        return Collections.unmodifiableMap(view);
+    }
+
+    public synchronized List<CampaignAction> pollDueActions(LocalDateTime currentTime) {
+        List<CampaignAction> dueActions = new ArrayList<>();
+        List<LocalDateTime> dueTimes = new ArrayList<>();
+        for (Map.Entry<LocalDateTime, List<CampaignAction>> entry : scheduleMap.entrySet()) {
+            if (!entry.getKey().isAfter(currentTime)) {
+                dueActions.addAll(entry.getValue());
+                dueTimes.add(entry.getKey());
+            }
+        }
+        for (LocalDateTime time : dueTimes) {
+            scheduleMap.remove(time);
+        }
+        return dueActions;
+    }
+}
+// File: Campaign.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class Campaign {
+    private final String id;
+    private String name;
+    private final Product product;
+    private final List<Content> contents = new ArrayList<>();
+    private final CampaignSchedule schedule = new CampaignSchedule();
+    private final Set<String> allowedUsers = new HashSet<>();
+    private final Set<String> allowedGroups = new HashSet<>();
+
+    public Campaign(String id, String name, Product product) {
+        if (id == null || id.isBlank()) throw new IllegalArgumentException("Campaign ID cannot be empty");
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Campaign name cannot be empty");
+        if (product == null) throw new IllegalArgumentException("Campaign product cannot be null");
+        this.id = id;
+        this.name = name;
+        this.product = product;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Campaign name cannot be empty");
+        this.name = name;
+    }
+
+    public Product getProduct() {
+        return product;
+    }
+
+    public synchronized void addContent(Content content) {
+        if (content != null && !contents.contains(content)) {
+            contents.add(content);
+        }
+    }
+
+    public synchronized boolean removeContent(Content content) {
+        return contents.remove(content);
+    }
+
+    public synchronized List<Content> getContents() {
+        return Collections.unmodifiableList(new ArrayList<>(contents));
+    }
+
+    public CampaignSchedule getSchedule() {
+        return schedule;
+    }
+
+    public synchronized void allowUser(String username) {
+        if (username != null && !username.isBlank()) {
+            allowedUsers.add(username);
+        }
+    }
+
+    public synchronized void allowGroup(String groupName) {
+        if (groupName != null && !groupName.isBlank()) {
+            allowedGroups.add(groupName);
+        }
+    }
+
+    public synchronized boolean hasAccess(User user) {
+        if (user == null) return false;
+        if (user.getAccountType() == UserAccountType.SYSTEM_ADMINISTRATOR) return true;
+        return allowedUsers.contains(user.getUsername()) || allowedGroups.contains(user.getGroupMembership());
+    }
+
+    public synchronized Set<String> getAllowedUsers() {
+        return Collections.unmodifiableSet(new HashSet<>(allowedUsers));
+    }
+
+    public synchronized Set<String> getAllowedGroups() {
+        return Collections.unmodifiableSet(new HashSet<>(allowedGroups));
+    }
+}
+// File: User.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+public class User {
+    private final String username;
+    private String password;
+    private String name;
+    private String email;
+    private String groupMembership;
+    private final UserAccountType accountType;
+    private boolean active = true;
+
+    private final Map<String, Set<AccountRole>> productRoles = new HashMap<>();
+    private final List<String> history = new ArrayList<>();
+    private final List<ExternalServiceAccount> externalAccounts = new ArrayList<>();
+
+    public User(String username, String password, String name, String email, String groupMembership, UserAccountType accountType) {
+        if (username == null || username.isBlank()) throw new IllegalArgumentException("Username is required");
+        if (password == null || password.isBlank()) throw new IllegalArgumentException("Password is required");
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Name is required");
+        if (email == null || email.isBlank()) throw new IllegalArgumentException("Email is required");
+        if (groupMembership == null || groupMembership.isBlank()) throw new IllegalArgumentException("Group membership is required");
+        if (accountType == null) throw new IllegalArgumentException("Account type is required");
+
+        this.username = username;
+        this.password = password;
+        this.name = name;
+        this.email = email;
+        this.groupMembership = groupMembership;
+        this.accountType = accountType;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        if (password == null || password.isBlank()) throw new IllegalArgumentException("Password cannot be empty");
+        this.password = password;
+        addHistory("Password changed");
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Name cannot be empty");
+        this.name = name;
+        addHistory("Name updated to: " + name);
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        if (email == null || email.isBlank()) throw new IllegalArgumentException("Email cannot be empty");
+        this.email = email;
+        addHistory("Email updated to: " + email);
+    }
+
+    public String getGroupMembership() {
+        return groupMembership;
+    }
+
+    public void setGroupMembership(String groupMembership) {
+        if (groupMembership == null || groupMembership.isBlank()) throw new IllegalArgumentException("Group membership cannot be empty");
+        this.groupMembership = groupMembership;
+        addHistory("Group updated to: " + groupMembership);
+    }
+
+    public UserAccountType getAccountType() {
+        return accountType;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+        addHistory("Account active state changed to: " + active);
+    }
+
+    public synchronized void assignRole(Product product, AccountRole role) {
+        if (product == null || role == null) return;
+        productRoles.computeIfAbsent(product.getId(), k -> EnumSet.noneOf(AccountRole.class)).add(role);
+        addHistory("Assigned role " + role + " on product " + product.getName());
+    }
+
+    public synchronized void removeRole(Product product, AccountRole role) {
+        if (product == null || role == null) return;
+        Set<AccountRole> roles = productRoles.get(product.getId());
+        if (roles != null) {
+            roles.remove(role);
+            addHistory("Removed role " + role + " on product " + product.getName());
+        }
+    }
+
+    public synchronized boolean hasRole(Product product, AccountRole role) {
+        if (product == null || role == null) return false;
+        Set<AccountRole> roles = productRoles.get(product.getId());
+        return roles != null && roles.contains(role);
+    }
+
+    public synchronized Set<AccountRole> getRolesForProduct(Product product) {
+        if (product == null) return Collections.emptySet();
+        Set<AccountRole> roles = productRoles.get(product.getId());
+        return roles != null ? Collections.unmodifiableSet(roles) : Collections.emptySet();
+    }
+
+    public synchronized void addHistory(String record) {
+        if (record != null && !record.isBlank()) {
+            history.add(record);
+        }
+    }
+
+    public synchronized List<String> getHistory() {
+        return Collections.unmodifiableList(new ArrayList<>(history));
+    }
+
+    public synchronized boolean hasHistory() {
+        return !history.isEmpty();
+    }
+
+    public synchronized void linkExternalAccount(ExternalServiceAccount account) {
+        if (account != null && !externalAccounts.contains(account)) {
+            externalAccounts.add(account);
+            addHistory("Linked external account: " + account);
+        }
+    }
+
+    public synchronized List<ExternalServiceAccount> getExternalAccounts() {
+        return Collections.unmodifiableList(new ArrayList<>(externalAccounts));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return Objects.equals(username, user.username);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(username);
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "username='" + username + '\'' +
+                ", name='" + name + '\'' +
+                ", email='" + email + '\'' +
+                ", group='" + groupMembership + '\'' +
+                ", type=" + accountType +
+                ", active=" + active +
+                '}';
+    }
+}
+// File: MashbotSystem.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+public class MashbotSystem {
+    private final Map<String, User> users = new HashMap<>();
+    private final Set<String> activeSessions = new HashSet<>();
+    private final Map<String, Product> products = new HashMap<>();
+    private final Map<String, Campaign> campaigns = new HashMap<>();
+    private final Map<String, ExternalServiceClient> externalClients = new HashMap<>();
+    private final Map<String, ExternalServiceAuthenticator> externalAuthenticators = new HashMap<>();
+
+    public MashbotSystem() {
+    }
+
+    public synchronized User registerUser(String username, String password, String name, String email,
+                                          String groupMembership, UserAccountType accountType) {
+        if (users.containsKey(username)) {
+            throw new IllegalArgumentException("User with username " + username + " already exists.");
+        }
+        User newUser = new User(username, password, name, email, groupMembership, accountType);
+        users.put(username, newUser);
+        return newUser;
+    }
+
+    public synchronized boolean login(String username, String password) {
+        User user = users.get(username);
+        if (user == null) {
+            return false;
+        }
+        if (!user.isActive()) {
+            return false;
+        }
+        if (user.getPassword().equals(password)) {
+            activeSessions.add(username);
+            return true;
+        }
+        return false;
+    }
+
+    public synchronized void logout(String username) {
+        activeSessions.remove(username);
+    }
+
+    public synchronized boolean isUserLoggedIn(String username) {
+        return activeSessions.contains(username);
+    }
+
+    private void ensureLoggedIn(String username) {
+        if (!isUserLoggedIn(username)) {
+            throw new SecurityException("User " + username + " must be logged in to perform this operation.");
+        }
+    }
+
+    public synchronized void modifyUserProfile(String loggedInUsername, String newName, String newEmail) {
+        ensureLoggedIn(loggedInUsername);
+        User user = users.get(loggedInUsername);
+        if (user == null || !user.isActive()) {
+            throw new IllegalStateException("User account is inactive or not found.");
+        }
+        if (newName != null && !newName.isBlank()) {
+            user.setName(newName);
+        }
+        if (newEmail != null && !newEmail.isBlank()) {
+            user.setEmail(newEmail);
+        }
+    }
+
+    public synchronized void resetPassword(String loggedInUsername, String oldPassword, String newPassword) {
+        ensureLoggedIn(loggedInUsername);
+        User user = users.get(loggedInUsername);
+        if (user == null || !user.isActive()) {
+            throw new IllegalStateException("User account is inactive or not found.");
+        }
+        if (!user.getPassword().equals(oldPassword)) {
+            throw new IllegalArgumentException("Incorrect current password.");
+        }
+        user.setPassword(newPassword);
+    }
+
+    public synchronized boolean deactivateUser(String targetUsername) {
+        User target = users.get(targetUsername);
+        if (target == null) {
+            throw new IllegalArgumentException("User " + targetUsername + " not found.");
+        }
+        if (target.getAccountType() == UserAccountType.SYSTEM_ADMINISTRATOR) {
+            throw new UnsupportedOperationException("Cannot deactivate System Administrator account.");
+        }
+        target.setActive(false);
+        activeSessions.remove(targetUsername);
+        return true;
+    }
+
+    public synchronized boolean undisableUser(String targetUsername) {
+        User target = users.get(targetUsername);
+        if (target == null) {
+            throw new IllegalArgumentException("User " + targetUsername + " not found.");
+        }
+        target.setActive(true);
+        return true;
+    }
+
+    public synchronized boolean deleteUser(String targetUsername) {
+        User target = users.get(targetUsername);
+        if (target == null) {
+            throw new IllegalArgumentException("User " + targetUsername + " not found.");
+        }
+        if (target.getAccountType() == UserAccountType.SYSTEM_ADMINISTRATOR) {
+            throw new UnsupportedOperationException("Cannot delete System Administrator account.");
+        }
+        if (target.hasHistory()) {
+            throw new IllegalStateException("Cannot delete user with existing history. Deactivate instead.");
+        }
+        users.remove(targetUsername);
+        activeSessions.remove(targetUsername);
+        return true;
+    }
+
+    public synchronized void registerProduct(Product product) {
+        if (product != null) {
+            products.put(product.getId(), product);
+        }
+    }
+
+    public synchronized Product getProduct(String id) {
+        return products.get(id);
+    }
+
+    public synchronized void registerCampaign(Campaign campaign) {
+        if (campaign != null) {
+            campaigns.put(campaign.getId(), campaign);
+        }
+    }
+
+    public synchronized Campaign getCampaign(String id) {
+        return campaigns.get(id);
+    }
+
+    public synchronized void registerExternalService(ExternalServiceClient client, ExternalServiceAuthenticator authenticator) {
+        if (client != null) {
+            externalClients.put(client.getServiceName(), client);
+        }
+        if (authenticator != null && client != null) {
+            externalAuthenticators.put(client.getServiceName(), authenticator);
+        }
+    }
+
+    public synchronized boolean authenticateExternalAccount(String username, ExternalServiceAccount account, String credential) {
+        ensureLoggedIn(username);
+        User user = users.get(username);
+        ExternalServiceAuthenticator authenticator = externalAuthenticators.get(account.getServiceName());
+        if (authenticator == null) {
+            throw new IllegalArgumentException("No authenticator registered for service: " + account.getServiceName());
+        }
+        boolean success = authenticator.authenticate(user, account, credential);
+        if (success) {
+            user.linkExternalAccount(account);
+        }
+        return success;
+    }
+
+    public synchronized CampaignAction createContent(String username, Campaign campaign, Content content) {
+        ensureLoggedIn(username);
+        User user = users.get(username);
+        validateCampaignAccess(user, campaign);
+        if (!user.hasRole(campaign.getProduct(), AccountRole.CONTRIBUTOR)) {
+            throw new SecurityException("User must have CONTRIBUTOR role on product " + campaign.getProduct().getName());
+        }
+
+        campaign.addContent(content);
+        CampaignAction action = new CampaignAction(UUID.randomUUID().toString(), ActionType.CREATE, content, username);
+        user.addHistory("Created content: " + content.getTitle() + " in campaign " + campaign.getName());
+        return action;
+    }
+
+    public synchronized CampaignAction importContent(String username, Campaign campaign, Content existingContent) {
+        ensureLoggedIn(username);
+        User user = users.get(username);
+        validateCampaignAccess(user, campaign);
+        if (!user.hasRole(campaign.getProduct(), AccountRole.CONTRIBUTOR)) {
+            throw new SecurityException("User must have CONTRIBUTOR role on product " + campaign.getProduct().getName());
+        }
+
+        campaign.addContent(existingContent);
+        CampaignAction action = new CampaignAction(UUID.randomUUID().toString(), ActionType.IMPORT, existingContent, username);
+        user.addHistory("Imported content: " + existingContent.getTitle() + " into campaign " + campaign.getName());
+        return action;
+    }
+
+    public synchronized CampaignAction editContent(String username, Campaign campaign, Content content, String newTitle) {
+        ensureLoggedIn(username);
+        User user = users.get(username);
+        validateCampaignAccess(user, campaign);
+        if (!user.hasRole(campaign.getProduct(), AccountRole.CONTRIBUTOR)) {
+            throw new SecurityException("User must have CONTRIBUTOR role on product " + campaign.getProduct().getName());
+        }
+        content.setTitle(newTitle);
+        CampaignAction action = new CampaignAction(UUID.randomUUID().toString(), ActionType.EDIT, content, username);
+        user.addHistory("Edited content: " + content.getId() + " new title " + newTitle);
+        return action;
+    }
+
+    public synchronized CampaignAction deleteContent(String username, Campaign campaign, Content content) {
+        ensureLoggedIn(username);
+        User user = users.get(username);
+        validateCampaignAccess(user, campaign);
+        if (!user.hasRole(campaign.getProduct(), AccountRole.CONTRIBUTOR)) {
+            throw new SecurityException("User must have CONTRIBUTOR role on product " + campaign.getProduct().getName());
+        }
+        campaign.removeContent(content);
+        CampaignAction action = new CampaignAction(UUID.randomUUID().toString(), ActionType.DELETE, content, username);
+        user.addHistory("Deleted content: " + content.getTitle());
+        return action;
+    }
+
+    public synchronized void submitActionForApproval(String username, Campaign campaign, CampaignAction action) {
+        ensureLoggedIn(username);
+        User user = users.get(username);
+        validateCampaignAccess(user, campaign);
+        if (!user.hasRole(campaign.getProduct(), AccountRole.CONTRIBUTOR)) {
+            throw new SecurityException("Only contributors can submit actions for approval.");
+        }
+        action.setStatus(ActionStatus.SUBMITTED_FOR_APPROVAL);
+        user.addHistory("Submitted action " + action.getId() + " for approval");
+    }
+
+    public synchronized void approveAction(String username, Campaign campaign, CampaignAction action) {
+        ensureLoggedIn(username);
+        User user = users.get(username);
+        validateCampaignAccess(user, campaign);
+        if (!user.hasRole(campaign.getProduct(), AccountRole.APPROVER)) {
+            throw new SecurityException("User must have APPROVER role on product " + campaign.getProduct().getName());
+        }
+        if (action.getStatus() != ActionStatus.SUBMITTED_FOR_APPROVAL) {
+            throw new IllegalStateException("Action is not awaiting approval.");
+        }
+        action.setStatus(ActionStatus.APPROVED);
+        action.setApproverUsername(username);
+        user.addHistory("Approved action " + action.getId());
+    }
+
+    public synchronized void scheduleAction(String username, Campaign campaign, CampaignAction action, LocalDateTime scheduledTime) {
+        ensureLoggedIn(username);
+        User user = users.get(username);
+        validateCampaignAccess(user, campaign);
+        if (!user.hasRole(campaign.getProduct(), AccountRole.PUBLISHER)) {
+            throw new SecurityException("User must have PUBLISHER role on product " + campaign.getProduct().getName());
+        }
+        if (action.getStatus() != ActionStatus.APPROVED && action.getStatus() != ActionStatus.DRAFT) {
+            throw new IllegalStateException("Only approved or initiated actions can be scheduled.");
+        }
+        campaign.getSchedule().scheduleAction(scheduledTime, action);
+        user.addHistory("Scheduled action " + action.getId() + " for " + scheduledTime);
+    }
+
+    public synchronized boolean initiateActionImmediately(String username, Campaign campaign, CampaignAction action,
+                                                          ExternalServiceAccount externalAccount) {
+        ensureLoggedIn(username);
+        User user = users.get(username);
+        validateCampaignAccess(user, campaign);
+        if (!user.hasRole(campaign.getProduct(), AccountRole.PUBLISHER)) {
+            throw new SecurityException("User must have PUBLISHER role on product " + campaign.getProduct().getName());
+        }
+        if (action.getStatus() != ActionStatus.APPROVED && action.getStatus() != ActionStatus.DRAFT) {
+            throw new IllegalStateException("Action is not approved or initiated for publishing.");
+        }
+
+        ExternalServiceClient client = externalClients.get(externalAccount.getServiceName());
+        if (client == null) {
+            throw new IllegalArgumentException("No client found for external service: " + externalAccount.getServiceName());
+        }
+        boolean success = client.publish(externalAccount, action.getTargetContent());
+        if (success) {
+            action.setStatus(ActionStatus.EXECUTED);
+            action.setExecutionTimestamp(LocalDateTime.now());
+            user.addHistory("Executed action " + action.getId() + " via " + externalAccount.getServiceName());
+        }
+        return success;
+    }
+
+    public synchronized List<CampaignAction> processScheduledActions(LocalDateTime currentTime, ExternalServiceAccount defaultExternalAccount) {
+        List<CampaignAction> processed = new ArrayList<>();
+        for (Campaign campaign : campaigns.values()) {
+            List<CampaignAction> dueActions = campaign.getSchedule().pollDueActions(currentTime);
+            for (CampaignAction action : dueActions) {
+                ExternalServiceClient client = externalClients.get(defaultExternalAccount.getServiceName());
+                if (client != null && client.publish(defaultExternalAccount, action.getTargetContent())) {
+                    action.setStatus(ActionStatus.EXECUTED);
+                    processed.add(action);
+                }
+            }
+        }
+        return processed;
+    }
+
+    private void validateCampaignAccess(User user, Campaign campaign) {
+        if (!campaign.hasAccess(user)) {
+            throw new SecurityException("User " + user.getUsername() + " does not have permission for campaign " + campaign.getName());
+        }
+    }
+
+    public User getUser(String username) {
+        return users.get(username);
+    }
+
+    public List<User> getAllUsers() {
+        return Collections.unmodifiableList(new ArrayList<>(users.values()));
+    }
+}
+// File: Main.java
+import java.time.LocalDateTime;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=== Mashbot Campaigns Demonstration ===");
+
+        MashbotSystem system = new MashbotSystem();
+
+        // 1. Setup External Services
+        MockExternalSocialClient twitterClient = new MockExternalSocialClient("Twitter");
+        MockExternalSocialClient youtubeClient = new MockExternalSocialClient("YouTube");
+        system.registerExternalService(twitterClient, twitterClient);
+        system.registerExternalService(youtubeClient, youtubeClient);
+
+        // 2. Setup Products and Campaigns
+        Product mobileApp = new Product("PROD-01", "Mashbot Mobile App");
+        Product webApp = new Product("PROD-02", "Mashbot Web Suite");
+        system.registerProduct(mobileApp);
+        system.registerProduct(webApp);
+
+        Campaign summerCampaign = new Campaign("CAMP-01", "Summer Launch 2025", mobileApp);
+        summerCampaign.allowGroup("Marketing");
+        summerCampaign.allowUser("charlie_contributor");
+        summerCampaign.allowUser("alice_approver");
+        summerCampaign.allowUser("peter_publisher");
+        system.registerCampaign(summerCampaign);
+
+        // 3. User Creation (0240 - 0320)
+        User admin = system.registerUser(
+                "sysadmin", "AdminPass123", "System Administrator", "admin@mashbot.com",
+                "Administration", UserAccountType.SYSTEM_ADMINISTRATOR
+        );
+        User contributor = system.registerUser(
+                "charlie_contributor", "Pass123!", "Charlie Writer", "charlie@mashbot.com",
+                "Marketing", UserAccountType.STANDARD
+        );
+        User approver = system.registerUser(
+                "alice_approver", "Pass123!", "Alice Lead", "alice@mashbot.com",
+                "Marketing", UserAccountType.STANDARD
+        );
+        User publisher = system.registerUser(
+                "peter_publisher", "Pass123!", "Peter Distribution", "peter@mashbot.com",
+                "Marketing", UserAccountType.STANDARD
+        );
+        User temporaryUser = system.registerUser(
+                "temp_user", "TempPass123", "Temporary User", "temp@mashbot.com",
+                "Guest", UserAccountType.STANDARD
+        );
+
+        // 4. Role Assignments for Individual Products (0140 - 0200)
+        contributor.assignRole(mobileApp, AccountRole.CONTRIBUTOR);
+        approver.assignRole(mobileApp, AccountRole.APPROVER);
+        publisher.assignRole(mobileApp, AccountRole.PUBLISHER);
+
+        // 5. User Account Modification and Password Change (0330 - 0370, 0440 - 0470)
+        system.login("charlie_contributor", "Pass123!");
+        system.modifyUserProfile("charlie_contributor", "Charlie Senior Writer", "charlie.sr@mashbot.com");
+        system.resetPassword("charlie_contributor", "Pass123!", "NewSecretPass456!");
+        system.logout("charlie_contributor");
+
+        // Verify login with new password
+        boolean reloginSuccess = system.login("charlie_contributor", "NewSecretPass456!");
+        System.out.println("Charlie re-login with updated password: " + (reloginSuccess ? "SUCCESS" : "FAILED"));
+
+        // 6. Content Creation & Import (0210, 0540 - 0580)
+        Content textArticle = new TextContent("C-001", "Mobile App Launch Article", "Experience the new era of marketing.");
+        Content bannerImage = new ImageContent("C-002", "App Banner", "https://mashbot.cdn/banner.png", "1920x1080");
+        Content promoAudio = new AudioContent("C-003", "Podcast Jingle", "https://mashbot.cdn/jingle.mp3", 30);
+        Content launchVideo = new VideoContent("C-004", "Feature Video", "https://mashbot.cdn/feature.mp4", "mp4", 120);
+
+        CampaignAction action1 = system.createContent("charlie_contributor", summerCampaign, textArticle);
+        CampaignAction action2 = system.importContent("charlie_contributor", summerCampaign, bannerImage);
+        CampaignAction action3 = system.createContent("charlie_contributor", summerCampaign, launchVideo);
+
+        System.out.println("Campaign Contents: " + summerCampaign.getContents());
+
+        // 7. Contributor Submits for Approval (0210)
+        system.submitActionForApproval("charlie_contributor", summerCampaign, action1);
+        system.submitActionForApproval("charlie_contributor", summerCampaign, action3);
+        system.logout("charlie_contributor");
+
+        // 8. Approver Approves Content (0220)
+        system.login("alice_approver", "Pass123!");
+        system.approveAction("alice_approver", summerCampaign, action1);
+        system.approveAction("alice_approver", summerCampaign, action3);
+        System.out.println("Action 1 status after Alice approval: " + action1.getStatus());
+        system.logout("alice_approver");
+
+        // 9. External Service Account Linking and Authentication (0590 - 0610)
+        system.login("peter_publisher", "Pass123!");
+        ExternalServiceAccount twitterAccount = new ExternalServiceAccount("Twitter", "tw_101", "@MashbotOfficial");
+        boolean authResult = system.authenticateExternalAccount("peter_publisher", twitterAccount, "valid_auth_token_xyz");
+        System.out.println("External account authentication status: " + authResult);
+
+        // 10. Publisher Publishes Immediately and Schedules Future Actions (0230, 0480 - 0530)
+        system.initiateActionImmediately("peter_publisher", summerCampaign, action1, twitterAccount);
+
+        LocalDateTime scheduledTime = LocalDateTime.now().plusHours(2);
+        system.scheduleAction("peter_publisher", summerCampaign, action3, scheduledTime);
+        System.out.println("Campaign Scheduled Items Count: " + summerCampaign.getSchedule().getSchedule().size());
+
+        // Process scheduled actions simulating arrival at schedule time
+        System.out.println("Simulating arrival at scheduled time...");
+        var processedActions = system.processScheduledActions(scheduledTime.plusMinutes(1), twitterAccount);
+        System.out.println("Processed scheduled actions count: " + processedActions.size());
+        system.logout("peter_publisher");
+
+        // 11. Account Deactivation vs Deletion (0380 - 0430)
+        System.out.println("\n--- Testing Deactivation, Undisable, and Deletion Policies ---");
+
+        // Charlie has history -> Cannot delete, only deactivate
+        try {
+            system.deleteUser("charlie_contributor");
+            System.out.println("ERROR: Deleted user with history!");
+        } catch (IllegalStateException e) {
+            System.out.println("Expected rejection: " + e.getMessage());
+        }
+
+        // Deactivating Charlie
+        system.deactivateUser("charlie_contributor");
+        boolean charlieLoginWhenDeactivated = system.login("charlie_contributor", "NewSecretPass456!");
+        System.out.println("Deactivated Charlie login allowed? " + charlieLoginWhenDeactivated);
+
+        // Undisabling Charlie
+        system.undisableUser("charlie_contributor");
+        boolean charlieLoginReenabled = system.login("charlie_contributor", "NewSecretPass456!");
+        System.out.println("Re-enabled Charlie login allowed? " + charlieLoginReenabled);
+        system.logout("charlie_contributor");
+
+        // Deleting user without history -> Should succeed
+        boolean tempDeleted = system.deleteUser("temp_user");
+        System.out.println("User without history deleted successfully: " + tempDeleted);
+
+        // Testing System Administrator protection
+        try {
+            system.deactivateUser("sysadmin");
+            System.out.println("ERROR: Deactivated Admin!");
+        } catch (UnsupportedOperationException e) {
+            System.out.println("Expected rejection: " + e.getMessage());
+        }
+
+        System.out.println("\nAll demonstration scenarios completed successfully!");
+    }
+}

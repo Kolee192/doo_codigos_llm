@@ -1,0 +1,1669 @@
+// File: UserRole.java
+public enum UserRole {
+    PUBLIC_USER,
+    PROSPECTIVE_APPLICANT,
+    APPLICANT,
+    CUSTOMER,
+    STAFF,
+    PLANNING_STAFF,
+    ZONING_STAFF,
+    PLAN_REVIEW_STAFF,
+    PLAN_REVIEW_SUPERVISOR,
+    DEVELOPMENT_STAFF,
+    INSPECTION_STAFF,
+    INSPECTION_SUPERVISOR,
+    INSPECTOR,
+    ENFORCEMENT_STAFF,
+    TECHNICAL_STAFF,
+    COUNTY_STAFF
+}
+
+// File: User.java
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
+import java.util.UUID;
+
+public final class User {
+    private final String id;
+    private final String name;
+    private final String email;
+    private final String passwordHash;
+    private final Set<UserRole> roles;
+
+    public User(String name, String email, String password, Set<UserRole> roles) {
+        if (name == null || name.isBlank() || email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Name and email are required.");
+        }
+        this.id = UUID.randomUUID().toString();
+        this.name = name;
+        this.email = email.trim().toLowerCase();
+        this.passwordHash = hash(password == null ? "" : password);
+        this.roles = roles == null || roles.isEmpty()
+                ? EnumSet.of(UserRole.PUBLIC_USER)
+                : EnumSet.copyOf(roles);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public Set<UserRole> getRoles() {
+        return Collections.unmodifiableSet(roles);
+    }
+
+    public boolean hasRole(UserRole role) {
+        return roles.contains(role);
+    }
+
+    public boolean verifyPassword(String password) {
+        return passwordHash.equals(hash(password == null ? "" : password));
+    }
+
+    private static String hash(String value) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder result = new StringBuilder();
+            for (byte b : digest) {
+                result.append(String.format("%02x", b));
+            }
+            return result.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is unavailable.", e);
+        }
+    }
+}
+
+// File: ServiceDefinition.java
+import java.util.Set;
+
+public final class ServiceDefinition {
+    private final String id;
+    private final String name;
+    private final String description;
+    private final String requirements;
+    private final double applicationFee;
+    private final Set<UserRole> eligibleRoles;
+
+    public ServiceDefinition(String id, String name, String description, String requirements,
+                             double applicationFee, Set<UserRole> eligibleRoles) {
+        if (id == null || id.isBlank() || name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Service id and name are required.");
+        }
+        if (applicationFee < 0) {
+            throw new IllegalArgumentException("Fee cannot be negative.");
+        }
+        this.id = id;
+        this.name = name;
+        this.description = description == null ? "" : description;
+        this.requirements = requirements == null ? "" : requirements;
+        this.applicationFee = applicationFee;
+        this.eligibleRoles = eligibleRoles == null ? Set.of() : Set.copyOf(eligibleRoles);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getRequirements() {
+        return requirements;
+    }
+
+    public double getApplicationFee() {
+        return applicationFee;
+    }
+
+    public Set<UserRole> getEligibleRoles() {
+        return eligibleRoles;
+    }
+
+    public boolean isAvailableTo(User user) {
+        return eligibleRoles.isEmpty() || eligibleRoles.stream().anyMatch(user::hasRole);
+    }
+}
+
+// File: ApplicationStatus.java
+public enum ApplicationStatus {
+    DRAFT,
+    SUBMITTED,
+    COMPLETENESS_REVIEW,
+    INCOMPLETE,
+    READY_FOR_TECHNICAL_REVIEW,
+    UNDER_REVIEW,
+    CORRECTIONS_REQUIRED,
+    HEARING_SCHEDULED,
+    APPROVED,
+    DENIED,
+    PERMIT_ISSUED,
+    COMPLETED,
+    APPEALED,
+    CLOSED
+}
+
+// File: Activity.java
+import java.time.Instant;
+
+public final class Activity {
+    private final Instant timestamp;
+    private final String actor;
+    private final String category;
+    private final String detail;
+
+    public Activity(String actor, String category, String detail) {
+        this.timestamp = Instant.now();
+        this.actor = actor == null ? "System" : actor;
+        this.category = category == null ? "GENERAL" : category;
+        this.detail = detail == null ? "" : detail;
+    }
+
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+
+    public String getActor() {
+        return actor;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public String getDetail() {
+        return detail;
+    }
+
+    @Override
+    public String toString() {
+        return timestamp + " [" + category + "] " + actor + ": " + detail;
+    }
+}
+
+// File: DocumentRecord.java
+import java.time.Instant;
+import java.util.UUID;
+
+public final class DocumentRecord {
+    private final String id = UUID.randomUUID().toString();
+    private final String fileName;
+    private final String documentType;
+    private final String submittedBy;
+    private final String description;
+    private final Instant submittedAt = Instant.now();
+    private final int version;
+
+    public DocumentRecord(String fileName, String documentType, String submittedBy,
+                          String description, int version) {
+        if (fileName == null || fileName.isBlank()) {
+            throw new IllegalArgumentException("File name is required.");
+        }
+        this.fileName = fileName;
+        this.documentType = documentType == null ? "Supporting Document" : documentType;
+        this.submittedBy = submittedBy;
+        this.description = description == null ? "" : description;
+        this.version = version;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public String getDocumentType() {
+        return documentType;
+    }
+
+    public String getSubmittedBy() {
+        return submittedBy;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Instant getSubmittedAt() {
+        return submittedAt;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+}
+
+// File: ApplicationRecord.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+public final class ApplicationRecord {
+    private final String id = UUID.randomUUID().toString();
+    private final String applicantId;
+    private final String serviceId;
+    private final String propertyId;
+    private final Instant createdAt = Instant.now();
+    private final List<DocumentRecord> documents = new ArrayList<>();
+    private final List<Activity> activities = new ArrayList<>();
+    private final List<String> profferDrafts = new ArrayList<>();
+    private final List<String> approvedProffers = new ArrayList<>();
+    private final List<String> planVersions = new ArrayList<>();
+    private ApplicationStatus status = ApplicationStatus.DRAFT;
+    private String applicationData;
+    private String assignedTo;
+    private String finalAction;
+    private String holdReason;
+    private double outstandingFee;
+    private boolean completenessPassed;
+    private boolean consistencyPassed;
+    private boolean staffReviewPassed;
+    private boolean hearingRequirementsSatisfied;
+    private boolean planReviewsComplete;
+    private String permitNumber;
+
+    public ApplicationRecord(String applicantId, String serviceId, String propertyId, String applicationData) {
+        this.applicantId = applicantId;
+        this.serviceId = serviceId;
+        this.propertyId = propertyId;
+        this.applicationData = applicationData == null ? "" : applicationData;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getApplicantId() {
+        return applicantId;
+    }
+
+    public String getServiceId() {
+        return serviceId;
+    }
+
+    public String getPropertyId() {
+        return propertyId;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public ApplicationStatus getStatus() {
+        return status;
+    }
+
+    public String getApplicationData() {
+        return applicationData;
+    }
+
+    public String getAssignedTo() {
+        return assignedTo;
+    }
+
+    public String getFinalAction() {
+        return finalAction;
+    }
+
+    public String getHoldReason() {
+        return holdReason;
+    }
+
+    public double getOutstandingFee() {
+        return outstandingFee;
+    }
+
+    public String getPermitNumber() {
+        return permitNumber;
+    }
+
+    public boolean isOnHold() {
+        return holdReason != null;
+    }
+
+    public boolean isCompletenessPassed() {
+        return completenessPassed;
+    }
+
+    public boolean isConsistencyPassed() {
+        return consistencyPassed;
+    }
+
+    public boolean isStaffReviewPassed() {
+        return staffReviewPassed;
+    }
+
+    public boolean isHearingRequirementsSatisfied() {
+        return hearingRequirementsSatisfied;
+    }
+
+    public boolean arePlanReviewsComplete() {
+        return planReviewsComplete;
+    }
+
+    public List<DocumentRecord> getDocuments() {
+        return Collections.unmodifiableList(documents);
+    }
+
+    public List<Activity> getActivities() {
+        return Collections.unmodifiableList(activities);
+    }
+
+    public List<String> getProfferDrafts() {
+        return Collections.unmodifiableList(profferDrafts);
+    }
+
+    public List<String> getApprovedProffers() {
+        return Collections.unmodifiableList(approvedProffers);
+    }
+
+    public List<String> getPlanVersions() {
+        return Collections.unmodifiableList(planVersions);
+    }
+
+    void setStatus(ApplicationStatus status) {
+        this.status = status;
+    }
+
+    void setApplicationData(String applicationData) {
+        this.applicationData = applicationData;
+    }
+
+    void setAssignedTo(String assignedTo) {
+        this.assignedTo = assignedTo;
+    }
+
+    void setFinalAction(String finalAction) {
+        this.finalAction = finalAction;
+    }
+
+    void setHoldReason(String holdReason) {
+        this.holdReason = holdReason;
+    }
+
+    void setOutstandingFee(double outstandingFee) {
+        this.outstandingFee = outstandingFee;
+    }
+
+    void setCompletenessPassed(boolean value) {
+        completenessPassed = value;
+    }
+
+    void setConsistencyPassed(boolean value) {
+        consistencyPassed = value;
+    }
+
+    void setStaffReviewPassed(boolean value) {
+        staffReviewPassed = value;
+    }
+
+    void setHearingRequirementsSatisfied(boolean value) {
+        hearingRequirementsSatisfied = value;
+    }
+
+    void setPlanReviewsComplete(boolean value) {
+        planReviewsComplete = value;
+    }
+
+    void setPermitNumber(String permitNumber) {
+        this.permitNumber = permitNumber;
+    }
+
+    void addDocument(DocumentRecord document) {
+        documents.add(document);
+    }
+
+    void addActivity(Activity activity) {
+        activities.add(activity);
+    }
+
+    void addDraftProffer(String proffer) {
+        profferDrafts.add(proffer);
+    }
+
+    void addApprovedProffer(String proffer) {
+        approvedProffers.add(proffer);
+    }
+
+    void addPlanVersion(String version) {
+        planVersions.add(version);
+    }
+}
+
+// File: PropertyRecord.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public final class PropertyRecord {
+    private final String id;
+    private String address;
+    private String parcelPin;
+    private String gisLayerReference;
+    private final List<String> currentOwners = new ArrayList<>();
+    private final List<String> historicOwners = new ArrayList<>();
+    private final List<String> associatedRecords = new ArrayList<>();
+    private final List<String> condoUnits = new ArrayList<>();
+    private final List<String> geospatialNotifications = new ArrayList<>();
+
+    public PropertyRecord(String id, String address, String parcelPin, String owner) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("Property id is required.");
+        }
+        this.id = id;
+        this.address = address == null ? "" : address;
+        this.parcelPin = parcelPin == null ? "" : parcelPin;
+        this.gisLayerReference = "";
+        if (owner != null && !owner.isBlank()) {
+            currentOwners.add(owner);
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public String getParcelPin() {
+        return parcelPin;
+    }
+
+    public String getGisLayerReference() {
+        return gisLayerReference;
+    }
+
+    public List<String> getCurrentOwners() {
+        return Collections.unmodifiableList(currentOwners);
+    }
+
+    public List<String> getHistoricOwners() {
+        return Collections.unmodifiableList(historicOwners);
+    }
+
+    public List<String> getAssociatedRecords() {
+        return Collections.unmodifiableList(associatedRecords);
+    }
+
+    public List<String> getCondoUnits() {
+        return Collections.unmodifiableList(condoUnits);
+    }
+
+    public List<String> getGeospatialNotifications() {
+        return Collections.unmodifiableList(geospatialNotifications);
+    }
+
+    void changeOwner(String owner) {
+        historicOwners.addAll(currentOwners);
+        currentOwners.clear();
+        currentOwners.add(owner);
+    }
+
+    void setAddress(String address) {
+        this.address = address;
+    }
+
+    void setParcelPin(String parcelPin) {
+        this.parcelPin = parcelPin;
+    }
+
+    void setGisLayerReference(String reference) {
+        this.gisLayerReference = reference;
+    }
+
+    void addAssociatedRecord(String record) {
+        associatedRecords.add(record);
+    }
+
+    void addCondoUnit(String unit) {
+        condoUnits.add(unit);
+    }
+
+    void addGeospatialNotification(String notification) {
+        geospatialNotifications.add(notification);
+    }
+}
+
+// File: PreApplicationRequest.java
+import java.time.Instant;
+import java.util.UUID;
+
+public final class PreApplicationRequest {
+    private final String id = UUID.randomUUID().toString();
+    private final String requesterId;
+    private final String requestText;
+    private final Instant requestedAt = Instant.now();
+    private String response;
+
+    public PreApplicationRequest(String requesterId, String requestText) {
+        this.requesterId = requesterId;
+        this.requestText = requestText;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getRequesterId() {
+        return requesterId;
+    }
+
+    public String getRequestText() {
+        return requestText;
+    }
+
+    public Instant getRequestedAt() {
+        return requestedAt;
+    }
+
+    public String getResponse() {
+        return response;
+    }
+
+    void setResponse(String response) {
+        this.response = response;
+    }
+}
+
+// File: MeetingRecord.java
+import java.time.Instant;
+import java.util.UUID;
+
+public final class MeetingRecord {
+    private final String id = UUID.randomUUID().toString();
+    private final String applicationId;
+    private final String subject;
+    private final Instant scheduledAt;
+    private final String organizerId;
+    private String outcome;
+
+    public MeetingRecord(String applicationId, String subject, Instant scheduledAt, String organizerId) {
+        this.applicationId = applicationId;
+        this.subject = subject;
+        this.scheduledAt = scheduledAt;
+        this.organizerId = organizerId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public Instant getScheduledAt() {
+        return scheduledAt;
+    }
+
+    public String getOrganizerId() {
+        return organizerId;
+    }
+
+    public String getOutcome() {
+        return outcome;
+    }
+
+    void setOutcome(String outcome) {
+        this.outcome = outcome;
+    }
+}
+
+// File: PlanReviewTask.java
+import java.time.Instant;
+import java.util.UUID;
+
+public final class PlanReviewTask {
+    private final String id = UUID.randomUUID().toString();
+    private final String applicationId;
+    private final String planName;
+    private String reviewerId;
+    private String result = "PENDING";
+    private String comments = "";
+    private Instant completedAt;
+
+    public PlanReviewTask(String applicationId, String planName) {
+        this.applicationId = applicationId;
+        this.planName = planName;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public String getPlanName() {
+        return planName;
+    }
+
+    public String getReviewerId() {
+        return reviewerId;
+    }
+
+    public String getResult() {
+        return result;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public Instant getCompletedAt() {
+        return completedAt;
+    }
+
+    void assign(String reviewerId) {
+        this.reviewerId = reviewerId;
+    }
+
+    void complete(String result, String comments) {
+        this.result = result;
+        this.comments = comments == null ? "" : comments;
+        this.completedAt = Instant.now();
+    }
+}
+
+// File: InspectionRecord.java
+import java.time.Instant;
+import java.util.UUID;
+
+public final class InspectionRecord {
+    private final String id = UUID.randomUUID().toString();
+    private final String applicationId;
+    private final String requestedBy;
+    private final String inspectionType;
+    private final Instant requestedAt = Instant.now();
+    private Instant scheduledAt;
+    private String inspectorId;
+    private String result;
+    private String notes;
+
+    public InspectionRecord(String applicationId, String requestedBy, String inspectionType) {
+        this.applicationId = applicationId;
+        this.requestedBy = requestedBy;
+        this.inspectionType = inspectionType;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public String getRequestedBy() {
+        return requestedBy;
+    }
+
+    public String getInspectionType() {
+        return inspectionType;
+    }
+
+    public Instant getRequestedAt() {
+        return requestedAt;
+    }
+
+    public Instant getScheduledAt() {
+        return scheduledAt;
+    }
+
+    public String getInspectorId() {
+        return inspectorId;
+    }
+
+    public String getResult() {
+        return result;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    void assign(String inspectorId, Instant scheduledAt) {
+        this.inspectorId = inspectorId;
+        this.scheduledAt = scheduledAt;
+    }
+
+    void recordResult(String result, String notes) {
+        this.result = result;
+        this.notes = notes == null ? "" : notes;
+    }
+}
+
+// File: HearingRecord.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+public final class HearingRecord {
+    private final String id = UUID.randomUUID().toString();
+    private final String applicationId;
+    private final String governingBody;
+    private Instant hearingDate;
+    private final List<String> affidavits = new ArrayList<>();
+    private final List<String> requirements = new ArrayList<>();
+    private String decision;
+    private String preparationNotes;
+
+    public HearingRecord(String applicationId, String governingBody) {
+        this.applicationId = applicationId;
+        this.governingBody = governingBody;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public String getGoverningBody() {
+        return governingBody;
+    }
+
+    public Instant getHearingDate() {
+        return hearingDate;
+    }
+
+    public List<String> getAffidavits() {
+        return Collections.unmodifiableList(affidavits);
+    }
+
+    public List<String> getRequirements() {
+        return Collections.unmodifiableList(requirements);
+    }
+
+    public String getDecision() {
+        return decision;
+    }
+
+    public String getPreparationNotes() {
+        return preparationNotes;
+    }
+
+    void setHearingDate(Instant hearingDate) {
+        this.hearingDate = hearingDate;
+    }
+
+    void addAffidavit(String affidavit) {
+        affidavits.add(affidavit);
+    }
+
+    void addRequirement(String requirement) {
+        requirements.add(requirement);
+    }
+
+    void setDecision(String decision) {
+        this.decision = decision;
+    }
+
+    void setPreparationNotes(String preparationNotes) {
+        this.preparationNotes = preparationNotes;
+    }
+}
+
+// File: CountyPortal.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+public final class CountyPortal {
+    private final Map<String, User> usersById = new ConcurrentHashMap<>();
+    private final Map<String, User> usersByEmail = new ConcurrentHashMap<>();
+    private final Map<String, ServiceDefinition> services = new ConcurrentHashMap<>();
+    private final Map<String, ApplicationRecord> applications = new ConcurrentHashMap<>();
+    private final Map<String, PropertyRecord> properties = new ConcurrentHashMap<>();
+    private final Map<String, PreApplicationRequest> preApplicationRequests = new ConcurrentHashMap<>();
+    private final Map<String, MeetingRecord> meetings = new ConcurrentHashMap<>();
+    private final Map<String, PlanReviewTask> planReviews = new ConcurrentHashMap<>();
+    private final Map<String, InspectionRecord> inspections = new ConcurrentHashMap<>();
+    private final Map<String, HearingRecord> hearings = new ConcurrentHashMap<>();
+    private final Map<String, List<String>> reports = new ConcurrentHashMap<>();
+    private final Map<String, List<Activity>> systemActivities = new ConcurrentHashMap<>();
+    private final Map<String, String> ordinances = new ConcurrentHashMap<>();
+    private final Map<String, String> bonds = new ConcurrentHashMap<>();
+    private final Map<String, String> zoningRequests = new ConcurrentHashMap<>();
+    private final Map<String, String> codeModificationRequests = new ConcurrentHashMap<>();
+
+    public synchronized User createAccount(String name, String email, String password) {
+        String key = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        if (key.isBlank() || usersByEmail.containsKey(key)) {
+            throw new IllegalArgumentException("A unique email address is required.");
+        }
+        User user = new User(name, key, password,
+                java.util.Set.of(UserRole.CUSTOMER, UserRole.APPLICANT));
+        usersById.put(user.getId(), user);
+        usersByEmail.put(key, user);
+        return user;
+    }
+
+    public User registerStaff(String name, String email, String password, UserRole role) {
+        if (role == null || role == UserRole.PUBLIC_USER || role == UserRole.APPLICANT
+                || role == UserRole.CUSTOMER || role == UserRole.PROSPECTIVE_APPLICANT) {
+            throw new IllegalArgumentException("A staff role is required.");
+        }
+        String key = email.trim().toLowerCase(Locale.ROOT);
+        if (usersByEmail.containsKey(key)) {
+            throw new IllegalArgumentException("Email is already registered.");
+        }
+        User user = new User(name, key, password, java.util.Set.of(role));
+        usersById.put(user.getId(), user);
+        usersByEmail.put(key, user);
+        return user;
+    }
+
+    public User authenticate(String email, String password) {
+        User user = usersByEmail.get(email == null ? "" : email.trim().toLowerCase(Locale.ROOT));
+        if (user == null || !user.verifyPassword(password)) {
+            throw new SecurityException("Invalid email or password.");
+        }
+        return user;
+    }
+
+    public void addService(ServiceDefinition service) {
+        services.put(service.getId(), Objects.requireNonNull(service));
+    }
+
+    public List<ServiceDefinition> searchServices(String query, User user) {
+        String q = query == null ? "" : query.toLowerCase(Locale.ROOT);
+        return services.values().stream()
+                .filter(s -> user == null || s.isAvailableTo(user))
+                .filter(s -> q.isBlank() || (s.getName() + " " + s.getDescription() + " "
+                        + s.getRequirements()).toLowerCase(Locale.ROOT).contains(q))
+                .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public List<String> searchPublicInformation(String query) {
+        String q = query == null ? "" : query.toLowerCase(Locale.ROOT);
+        List<String> results = new ArrayList<>();
+        for (ServiceDefinition service : services.values()) {
+            String content = service.getName() + " — " + service.getDescription()
+                    + " Requirements: " + service.getRequirements();
+            if (q.isBlank() || content.toLowerCase(Locale.ROOT).contains(q)) {
+                results.add(content);
+            }
+        }
+        for (PropertyRecord property : properties.values()) {
+            String content = "Property " + property.getId() + ": " + property.getAddress()
+                    + ", parcel " + property.getParcelPin();
+            if (q.isBlank() || content.toLowerCase(Locale.ROOT).contains(q)) {
+                results.add(content);
+            }
+        }
+        return List.copyOf(results);
+    }
+
+    public PreApplicationRequest requestPreApplicationAssistance(User applicant, String requestText) {
+        requireApplicant(applicant);
+        if (requestText == null || requestText.isBlank()) {
+            throw new IllegalArgumentException("Request details are required.");
+        }
+        PreApplicationRequest request = new PreApplicationRequest(applicant.getId(), requestText);
+        preApplicationRequests.put(request.getId(), request);
+        return request;
+    }
+
+    public void respondToPreApplicationRequest(User staff, String requestId, String response) {
+        requireStaff(staff);
+        PreApplicationRequest request = require(preApplicationRequests, requestId, "Pre-application request");
+        request.setResponse(requireText(response, "Response"));
+    }
+
+    public ApplicationRecord submitApplication(User applicant, String serviceId, String propertyId,
+                                               String applicationData) {
+        requireApplicant(applicant);
+        ServiceDefinition service = require(services, serviceId, "Service");
+        if (!service.isAvailableTo(applicant)) {
+            throw new SecurityException("This service is not available to the user.");
+        }
+        if (propertyId != null && !properties.containsKey(propertyId)) {
+            throw new IllegalArgumentException("Unknown property.");
+        }
+        ApplicationRecord application = new ApplicationRecord(
+                applicant.getId(), serviceId, propertyId, applicationData);
+        application.setStatus(ApplicationStatus.SUBMITTED);
+        application.setOutstandingFee(service.getApplicationFee());
+        record(application, applicant, "APPLICATION_SUBMITTED", "Application submitted.");
+        applications.put(application.getId(), application);
+        if (propertyId != null) {
+            properties.get(propertyId).addAssociatedRecord(application.getId());
+        }
+        return application;
+    }
+
+    public DocumentRecord submitSupportingDocumentation(User applicant, String applicationId,
+                                                        String fileName, String documentType,
+                                                        String description) {
+        ApplicationRecord application = requireApplication(applicationId);
+        requireOwnerOrStaff(applicant, application);
+        ensureNotFinal(application);
+        int version = (int) application.getDocuments().stream()
+                .filter(d -> d.getFileName().equalsIgnoreCase(fileName)).count() + 1;
+        DocumentRecord document = new DocumentRecord(
+                fileName, documentType, applicant.getId(), description, version);
+        application.addDocument(document);
+        record(application, applicant, "DOCUMENT_SUBMITTED", fileName + " (version " + version + ")");
+        return document;
+    }
+
+    public void payFee(User applicant, String applicationId, double amount, String paymentReference) {
+        ApplicationRecord application = requireApplication(applicationId);
+        requireOwnerOrStaff(applicant, application);
+        ensureNotOnHold(application);
+        if (amount <= 0 || amount > application.getOutstandingFee()) {
+            throw new IllegalArgumentException("Payment must be positive and cannot exceed the balance.");
+        }
+        application.setOutstandingFee(roundCurrency(application.getOutstandingFee() - amount));
+        record(application, applicant, "FEE_PAID",
+                amount + " paid; reference " + (paymentReference == null ? "" : paymentReference)
+                        + "; balance " + application.getOutstandingFee());
+    }
+
+    public ApplicationRecord checkStatus(User user, String applicationId) {
+        ApplicationRecord application = requireApplication(applicationId);
+        requireOwnerOrStaff(user, application);
+        return application;
+    }
+
+    public void modifyApplication(User applicant, String applicationId, String revisedData) {
+        ApplicationRecord application = requireApplication(applicationId);
+        requireOwnerOrStaff(applicant, application);
+        ensureNotFinal(application);
+        ensureNotOnHold(application);
+        application.setApplicationData(requireText(revisedData, "Application data"));
+        record(application, applicant, "APPLICATION_MODIFIED", "Application information updated.");
+    }
+
+    public void performCompletenessReview(User staff, String applicationId, boolean complete, String comments) {
+        requireStaff(staff);
+        ApplicationRecord application = requireApplication(applicationId);
+        ensureNotOnHold(application);
+        application.setCompletenessPassed(complete);
+        application.setStatus(complete ? ApplicationStatus.READY_FOR_TECHNICAL_REVIEW
+                : ApplicationStatus.INCOMPLETE);
+        record(application, staff, "COMPLETENESS_REVIEW",
+                (complete ? "Complete. " : "Incomplete. ") + safe(comments));
+    }
+
+    public void recordInternalNote(User staff, String applicationId, String note) {
+        requireStaff(staff);
+        record(requireApplication(applicationId), staff, "INTERNAL_NOTE", requireText(note, "Note"));
+    }
+
+    public void assignForDetailedReview(User staff, String applicationId, String reviewerId) {
+        requireStaff(staff);
+        ApplicationRecord application = requireApplication(applicationId);
+        ensureCanProgress(application);
+        if (!application.isCompletenessPassed()) {
+            throw new IllegalStateException("Completeness review must pass before detailed review.");
+        }
+        application.setAssignedTo(requireText(reviewerId, "Reviewer"));
+        application.setStatus(ApplicationStatus.UNDER_REVIEW);
+        record(application, staff, "DETAILED_REVIEW_ASSIGNED", "Assigned to " + reviewerId);
+    }
+
+    public void applyHold(User staff, String applicationId, String reason) {
+        requireStaff(staff);
+        ApplicationRecord application = requireApplication(applicationId);
+        application.setHoldReason(requireText(reason, "Hold reason"));
+        record(application, staff, "HOLD_APPLIED", reason);
+    }
+
+    public void removeHold(User staff, String applicationId, String resolution) {
+        requireStaff(staff);
+        ApplicationRecord application = requireApplication(applicationId);
+        if (!application.isOnHold()) {
+            throw new IllegalStateException("Application is not on hold.");
+        }
+        String previous = application.getHoldReason();
+        application.setHoldReason(null);
+        record(application, staff, "HOLD_REMOVED",
+                previous + "; resolved: " + safe(resolution));
+    }
+
+    public void sendFormalResponse(User staff, String applicationId, String message) {
+        requireStaff(staff);
+        record(requireApplication(applicationId), staff, "FORMAL_RESPONSE",
+                requireText(message, "Response"));
+    }
+
+    public void trackDraftProffer(User staff, String applicationId, String draft) {
+        requireStaff(staff);
+        ApplicationRecord app = requireApplication(applicationId);
+        app.addDraftProffer(requireText(draft, "Draft proffer"));
+        record(app, staff, "DRAFT_PROFFER", "Draft proffer version recorded.");
+    }
+
+    public void manageApprovedProffer(User staff, String applicationId, String proffer, String action) {
+        requireStaff(staff);
+        ApplicationRecord app = requireApplication(applicationId);
+        String value = requireText(proffer, "Proffer");
+        if ("ADD".equalsIgnoreCase(action) || "APPROVE".equalsIgnoreCase(action)) {
+            app.addApprovedProffer(value);
+        } else if ("SATISFY".equalsIgnoreCase(action)) {
+            app.addActivity(new Activity(staff.getName(), "PROFFER_SATISFIED", value));
+        } else {
+            throw new IllegalArgumentException("Action must be ADD, APPROVE, or SATISFY.");
+        }
+        record(app, staff, "APPROVED_PROFFER_" + action.toUpperCase(Locale.ROOT), value);
+    }
+
+    public void manageOrdinance(User staff, String ordinanceId, String ordinanceText) {
+        requireStaff(staff);
+        ordinances.put(requireText(ordinanceId, "Ordinance id"), requireText(ordinanceText, "Ordinance text"));
+        addSystemActivity(staff, "ORDINANCE_UPDATED", ordinanceId);
+    }
+
+    public MeetingRecord scheduleMeeting(User staff, String applicationId, String subject, Instant dateTime) {
+        requireStaff(staff);
+        requireApplication(applicationId);
+        if (dateTime == null || dateTime.isBefore(Instant.now())) {
+            throw new IllegalArgumentException("Meeting must be scheduled in the future.");
+        }
+        MeetingRecord meeting = new MeetingRecord(applicationId, requireText(subject, "Subject"),
+                dateTime, staff.getId());
+        meetings.put(meeting.getId(), meeting);
+        record(requireApplication(applicationId), staff, "MEETING_SCHEDULED", subject + " at " + dateTime);
+        return meeting;
+    }
+
+    public void recordMeetingOutcome(User staff, String meetingId, String outcome) {
+        requireStaff(staff);
+        MeetingRecord meeting = require(meetings, meetingId, "Meeting");
+        meeting.setOutcome(requireText(outcome, "Outcome"));
+        record(requireApplication(meeting.getApplicationId()), staff, "MEETING_OUTCOME", outcome);
+    }
+
+    public void setFinalAction(User staff, String applicationId, String action) {
+        requireStaff(staff);
+        ApplicationRecord app = requireApplication(applicationId);
+        ensureNotOnHold(app);
+        String value = requireText(action, "Final action");
+        app.setFinalAction(value);
+        if (value.equalsIgnoreCase("APPROVED")) {
+            app.setStatus(ApplicationStatus.APPROVED);
+        } else if (value.equalsIgnoreCase("DENIED")) {
+            app.setStatus(ApplicationStatus.DENIED);
+        } else if (value.equalsIgnoreCase("COMPLETED")) {
+            app.setStatus(ApplicationStatus.COMPLETED);
+        } else {
+            app.setStatus(ApplicationStatus.CLOSED);
+        }
+        record(app, staff, "FINAL_ACTION", value);
+    }
+
+    public void recordPlanningStudy(User planningStaff, String studyId, String title,
+                                    String location, String outcome, String status) {
+        requireRole(planningStaff, UserRole.PLANNING_STAFF);
+        String details = requireText(title, "Study title") + " | Location: " + safe(location)
+                + " | Outcome: " + safe(outcome) + " | Status: " + safe(status);
+        addSystemActivity(planningStaff, "PLANNING_STUDY:" + requireText(studyId, "Study id"), details);
+    }
+
+    public List<String> generatePlanningReport(User planningStaff, String query) {
+        requireRole(planningStaff, UserRole.PLANNING_STAFF);
+        String q = query == null ? "" : query.toLowerCase(Locale.ROOT);
+        return systemActivities.values().stream().flatMap(List::stream)
+                .filter(a -> a.getCategory().startsWith("PLANNING_STUDY"))
+                .filter(a -> q.isBlank() || a.toString().toLowerCase(Locale.ROOT).contains(q))
+                .map(Activity::toString).toList();
+    }
+
+    public void evaluateComprehensivePlanConsistency(User planningStaff, String applicationId,
+                                                      boolean consistent, String comments) {
+        requireRole(planningStaff, UserRole.PLANNING_STAFF);
+        ApplicationRecord app = requireApplication(applicationId);
+        app.setConsistencyPassed(consistent);
+        record(app, planningStaff, "COMPREHENSIVE_PLAN_CONSISTENCY",
+                (consistent ? "Consistent. " : "Not consistent. ") + safe(comments));
+    }
+
+    public void performStaffReview(User staff, String applicationId, boolean compliant, String comments) {
+        requireStaff(staff);
+        ApplicationRecord app = requireApplication(applicationId);
+        ensureNotOnHold(app);
+        app.setStaffReviewPassed(compliant);
+        app.setStatus(compliant ? ApplicationStatus.READY_FOR_TECHNICAL_REVIEW
+                : ApplicationStatus.CORRECTIONS_REQUIRED);
+        record(app, staff, "STAFF_REVIEW", (compliant ? "Compliant. " : "Non-compliant. ") + safe(comments));
+    }
+
+    public String processZoningInformationRequest(User zoningStaff, String requestText, String response) {
+        requireRole(zoningStaff, UserRole.ZONING_STAFF);
+        String id = UUID.randomUUID().toString();
+        zoningRequests.put(id, requireText(response, "Response"));
+        addSystemActivity(zoningStaff, "ZONING_INFORMATION_REQUEST",
+                requireText(requestText, "Request") + " | Response: " + response);
+        return id;
+    }
+
+    public String issueZoningPermit(User zoningStaff, String applicationId) {
+        requireRole(zoningStaff, UserRole.ZONING_STAFF);
+        ApplicationRecord app = requireApplication(applicationId);
+        ensureCanProgress(app);
+        if (!app.isStaffReviewPassed()) {
+            throw new IllegalStateException("A passing staff review is required.");
+        }
+        String permit = "Z-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
+        app.setPermitNumber(permit);
+        app.setStatus(ApplicationStatus.PERMIT_ISSUED);
+        record(app, zoningStaff, "ZONING_PERMIT_ISSUED", permit);
+        return permit;
+    }
+
+    public String developStaffReport(User staff, String applicationId, String reportText) {
+        requireStaff(staff);
+        ApplicationRecord app = requireApplication(applicationId);
+        String id = UUID.randomUUID().toString();
+        reports.put(id, new ArrayList<>(List.of(requireText(reportText, "Report"))));
+        record(app, staff, "STAFF_REPORT_PUBLISHED", id);
+        return id;
+    }
+
+    public HearingRecord createHearing(User staff, String applicationId, String governingBody) {
+        requireStaff(staff);
+        requireApplication(applicationId);
+        HearingRecord hearing = new HearingRecord(applicationId, requireText(governingBody, "Governing body"));
+        hearings.put(hearing.getId(), hearing);
+        return hearing;
+    }
+
+    public void assignHearingDate(User staff, String hearingId, Instant date) {
+        requireStaff(staff);
+        if (date == null || date.isBefore(Instant.now())) {
+            throw new IllegalArgumentException("Hearing date must be in the future.");
+        }
+        HearingRecord hearing = require(hearings, hearingId, "Hearing");
+        hearing.setHearingDate(date);
+        ApplicationRecord app = requireApplication(hearing.getApplicationId());
+        app.setStatus(ApplicationStatus.HEARING_SCHEDULED);
+        record(app, staff, "HEARING_DATE_ASSIGNED", date.toString());
+    }
+
+    public void manageAffidavit(User staff, String hearingId, String affidavit) {
+        requireStaff(staff);
+        require(hearings, hearingId, "Hearing").addAffidavit(requireText(affidavit, "Affidavit"));
+    }
+
+    public void addHearingRequirement(User staff, String hearingId, String requirement) {
+        requireStaff(staff);
+        require(hearings, hearingId, "Hearing").addRequirement(requireText(requirement, "Requirement"));
+    }
+
+    public void satisfyHearingRequirement(User applicant, String applicationId, String requirement) {
+        ApplicationRecord app = requireApplication(applicationId);
+        requireOwnerOrStaff(applicant, app);
+        record(app, applicant, "HEARING_REQUIREMENT_SATISFIED", requireText(requirement, "Requirement"));
+    }
+
+    public void prepareForHearing(User staff, String hearingId, String notes) {
+        requireStaff(staff);
+        HearingRecord hearing = require(hearings, hearingId, "Hearing");
+        hearing.setPreparationNotes(requireText(notes, "Preparation notes"));
+        record(requireApplication(hearing.getApplicationId()), staff, "HEARING_PREPARATION", notes);
+    }
+
+    public void captureHearingDecision(User staff, String hearingId, String decision) {
+        requireStaff(staff);
+        HearingRecord hearing = require(hearings, hearingId, "Hearing");
+        hearing.setDecision(requireText(decision, "Decision"));
+        ApplicationRecord app = requireApplication(hearing.getApplicationId());
+        record(app, staff, "HEARING_DECISION", decision);
+        if (decision.equalsIgnoreCase("APPROVED")) {
+            app.setStatus(ApplicationStatus.APPROVED);
+        } else if (decision.equalsIgnoreCase("DENIED")) {
+            app.setStatus(ApplicationStatus.DENIED);
+        }
+    }
+
+    public void processAppeal(User staff, String applicationId, String outcome, String impact) {
+        requireStaff(staff);
+        ApplicationRecord app = requireApplication(applicationId);
+        app.setStatus(ApplicationStatus.APPEALED);
+        record(app, staff, "APPEAL_PROCESSED", outcome + " | Impact: " + safe(impact));
+    }
+
+    public PlanReviewTask assignPlanForReview(User staff, String applicationId, String planName,
+                                              String reviewerId) {
+        requireRole(staff, UserRole.PLAN_REVIEW_STAFF);
+        ApplicationRecord app = requireApplication(applicationId);
+        ensureCanProgress(app);
+        PlanReviewTask task = new PlanReviewTask(applicationId, requireText(planName, "Plan name"));
+        task.assign(requireText(reviewerId, "Reviewer"));
+        planReviews.put(task.getId(), task);
+        app.addPlanVersion(planName);
+        record(app, staff, "PLAN_ASSIGNED", planName + " to " + reviewerId);
+        return task;
+    }
+
+    public Map<String, Long> getPlanReviewerWorkload(User supervisor) {
+        requireRole(supervisor, UserRole.PLAN_REVIEW_SUPERVISOR);
+        Map<String, Long> workload = new HashMap<>();
+        planReviews.values().stream().filter(task -> "PENDING".equals(task.getResult()))
+                .filter(task -> task.getReviewerId() != null)
+                .forEach(task -> workload.merge(task.getReviewerId(), 1L, Long::sum));
+        return Collections.unmodifiableMap(workload);
+    }
+
+    public MeetingRecord requestPlanReviewMeeting(User applicant, String applicationId,
+                                                  String subject, Instant requestedTime) {
+        requireApplicant(applicant);
+        requireApplication(applicationId);
+        if (requestedTime == null || requestedTime.isBefore(Instant.now())) {
+            throw new IllegalArgumentException("Requested meeting time must be in the future.");
+        }
+        MeetingRecord meeting = new MeetingRecord(applicationId, subject, requestedTime, applicant.getId());
+        meetings.put(meeting.getId(), meeting);
+        record(requireApplication(applicationId), applicant, "PLAN_REVIEW_MEETING_REQUESTED", subject);
+        return meeting;
+    }
+
+    public void reviewPlan(User reviewer, String taskId, String result, String comments) {
+        requireRole(reviewer, UserRole.PLAN_REVIEW_STAFF);
+        PlanReviewTask task = require(planReviews, taskId, "Plan review");
+        if (!"PENDING".equals(task.getResult())) {
+            throw new IllegalStateException("Plan review has already been completed.");
+        }
+        if (!List.of("APPROVED", "FAILED", "DENIED", "CORRECTIONS_REQUIRED")
+                .contains(result.toUpperCase(Locale.ROOT))) {
+            throw new IllegalArgumentException("Unsupported plan review result.");
+        }
+        task.complete(result.toUpperCase(Locale.ROOT), comments);
+        ApplicationRecord app = requireApplication(task.getApplicationId());
+        record(app, reviewer, "PLAN_REVIEW_RESULT", task.getPlanName() + ": " + result + " " + safe(comments));
+        refreshPlanReviewCompletion(app);
+    }
+
+    public void resubmitPlans(User applicant, String applicationId, String planDescription) {
+        ApplicationRecord app = requireApplication(applicationId);
+        requireOwnerOrStaff(applicant, app);
+        ensureNotOnHold(app);
+        app.addPlanVersion(requireText(planDescription, "Plan description"));
+        app.setPlanReviewsComplete(false);
+        record(app, applicant, "PLANS_RESUBMITTED", planDescription);
+    }
+
+    public String submitCodeModificationRequest(User applicant, String applicationId, String request) {
+        ApplicationRecord app = requireApplication(applicationId);
+        requireOwnerOrStaff(applicant, app);
+        String id = UUID.randomUUID().toString();
+        codeModificationRequests.put(id, requireText(request, "Code modification request"));
+        record(app, applicant, "CODE_MODIFICATION_SUBMITTED", id);
+        return id;
+    }
+
+    public void reviewCodeModification(User reviewer, String requestId, boolean approved, String projectId) {
+        requireRole(reviewer, UserRole.PLAN_REVIEW_STAFF);
+        String request = require(codeModificationRequests, requestId, "Code modification request");
+        codeModificationRequests.put(requestId, request + " | "
+                + (approved ? "APPROVED" : "DENIED") + " | Project: " + safe(projectId));
+        addSystemActivity(reviewer, "CODE_MODIFICATION_REVIEW", requestId);
+    }
+
+    public boolean trackPlanReviewCompletion(User staff, String applicationId) {
+        requireStaff(staff);
+        ApplicationRecord app = requireApplication(applicationId);
+        refreshPlanReviewCompletion(app);
+        record(app, staff, "PLAN_REVIEW_COMPLETION_CHECK",
+                app.arePlanReviewsComplete() ? "All plan reviews complete." : "Plan reviews remain outstanding.");
+        return app.arePlanReviewsComplete();
+    }
+
+    public String issueDevelopmentPermit(User developmentStaff, String applicationId) {
+        requireRole(developmentStaff, UserRole.DEVELOPMENT_STAFF);
+        ApplicationRecord app = requireApplication(applicationId);
+        ensureCanProgress(app);
+        if (app.getStatus() != ApplicationStatus.APPROVED) {
+            throw new IllegalStateException("Application must be approved before permit issuance.");
+        }
+        if (app.getOutstandingFee() > 0) {
+            throw new IllegalStateException("Outstanding fees must be paid before permit issuance.");
+        }
+        String permit = "D-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
+        app.setPermitNumber(permit);
+        app.setStatus(ApplicationStatus.PERMIT_ISSUED);
+        record(app, developmentStaff, "DEVELOPMENT_PERMIT_ISSUED", permit);
+        return permit;
+    }
+
+    public void manageBond(User staff, String applicationId, String action, String details) {
+        requireStaff(staff);
+        requireApplication(applicationId);
+        String key = applicationId + ":" + requireText(action, "Bond action");
+        bonds.put(key, requireText(details, "Bond details"));
+        record(requireApplication(applicationId), staff, "BOND_" + action.toUpperCase(Locale.ROOT), details);
+    }
+
+    public void completeDevelopmentProject(User applicant, String applicationId, String completionDetails) {
+        ApplicationRecord app = requireApplication(applicationId);
+        requireOwnerOrStaff(applicant, app);
+        if (app.getStatus() != ApplicationStatus.PERMIT_ISSUED
+                && app.getStatus() != ApplicationStatus.APPROVED) {
+            throw new IllegalStateException("Project must be approved or permitted before completion.");
+        }
+        app.setStatus(ApplicationStatus.COMPLETED);
+        record(app, applicant, "PROJECT_COMPLETED", requireText(completionDetails, "Completion details"));
+    }
+
+    public InspectionRecord requestInspection(User customer, String applicationId, String inspectionType) {
+        ApplicationRecord app = requireApplication(applicationId);
+        requireOwnerOrStaff(customer, app);
+        InspectionRecord inspection = new InspectionRecord(applicationId, customer.getId(),
+                requireText(inspectionType, "Inspection type"));
+        inspections.put(inspection.getId(), inspection);
+        record(app, customer, "INSPECTION_REQUESTED", inspectionType);
+        return inspection;
+    }
+
+    public InspectionRecord createInspection(User inspectionStaff, String applicationId,
+                                             String inspectionType) {
+        requireRole(inspectionStaff, UserRole.INSPECTION_STAFF);
+        ApplicationRecord app = requireApplication(applicationId);
+        InspectionRecord inspection = new InspectionRecord(applicationId, inspectionStaff.getId(),
+                requireText(inspectionType, "Inspection type"));
+        inspections.put(inspection.getId(), inspection);
+        record(app, inspectionStaff, "INSPECTION_CREATED", inspectionType);
+        return inspection;
+    }
+
+    public void assignInspection(User supervisor, String inspectionId, String inspectorId, Instant date) {
+        requireRole(supervisor, UserRole.INSPECTION_SUPERVISOR);
+        if (date == null || date.isBefore(Instant.now())) {
+            throw new IllegalArgumentException("Inspection date must be in the future.");
+        }
+        InspectionRecord inspection = require(inspections, inspectionId, "Inspection");
+        inspection.assign(requireText(inspectorId, "Inspector"), date);
+        record(requireApplication(inspection.getApplicationId()), supervisor,
+                "INSPECTION_ASSIGNED", inspectorId + " at " + date);
+    }
+
+    public Map<String, Long> getInspectorWorkload(User supervisor) {
+        requireRole(supervisor, UserRole.INSPECTION_SUPERVISOR);
+        Map<String, Long> result = new HashMap<>();
+        inspections.values().stream()
+                .filter(i -> i.getInspectorId() != null && i.getResult() == null)
+                .forEach(i -> result.merge(i.getInspectorId(), 1L, Long::sum));
+        return Collections.unmodifiableMap(result);
+    }
+
+    public void conductInspection(User inspector, String inspectionId, String result, String notes) {
+        requireRole(inspector, UserRole.INSPECTOR);
+        InspectionRecord inspection = require(inspections, inspectionId, "Inspection");
+        if (inspection.getInspectorId() != null && !inspection.getInspectorId().equals(inspector.getId())) {
+            throw new SecurityException("Inspection is assigned to another inspector.");
+        }
+        inspection.recordResult(requireText(result, "Inspection result"), notes);
+        record(requireApplication(inspection.getApplicationId()), inspector,
+                "INSPECTION_RESULT", result + " " + safe(notes));
+    }
+
+    public void issueNoticeOfViolation(User enforcementStaff, String propertyId,
+                                       String responsibleParty, String violation) {
+        requireRole(enforcementStaff, UserRole.ENFORCEMENT_STAFF);
+        PropertyRecord property = require(properties, propertyId, "Property");
+        String detail = "Notice of Violation to " + requireText(responsibleParty, "Responsible party")
+                + ": " + requireText(violation, "Violation");
+        property.addAssociatedRecord(detail);
+        addSystemActivity(enforcementStaff, "NOTICE_OF_VIOLATION", propertyId + " | " + detail);
+    }
+
+    public void postCitationOrFine(User staff, String propertyId, String citation, double amount) {
+        requireStaff(staff);
+        if (amount < 0) {
+            throw new IllegalArgumentException("Amount cannot be negative.");
+        }
+        PropertyRecord property = require(properties, propertyId, "Property");
+        String detail = requireText(citation, "Citation") + " | Fine: " + amount;
+        property.addAssociatedRecord(detail);
+        addSystemActivity(staff, "CITATION_OR_FINE", propertyId + " | " + detail);
+    }
+
+    public void addProperty(PropertyRecord property) {
+        properties.put(property.getId(), Objects.requireNonNull(property));
+    }
+
+    public List<PropertyRecord> searchPropertyInformation(User staff, String query) {
+        requireStaff(staff);
+        String q = query == null ? "" : query.toLowerCase(Locale.ROOT);
+        return properties.values().stream()
+                .filter(p -> q.isBlank() || (p.getId() + " " + p.getAddress() + " " + p.getParcelPin())
+                        .toLowerCase(Locale.ROOT).contains(q))
+                .toList();
+    }
+
+    public void notifyGeospatialChange(User staff, String propertyId, String changeDescription) {
+        requireStaff(staff);
+        PropertyRecord property = require(properties, propertyId, "Property");
+        String notification = Instant.now() + ": " + requireText(changeDescription, "Change description");
+        property.addGeospatialNotification(notification);
+        addSystemActivity(staff, "GEOSPATIAL_CHANGE", propertyId + " | " + notification);
+    }
+
+    public String createCustomReport(User countyStaff, String name, String query) {
+        requireRole(countyStaff, UserRole.COUNTY_STAFF);
+        String reportId = UUID.randomUUID().toString();
+        List<String> rows = new ArrayList<>();
+        String q = query == null ? "" : query.toLowerCase(Locale.ROOT);
+        applications.values().stream()
+                .filter(a -> q.isBlank() || (a.getId() + " " + a.getStatus() + " "
+                        + a.getApplicationData()).toLowerCase(Locale.ROOT).contains(q))
+                .forEach(a -> rows.add(a.getId() + "," + a.getStatus() + "," + a.getServiceId()));
+        reports.put(reportId, rows);
+        addSystemActivity(countyStaff, "CUSTOM_REPORT", name + " | " + reportId);
+        return reportId;
+    }
+
+    public List<String> getReport(String reportId) {
+        List<String> rows = reports.get(reportId);
+        if (rows == null) {
+            throw new IllegalArgumentException("Unknown report.");
+        }
+        return List.copyOf(rows);
+    }
+
+    public void createCondoUnit(User staff, String propertyId, String unitId, String address) {
+        requireStaff(staff);
+        PropertyRecord property = require(properties, propertyId, "Property");
+        property.addCondoUnit(requireText(unitId, "Unit id") + " | " + safe(address));
+    }
+
+    public void updateGisPropertyManagement(User technicalStaff, String propertyId,
+                                            String newParcelPin, String gisLayerReference) {
+        requireRole(technicalStaff, UserRole.TECHNICAL_STAFF);
+        PropertyRecord property = require(properties, propertyId, "Property");
+        property.setParcelPin(requireText(newParcelPin, "Parcel PIN"));
+        property.setGisLayerReference(requireText(gisLayerReference, "GIS layer reference"));
+        notifyGeospatialChange(technicalStaff, propertyId, "Parcel PIN/GIS reference updated.");
+    }
+
+    public List<Activity> getSystemActivities(User staff) {
+        requireStaff(staff);
+        return systemActivities.values().stream().flatMap(List::stream).toList();
+    }
+
+    public List<ApplicationRecord> getApplications(User staff) {
+        requireStaff(staff);
+        return List.copyOf(applications.values());
+    }
+
+    private void refreshPlanReviewCompletion(ApplicationRecord app) {
+        List<PlanReviewTask> tasks = planReviews.values().stream()
+                .filter(t -> t.getApplicationId().equals(app.getId())).toList();
+        app.setPlanReviewsComplete(!tasks.isEmpty() && tasks.stream()
+                .allMatch(t -> !"PENDING".equals(t.getResult())));
+    }
+
+    private void record(ApplicationRecord application, User actor, String category, String detail) {
+        application.addActivity(new Activity(actor == null ? "System" : actor.getName(), category, detail));
+    }
+
+    private void addSystemActivity(User actor, String category, String detail) {
+        systemActivities.computeIfAbsent(UUID.randomUUID().toString(), ignored -> new ArrayList<>())
+                .add(new Activity(actor == null ? "System" : actor.getName(), category, detail));
+    }
+
+    private ApplicationRecord requireApplication(String id) {
+        return require(applications, id, "Application");
+    }
+
+    private void requireApplicant(User user) {
+        if (user == null || !(user.hasRole(UserRole.APPLICANT) || user.hasRole(UserRole.CUSTOMER)
+                || user.hasRole(UserRole.PROSPECTIVE_APPLICANT))) {
+            throw new SecurityException("Applicant or customer account required.");
+        }
+    }
+
+    private void requireStaff(User user) {
+        if (user == null || user.getRoles().stream().noneMatch(this::isStaffRole)) {
+            throw new SecurityException("Staff account required.");
+        }
+    }
+
+    private void requireRole(User user, UserRole role) {
+        if (user == null || !user.hasRole(role)) {
+            throw new SecurityException("Required role: " + role);
+        }
+    }
+
+    private boolean isStaffRole(UserRole role) {
+        return switch (role) {
+            case STAFF, PLANNING_STAFF, ZONING_STAFF, PLAN_REVIEW_STAFF, PLAN_REVIEW_SUPERVISOR,
+                    DEVELOPMENT_STAFF, INSPECTION_STAFF, INSPECTION_SUPERVISOR, INSPECTOR,
+                    ENFORCEMENT_STAFF, TECHNICAL_STAFF, COUNTY_STAFF -> true;
+            default -> false;
+        };
+    }
+
+    private void requireOwnerOrStaff(User user, ApplicationRecord app) {
+        if (user == null) {
+            throw new SecurityException("Authentication required.");
+        }
+        if (!app.getApplicantId().equals(user.getId())) {
+            requireStaff(user);
+        }
+    }
+
+    private void ensureNotOnHold(ApplicationRecord application) {
+        if (application.isOnHold()) {
+            throw new IllegalStateException("Application is on hold: " + application.getHoldReason());
+        }
+    }
+
+    private void ensureCanProgress(ApplicationRecord application) {
+        ensureNotOnHold(application);
+        ensureNotFinal(application);
+    }
+
+    private void ensureNotFinal(ApplicationRecord application) {
+        if (application.getStatus() == ApplicationStatus.CLOSED
+                || application.getStatus() == ApplicationStatus.COMPLETED
+                || application.getStatus() == ApplicationStatus.DENIED) {
+            throw new IllegalStateException("Application is in a final state.");
+        }
+    }
+
+    private static String requireText(String value, String name) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(name + " is required.");
+        }
+        return value.trim();
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static double roundCurrency(double amount) {
+        return Math.round(amount * 100.0) / 100.0;
+    }
+
+    private static <T> T require(Map<String, T> map, String id, String type) {
+        T value = map.get(id);
+        if (value == null) {
+            throw new IllegalArgumentException(type + " not found: " + id);
+        }
+        return value;
+    }
+}
+
+// File: Main.java
+import java.time.Instant;
+import java.util.Set;
+
+public final class Main {
+    public static void main(String[] args) {
+        CountyPortal portal = new CountyPortal();
+
+        portal.addService(new ServiceDefinition(
+                "SITE-PLAN",
+                "Site Plan Review",
+                "Review of plans for proposed development.",
+                "Application form, site plan, ownership information, and applicable fees.",
+                250.00,
+                Set.of(UserRole.APPLICANT, UserRole.CUSTOMER)));
+
+        User applicant = portal.createAccount("Jordan Applicant", "jordan@example.com", "demo-password");
+        User staff = portal.registerStaff("Casey Reviewer", "casey@county.gov", "staff-password",
+                UserRole.STAFF);
+        PropertyRecord property = new PropertyRecord("PROP-1001", "100 Main Street", "12-34-567", "Jordan Applicant");
+        portal.addProperty(property);
+
+        ApplicationRecord application = portal.submitApplication(
+                applicant, "SITE-PLAN", property.getId(), "Proposed retail building");
+        portal.submitSupportingDocumentation(applicant, application.getId(),
+                "site-plan.pdf", "Plan Set", "Initial submitted site plan");
+
+        portal.performCompletenessReview(staff, application.getId(), true, "Required materials received.");
+        portal.assignForDetailedReview(staff, application.getId(), "reviewer-42");
+        portal.payFee(applicant, application.getId(), 250.00, "PAY-001");
+        portal.sendFormalResponse(staff, application.getId(), "Your application is under technical review.");
+
+        System.out.println("Application " + application.getId() + " status: "
+                + portal.checkStatus(applicant, application.getId()).getStatus());
+        System.out.println("Public search results: " + portal.searchPublicInformation("site plan").size());
+        System.out.println("Demo time: " + Instant.now());
+    }
+}

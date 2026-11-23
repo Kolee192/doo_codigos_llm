@@ -1,0 +1,848 @@
+// File: User.java
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+public class User {
+    private final String id;
+    private String name;
+    private String email;
+    private String bio = "";
+    private final Set<String> roles = new LinkedHashSet<>();
+
+    public User(String id, String name, String email, String... roles) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        if (roles != null) {
+            for (String role : roles) {
+                this.roles.add(role.toLowerCase());
+            }
+        }
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
+    public Set<String> getRoles() { return Set.copyOf(roles); }
+    public boolean hasRole(String role) { return roles.contains(role.toLowerCase()); }
+    public void addRole(String role) { roles.add(role.toLowerCase()); }
+}
+
+// File: Venue.java
+public class Venue {
+    private final String id;
+    private String name;
+    private String address;
+    private String directions;
+    private String mapUrl;
+
+    public Venue(String id, String name, String address, String directions, String mapUrl) {
+        this.id = id;
+        this.name = name;
+        this.address = address;
+        this.directions = directions;
+        this.mapUrl = mapUrl;
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getAddress() { return address; }
+    public String getDirections() { return directions; }
+    public String getMapUrl() { return mapUrl; }
+
+    public void update(String name, String address, String directions, String mapUrl) {
+        this.name = name;
+        this.address = address;
+        this.directions = directions;
+        this.mapUrl = mapUrl;
+    }
+
+    @Override
+    public String toString() {
+        return name + " — " + address;
+    }
+}
+
+// File: RegistrationStatus.java
+public enum RegistrationStatus {
+    REGISTERED, WAITLISTED, ATTENDED, REFUNDED, NO_SHOW, CANCELLED
+}
+
+// File: Registration.java
+import java.time.Instant;
+
+public class Registration {
+    private final String userId;
+    private final String trainingId;
+    private RegistrationStatus status;
+    private final Instant createdAt;
+
+    public Registration(String userId, String trainingId, RegistrationStatus status) {
+        this.userId = userId;
+        this.trainingId = trainingId;
+        this.status = status;
+        this.createdAt = Instant.now();
+    }
+
+    public String getUserId() { return userId; }
+    public String getTrainingId() { return trainingId; }
+    public RegistrationStatus getStatus() { return status; }
+    public void setStatus(RegistrationStatus status) { this.status = status; }
+    public Instant getCreatedAt() { return createdAt; }
+}
+
+// File: Training.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Training {
+    private final String id;
+    private String title;
+    private String summary;
+    private String description;
+    private String logoUrl;
+    private String level;
+    private String location;
+    private String venueId;
+    private LocalDateTime start;
+    private LocalDateTime end;
+    private int capacity;
+    private String slidesUrl;
+    private final Set<String> trainerIds = new LinkedHashSet<>();
+    private final Map<String, Registration> registrations = new LinkedHashMap<>();
+    private final List<String> waitlist = new ArrayList<>();
+
+    public Training(String id, String title, String summary, String description, String logoUrl,
+                    String level, String location, String venueId, LocalDateTime start,
+                    LocalDateTime end, int capacity) {
+        this.id = id;
+        this.title = title;
+        this.summary = summary;
+        this.description = description;
+        this.logoUrl = logoUrl;
+        this.level = level;
+        this.location = location;
+        this.venueId = venueId;
+        this.start = start;
+        this.end = end;
+        this.capacity = capacity;
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public String getSummary() { return summary; }
+    public String getDescription() { return description; }
+    public String getLogoUrl() { return logoUrl; }
+    public String getLevel() { return level; }
+    public String getLocation() { return location; }
+    public String getVenueId() { return venueId; }
+    public LocalDateTime getStart() { return start; }
+    public LocalDateTime getEnd() { return end; }
+    public int getCapacity() { return capacity; }
+    public String getSlidesUrl() { return slidesUrl; }
+    public Set<String> getTrainerIds() { return Set.copyOf(trainerIds); }
+    public Map<String, Registration> getRegistrations() { return Map.copyOf(registrations); }
+    public List<String> getWaitlist() { return List.copyOf(waitlist); }
+
+    public void addTrainer(String userId) { trainerIds.add(userId); }
+
+    public void edit(String title, String summary, String description, String logoUrl,
+                     String level, String location, String venueId, LocalDateTime start,
+                     LocalDateTime end, int capacity, String slidesUrl) {
+        this.title = title;
+        this.summary = summary;
+        this.description = description;
+        this.logoUrl = logoUrl;
+        this.level = level;
+        this.location = location;
+        this.venueId = venueId;
+        this.start = start;
+        this.end = end;
+        this.capacity = capacity;
+        this.slidesUrl = slidesUrl;
+    }
+
+    Map<String, Registration> registrationStore() { return registrations; }
+    List<String> waitlistStore() { return waitlist; }
+
+    public int getRegisteredCount() {
+        return (int) registrations.values().stream()
+                .filter(r -> r.getStatus() == RegistrationStatus.REGISTERED
+                        || r.getStatus() == RegistrationStatus.ATTENDED
+                        || r.getStatus() == RegistrationStatus.NO_SHOW)
+                .count();
+    }
+
+    public int getRemainingSeats() {
+        return Math.max(0, capacity - getRegisteredCount());
+    }
+
+    public String getSlug() {
+        return title.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+    }
+
+    @Override
+    public String toString() {
+        return start + " | " + title + " | " + level + " | " + getRemainingSeats()
+                + " seats left | " + location;
+    }
+}
+
+// File: SponsorLevel.java
+public enum SponsorLevel {
+    INDIVIDUAL(25), BRONZE(350), SILVER(1000), GOLD(2500), PLATINUM(5000);
+
+    private final int amount;
+
+    SponsorLevel(int amount) { this.amount = amount; }
+    public int getAmount() { return amount; }
+}
+
+// File: Sponsor.java
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+public class Sponsor {
+    private final String id;
+    private String companyName;
+    private String description;
+    private String website;
+    private SponsorLevel level;
+    private final Set<String> attendeeIds = new LinkedHashSet<>();
+    private final Set<String> eventIds = new LinkedHashSet<>();
+
+    public Sponsor(String id, String companyName, String description, String website, SponsorLevel level) {
+        this.id = id;
+        this.companyName = companyName;
+        this.description = description;
+        this.website = website;
+        this.level = level;
+    }
+
+    public String getId() { return id; }
+    public String getCompanyName() { return companyName; }
+    public String getDescription() { return description; }
+    public String getWebsite() { return website; }
+    public SponsorLevel getLevel() { return level; }
+    public Set<String> getAttendeeIds() { return Set.copyOf(attendeeIds); }
+    public Set<String> getEventIds() { return Set.copyOf(eventIds); }
+
+    public void personalize(String description, String website) {
+        this.description = description;
+        this.website = website;
+    }
+
+    public void addAttendee(String userId) { attendeeIds.add(userId); }
+    public void addEvent(String eventId) { eventIds.add(eventId); }
+    public void setLevel(SponsorLevel level) { this.level = level; }
+}
+
+// File: Summit.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+public class Summit {
+    private final String id;
+    private String title;
+    private String description;
+    private String venueId;
+    private LocalDateTime start;
+    private LocalDateTime end;
+    private int capacity;
+    private final Set<String> attendeeIds = new LinkedHashSet<>();
+    private final Set<String> sponsorIds = new LinkedHashSet<>();
+    private final List<String> agenda = new ArrayList<>();
+
+    public Summit(String id, String title, String description, String venueId,
+                  LocalDateTime start, LocalDateTime end, int capacity) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.venueId = venueId;
+        this.start = start;
+        this.end = end;
+        this.capacity = capacity;
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public String getVenueId() { return venueId; }
+    public LocalDateTime getStart() { return start; }
+    public LocalDateTime getEnd() { return end; }
+    public Set<String> getAttendeeIds() { return Set.copyOf(attendeeIds); }
+    public Set<String> getSponsorIds() { return Set.copyOf(sponsorIds); }
+    public List<String> getAgenda() { return List.copyOf(agenda); }
+    public int getSeatsLeft() { return Math.max(0, capacity - attendeeIds.size()); }
+
+    public void addAttendee(String userId) {
+        if (getSeatsLeft() <= 0) throw new IllegalStateException("Summit is full");
+        attendeeIds.add(userId);
+    }
+
+    public void addSponsor(String sponsorId) { sponsorIds.add(sponsorId); }
+    public void addAgendaItem(String item) { agenda.add(item); }
+    public void update(String title, String description, String venueId,
+                       LocalDateTime start, LocalDateTime end, int capacity) {
+        this.title = title;
+        this.description = description;
+        this.venueId = venueId;
+        this.start = start;
+        this.end = end;
+        this.capacity = capacity;
+    }
+
+    @Override
+    public String toString() {
+        return start + " | " + title + " | " + getSeatsLeft() + " seats left";
+    }
+}
+
+// File: SessionStatus.java
+public enum SessionStatus {
+    PENDING, ACCEPTED, REJECTED
+}
+
+// File: Session.java
+import java.time.LocalDateTime;
+
+public class Session {
+    private final String id;
+    private final String presenterId;
+    private String title;
+    private String abstractText;
+    private SessionStatus status = SessionStatus.PENDING;
+    private String room;
+    private LocalDateTime start;
+    private LocalDateTime end;
+
+    public Session(String id, String presenterId, String title, String abstractText) {
+        this.id = id;
+        this.presenterId = presenterId;
+        this.title = title;
+        this.abstractText = abstractText;
+    }
+
+    public String getId() { return id; }
+    public String getPresenterId() { return presenterId; }
+    public String getTitle() { return title; }
+    public String getAbstractText() { return abstractText; }
+    public SessionStatus getStatus() { return status; }
+    public String getRoom() { return room; }
+    public LocalDateTime getStart() { return start; }
+    public LocalDateTime getEnd() { return end; }
+
+    public void edit(String title, String abstractText) {
+        this.title = title;
+        this.abstractText = abstractText;
+    }
+
+    public void setStatus(SessionStatus status) { this.status = status; }
+    public void schedule(String room, LocalDateTime start, LocalDateTime end) {
+        this.room = room;
+        this.start = start;
+        this.end = end;
+    }
+}
+
+// File: BlogPost.java
+import java.time.Instant;
+import java.util.Set;
+
+public class BlogPost {
+    private final String id;
+    private final String authorId;
+    private String title;
+    private String content;
+    private boolean drupalPlanet;
+    private final Instant publishedAt;
+
+    public BlogPost(String id, String authorId, String title, String content, boolean drupalPlanet) {
+        this.id = id;
+        this.authorId = authorId;
+        this.title = title;
+        this.content = content;
+        this.drupalPlanet = drupalPlanet;
+        this.publishedAt = Instant.now();
+    }
+
+    public String getId() { return id; }
+    public String getAuthorId() { return authorId; }
+    public String getTitle() { return title; }
+    public String getContent() { return content; }
+    public boolean isDrupalPlanet() { return drupalPlanet; }
+    public Instant getPublishedAt() { return publishedAt; }
+
+    public void update(String title, String content, boolean drupalPlanet) {
+        this.title = title;
+        this.content = content;
+        this.drupalPlanet = drupalPlanet;
+    }
+}
+
+// File: Job.java
+public class Job {
+    private final String id;
+    private final String sponsorId;
+    private final String title;
+    private final String description;
+
+    public Job(String id, String sponsorId, String title, String description) {
+        this.id = id;
+        this.sponsorId = sponsorId;
+        this.title = title;
+        this.description = description;
+    }
+
+    public String getId() { return id; }
+    public String getSponsorId() { return sponsorId; }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+}
+
+// File: Payment.java
+import java.time.Instant;
+
+public class Payment {
+    private final String id;
+    private final String userId;
+    private final String sponsorId;
+    private final int amount;
+    private final Instant createdAt;
+    private boolean refunded;
+
+    public Payment(String id, String userId, String sponsorId, int amount) {
+        this.id = id;
+        this.userId = userId;
+        this.sponsorId = sponsorId;
+        this.amount = amount;
+        this.createdAt = Instant.now();
+    }
+
+    public String getId() { return id; }
+    public String getUserId() { return userId; }
+    public String getSponsorId() { return sponsorId; }
+    public int getAmount() { return amount; }
+    public Instant getCreatedAt() { return createdAt; }
+    public boolean isRefunded() { return refunded; }
+    public void refund() {
+        if (refunded) throw new IllegalStateException("Payment already refunded");
+        refunded = true;
+    }
+}
+
+// File: ConferencePlatform.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+public class ConferencePlatform {
+    private final Map<String, User> users = new LinkedHashMap<>();
+    private final Map<String, Venue> venues = new LinkedHashMap<>();
+    private final Map<String, Training> trainings = new LinkedHashMap<>();
+    private final Map<String, Sponsor> sponsors = new LinkedHashMap<>();
+    private final Map<String, Summit> summits = new LinkedHashMap<>();
+    private final Map<String, Session> sessions = new LinkedHashMap<>();
+    private final Map<String, BlogPost> blogPosts = new LinkedHashMap<>();
+    private final Map<String, Job> jobs = new LinkedHashMap<>();
+    private final Map<String, Payment> payments = new LinkedHashMap<>();
+    private final Map<String, String> schedule = new LinkedHashMap<>();
+    private final List<String> newsletterSubscribers = new ArrayList<>();
+    private final List<String> notifications = new ArrayList<>();
+    private final Map<String, LocalDateTime> cancellationDeadlines = new LinkedHashMap<>();
+    private final LocalDateTime registrationOpens = LocalDateTime.MIN;
+    private LocalDateTime registrationCloses = LocalDateTime.MAX;
+
+    private String id() { return UUID.randomUUID().toString(); }
+
+    public User registerUser(String name, String email) {
+        if (users.values().stream().anyMatch(u -> u.getEmail().equalsIgnoreCase(email))) {
+            throw new IllegalArgumentException("Email is already registered");
+        }
+        User user = new User(id(), name, email, "attendee", "authenticated");
+        users.put(user.getId(), user);
+        return user;
+    }
+
+    public void addUser(User user) { users.put(user.getId(), user); }
+    public User getUser(String userId) { return require(users, userId, "User"); }
+    public List<User> listProfiles() { return List.copyOf(users.values()); }
+
+    public void updateProfile(String userId, String name, String email, String bio) {
+        User user = getUser(userId);
+        user.setName(name);
+        user.setEmail(email);
+        user.setBio(bio);
+    }
+
+    public Venue createVenue(String name, String address, String directions, String mapUrl) {
+        Venue venue = new Venue(id(), name, address, directions, mapUrl);
+        venues.put(venue.getId(), venue);
+        return venue;
+    }
+
+    public void updateVenue(String venueId, String name, String address, String directions, String mapUrl) {
+        require(venues, venueId, "Venue").update(name, address, directions, mapUrl);
+    }
+
+    public List<Venue> listVenues() { return List.copyOf(venues.values()); }
+    public Venue getVenue(String venueId) { return require(venues, venueId, "Venue"); }
+
+    public Training createTraining(String title, String summary, String description, String logoUrl,
+                                   String level, String location, String venueId, LocalDateTime start,
+                                   LocalDateTime end, int capacity, String... trainerIds) {
+        if (venueId != null && !venues.containsKey(venueId)) throw new IllegalArgumentException("Unknown venue");
+        Training training = new Training(id(), title, summary, description, logoUrl, level,
+                location, venueId, start, end, capacity);
+        if (trainerIds != null) for (String trainerId : trainerIds) training.addTrainer(trainerId);
+        trainings.put(training.getId(), training);
+        return training;
+    }
+
+    public void editTrainingAsTrainer(String trainerId, String trainingId, String title, String summary,
+                                      String description, String logoUrl, String level, String location,
+                                      String venueId, LocalDateTime start, LocalDateTime end,
+                                      int capacity, String slidesUrl) {
+        Training training = getTraining(trainingId);
+        if (!training.getTrainerIds().contains(trainerId)) throw new SecurityException("Not a trainer for this class");
+        training.edit(title, summary, description, logoUrl, level, location, venueId,
+                start, end, capacity, slidesUrl);
+    }
+
+    public List<Training> listTrainings() {
+        return trainings.values().stream().sorted(Comparator.comparing(Training::getStart)).toList();
+    }
+
+    public Training getTraining(String trainingId) { return require(trainings, trainingId, "Training"); }
+
+    public Training findTrainingBySlug(String slug) {
+        return trainings.values().stream().filter(t -> t.getSlug().equals(slug)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Training not found: " + slug));
+    }
+
+    public String trainingUrl(Training training) { return "/training/" + training.getSlug(); }
+
+    public Registration registerForTraining(String userId, String trainingId, boolean acceptedCancellationTerms) {
+        if (!acceptedCancellationTerms) throw new IllegalArgumentException("Cancellation terms must be accepted");
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(registrationOpens) || now.isAfter(registrationCloses))
+            throw new IllegalStateException("Registration is closed");
+        Training training = getTraining(trainingId);
+        if (training.getStart().toLocalDate().isBefore(LocalDate.now()))
+            throw new IllegalStateException("Training has already taken place");
+        Registration existing = training.registrationStore().get(userId);
+        if (existing != null && existing.getStatus() != RegistrationStatus.CANCELLED
+                && existing.getStatus() != RegistrationStatus.REFUNDED) {
+            throw new IllegalStateException("Only one registration per user per training is allowed");
+        }
+        RegistrationStatus status = training.getRemainingSeats() > 0
+                ? RegistrationStatus.REGISTERED : RegistrationStatus.WAITLISTED;
+        Registration registration = new Registration(userId, trainingId, status);
+        training.registrationStore().put(userId, registration);
+        if (status == RegistrationStatus.WAITLISTED) training.waitlistStore().add(userId);
+        notifications.add("Registration confirmed for " + userId + ": " + training.getTitle());
+        return registration;
+    }
+
+    public void setCancellationDeadline(String trainingId, LocalDateTime deadline) {
+        cancellationDeadlines.put(trainingId, deadline);
+    }
+
+    public void cancelTrainingRegistration(String userId, String trainingId) {
+        Training training = getTraining(trainingId);
+        Registration registration = training.registrationStore().get(userId);
+        if (registration == null || registration.getStatus() != RegistrationStatus.REGISTERED)
+            throw new IllegalStateException("No active registration");
+        LocalDateTime deadline = cancellationDeadlines.get(trainingId);
+        if (deadline != null && LocalDateTime.now().isAfter(deadline))
+            throw new IllegalStateException("Cancellation deadline has passed");
+        registration.setStatus(RegistrationStatus.CANCELLED);
+        promoteWaitlisted(training);
+    }
+
+    private void promoteWaitlisted(Training training) {
+        while (training.getRemainingSeats() > 0 && !training.waitlistStore().isEmpty()) {
+            String next = training.waitlistStore().remove(0);
+            Registration registration = training.registrationStore().get(next);
+            if (registration != null && registration.getStatus() == RegistrationStatus.WAITLISTED) {
+                registration.setStatus(RegistrationStatus.REGISTERED);
+                notifications.add("A seat is available for " + next + ": " + training.getTitle());
+                break;
+            }
+        }
+    }
+
+    public List<Training> myTrainings(String userId) {
+        return trainings.values().stream()
+                .filter(t -> {
+                    Registration r = t.registrationStore().get(userId);
+                    return r != null && (r.getStatus() == RegistrationStatus.REGISTERED
+                            || r.getStatus() == RegistrationStatus.ATTENDED
+                            || r.getStatus() == RegistrationStatus.NO_SHOW);
+                }).sorted(Comparator.comparing(Training::getStart)).toList();
+    }
+
+    public List<String> trainingAttendees(String trainerId, String trainingId) {
+        Training training = getTraining(trainingId);
+        if (!training.getTrainerIds().contains(trainerId)) throw new SecurityException("Not a trainer for this class");
+        return training.getRegistrations().values().stream()
+                .filter(r -> r.getStatus() == RegistrationStatus.REGISTERED
+                        || r.getStatus() == RegistrationStatus.ATTENDED
+                        || r.getStatus() == RegistrationStatus.NO_SHOW)
+                .map(Registration::getUserId).map(this::getUser)
+                .map(u -> u.getName() + " <" + u.getEmail() + ">").toList();
+    }
+
+    public void updateTrainingAttendance(String trainingId, String userId, RegistrationStatus status) {
+        if (status != RegistrationStatus.ATTENDED && status != RegistrationStatus.NO_SHOW
+                && status != RegistrationStatus.REFUNDED) throw new IllegalArgumentException("Invalid attendance status");
+        Training training = getTraining(trainingId);
+        Registration registration = training.registrationStore().get(userId);
+        if (registration == null) throw new IllegalArgumentException("Registration not found");
+        registration.setStatus(status);
+        if (status == RegistrationStatus.REFUNDED) promoteWaitlisted(training);
+    }
+
+    public List<Registration> adminTrainingRegistrations(String trainingId) {
+        return getTraining(trainingId).getRegistrations().values().stream().toList();
+    }
+
+    public List<String> trainerEmails() {
+        return users.values().stream().filter(u -> u.hasRole("trainer")).map(User::getEmail).toList();
+    }
+
+    public String emailAllTrainers(String subject, String body) {
+        return "Queued message to " + trainerEmails().size() + " trainers: " + subject;
+    }
+
+    public void subscribeNewsletter(String email) {
+        if (email == null || !email.contains("@")) throw new IllegalArgumentException("Valid email required");
+        if (!newsletterSubscribers.contains(email.toLowerCase())) newsletterSubscribers.add(email.toLowerCase());
+    }
+
+    public List<String> getNewsletterSubscribers() { return List.copyOf(newsletterSubscribers); }
+
+    public Sponsor createSponsor(String companyName, String description, String website, SponsorLevel level) {
+        Sponsor sponsor = new Sponsor(id(), companyName, description, website, level);
+        sponsors.put(sponsor.getId(), sponsor);
+        return sponsor;
+    }
+
+    public List<Sponsor> listSponsors() { return List.copyOf(sponsors.values()); }
+    public Sponsor getSponsor(String sponsorId) { return require(sponsors, sponsorId, "Sponsor"); }
+
+    public Payment paySponsorship(String userId, String sponsorId, SponsorLevel level, String paymentToken) {
+        if (paymentToken == null || paymentToken.isBlank()) throw new IllegalArgumentException("Payment information required");
+        Sponsor sponsor = getSponsor(sponsorId);
+        sponsor.setLevel(level);
+        Payment payment = new Payment(id(), userId, sponsorId, level.getAmount());
+        payments.put(payment.getId(), payment);
+        getUser(userId).addRole("sponsor");
+        sponsor.addAttendee(userId);
+        return payment;
+    }
+
+    public Sponsor becomeCompanySponsor(String userId, String companyName, String description,
+                                        String website, String paymentToken) {
+        Sponsor sponsor = createSponsor(companyName, description, website, SponsorLevel.BRONZE);
+        paySponsorship(userId, sponsor.getId(), SponsorLevel.BRONZE, paymentToken);
+        return sponsor;
+    }
+
+    public void refundPayment(String paymentId) {
+        Payment payment = require(payments, paymentId, "Payment");
+        payment.refund();
+    }
+
+    public List<Payment> listPayments() { return List.copyOf(payments.values()); }
+
+    public void personalizeSponsor(String sponsorId, String description, String website) {
+        getSponsor(sponsorId).personalize(description, website);
+    }
+
+    public void addSponsorAttendee(String sponsorId, String userId) {
+        getSponsor(sponsorId).addAttendee(userId);
+    }
+
+    public List<User> sponsorAttendees(String sponsorId) {
+        return getSponsor(sponsorId).getAttendeeIds().stream().map(this::getUser).toList();
+    }
+
+    public void assignSponsorToEvent(String sponsorId, String eventId) {
+        getSponsor(sponsorId).addEvent(eventId);
+        if (summits.containsKey(eventId)) summits.get(eventId).addSponsor(sponsorId);
+    }
+
+    public List<String> sponsorEvents(String sponsorId) {
+        Sponsor sponsor = getSponsor(sponsorId);
+        return sponsor.getEventIds().stream().map(eventId -> {
+            if (summits.containsKey(eventId)) return summits.get(eventId).getTitle();
+            if (trainings.containsKey(eventId)) return trainings.get(eventId).getTitle();
+            if (sessions.containsKey(eventId)) return sessions.get(eventId).getTitle();
+            return eventId;
+        }).toList();
+    }
+
+    public Summit createSummit(String title, String description, String venueId,
+                               LocalDateTime start, LocalDateTime end, int capacity) {
+        getVenue(venueId);
+        Summit summit = new Summit(id(), title, description, venueId, start, end, capacity);
+        summits.put(summit.getId(), summit);
+        return summit;
+    }
+
+    public List<Summit> listSummits() {
+        return summits.values().stream().sorted(Comparator.comparing(Summit::getStart)).toList();
+    }
+
+    public Summit getSummit(String summitId) { return require(summits, summitId, "Summit"); }
+
+    public void registerForSummit(String userId, String summitId) {
+        Summit summit = getSummit(summitId);
+        if (summit.getAttendeeIds().contains(userId)) throw new IllegalStateException("Already registered");
+        summit.addAttendee(userId);
+    }
+
+    public List<User> summitAttendees(String summitId) {
+        return getSummit(summitId).getAttendeeIds().stream().map(this::getUser).toList();
+    }
+
+    public List<Summit> mySummits(String userId) {
+        return summits.values().stream().filter(s -> s.getAttendeeIds().contains(userId))
+                .sorted(Comparator.comparing(Summit::getStart)).toList();
+    }
+
+    public void addSummitAgendaItem(String summitId, String item) {
+        getSummit(summitId).addAgendaItem(item);
+    }
+
+    public void sponsorSummit(String sponsorId, String summitId) {
+        getSponsor(sponsorId);
+        getSummit(summitId).addSponsor(sponsorId);
+        assignSponsorToEvent(sponsorId, summitId);
+    }
+
+    public Session submitSession(String presenterId, String title, String abstractText) {
+        Session session = new Session(id(), presenterId, title, abstractText);
+        sessions.put(session.getId(), session);
+        notifications.add("Session submitted: " + title);
+        return session;
+    }
+
+    public void editSession(String userId, String sessionId, String title, String abstractText) {
+        Session session = require(sessions, sessionId, "Session");
+        if (!session.getPresenterId().equals(userId)) throw new SecurityException("Not the session presenter");
+        session.edit(title, abstractText);
+    }
+
+    public void evaluateSession(String sessionId, SessionStatus status) {
+        if (status == SessionStatus.PENDING) throw new IllegalArgumentException("Evaluation must be final");
+        Session session = require(sessions, sessionId, "Session");
+        session.setStatus(status);
+        notifications.add("Session evaluated: " + session.getTitle() + " — " + status);
+    }
+
+    public void bulkApproveSessions(Collection<String> sessionIds) {
+        for (String sessionId : sessionIds) evaluateSession(sessionId, SessionStatus.ACCEPTED);
+    }
+
+    public List<Session> acceptedSessions() {
+        return sessions.values().stream().filter(s -> s.getStatus() == SessionStatus.ACCEPTED).toList();
+    }
+
+    public void scheduleSession(String sessionId, String room, LocalDateTime start, LocalDateTime end) {
+        Session session = require(sessions, sessionId, "Session");
+        if (session.getStatus() != SessionStatus.ACCEPTED) throw new IllegalStateException("Session is not accepted");
+        session.schedule(room, start, end);
+        schedule.put(sessionId, sessionId);
+    }
+
+    public List<Session> getSchedule() {
+        return schedule.values().stream().map(sessions::get)
+                .sorted(Comparator.comparing(Session::getStart, Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+    }
+
+    public BlogPost createBlogPost(String authorId, String title, String content, boolean drupalPlanet) {
+        BlogPost post = new BlogPost(id(), authorId, title, content, drupalPlanet);
+        blogPosts.put(post.getId(), post);
+        return post;
+    }
+
+    public void updateBlogPost(String postId, String title, String content, boolean drupalPlanet) {
+        require(blogPosts, postId, "Blog post").update(title, content, drupalPlanet);
+    }
+
+    public List<BlogPost> readBlog() { return List.copyOf(blogPosts.values()); }
+    public List<BlogPost> drupalPlanetPosts() {
+        return blogPosts.values().stream().filter(BlogPost::isDrupalPlanet).toList();
+    }
+
+    public Job postJob(String sponsorId, String title, String description) {
+        getSponsor(sponsorId);
+        Job job = new Job(id(), sponsorId, title, description);
+        jobs.put(job.getId(), job);
+        return job;
+    }
+
+    public List<Job> listJobs() { return List.copyOf(jobs.values()); }
+    public Sponsor jobSponsor(String jobId) { return getSponsor(require(jobs, jobId, "Job").getSponsorId()); }
+
+    public List<String> getNotifications() { return List.copyOf(notifications); }
+
+    private static <T> T require(Map<String, T> map, String key, String label) {
+        T value = map.get(Objects.requireNonNull(key));
+        if (value == null) throw new IllegalArgumentException(label + " not found: " + key);
+        return value;
+    }
+}
+
+// File: Main.java
+import java.time.LocalDateTime;
+
+public class Main {
+    public static void main(String[] args) {
+        ConferencePlatform platform = new ConferencePlatform();
+
+        User trainer = new User("trainer-1", "Ada Trainer", "ada@example.org", "trainer", "authenticated");
+        User attendee = new User("attendee-1", "Sam Attendee", "sam@example.org", "attendee", "authenticated");
+        platform.addUser(trainer);
+        platform.addUser(attendee);
+
+        Venue venue = platform.createVenue("Innovation Hall", "100 Conference Way",
+                "Enter through the north doors.", "https://maps.example.org/innovation-hall");
+
+        LocalDateTime start = LocalDateTime.now().plusDays(10).withHour(9).withMinute(0);
+        Training training = platform.createTraining(
+                "Java for Everyone", "A practical introduction to Java.",
+                "Learn the fundamentals of Java through hands-on exercises.",
+                "https://example.org/java-logo.png", "Beginner", "Room 101",
+                venue.getId(), start, start.plusHours(3), 25, trainer.getId());
+
+        platform.registerForTraining(attendee.getId(), training.getId(), true);
+        System.out.println("Training: " + platform.trainingUrl(training));
+        System.out.println(platform.listTrainings().get(0));
+        System.out.println("Attendee's trainings: " + platform.myTrainings(attendee.getId()).size());
+        System.out.println("Sponsors listed: " + platform.listSponsors().size());
+    }
+}

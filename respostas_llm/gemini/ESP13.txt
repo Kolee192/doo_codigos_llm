@@ -1,0 +1,1687 @@
+// File: UserRole.java
+public enum UserRole {
+    USER,
+    REPOSITORY_STAFF,
+    REPOSITORY_MANAGER,
+    DAMS_MANAGER
+}
+
+// File: User.java
+public class User {
+    private final String id;
+    private final String name;
+    private final UserRole role;
+    private final String unitId; // library unit / repository id if applicable
+
+    public User(String id, String name, UserRole role, String unitId) {
+        this.id = id;
+        this.name = name;
+        this.role = role;
+        this.unitId = unitId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public String getUnitId() {
+        return unitId;
+    }
+
+    public boolean canCurateUnit(String targetUnitId) {
+        if (role == UserRole.DAMS_MANAGER) {
+            return true;
+        }
+        if ((role == UserRole.REPOSITORY_MANAGER || role == UserRole.REPOSITORY_STAFF) &&
+                unitId != null && unitId.equals(targetUnitId)) {
+            return true;
+        }
+        return false;
+    }
+}
+
+// File: Repository.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Repository {
+    private final String id;
+    private String name;
+    private String contactEmail;
+    private String contactPhone;
+    private String address;
+    private final List<RepositoryChangeListener> listeners = new ArrayList<>();
+
+    public interface RepositoryChangeListener {
+        void onRepositoryUpdated(Repository repo);
+    }
+
+    public Repository(String id, String name, String contactEmail, String contactPhone, String address) {
+        this.id = id;
+        this.name = name;
+        this.contactEmail = contactEmail;
+        this.contactPhone = contactPhone;
+        this.address = address;
+    }
+
+    public void addListener(RepositoryChangeListener listener) {
+        if (!listeners.contains(listener)) {
+            listeners.add(listener);
+        }
+    }
+
+    public void removeListener(RepositoryChangeListener listener) {
+        listeners.remove(listener);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void updateInfo(String name, String contactEmail, String contactPhone, String address) {
+        this.name = name;
+        this.contactEmail = contactEmail;
+        this.contactPhone = contactPhone;
+        this.address = address;
+        notifyListeners();
+    }
+
+    private void notifyListeners() {
+        for (RepositoryChangeListener listener : new ArrayList<>(listeners)) {
+            listener.onRepositoryUpdated(this);
+        }
+    }
+
+    public String getContactEmail() {
+        return contactEmail;
+    }
+
+    public String getContactPhone() {
+        return contactPhone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    @Override
+    public String toString() {
+        return "Repository[id=" + id + ", name=" + name + ", contact=" + contactEmail + "]";
+    }
+}
+
+// File: DamsEvent.java
+import java.time.LocalDateTime;
+
+public class DamsEvent {
+    private final String eventId;
+    private final String eventType;
+    private final LocalDateTime timestamp;
+    private final String agentId;
+    private final String outcome;
+    private final String targetId;
+
+    public DamsEvent(String eventId, String eventType, LocalDateTime timestamp, String agentId, String outcome, String targetId) {
+        this.eventId = eventId;
+        this.eventType = eventType;
+        this.timestamp = timestamp;
+        this.agentId = agentId;
+        this.outcome = outcome;
+        this.targetId = targetId;
+    }
+
+    public String getEventId() {
+        return eventId;
+    }
+
+    public String getEventType() {
+        return eventType;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public String getAgentId() {
+        return agentId;
+    }
+
+    public String getOutcome() {
+        return outcome;
+    }
+
+    public String getTargetId() {
+        return targetId;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + timestamp + "] " + eventType + " on " + targetId + " by " + agentId + " -> " + outcome;
+    }
+}
+
+// File: NameAssociation.java
+public class NameAssociation {
+    private final String name;
+    private final String role; // e.g. "creator", "source", "subject", "illustrator", "photographer"
+
+    public NameAssociation(String name, String role) {
+        this.name = name;
+        this.role = role;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + role + ")";
+    }
+}
+
+// File: SubjectHeading.java
+public class SubjectHeading {
+    public enum SubjectType {
+        TOPIC,
+        TITLE,
+        GENRE_FORM,
+        GEOGRAPHIC,
+        FUNCTION,
+        OCCUPATION,
+        NAME,
+        CARTOGRAPHICS
+    }
+
+    private final String heading;
+    private final SubjectType type;
+
+    public SubjectHeading(String heading, SubjectType type) {
+        this.heading = heading;
+        this.type = type;
+    }
+
+    public String getHeading() {
+        return heading;
+    }
+
+    public SubjectType getType() {
+        return type;
+    }
+
+    @Override
+    public String toString() {
+        return heading + " [" + type + "]";
+    }
+}
+
+// File: ExternalDescription.java
+public class ExternalDescription {
+    private final String title;
+    private final String url;
+    private final String description;
+
+    public ExternalDescription(String title, String url, String description) {
+        this.title = title;
+        this.url = url;
+        this.description = description;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return title + " <" + url + ">: " + description;
+    }
+}
+
+// File: OriginInfo.java
+public class OriginInfo {
+    private String placeOfPublication;
+    private String publisher;
+    private String edition;
+    private String dateIssued;
+
+    public OriginInfo(String placeOfPublication, String publisher, String edition, String dateIssued) {
+        this.placeOfPublication = placeOfPublication;
+        this.publisher = publisher;
+        this.edition = edition;
+        this.dateIssued = dateIssued;
+    }
+
+    public String getPlaceOfPublication() {
+        return placeOfPublication;
+    }
+
+    public void setPlaceOfPublication(String placeOfPublication) {
+        this.placeOfPublication = placeOfPublication;
+    }
+
+    public String getPublisher() {
+        return publisher;
+    }
+
+    public void setPublisher(String publisher) {
+        this.publisher = publisher;
+    }
+
+    public String getEdition() {
+        return edition;
+    }
+
+    public void setEdition(String edition) {
+        this.edition = edition;
+    }
+
+    public String getDateIssued() {
+        return dateIssued;
+    }
+
+    public void setDateIssued(String dateIssued) {
+        this.dateIssued = dateIssued;
+    }
+
+    @Override
+    public String toString() {
+        return "Published: " + publisher + " (" + placeOfPublication + "), Edition: " + edition + ", Date: " + dateIssued;
+    }
+}
+
+// File: GeoCoordinates.java
+public class GeoCoordinates {
+    private final double latitude;
+    private final double longitude;
+
+    public GeoCoordinates(double latitude, double longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    @Override
+    public String toString() {
+        return "(" + latitude + ", " + longitude + ")";
+    }
+}
+
+// File: CopyrightStatus.java
+import java.time.LocalDate;
+
+public class CopyrightStatus {
+    private boolean underCopyright;
+    private String rightsHolder;
+    private LocalDate copyrightExpirationDate;
+    private String jurisdictionStatute;
+
+    public CopyrightStatus(boolean underCopyright, String rightsHolder, LocalDate copyrightExpirationDate, String jurisdictionStatute) {
+        this.underCopyright = underCopyright;
+        this.rightsHolder = rightsHolder;
+        this.copyrightExpirationDate = copyrightExpirationDate;
+        this.jurisdictionStatute = jurisdictionStatute;
+    }
+
+    public boolean isUnderCopyright() {
+        return underCopyright;
+    }
+
+    public void setUnderCopyright(boolean underCopyright) {
+        this.underCopyright = underCopyright;
+    }
+
+    public String getRightsHolder() {
+        return rightsHolder;
+    }
+
+    public void setRightsHolder(String rightsHolder) {
+        this.rightsHolder = rightsHolder;
+    }
+
+    public LocalDate getCopyrightExpirationDate() {
+        return copyrightExpirationDate;
+    }
+
+    public void setCopyrightExpirationDate(LocalDate copyrightExpirationDate) {
+        this.copyrightExpirationDate = copyrightExpirationDate;
+    }
+
+    public String getJurisdictionStatute() {
+        return jurisdictionStatute;
+    }
+
+    public void setJurisdictionStatute(String jurisdictionStatute) {
+        this.jurisdictionStatute = jurisdictionStatute;
+    }
+
+    @Override
+    public String toString() {
+        return "UnderCopyright: " + underCopyright + ", Holder: " + rightsHolder + ", Expires: " + copyrightExpirationDate + ", Statute: " + jurisdictionStatute;
+    }
+}
+
+// File: StatuteInfo.java
+import java.time.LocalDate;
+
+public class StatuteInfo {
+    private String statuteName;
+    private String jurisdiction;
+    private LocalDate expirationDate;
+
+    public StatuteInfo(String statuteName, String jurisdiction, LocalDate expirationDate) {
+        this.statuteName = statuteName;
+        this.jurisdiction = jurisdiction;
+        this.expirationDate = expirationDate;
+    }
+
+    public String getStatuteName() {
+        return statuteName;
+    }
+
+    public void setStatuteName(String statuteName) {
+        this.statuteName = statuteName;
+    }
+
+    public String getJurisdiction() {
+        return jurisdiction;
+    }
+
+    public void setJurisdiction(String jurisdiction) {
+        this.jurisdiction = jurisdiction;
+    }
+
+    public LocalDate getExpirationDate() {
+        return expirationDate;
+    }
+
+    public void setExpirationDate(LocalDate expirationDate) {
+        this.expirationDate = expirationDate;
+    }
+
+    @Override
+    public String toString() {
+        return statuteName + " (" + jurisdiction + "), Expires: " + expirationDate;
+    }
+}
+
+// File: PolicyRestriction.java
+import java.time.LocalDate;
+
+public class PolicyRestriction {
+    private String policyName;
+    private String restrictionDetails;
+    private LocalDate expirationDate;
+
+    public PolicyRestriction(String policyName, String restrictionDetails, LocalDate expirationDate) {
+        this.policyName = policyName;
+        this.restrictionDetails = restrictionDetails;
+        this.expirationDate = expirationDate;
+    }
+
+    public String getPolicyName() {
+        return policyName;
+    }
+
+    public void setPolicyName(String policyName) {
+        this.policyName = policyName;
+    }
+
+    public String getRestrictionDetails() {
+        return restrictionDetails;
+    }
+
+    public void setRestrictionDetails(String restrictionDetails) {
+        this.restrictionDetails = restrictionDetails;
+    }
+
+    public LocalDate getExpirationDate() {
+        return expirationDate;
+    }
+
+    public void setExpirationDate(LocalDate expirationDate) {
+        this.expirationDate = expirationDate;
+    }
+
+    @Override
+    public String toString() {
+        return policyName + ": " + restrictionDetails + " [Expires: " + expirationDate + "]";
+    }
+}
+
+// File: RightsUsageRule.java
+import java.time.LocalDate;
+
+public class RightsUsageRule {
+    public enum RuleType {
+        PERMITTED,
+        RESTRICTED
+    }
+
+    private String action; // e.g., "Display", "Download", "Commercial Use"
+    private RuleType ruleType;
+    private LocalDate startDate;
+    private LocalDate endDate;
+
+    public RightsUsageRule(String action, RuleType ruleType, LocalDate startDate, LocalDate endDate) {
+        this.action = action;
+        this.ruleType = ruleType;
+        this.startDate = startDate;
+        this.endDate = endDate;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public void setAction(String action) {
+        this.action = action;
+    }
+
+    public RuleType getRuleType() {
+        return ruleType;
+    }
+
+    public void setRuleType(RuleType ruleType) {
+        this.ruleType = ruleType;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public boolean isActiveOn(LocalDate date) {
+        if (startDate != null && date.isBefore(startDate)) {
+            return false;
+        }
+        if (endDate != null && date.isAfter(endDate)) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return ruleType + " action '" + action + "' from " + startDate + " to " + endDate;
+    }
+}
+
+// File: RightsMetadata.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class RightsMetadata {
+    private CopyrightStatus copyrightStatus;
+    private final List<StatuteInfo> statutes = new ArrayList<>();
+    private String license;
+    private String otherRights;
+    private final List<PolicyRestriction> policyRestrictions = new ArrayList<>();
+    private final List<RightsUsageRule> usageRules = new ArrayList<>();
+
+    public RightsMetadata() {}
+
+    public RightsMetadata(CopyrightStatus copyrightStatus, String license, String otherRights) {
+        this.copyrightStatus = copyrightStatus;
+        this.license = license;
+        this.otherRights = otherRights;
+    }
+
+    public CopyrightStatus getCopyrightStatus() {
+        return copyrightStatus;
+    }
+
+    public void setCopyrightStatus(CopyrightStatus copyrightStatus) {
+        this.copyrightStatus = copyrightStatus;
+    }
+
+    public List<StatuteInfo> getStatutes() {
+        return statutes;
+    }
+
+    public void addStatute(StatuteInfo statute) {
+        this.statutes.add(statute);
+    }
+
+    public String getLicense() {
+        return license;
+    }
+
+    public void setLicense(String license) {
+        this.license = license;
+    }
+
+    public String getOtherRights() {
+        return otherRights;
+    }
+
+    public void setOtherRights(String otherRights) {
+        this.otherRights = otherRights;
+    }
+
+    public List<PolicyRestriction> getPolicyRestrictions() {
+        return policyRestrictions;
+    }
+
+    public void addPolicyRestriction(PolicyRestriction restriction) {
+        this.policyRestrictions.add(restriction);
+    }
+
+    public List<RightsUsageRule> getUsageRules() {
+        return usageRules;
+    }
+
+    public void addUsageRule(RightsUsageRule rule) {
+        this.usageRules.add(rule);
+    }
+}
+
+// File: ContentFile.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ContentFile {
+    private final String id;
+    private String fileName;
+    private long fileSize; // in bytes
+    private final LocalDateTime creationDate;
+    private String fileFormat;
+    private String formatVersion;
+    private String checksum;
+    private final String checksumAlgorithm;
+    private String originalChecksum;
+    private String sourceCaptureHardware;
+    private String sourceCaptureSoftware;
+    private boolean isMaster;
+    private boolean integrityQuestioned;
+    private final List<DamsEvent> lifecycleEvents = new ArrayList<>();
+
+    public ContentFile(String id, String fileName, long fileSize, LocalDateTime creationDate,
+                       String fileFormat, String formatVersion, String checksum, String checksumAlgorithm,
+                       boolean isMaster) {
+        this.id = id;
+        this.fileName = fileName;
+        this.fileSize = fileSize;
+        this.creationDate = creationDate;
+        this.fileFormat = fileFormat;
+        this.formatVersion = formatVersion;
+        this.checksum = checksum;
+        this.originalChecksum = checksum;
+        this.checksumAlgorithm = checksumAlgorithm;
+        this.isMaster = isMaster;
+        this.integrityQuestioned = false;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public long getFileSize() {
+        return fileSize;
+    }
+
+    public LocalDateTime getCreationDate() {
+        return creationDate;
+    }
+
+    public String getFileFormat() {
+        return fileFormat;
+    }
+
+    public void setFileFormat(String fileFormat, String formatVersion) {
+        this.fileFormat = fileFormat;
+        this.formatVersion = formatVersion;
+    }
+
+    public String getFormatVersion() {
+        return formatVersion;
+    }
+
+    public String getChecksum() {
+        return checksum;
+    }
+
+    public String getChecksumAlgorithm() {
+        return checksumAlgorithm;
+    }
+
+    public String getOriginalChecksum() {
+        return originalChecksum;
+    }
+
+    public boolean isMaster() {
+        return isMaster;
+    }
+
+    public boolean isChecksumChanged() {
+        return originalChecksum != null && !originalChecksum.equals(checksum);
+    }
+
+    public void updateChecksum(String newChecksum) {
+        this.checksum = newChecksum;
+        if (!this.checksum.equals(this.originalChecksum)) {
+            this.integrityQuestioned = true;
+        }
+    }
+
+    public boolean isIntegrityQuestioned() {
+        return integrityQuestioned || isChecksumChanged();
+    }
+
+    public void setIntegrityQuestioned(boolean integrityQuestioned) {
+        this.integrityQuestioned = integrityQuestioned;
+    }
+
+    public String getSourceCaptureHardware() {
+        return sourceCaptureHardware;
+    }
+
+    public void setSourceCaptureHardware(String sourceCaptureHardware) {
+        this.sourceCaptureHardware = sourceCaptureHardware;
+    }
+
+    public String getSourceCaptureSoftware() {
+        return sourceCaptureSoftware;
+    }
+
+    public void setSourceCaptureSoftware(String sourceCaptureSoftware) {
+        this.sourceCaptureSoftware = sourceCaptureSoftware;
+    }
+
+    public void setSourceCaptureInfo(String hardware, String software) {
+        this.sourceCaptureHardware = hardware;
+        this.sourceCaptureSoftware = software;
+    }
+
+    public List<DamsEvent> getLifecycleEvents() {
+        return lifecycleEvents;
+    }
+
+    public void recordEvent(DamsEvent event) {
+        lifecycleEvents.add(event);
+    }
+
+    @Override
+    public String toString() {
+        return "ContentFile[id=" + id + ", name=" + fileName + ", size=" + fileSize + " bytes, format=" + fileFormat + " " + formatVersion + "]";
+    }
+}
+
+// File: ObjectComponent.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ObjectComponent {
+    private final String id;
+    private int order;
+    private final Map<String, String> titles = new HashMap<>(); // type -> title (e.g. "primary", "alternative")
+    private String date;
+    private final List<String> languages = new ArrayList<>();
+    private final List<NameAssociation> names = new ArrayList<>();
+    private final List<SubjectHeading> subjects = new ArrayList<>();
+    private OriginInfo originInfo;
+    private final Map<String, String> notes = new HashMap<>(); // facet name -> note
+    private GeoCoordinates geoCoordinates;
+    private RightsMetadata componentRights; // optional override of object rights
+    private final List<ExternalDescription> externalDescriptions = new ArrayList<>();
+    private final List<ContentFile> files = new ArrayList<>();
+    private final List<ObjectComponent> childComponents = new ArrayList<>();
+    private final List<ObjectComponent> linkedComponents = new ArrayList<>();
+    private final List<DamsEvent> lifecycleEvents = new ArrayList<>();
+
+    public ObjectComponent(String id, int order, String primaryTitle) {
+        this.id = id;
+        this.order = order;
+        this.titles.put("primary", primaryTitle);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public int getOrder() {
+        return order;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
+    public String getPrimaryTitle() {
+        return titles.getOrDefault("primary", titles.values().stream().findFirst().orElse("Untitled Component"));
+    }
+
+    public Map<String, String> getTitles() {
+        return titles;
+    }
+
+    public void setTitle(String form, String title) {
+        titles.put(form, title);
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    public List<String> getLanguages() {
+        return languages;
+    }
+
+    public void addLanguage(String language) {
+        if (!languages.contains(language)) {
+            languages.add(language);
+        }
+    }
+
+    public List<NameAssociation> getNames() {
+        return names;
+    }
+
+    public void addName(NameAssociation name) {
+        this.names.add(name);
+    }
+
+    public List<SubjectHeading> getSubjects() {
+        return subjects;
+    }
+
+    public void addSubject(SubjectHeading subject) {
+        this.subjects.add(subject);
+    }
+
+    public OriginInfo getOriginInfo() {
+        return originInfo;
+    }
+
+    public void setOriginInfo(OriginInfo originInfo) {
+        this.originInfo = originInfo;
+    }
+
+    public Map<String, String> getNotes() {
+        return notes;
+    }
+
+    public void putNote(String facet, String content) {
+        notes.put(facet, content);
+    }
+
+    public GeoCoordinates getGeoCoordinates() {
+        return geoCoordinates;
+    }
+
+    public void setGeoCoordinates(GeoCoordinates geoCoordinates) {
+        this.geoCoordinates = geoCoordinates;
+    }
+
+    public RightsMetadata getComponentRights() {
+        return componentRights;
+    }
+
+    public void setComponentRights(RightsMetadata componentRights) {
+        this.componentRights = componentRights;
+    }
+
+    public List<ExternalDescription> getExternalDescriptions() {
+        return externalDescriptions;
+    }
+
+    public void addExternalDescription(ExternalDescription description) {
+        this.externalDescriptions.add(description);
+    }
+
+    public List<ContentFile> getFiles() {
+        return files;
+    }
+
+    public void addFile(ContentFile file) {
+        this.files.add(file);
+    }
+
+    public List<ObjectComponent> getChildComponents() {
+        return childComponents;
+    }
+
+    public void addChildComponent(ObjectComponent child) {
+        this.childComponents.add(child);
+        this.childComponents.sort((a, b) -> Integer.compare(a.getOrder(), b.getOrder()));
+    }
+
+    public List<ObjectComponent> getLinkedComponents() {
+        return linkedComponents;
+    }
+
+    public void linkComponent(ObjectComponent other) {
+        if (!linkedComponents.contains(other)) {
+            linkedComponents.add(other);
+        }
+    }
+
+    public List<DamsEvent> getLifecycleEvents() {
+        return lifecycleEvents;
+    }
+
+    public void recordEvent(DamsEvent event) {
+        this.lifecycleEvents.add(event);
+    }
+
+    @Override
+    public String toString() {
+        return "Component #" + order + " [" + id + "]: " + getPrimaryTitle();
+    }
+}
+
+// File: DigitalObject.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class DigitalObject {
+    private final String id;
+    private final String repositoryId;
+    private final List<String> collectionIds = new ArrayList<>();
+    private final Map<String, String> titles = new HashMap<>(); // type -> title
+    private String date;
+    private final List<String> languages = new ArrayList<>();
+    private final List<NameAssociation> names = new ArrayList<>();
+    private final List<SubjectHeading> subjects = new ArrayList<>();
+    private OriginInfo originInfo;
+    private final Map<String, String> notes = new HashMap<>(); // facet -> note
+    private GeoCoordinates geoCoordinates;
+    private RightsMetadata rightsMetadata = new RightsMetadata();
+    private final List<ExternalDescription> externalDescriptions = new ArrayList<>();
+    private final List<ContentFile> directFiles = new ArrayList<>();
+    private final List<ObjectComponent> components = new ArrayList<>(); // ordered components
+    private final List<DamsEvent> lifecycleEvents = new ArrayList<>();
+
+    public DigitalObject(String id, String repositoryId, String primaryTitle) {
+        this.id = id;
+        this.repositoryId = repositoryId;
+        this.titles.put("primary", primaryTitle);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getRepositoryId() {
+        return repositoryId;
+    }
+
+    public List<String> getCollectionIds() {
+        return collectionIds;
+    }
+
+    public void addCollectionId(String collectionId) {
+        if (!collectionIds.contains(collectionId)) {
+            collectionIds.add(collectionId);
+        }
+    }
+
+    public String getPrimaryTitle() {
+        return titles.getOrDefault("primary", titles.values().stream().findFirst().orElse("Untitled Object"));
+    }
+
+    public Map<String, String> getTitles() {
+        return titles;
+    }
+
+    public void setTitle(String form, String title) {
+        titles.put(form, title);
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    public List<String> getLanguages() {
+        return languages;
+    }
+
+    public void addLanguage(String language) {
+        if (!languages.contains(language)) {
+            languages.add(language);
+        }
+    }
+
+    public List<NameAssociation> getNames() {
+        return names;
+    }
+
+    public void addName(NameAssociation name) {
+        this.names.add(name);
+    }
+
+    public List<SubjectHeading> getSubjects() {
+        return subjects;
+    }
+
+    public void addSubject(SubjectHeading subject) {
+        this.subjects.add(subject);
+    }
+
+    public OriginInfo getOriginInfo() {
+        return originInfo;
+    }
+
+    public void setOriginInfo(OriginInfo originInfo) {
+        this.originInfo = originInfo;
+    }
+
+    public Map<String, String> getNotes() {
+        return notes;
+    }
+
+    public void putNote(String facet, String content) {
+        notes.put(facet, content);
+    }
+
+    public GeoCoordinates getGeoCoordinates() {
+        return geoCoordinates;
+    }
+
+    public void setGeoCoordinates(GeoCoordinates geoCoordinates) {
+        this.geoCoordinates = geoCoordinates;
+    }
+
+    public RightsMetadata getRightsMetadata() {
+        return rightsMetadata;
+    }
+
+    public void setRightsMetadata(RightsMetadata rightsMetadata) {
+        this.rightsMetadata = rightsMetadata;
+    }
+
+    public List<ExternalDescription> getExternalDescriptions() {
+        return externalDescriptions;
+    }
+
+    public void addExternalDescription(ExternalDescription description) {
+        this.externalDescriptions.add(description);
+    }
+
+    public List<ContentFile> getDirectFiles() {
+        return directFiles;
+    }
+
+    public void addFile(ContentFile file) {
+        this.directFiles.add(file);
+    }
+
+    public List<ObjectComponent> getComponents() {
+        return components;
+    }
+
+    public void addComponent(ObjectComponent component) {
+        components.add(component);
+        components.sort((a, b) -> Integer.compare(a.getOrder(), b.getOrder()));
+    }
+
+    public List<ContentFile> getAllFiles() {
+        List<ContentFile> all = new ArrayList<>(directFiles);
+        collectComponentFiles(components, all);
+        return all;
+    }
+
+    private void collectComponentFiles(List<ObjectComponent> compList, List<ContentFile> result) {
+        for (ObjectComponent comp : compList) {
+            result.addAll(comp.getFiles());
+            collectComponentFiles(comp.getChildComponents(), result);
+        }
+    }
+
+    public List<DamsEvent> getLifecycleEvents() {
+        return lifecycleEvents;
+    }
+
+    public void recordEvent(DamsEvent event) {
+        this.lifecycleEvents.add(event);
+    }
+
+    public RightsMetadata effectiveRightsForComponent(ObjectComponent comp) {
+        if (comp.getComponentRights() != null) {
+            return comp.getComponentRights();
+        }
+        return this.rightsMetadata;
+    }
+
+    @Override
+    public String toString() {
+        return "DigitalObject[id=" + id + ", title=" + getPrimaryTitle() + ", repo=" + repositoryId + "]";
+    }
+}
+
+// File: DigitalCollection.java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class DigitalCollection {
+    public enum CompositionType {
+        SHARED_PROVENANCE,
+        PART_OF_SINGLE_PROVENANCE,
+        ASSEMBLED
+    }
+
+    private final String id;
+    private final String repositoryId;
+    private final boolean formalCollection;
+    private CompositionType compositionType;
+    private String provenance;
+
+    private final Map<String, String> titles = new HashMap<>(); // form -> title
+    private String inclusiveDates;
+    private String bulkDates;
+    private final List<String> languages = new ArrayList<>();
+    private final List<NameAssociation> names = new ArrayList<>();
+    private final List<SubjectHeading> subjects = new ArrayList<>();
+    private final Map<String, String> notes = new HashMap<>();
+    private GeoCoordinates geoCoordinates;
+    private final List<ExternalDescription> externalDescriptions = new ArrayList<>();
+
+    private final List<String> relatedCollectionIds = new ArrayList<>();
+    private final List<String> memberCollectionIds = new ArrayList<>();
+    private final List<String> memberObjectIds = new ArrayList<>();
+    private final List<DamsEvent> lifecycleEvents = new ArrayList<>();
+
+    public DigitalCollection(String id, String repositoryId, String primaryTitle, boolean formalCollection, CompositionType compositionType, String provenance) {
+        this.id = id;
+        this.repositoryId = repositoryId;
+        this.formalCollection = formalCollection;
+        this.compositionType = compositionType;
+        this.provenance = provenance;
+        this.titles.put("primary", primaryTitle);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getRepositoryId() {
+        return repositoryId;
+    }
+
+    public boolean isFormalCollection() {
+        return formalCollection;
+    }
+
+    public CompositionType getCompositionType() {
+        return compositionType;
+    }
+
+    public void setCompositionType(CompositionType compositionType) {
+        this.compositionType = compositionType;
+    }
+
+    public String getProvenance() {
+        return provenance;
+    }
+
+    public void setProvenance(String provenance) {
+        this.provenance = provenance;
+    }
+
+    public String getPrimaryTitle() {
+        return titles.getOrDefault("primary", titles.values().stream().findFirst().orElse("Untitled Collection"));
+    }
+
+    public Map<String, String> getTitles() {
+        return titles;
+    }
+
+    public void setTitle(String form, String title) {
+        this.titles.put(form, title);
+    }
+
+    public String getInclusiveDates() {
+        return inclusiveDates;
+    }
+
+    public void setInclusiveDates(String inclusiveDates) {
+        this.inclusiveDates = inclusiveDates;
+    }
+
+    public String getBulkDates() {
+        return bulkDates;
+    }
+
+    public void setBulkDates(String bulkDates) {
+        this.bulkDates = bulkDates;
+    }
+
+    public List<String> getLanguages() {
+        return languages;
+    }
+
+    public void addLanguage(String language) {
+        if (!languages.contains(language)) {
+            languages.add(language);
+        }
+    }
+
+    public List<NameAssociation> getNames() {
+        return names;
+    }
+
+    public void addName(NameAssociation name) {
+        this.names.add(name);
+    }
+
+    public List<SubjectHeading> getSubjects() {
+        return subjects;
+    }
+
+    public void addSubject(SubjectHeading subject) {
+        this.subjects.add(subject);
+    }
+
+    public Map<String, String> getNotes() {
+        return notes;
+    }
+
+    public void putNote(String facet, String note) {
+        this.notes.put(facet, note);
+    }
+
+    public GeoCoordinates getGeoCoordinates() {
+        return geoCoordinates;
+    }
+
+    public void setGeoCoordinates(GeoCoordinates geoCoordinates) {
+        this.geoCoordinates = geoCoordinates;
+    }
+
+    public List<ExternalDescription> getExternalDescriptions() {
+        return externalDescriptions;
+    }
+
+    public void addExternalDescription(ExternalDescription externalDescription) {
+        this.externalDescriptions.add(externalDescription);
+    }
+
+    public List<String> getRelatedCollectionIds() {
+        return relatedCollectionIds;
+    }
+
+    public void addRelatedCollection(String otherCollectionId) {
+        if (!relatedCollectionIds.contains(otherCollectionId) && !otherCollectionId.equals(this.id)) {
+            relatedCollectionIds.add(otherCollectionId);
+        }
+    }
+
+    public List<String> getMemberCollectionIds() {
+        return memberCollectionIds;
+    }
+
+    public void addMemberCollection(String subCollectionId) {
+        if (!memberCollectionIds.contains(subCollectionId)) {
+            memberCollectionIds.add(subCollectionId);
+        }
+    }
+
+    public List<String> getMemberObjectIds() {
+        return memberObjectIds;
+    }
+
+    public void addMemberObject(String objectId) {
+        if (!memberObjectIds.contains(objectId)) {
+            memberObjectIds.add(objectId);
+        }
+    }
+
+    public List<DamsEvent> getLifecycleEvents() {
+        return lifecycleEvents;
+    }
+
+    public void recordEvent(DamsEvent event) {
+        this.lifecycleEvents.add(event);
+    }
+
+    @Override
+    public String toString() {
+        return "DigitalCollection[id=" + id + ", title=" + getPrimaryTitle() + ", repo=" + repositoryId + "]";
+    }
+}
+
+// File: DamsService.java
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class DamsService implements Repository.RepositoryChangeListener {
+    private final Map<String, Repository> repositories = new HashMap<>();
+    private final Map<String, DigitalCollection> collections = new HashMap<>();
+    private final Map<String, DigitalObject> objects = new HashMap<>();
+    private final Map<String, ContentFile> files = new HashMap<>();
+    private final List<DamsEvent> allScheduledEvents = new ArrayList<>();
+    private int eventCounter = 1;
+
+    public DamsService() {}
+
+    // Repository operations
+    public void registerRepository(Repository repo) {
+        repositories.put(repo.getId(), repo);
+        repo.addListener(this);
+    }
+
+    public Optional<Repository> getRepository(String id) {
+        return Optional.ofNullable(repositories.get(id));
+    }
+
+    public List<Repository> getAllRepositories() {
+        return new ArrayList<>(repositories.values());
+    }
+
+    @Override
+    public void onRepositoryUpdated(Repository repo) {
+        recordEvent("REPOSITORY_UPDATED", "system", "Propagated update for repository " + repo.getId(), repo.getId());
+    }
+
+    // Access control check
+    public boolean checkCuratorialAccess(User user, String repositoryId) {
+        return user.canCurateUnit(repositoryId);
+    }
+
+    // Collections
+    public void addCollection(DigitalCollection collection, User user) {
+        if (!user.canCurateUnit(collection.getRepositoryId())) {
+            throw new SecurityException("User " + user.getName() + " lacks curatorial access to repository " + collection.getRepositoryId());
+        }
+        collections.put(collection.getId(), collection);
+        recordEvent("COLLECTION_CREATED", user.getId(), "Collection created: " + collection.getPrimaryTitle(), collection.getId());
+    }
+
+    public Optional<DigitalCollection> getCollection(String id) {
+        return Optional.ofNullable(collections.get(id));
+    }
+
+    public List<DigitalCollection> getCollectionsByRepository(String repoId) {
+        return collections.values().stream()
+                .filter(c -> c.getRepositoryId().equals(repoId))
+                .collect(Collectors.toList());
+    }
+
+    public List<DigitalCollection> getFormalCollections() {
+        return collections.values().stream()
+                .filter(DigitalCollection::isFormalCollection)
+                .collect(Collectors.toList());
+    }
+
+    public List<DigitalCollection> getAllCollections() {
+        return new ArrayList<>(collections.values());
+    }
+
+    // Digital Objects
+    public void addObject(DigitalObject obj, User user) {
+        if (!user.canCurateUnit(obj.getRepositoryId())) {
+            throw new SecurityException("User " + user.getName() + " lacks curatorial access to repository " + obj.getRepositoryId());
+        }
+        objects.put(obj.getId(), obj);
+        for (ContentFile cf : obj.getAllFiles()) {
+            files.put(cf.getId(), cf);
+        }
+        recordEvent("OBJECT_CREATED", user.getId(), "Object created: " + obj.getPrimaryTitle(), obj.getId());
+    }
+
+    public Optional<DigitalObject> getObject(String id) {
+        return Optional.ofNullable(objects.get(id));
+    }
+
+    public List<DigitalObject> getObjectsByRepository(String repoId) {
+        return objects.values().stream()
+                .filter(o -> o.getRepositoryId().equals(repoId))
+                .collect(Collectors.toList());
+    }
+
+    public List<DigitalObject> getObjectsByCollection(String collectionId) {
+        return objects.values().stream()
+                .filter(o -> o.getCollectionIds().contains(collectionId))
+                .collect(Collectors.toList());
+    }
+
+    public List<DigitalObject> getAllObjects() {
+        return new ArrayList<>(objects.values());
+    }
+
+    // Files
+    public void registerFile(ContentFile file) {
+        files.put(file.getId(), file);
+    }
+
+    public Optional<ContentFile> getFile(String id) {
+        return Optional.ofNullable(files.get(id));
+    }
+
+    public List<ContentFile> getFilesForRepository(String repoId) {
+        List<ContentFile> result = new ArrayList<>();
+        for (DigitalObject obj : getObjectsByRepository(repoId)) {
+            result.addAll(obj.getAllFiles());
+        }
+        return result;
+    }
+
+    public List<ContentFile> getCompromisedFiles() {
+        return files.values().stream()
+                .filter(ContentFile::isIntegrityQuestioned)
+                .collect(Collectors.toList());
+    }
+
+    // Searches
+    public List<DigitalCollection> searchCollectionsByTitle(String query) {
+        String q = query.toLowerCase();
+        return collections.values().stream()
+                .filter(c -> c.getTitles().values().stream().anyMatch(t -> t.toLowerCase().contains(q)))
+                .collect(Collectors.toList());
+    }
+
+    public List<DigitalObject> searchObjectsByTitle(String query, Collection<String> scopeCollectionIds) {
+        String q = query.toLowerCase();
+        return objects.values().stream()
+                .filter(o -> scopeCollectionIds == null || scopeCollectionIds.isEmpty() ||
+                        o.getCollectionIds().stream().anyMatch(scopeCollectionIds::contains))
+                .filter(o -> o.getTitles().values().stream().anyMatch(t -> t.toLowerCase().contains(q)))
+                .collect(Collectors.toList());
+    }
+
+    public List<DigitalObject> searchObjectsByLanguage(String language, Collection<String> scopeCollectionIds) {
+        String lang = language.toLowerCase();
+        return objects.values().stream()
+                .filter(o -> scopeCollectionIds == null || scopeCollectionIds.isEmpty() ||
+                        o.getCollectionIds().stream().anyMatch(scopeCollectionIds::contains))
+                .filter(o -> o.getLanguages().stream().anyMatch(l -> l.equalsIgnoreCase(lang)))
+                .collect(Collectors.toList());
+    }
+
+    public List<DigitalObject> searchObjectsByNameAndRole(String nameQuery, String role) {
+        String nq = nameQuery.toLowerCase();
+        return objects.values().stream()
+                .filter(o -> o.getNames().stream().anyMatch(na ->
+                        na.getName().toLowerCase().contains(nq) &&
+                                (role == null || na.getRole().equalsIgnoreCase(role))))
+                .collect(Collectors.toList());
+    }
+
+    public List<DigitalObject> searchObjectsBySubject(String subjectQuery, SubjectHeading.SubjectType type) {
+        String sq = subjectQuery.toLowerCase();
+        return objects.values().stream()
+                .filter(o -> o.getSubjects().stream().anyMatch(sh ->
+                        sh.getHeading().toLowerCase().contains(sq) &&
+                                (type == null || sh.getType() == type)))
+                .collect(Collectors.toList());
+    }
+
+    // Rights checks
+    public List<DigitalObject> getObjectsUnderCopyright() {
+        return objects.values().stream()
+                .filter(o -> o.getRightsMetadata().getCopyrightStatus() != null &&
+                        o.getRightsMetadata().getCopyrightStatus().isUnderCopyright())
+                .collect(Collectors.toList());
+    }
+
+    // Events
+    public DamsEvent recordEvent(String eventType, String agentId, String outcome, String targetId) {
+        String eventId = "EVT-" + (eventCounter++);
+        DamsEvent evt = new DamsEvent(eventId, eventType, LocalDateTime.now(), agentId, outcome, targetId);
+        allScheduledEvents.add(evt);
+
+        // route event to appropriate object/collection/file
+        if (collections.containsKey(targetId)) {
+            collections.get(targetId).recordEvent(evt);
+        } else if (objects.containsKey(targetId)) {
+            objects.get(targetId).recordEvent(evt);
+        } else if (files.containsKey(targetId)) {
+            files.get(targetId).recordEvent(evt);
+        }
+        return evt;
+    }
+
+    public List<DamsEvent> getAllRecordedEvents() {
+        return Collections.unmodifiableList(allScheduledEvents);
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=== Starting DAMS Demo ===");
+
+        DamsService dams = new DamsService();
+
+        // 1. Setup Library Units / Repositories
+        Repository specialCollections = new Repository(
+                "repo-spec-coll",
+                "Special Collections & Archives",
+                "spec-coll@library.example.edu",
+                "+1-555-0199",
+                "100 Library Mall, Floor 4"
+        );
+        dams.registerRepository(specialCollections);
+
+        Repository musicLibrary = new Repository(
+                "repo-music",
+                "Music & Sound Archives",
+                "music-archive@library.example.edu",
+                "+1-555-0188",
+                "Music Hall, Room 210"
+        );
+        dams.registerRepository(musicLibrary);
+
+        // 2. Users with role-based curatorial access
+        User damsAdmin = new User("usr-admin", "Diana Admin", UserRole.DAMS_MANAGER, null);
+        User specManager = new User("usr-spec-mgr", "Sam Curator", UserRole.REPOSITORY_MANAGER, "repo-spec-coll");
+        User musicStaff = new User("usr-music-staff", "Miles Davis Fan", UserRole.REPOSITORY_STAFF, "repo-music");
+        User publicUser = new User("usr-public", "Jane Public", UserRole.USER, null);
+
+        System.out.println("Checking curator permissions:");
+        System.out.println(" - DAMS Manager can curate spec-coll? " + damsAdmin.canCurateUnit("repo-spec-coll"));
+        System.out.println(" - Spec Manager can curate spec-coll? " + specManager.canCurateUnit("repo-spec-coll"));
+        System.out.println(" - Spec Manager can curate music? " + specManager.canCurateUnit("repo-music"));
+
+        // 3. Create Collections (Composed, with Provenance, metadata, related collections)
+        DigitalCollection earlyManuscripts = new DigitalCollection(
+                "col-001",
+                "repo-spec-coll",
+                "Early Medieval Manuscripts",
+                true,
+                DigitalCollection.CompositionType.SHARED_PROVENANCE,
+                "Gift of Lord Pemberton, 1923"
+        );
+        earlyManuscripts.setInclusiveDates("1100 - 1350");
+        earlyManuscripts.setBulkDates("1200 - 1280");
+        earlyManuscripts.addLanguage("Latin");
+        earlyManuscripts.addLanguage("Old French");
+        earlyManuscripts.addName(new NameAssociation("Pemberton Estate", "source"));
+        earlyManuscripts.addSubject(new SubjectHeading("Illuminated manuscripts", SubjectHeading.SubjectType.TOPIC));
+        earlyManuscripts.addExternalDescription(new ExternalDescription("Finding Aid", "http://archives.org/pemberton", "Full EAD finding aid"));
+        earlyManuscripts.setGeoCoordinates(new GeoCoordinates(51.5074, -0.1278));
+
+        DigitalCollection charterCollection = new DigitalCollection(
+                "col-002",
+                "repo-spec-coll",
+                "Medieval Charters and Deeds",
+                true,
+                DigitalCollection.CompositionType.ASSEMBLED,
+                "Assembled from various institutional acquisitions"
+        );
+        earlyManuscripts.addRelatedCollection(charterCollection.getId());
+        charterCollection.addRelatedCollection(earlyManuscripts.getId());
+
+        dams.addCollection(earlyManuscripts, specManager);
+        dams.addCollection(charterCollection, specManager);
+
+        // 4. Create Digital Object with Components, Content Files, Rights, GeoContext, Notes
+        DigitalObject codex = new DigitalObject("obj-codex-1", "repo-spec-coll", "Codex Aureus Pemberton");
+        codex.addCollectionId(earlyManuscripts.getId());
+        codex.setTitle("alternative", "The Golden Book of Pemberton");
+        codex.setDate("ca. 1220");
+        codex.addLanguage("Latin");
+        codex.addName(new NameAssociation("Monastery of St. Peter", "creator"));
+        codex.addName(new NameAssociation("Brother Thomas", "illustrator"));
+        codex.addSubject(new SubjectHeading("Gospel Books", SubjectHeading.SubjectType.GENRE_FORM));
+        codex.setOriginInfo(new OriginInfo("Canterbury", "Scriptorium of St. Peter", "1st Edition", "1220"));
+        codex.putNote("Scope & Content", "Parchment codex with 120 folios, including 14 full-page miniatures.");
+        codex.putNote("Condition Governing Access", "Open access for digital surrogate; physical original restricted.");
+        codex.setGeoCoordinates(new GeoCoordinates(51.2798, 1.0789));
+
+        // Rights Metadata
+        CopyrightStatus crStatus = new CopyrightStatus(false, "Public Domain", LocalDate.of(1300, 1, 1), "UK Copyright Act Section 12");
+        RightsMetadata rights = new RightsMetadata(crStatus, "CC0 1.0 Universal", "Unrestricted research and commercial use");
+        rights.addStatute(new StatuteInfo("Public Domain Mark", "Worldwide", null));
+        rights.addPolicyRestriction(new PolicyRestriction("High-res Download Policy", "High resolution downloads permitted with credit", null));
+        rights.addUsageRule(new RightsUsageRule("Display", RightsUsageRule.RuleType.PERMITTED, LocalDate.of(2000, 1, 1), null));
+        rights.addUsageRule(new RightsUsageRule("Download", RightsUsageRule.RuleType.PERMITTED, LocalDate.of(2000, 1, 1), null));
+        codex.setRightsMetadata(rights);
+
+        // Components & Content Files (Structure & File technical metadata)
+        ObjectComponent fol1r = new ObjectComponent("comp-01", 1, "Folio 1 recto (Incipit)");
+        fol1r.setDate("ca. 1220");
+        fol1r.addLanguage("Latin");
+        fol1r.addName(new NameAssociation("Brother Thomas", "illustrator"));
+
+        ContentFile fileMasterTiff = new ContentFile(
+                "fil-001",
+                "fol1r_master.tif",
+                154857600L, // ~147 MB
+                LocalDateTime.now().minusDays(10),
+                "TIFF",
+                "6.0",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "SHA-256",
+                true
+        );
+        fileMasterTiff.setSourceCaptureInfo("Phase One IQ4 150MP", "Capture One CH 14.2");
+
+        ContentFile fileAccessJpg = new ContentFile(
+                "fil-002",
+                "fol1r_access.jpg",
+                3145728L, // ~3 MB
+                LocalDateTime.now().minusDays(10),
+                "JPEG",
+                "1.02",
+                "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce",
+                "SHA-256",
+                false
+        );
+
+        fol1r.addFile(fileMasterTiff);
+        fol1r.addFile(fileAccessJpg);
+        codex.addComponent(fol1r);
+
+        ObjectComponent fol1v = new ObjectComponent("comp-02", 2, "Folio 1 verso (Blank)");
+        fol1r.linkComponent(fol1v);
+        codex.addComponent(fol1v);
+
+        dams.addObject(codex, specManager);
+
+        // 5. Update Repository info in one place and verify event propagation
+        System.out.println("\nUpdating Special Collections Repository details...");
+        specialCollections.updateInfo("Special Collections & University Archives", "archives@library.example.edu", "+1-555-9999", "100 Library Mall, 5th Floor");
+
+        // 6. User browsing and limiting searches
+        System.out.println("\nBrowse collections belonging to 'repo-spec-coll':");
+        for (DigitalCollection col : dams.getCollectionsByRepository("repo-spec-coll")) {
+            System.out.println(" - " + col.getPrimaryTitle() + " (Provenance: " + col.getProvenance() + ")");
+            System.out.println("   Related collections: " + col.getRelatedCollectionIds());
+        }
+
+        System.out.println("\nSearch objects with title 'Codex' limited to collection 'col-001':");
+        List<DigitalObject> found = dams.searchObjectsByTitle("Codex", List.of("col-001"));
+        for (DigitalObject obj : found) {
+            System.out.println(" - Found: " + obj.getPrimaryTitle() + " in repo " + obj.getRepositoryId());
+            System.out.println("   Belongs to collections: " + obj.getCollectionIds());
+            System.out.println("   Origin: " + obj.getOriginInfo());
+            System.out.println("   Rights status: " + obj.getRightsMetadata().getCopyrightStatus());
+            System.out.println("   Geo Context: " + obj.getGeoCoordinates());
+            System.out.println("   Components in order:");
+            for (ObjectComponent comp : obj.getComponents()) {
+                System.out.println("     [" + comp.getOrder() + "] " + comp.getPrimaryTitle());
+                for (ContentFile cf : comp.getFiles()) {
+                    System.out.println("       File: " + cf.getFileName() + " (" + cf.getFileSize() + " bytes, Format: " + cf.getFileFormat() + ")");
+                }
+            }
+        }
+
+        // 7. Search by role (illustrator)
+        System.out.println("\nSearch objects by name role 'illustrator':");
+        List<DigitalObject> byRole = dams.searchObjectsByNameAndRole("Thomas", "illustrator");
+        System.out.println(" - Match count: " + byRole.size());
+
+        // 8. Preservation Manager integrity alert simulation
+        System.out.println("\nPreservation test: Simulating checksum alteration on master file...");
+        fileMasterTiff.updateChecksum("corrupted_hash_value_xyz");
+        List<ContentFile> compromised = dams.getCompromisedFiles();
+        System.out.println("Compromised files identified by Preservation Manager: " + compromised.size());
+        for (ContentFile cf : compromised) {
+            System.out.println(" - Integrity Warning: " + cf.getFileName() + " (Stored hash differs from original)");
+        }
+
+        // 9. DAMS Manager listing of events across lifecycle
+        System.out.println("\nDAMS Event History Audit Log:");
+        for (DamsEvent evt : dams.getAllRecordedEvents()) {
+            System.out.println(" * " + evt);
+        }
+
+        System.out.println("\n=== DAMS Demo Completed Successfully ===");
+    }
+}

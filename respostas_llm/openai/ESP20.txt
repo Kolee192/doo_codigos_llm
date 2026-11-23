@@ -1,0 +1,1670 @@
+// File: Role.java
+import java.util.Set;
+
+public enum Role {
+    ADMINISTRATOR,
+    SECURITY_OFFICER,
+    DATA_MANAGER,
+    PORTAL_MANAGER,
+    REGISTERED_VISITOR;
+
+    public static boolean hasAny(UserAccount account, Role... required) {
+        if (account == null) {
+            return false;
+        }
+        Set<Role> roles = account.getRoles();
+        for (Role role : required) {
+            if (roles.contains(role) || roles.contains(ADMINISTRATOR)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+// File: ResourceType.java
+public enum ResourceType {
+    OCCURRENCE,
+    CHECKLIST,
+    MULTIMEDIA,
+    BIBLIOGRAPHIC,
+    INSTITUTION,
+    EXPERT
+}
+
+// File: UserAccount.java
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
+import java.util.UUID;
+
+public class UserAccount {
+    private final String id;
+    private String username;
+    private String email;
+    private String password;
+    private final Set<Role> roles = EnumSet.noneOf(Role.class);
+
+    public UserAccount(String username, String email, String password) {
+        this(UUID.randomUUID().toString(), username, email, password);
+    }
+
+    public UserAccount(String id, String username, String email, String password) {
+        this.id = requireText(id, "id");
+        this.username = requireText(username, "username");
+        setEmail(email);
+        this.password = requireText(password, "password");
+    }
+
+    private static String requireText(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(field + " must not be blank");
+        }
+        return value.trim();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = requireText(username, "username");
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = requireText(email, "email");
+    }
+
+    public boolean authenticate(String candidate) {
+        return password.equals(candidate);
+    }
+
+    public void setPassword(String password) {
+        this.password = requireText(password, "password");
+    }
+
+    public Set<Role> getRoles() {
+        return Collections.unmodifiableSet(roles);
+    }
+
+    public void addRole(Role role) {
+        roles.add(java.util.Objects.requireNonNull(role));
+    }
+
+    public void removeRole(Role role) {
+        roles.remove(role);
+    }
+}
+
+// File: Resource.java
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+
+public class Resource {
+    private final String id;
+    private final ResourceType type;
+    private final Map<String, String> metadata = new LinkedHashMap<>();
+    private byte[] content = new byte[0];
+
+    public Resource(ResourceType type, Map<String, String> metadata) {
+        this(UUID.randomUUID().toString(), type, metadata);
+    }
+
+    public Resource(String id, ResourceType type, Map<String, String> metadata) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("id must not be blank");
+        }
+        this.id = id;
+        this.type = Objects.requireNonNull(type);
+        if (metadata != null) {
+            this.metadata.putAll(metadata);
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public ResourceType getType() {
+        return type;
+    }
+
+    public synchronized Map<String, String> getMetadata() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(metadata));
+    }
+
+    public synchronized void updateMetadata(Map<String, String> changes) {
+        if (changes == null) {
+            return;
+        }
+        changes.forEach((key, value) -> {
+            if (key == null || key.isBlank()) {
+                throw new IllegalArgumentException("Metadata keys must not be blank");
+            }
+            metadata.put(key, value == null ? "" : value);
+        });
+    }
+
+    public synchronized String getMetadataValue(String key) {
+        return metadata.get(key);
+    }
+
+    public synchronized void setContent(byte[] content) {
+        this.content = content == null ? new byte[0] : content.clone();
+    }
+
+    public synchronized byte[] getContent() {
+        return content.clone();
+    }
+
+    public synchronized String searchableText() {
+        return String.join(" ", metadata.values());
+    }
+}
+
+// File: LogEntry.java
+import java.time.Instant;
+import java.util.Objects;
+
+public class LogEntry {
+    public enum Kind { ERROR, AUDIT }
+
+    private final Instant timestamp;
+    private final Kind kind;
+    private final String actor;
+    private final String message;
+
+    public LogEntry(Kind kind, String actor, String message) {
+        this.timestamp = Instant.now();
+        this.kind = Objects.requireNonNull(kind);
+        this.actor = actor == null ? "system" : actor;
+        this.message = message == null ? "" : message;
+    }
+
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+
+    public Kind getKind() {
+        return kind;
+    }
+
+    public String getActor() {
+        return actor;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    @Override
+    public String toString() {
+        return timestamp + " [" + kind + "] " + actor + ": " + message;
+    }
+}
+
+// File: MailConfiguration.java
+public class MailConfiguration {
+    private String url = "";
+    private int port;
+    private String account = "";
+
+    public synchronized void configure(String url, int port, String account) {
+        if (url == null || url.isBlank() || account == null || account.isBlank()) {
+            throw new IllegalArgumentException("URL and account are required");
+        }
+        if (port < 1 || port > 65535) {
+            throw new IllegalArgumentException("Port must be between 1 and 65535");
+        }
+        this.url = url.trim();
+        this.port = port;
+        this.account = account.trim();
+    }
+
+    public synchronized String getUrl() {
+        return url;
+    }
+
+    public synchronized int getPort() {
+        return port;
+    }
+
+    public synchronized String getAccount() {
+        return account;
+    }
+}
+
+// File: SpatialLayer.java
+import java.util.UUID;
+
+public class SpatialLayer {
+    private final String id;
+    private String name;
+    private String source;
+    private boolean visible = true;
+
+    public SpatialLayer(String name, String source) {
+        this(UUID.randomUUID().toString(), name, source);
+    }
+
+    public SpatialLayer(String id, String name, String source) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("Layer id must not be blank");
+        }
+        this.id = id;
+        setName(name);
+        setSource(source);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public synchronized String getName() {
+        return name;
+    }
+
+    public synchronized void setName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Layer name must not be blank");
+        }
+        this.name = name.trim();
+    }
+
+    public synchronized String getSource() {
+        return source;
+    }
+
+    public synchronized void setSource(String source) {
+        if (source == null || source.isBlank()) {
+            throw new IllegalArgumentException("Layer source must not be blank");
+        }
+        this.source = source.trim();
+    }
+
+    public synchronized boolean isVisible() {
+        return visible;
+    }
+
+    public synchronized void setVisible(boolean visible) {
+        this.visible = visible;
+    }
+}
+
+// File: MapConfiguration.java
+public class MapConfiguration {
+    private String projection = "EPSG:4326";
+    private String defaultExtent = "-180,-90,180,90";
+
+    public synchronized void setProjection(String projection) {
+        if (projection == null || projection.isBlank()) {
+            throw new IllegalArgumentException("Projection must not be blank");
+        }
+        this.projection = projection.trim();
+    }
+
+    public synchronized String getProjection() {
+        return projection;
+    }
+
+    public synchronized void setDefaultExtent(String defaultExtent) {
+        if (defaultExtent == null || defaultExtent.isBlank()) {
+            throw new IllegalArgumentException("Extent must not be blank");
+        }
+        this.defaultExtent = defaultExtent.trim();
+    }
+
+    public synchronized String getDefaultExtent() {
+        return defaultExtent;
+    }
+}
+
+// File: AdminService.java
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public class AdminService {
+    private final Set<String> installedModules = ConcurrentHashMap.newKeySet();
+    private final Map<String, SpatialLayer> layers = new ConcurrentHashMap<>();
+    private final Map<String, UserAccount> users = new ConcurrentHashMap<>();
+    private final List<LogEntry> errorLogs = new CopyOnWriteArrayList<>();
+    private final List<LogEntry> auditLogs = new CopyOnWriteArrayList<>();
+    private final MapConfiguration mapConfiguration = new MapConfiguration();
+    private final MailConfiguration mailConfiguration = new MailConfiguration();
+
+    private static void requireRole(UserAccount actor, Role... roles) {
+        if (!Role.hasAny(actor, roles)) {
+            throw new SecurityException("The account is not authorized for this operation");
+        }
+    }
+
+    private static String actorName(UserAccount actor) {
+        return actor == null ? "system" : actor.getUsername();
+    }
+
+    private void audit(UserAccount actor, String message) {
+        auditLogs.add(new LogEntry(LogEntry.Kind.AUDIT, actorName(actor), message));
+    }
+
+    public void installModule(UserAccount actor, String module) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        if (module == null || module.isBlank()) throw new IllegalArgumentException("Module is required");
+        installedModules.add(module.trim());
+        audit(actor, "Installed module " + module);
+    }
+
+    public void uninstallModule(UserAccount actor, String module) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        installedModules.remove(module);
+        audit(actor, "Uninstalled module " + module);
+    }
+
+    public Set<String> getInstalledModules() {
+        return Set.copyOf(installedModules);
+    }
+
+    public void configureProjection(UserAccount actor, String projection) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        mapConfiguration.setProjection(projection);
+        audit(actor, "Changed map projection");
+    }
+
+    public void configureDefaultExtent(UserAccount actor, String extent) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        mapConfiguration.setDefaultExtent(extent);
+        audit(actor, "Changed map default extent");
+    }
+
+    public MapConfiguration getMapConfiguration() {
+        return mapConfiguration;
+    }
+
+    public void configureMail(UserAccount actor, String url, int port, String account) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        mailConfiguration.configure(url, port, account);
+        audit(actor, "Changed email server configuration");
+    }
+
+    public MailConfiguration getMailConfiguration() {
+        return mailConfiguration;
+    }
+
+    public SpatialLayer addLayer(UserAccount actor, String name, String source) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        SpatialLayer layer = new SpatialLayer(name, source);
+        layers.put(layer.getId(), layer);
+        audit(actor, "Added map layer " + layer.getName());
+        return layer;
+    }
+
+    public void removeLayer(UserAccount actor, String id) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        if (layers.remove(id) == null) throw new IllegalArgumentException("Unknown layer: " + id);
+        audit(actor, "Removed map layer " + id);
+    }
+
+    public void renameLayer(UserAccount actor, String id, String name) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        SpatialLayer layer = requireLayer(id);
+        layer.setName(name);
+        audit(actor, "Renamed map layer " + id);
+    }
+
+    public Collection<SpatialLayer> getLayers() {
+        return List.copyOf(layers.values());
+    }
+
+    public SpatialLayer requireLayer(String id) {
+        SpatialLayer layer = layers.get(id);
+        if (layer == null) throw new IllegalArgumentException("Unknown layer: " + id);
+        return layer;
+    }
+
+    public UserAccount createUser(UserAccount actor, String username, String email, String password) {
+        requireRole(actor, Role.SECURITY_OFFICER);
+        UserAccount user = new UserAccount(username, email, password);
+        users.put(user.getId(), user);
+        audit(actor, "Created account " + username);
+        return user;
+    }
+
+    public void deleteUser(UserAccount actor, String userId) {
+        requireRole(actor, Role.SECURITY_OFFICER);
+        UserAccount removed = users.remove(userId);
+        if (removed == null) throw new IllegalArgumentException("Unknown user: " + userId);
+        audit(actor, "Deleted account " + removed.getUsername());
+    }
+
+    public void assignRole(UserAccount actor, String userId, Role role) {
+        requireRole(actor, Role.SECURITY_OFFICER);
+        UserAccount user = requireUser(userId);
+        user.addRole(Objects.requireNonNull(role));
+        audit(actor, "Assigned role " + role + " to " + user.getUsername());
+    }
+
+    public void removeRole(UserAccount actor, String userId, Role role) {
+        requireRole(actor, Role.SECURITY_OFFICER);
+        UserAccount user = requireUser(userId);
+        user.removeRole(role);
+        audit(actor, "Removed role " + role + " from " + user.getUsername());
+    }
+
+    public void editUserEmail(UserAccount actor, String userId, String email) {
+        requireRole(actor, Role.SECURITY_OFFICER);
+        UserAccount user = requireUser(userId);
+        user.setEmail(email);
+        audit(actor, "Changed email for " + user.getUsername());
+    }
+
+    public UserAccount requireUser(String id) {
+        UserAccount user = users.get(id);
+        if (user == null) throw new IllegalArgumentException("Unknown user: " + id);
+        return user;
+    }
+
+    public UserAccount findUserByUsername(String username) {
+        return users.values().stream()
+                .filter(u -> u.getUsername().equalsIgnoreCase(username))
+                .findFirst().orElse(null);
+    }
+
+    public Collection<UserAccount> getUsers() {
+        return List.copyOf(users.values());
+    }
+
+    public void recordError(String actor, String message) {
+        errorLogs.add(new LogEntry(LogEntry.Kind.ERROR, actor, message));
+    }
+
+    public List<LogEntry> viewErrorLogs(UserAccount actor) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        return List.copyOf(errorLogs);
+    }
+
+    public String downloadErrorLogs(UserAccount actor) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        return errorLogs.stream().map(LogEntry::toString).reduce("", (a, b) -> a + b + "\n");
+    }
+
+    public List<LogEntry> viewAuditLogs(UserAccount actor) {
+        requireRole(actor, Role.SECURITY_OFFICER);
+        return List.copyOf(auditLogs);
+    }
+
+    public String downloadAuditLogsForMonth(UserAccount actor, YearMonth month) {
+        requireRole(actor, Role.SECURITY_OFFICER);
+        if (month == null) throw new IllegalArgumentException("Month is required");
+        return auditLogs.stream()
+                .filter(entry -> YearMonth.from(entry.getTimestamp().atZone(java.time.ZoneId.systemDefault())).equals(month))
+                .map(LogEntry::toString)
+                .reduce("", (a, b) -> a + b + "\n");
+    }
+}
+
+// File: ResourceCatalog.java
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class ResourceCatalog {
+    private final Map<String, Resource> resources = new ConcurrentHashMap<>();
+
+    public Resource importResource(Resource resource) {
+        if (resource == null) throw new IllegalArgumentException("Resource is required");
+        if (resources.putIfAbsent(resource.getId(), resource) != null) {
+            throw new IllegalArgumentException("A resource with this id already exists");
+        }
+        return resource;
+    }
+
+    public Resource create(ResourceType type, Map<String, String> metadata) {
+        return importResource(new Resource(type, metadata));
+    }
+
+    public void delete(String id) {
+        if (resources.remove(id) == null) throw new IllegalArgumentException("Unknown resource: " + id);
+    }
+
+    public Resource require(String id) {
+        Resource resource = resources.get(id);
+        if (resource == null) throw new IllegalArgumentException("Unknown resource: " + id);
+        return resource;
+    }
+
+    public void editMetadata(String id, Map<String, String> changes) {
+        require(id).updateMetadata(changes);
+    }
+
+    public List<Resource> search(ResourceType type, String keywords) {
+        String[] terms = keywords == null ? new String[0] : keywords.toLowerCase().trim().split("\\s+");
+        List<Resource> result = new ArrayList<>();
+        for (Resource resource : resources.values()) {
+            if (resource.getType() != type) continue;
+            String text = resource.searchableText().toLowerCase();
+            boolean matches = true;
+            for (String term : terms) {
+                if (!term.isBlank() && !text.contains(term)) {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) result.add(resource);
+        }
+        return List.copyOf(result);
+    }
+
+    public List<Resource> searchAll(String keywords) {
+        List<Resource> result = new ArrayList<>();
+        for (ResourceType type : ResourceType.values()) result.addAll(search(type, keywords));
+        return List.copyOf(result);
+    }
+
+    public Collection<Resource> all() {
+        return List.copyOf(resources.values());
+    }
+
+    public List<Resource> all(ResourceType type) {
+        return resources.values().stream().filter(r -> r.getType() == type).toList();
+    }
+}
+
+// File: DataSource.java
+import java.time.Instant;
+import java.util.UUID;
+
+public class DataSource {
+    public enum Type { GBIF_INDEX, IPT }
+
+    private final String id;
+    private final Type type;
+    private final String name;
+    private final String endpoint;
+    private final Instant registeredAt = Instant.now();
+
+    public DataSource(Type type, String name, String endpoint) {
+        this(UUID.randomUUID().toString(), type, name, endpoint);
+    }
+
+    public DataSource(String id, Type type, String name, String endpoint) {
+        if (id == null || id.isBlank() || name == null || name.isBlank() || endpoint == null || endpoint.isBlank()) {
+            throw new IllegalArgumentException("Data source id, name and endpoint are required");
+        }
+        this.id = id;
+        this.type = java.util.Objects.requireNonNull(type);
+        this.name = name.trim();
+        this.endpoint = endpoint.trim();
+    }
+
+    public String getId() { return id; }
+    public Type getType() { return type; }
+    public String getName() { return name; }
+    public String getEndpoint() { return endpoint; }
+    public Instant getRegisteredAt() { return registeredAt; }
+}
+
+// File: HarvestJob.java
+import java.time.Instant;
+import java.util.UUID;
+
+public class HarvestJob {
+    public enum Status { SCHEDULED, RUNNING, COMPLETED, CANCELLED, FAILED }
+
+    private final String id = UUID.randomUUID().toString();
+    private final String dataSourceId;
+    private final Instant createdAt = Instant.now();
+    private volatile Status status = Status.SCHEDULED;
+    private volatile String report = "Not yet run";
+
+    public HarvestJob(String dataSourceId) {
+        if (dataSourceId == null || dataSourceId.isBlank()) {
+            throw new IllegalArgumentException("Data source id is required");
+        }
+        this.dataSourceId = dataSourceId;
+    }
+
+    public String getId() { return id; }
+    public String getDataSourceId() { return dataSourceId; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Status getStatus() { return status; }
+    public String getReport() { return report; }
+
+    public synchronized void cancel() {
+        if (status == Status.RUNNING || status == Status.COMPLETED) {
+            throw new IllegalStateException("A running or completed job cannot be cancelled");
+        }
+        status = Status.CANCELLED;
+        report = "Job cancelled";
+    }
+
+    public synchronized void run() {
+        if (status != Status.SCHEDULED) throw new IllegalStateException("Job is not scheduled");
+        status = Status.RUNNING;
+        report = "Harvest completed successfully";
+        status = Status.COMPLETED;
+    }
+
+    public synchronized void fail(String reason) {
+        status = Status.FAILED;
+        report = reason == null ? "Harvest failed" : reason;
+    }
+}
+
+// File: DataManagerService.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class DataManagerService {
+    private final ResourceCatalog catalog;
+    private final Map<String, DataSource> dataSources = new ConcurrentHashMap<>();
+    private final Map<String, HarvestJob> jobs = new ConcurrentHashMap<>();
+    private final Set<String> extensions = ConcurrentHashMap.newKeySet();
+    private volatile String taxonomicBackboneVersion = "unset";
+    private volatile Instant lastBackupRestorationRequest;
+    private final List<Instant> usageChecks = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    public DataManagerService(ResourceCatalog catalog) {
+        this.catalog = java.util.Objects.requireNonNull(catalog);
+    }
+
+    private static void authorize(UserAccount actor) {
+        if (!Role.hasAny(actor, Role.DATA_MANAGER)) throw new SecurityException("Data manager role required");
+    }
+
+    public Resource importResource(UserAccount actor, ResourceType type, Map<String, String> metadata) {
+        authorize(actor);
+        return catalog.create(type, metadata);
+    }
+
+    public void deleteResource(UserAccount actor, String id) {
+        authorize(actor);
+        catalog.delete(id);
+    }
+
+    public void editResourceMetadata(UserAccount actor, String id, Map<String, String> metadata) {
+        authorize(actor);
+        catalog.editMetadata(id, metadata);
+    }
+
+    public List<Resource> searchResources(UserAccount actor, ResourceType type, String keywords) {
+        authorize(actor);
+        return catalog.search(type, keywords);
+    }
+
+    public DataSource registerGbifIndex(UserAccount actor, String name, String endpoint) {
+        authorize(actor);
+        return register(actor, DataSource.Type.GBIF_INDEX, name, endpoint);
+    }
+
+    public DataSource registerIpt(UserAccount actor, String name, String endpoint) {
+        authorize(actor);
+        return register(actor, DataSource.Type.IPT, name, endpoint);
+    }
+
+    private DataSource register(UserAccount actor, DataSource.Type type, String name, String endpoint) {
+        DataSource source = new DataSource(type, name, endpoint);
+        dataSources.put(source.getId(), source);
+        return source;
+    }
+
+    public void unregisterIpt(UserAccount actor, String id) {
+        authorize(actor);
+        unregister(id, DataSource.Type.IPT);
+    }
+
+    public void unregisterGbifIndex(UserAccount actor, String id) {
+        authorize(actor);
+        unregister(id, DataSource.Type.GBIF_INDEX);
+    }
+
+    private void unregister(String id, DataSource.Type expected) {
+        DataSource source = dataSources.get(id);
+        if (source == null || source.getType() != expected) {
+            throw new IllegalArgumentException("No matching data source: " + id);
+        }
+        dataSources.remove(id);
+    }
+
+    public Collection<DataSource> getDataSources(UserAccount actor) {
+        authorize(actor);
+        return List.copyOf(dataSources.values());
+    }
+
+    public HarvestJob scheduleHarvest(UserAccount actor, String sourceId) {
+        authorize(actor);
+        if (!dataSources.containsKey(sourceId)) throw new IllegalArgumentException("Unknown data source");
+        HarvestJob job = new HarvestJob(sourceId);
+        jobs.put(job.getId(), job);
+        return job;
+    }
+
+    public void cancelHarvest(UserAccount actor, String jobId) {
+        authorize(actor);
+        requireJob(jobId).cancel();
+    }
+
+    public String viewHarvestReport(UserAccount actor, String jobId) {
+        authorize(actor);
+        return requireJob(jobId).getReport();
+    }
+
+    public void triggerHarvest(UserAccount actor, String jobId) {
+        authorize(actor);
+        requireJob(jobId).run();
+    }
+
+    public Collection<HarvestJob> getHarvestJobs(UserAccount actor) {
+        authorize(actor);
+        return List.copyOf(jobs.values());
+    }
+
+    private HarvestJob requireJob(String id) {
+        HarvestJob job = jobs.get(id);
+        if (job == null) throw new IllegalArgumentException("Unknown harvest job: " + id);
+        return job;
+    }
+
+    public List<String> checkCoreResourceConsistency(UserAccount actor) {
+        authorize(actor);
+        List<String> issues = new ArrayList<>();
+        for (DataSource source : dataSources.values()) {
+            boolean harvested = jobs.values().stream()
+                    .anyMatch(job -> job.getDataSourceId().equals(source.getId())
+                            && job.getStatus() == HarvestJob.Status.COMPLETED);
+            if (!harvested) issues.add("No completed harvest for " + source.getName());
+        }
+        return List.copyOf(issues);
+    }
+
+    public void requestLatestBackupRestoration(UserAccount actor) {
+        authorize(actor);
+        lastBackupRestorationRequest = Instant.now();
+    }
+
+    public Instant getLastBackupRestorationRequest(UserAccount actor) {
+        authorize(actor);
+        return lastBackupRestorationRequest;
+    }
+
+    public void updateTaxonomicBackbone(UserAccount actor, String version) {
+        authorize(actor);
+        if (version == null || version.isBlank()) throw new IllegalArgumentException("Version is required");
+        taxonomicBackboneVersion = version.trim();
+    }
+
+    public String getTaxonomicBackboneVersion(UserAccount actor) {
+        authorize(actor);
+        return taxonomicBackboneVersion;
+    }
+
+    public void installExtension(UserAccount actor, String extension) {
+        authorize(actor);
+        if (extension == null || extension.isBlank()) throw new IllegalArgumentException("Extension is required");
+        extensions.add(extension.trim());
+    }
+
+    public Set<String> getExtensions(UserAccount actor) {
+        authorize(actor);
+        return Set.copyOf(extensions);
+    }
+
+    public void monitorPortalUsage(UserAccount actor) {
+        authorize(actor);
+        usageChecks.add(Instant.now());
+    }
+
+    public List<Instant> getUsageMonitoringEvents(UserAccount actor) {
+        authorize(actor);
+        return List.copyOf(usageChecks);
+    }
+}
+
+// File: PortalContentService.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class PortalContentService {
+    public static class Entry {
+        private final String id;
+        private String title;
+        private String body;
+        private final boolean blogPost;
+        private final java.time.Instant createdAt;
+        private java.time.Instant updatedAt;
+
+        private Entry(String id, String title, String body, boolean blogPost) {
+            this.id = id;
+            this.title = title;
+            this.body = body;
+            this.blogPost = blogPost;
+            this.createdAt = java.time.Instant.now();
+            this.updatedAt = createdAt;
+        }
+
+        public String getId() { return id; }
+        public String getTitle() { return title; }
+        public String getBody() { return body; }
+        public boolean isBlogPost() { return blogPost; }
+        public java.time.Instant getCreatedAt() { return createdAt; }
+        public java.time.Instant getUpdatedAt() { return updatedAt; }
+
+        private void edit(String title, String body) {
+            if (title == null || title.isBlank()) throw new IllegalArgumentException("Title is required");
+            this.title = title.trim();
+            this.body = body == null ? "" : body;
+            this.updatedAt = java.time.Instant.now();
+        }
+    }
+
+    public static class Page {
+        private final String id;
+        private String title;
+        private String body;
+        private Map<String, String> htmlMetadata = new LinkedHashMap<>();
+
+        private Page(String id, String title, String body) {
+            this.id = id;
+            this.title = title;
+            this.body = body;
+        }
+
+        public String getId() { return id; }
+        public String getTitle() { return title; }
+        public String getBody() { return body; }
+        public Map<String, String> getHtmlMetadata() {
+            return Collections.unmodifiableMap(new LinkedHashMap<>(htmlMetadata));
+        }
+
+        private void edit(String title, String body) {
+            if (title == null || title.isBlank()) throw new IllegalArgumentException("Title is required");
+            this.title = title.trim();
+            this.body = body == null ? "" : body;
+        }
+
+        private void setHtmlMetadata(Map<String, String> metadata) {
+            this.htmlMetadata = metadata == null ? new LinkedHashMap<>() : new LinkedHashMap<>(metadata);
+        }
+    }
+
+    private volatile boolean dataMetricsVisible = true;
+    private volatile String logo = "";
+    private volatile String nodeName = "";
+    private volatile String banner = "";
+    private volatile String contactName = "";
+    private volatile String contactEmail = "";
+    private volatile String networkSummary = "";
+    private volatile String defaultLanguage = "en";
+    private final Set<String> alternateLanguages = ConcurrentHashMap.newKeySet();
+    private final Map<String, Entry> entries = new ConcurrentHashMap<>();
+    private final Map<String, Page> pages = new ConcurrentHashMap<>();
+    private final List<String> menu = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final Map<String, String> toolsAndServices = new ConcurrentHashMap<>();
+
+    private static void authorize(UserAccount actor) {
+        if (!Role.hasAny(actor, Role.PORTAL_MANAGER)) throw new SecurityException("Portal manager role required");
+    }
+
+    private static void validateText(String value, String name) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(name + " must not be blank");
+    }
+
+    public void configureDataMetricsVisibility(UserAccount actor, boolean visible) {
+        authorize(actor);
+        dataMetricsVisible = visible;
+    }
+
+    public boolean areDataMetricsVisible() { return dataMetricsVisible; }
+
+    public void changeLogo(UserAccount actor, String value) { authorize(actor); validateText(value, "Logo"); logo = value; }
+    public String getLogo() { return logo; }
+
+    public void changeNodeName(UserAccount actor, String value) { authorize(actor); validateText(value, "Node name"); nodeName = value.trim(); }
+    public String getNodeName() { return nodeName; }
+
+    public void changeBanner(UserAccount actor, String value) { authorize(actor); banner = value == null ? "" : value; }
+    public String getBanner() { return banner; }
+
+    public void configureContact(UserAccount actor, String name, String email) {
+        authorize(actor);
+        validateText(name, "Contact name");
+        validateText(email, "Contact email");
+        contactName = name.trim();
+        contactEmail = email.trim();
+    }
+
+    public String getContactName() { return contactName; }
+    public String getContactEmail() { return contactEmail; }
+
+    public void configureNetworkSummary(UserAccount actor, String summary) {
+        authorize(actor);
+        networkSummary = summary == null ? "" : summary;
+    }
+
+    public String getNetworkSummary() { return networkSummary; }
+
+    public void setDefaultLanguage(UserAccount actor, String language) {
+        authorize(actor);
+        validateText(language, "Language");
+        defaultLanguage = language.trim();
+    }
+
+    public String getDefaultLanguage() { return defaultLanguage; }
+
+    public void addAlternateLanguage(UserAccount actor, String language) {
+        authorize(actor);
+        validateText(language, "Language");
+        alternateLanguages.add(language.trim());
+    }
+
+    public void removeAlternateLanguage(UserAccount actor, String language) {
+        authorize(actor);
+        alternateLanguages.remove(language);
+    }
+
+    public Set<String> getAvailableLanguages() {
+        Set<String> result = new LinkedHashSet<>(alternateLanguages);
+        result.add(defaultLanguage);
+        return Set.copyOf(result);
+    }
+
+    public Entry contributeNews(UserAccount actor, String title, String body) {
+        return contribute(actor, title, body, false);
+    }
+
+    public Entry contributeBlogPost(UserAccount actor, String title, String body) {
+        return contribute(actor, title, body, true);
+    }
+
+    private Entry contribute(UserAccount actor, String title, String body, boolean blog) {
+        authorize(actor);
+        validateText(title, "Title");
+        Entry entry = new Entry(UUID.randomUUID().toString(), title.trim(), body == null ? "" : body, blog);
+        entries.put(entry.getId(), entry);
+        return entry;
+    }
+
+    public void editEntry(UserAccount actor, String id, String title, String body) {
+        authorize(actor);
+        Entry entry = requireEntry(id);
+        entry.edit(title, body);
+    }
+
+    public void deleteEntry(UserAccount actor, String id) {
+        authorize(actor);
+        if (entries.remove(id) == null) throw new IllegalArgumentException("Unknown entry: " + id);
+    }
+
+    public Entry requireEntry(String id) {
+        Entry entry = entries.get(id);
+        if (entry == null) throw new IllegalArgumentException("Unknown entry: " + id);
+        return entry;
+    }
+
+    public List<Entry> latestBlogPosts(int limit) { return latest(true, limit); }
+    public List<Entry> latestNews(int limit) { return latest(false, limit); }
+
+    private List<Entry> latest(boolean blog, int limit) {
+        if (limit < 0) throw new IllegalArgumentException("Limit must not be negative");
+        return entries.values().stream().filter(e -> e.isBlogPost() == blog)
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .limit(limit).toList();
+    }
+
+    public Page addPage(UserAccount actor, String title, String body) {
+        authorize(actor);
+        validateText(title, "Title");
+        Page page = new Page(UUID.randomUUID().toString(), title.trim(), body == null ? "" : body);
+        pages.put(page.getId(), page);
+        return page;
+    }
+
+    public void editPage(UserAccount actor, String id, String title, String body) {
+        authorize(actor);
+        requirePage(id).edit(title, body);
+    }
+
+    public void deletePage(UserAccount actor, String id) {
+        authorize(actor);
+        if (pages.remove(id) == null) throw new IllegalArgumentException("Unknown page: " + id);
+        menu.remove(id);
+    }
+
+    public void editPageHtmlMetadata(UserAccount actor, String id, Map<String, String> metadata) {
+        authorize(actor);
+        requirePage(id).setHtmlMetadata(metadata);
+    }
+
+    public Page requirePage(String id) {
+        Page page = pages.get(id);
+        if (page == null) throw new IllegalArgumentException("Unknown page: " + id);
+        return page;
+    }
+
+    public List<Page> getPages() { return List.copyOf(pages.values()); }
+
+    public void setMenu(UserAccount actor, List<String> pageIds) {
+        authorize(actor);
+        if (pageIds == null) throw new IllegalArgumentException("Menu is required");
+        for (String id : pageIds) requirePage(id);
+        menu.clear();
+        menu.addAll(pageIds);
+    }
+
+    public List<String> getMenu() { return List.copyOf(menu); }
+
+    public void setToolOrService(UserAccount actor, String name, String description) {
+        authorize(actor);
+        validateText(name, "Name");
+        toolsAndServices.put(name.trim(), description == null ? "" : description);
+    }
+
+    public Map<String, String> getToolsAndServices() {
+        return Map.copyOf(toolsAndServices);
+    }
+
+    public List<Entry> searchEntries(String keywords) {
+        String needle = keywords == null ? "" : keywords.toLowerCase();
+        return entries.values().stream()
+                .filter(e -> (e.getTitle() + " " + e.getBody()).toLowerCase().contains(needle))
+                .toList();
+    }
+
+    public List<Page> searchPages(String keywords) {
+        String needle = keywords == null ? "" : keywords.toLowerCase();
+        return pages.values().stream()
+                .filter(p -> (p.getTitle() + " " + p.getBody()).toLowerCase().contains(needle))
+                .toList();
+    }
+}
+
+// File: FilterCriterion.java
+import java.util.Objects;
+
+public class FilterCriterion {
+    public enum Type {
+        TAXONOMIC, DATASET, DEPTH, ALTITUDE, BASIS_OF_RECORD, GEOGRAPHIC, DATE
+    }
+
+    private final Type type;
+    private final String value;
+    private final Double minimum;
+    private final Double maximum;
+
+    public FilterCriterion(Type type, String value) {
+        this(type, value, null, null);
+    }
+
+    public FilterCriterion(Type type, Double minimum, Double maximum) {
+        this(type, null, minimum, maximum);
+        if (minimum != null && maximum != null && minimum > maximum) {
+            throw new IllegalArgumentException("Minimum must not exceed maximum");
+        }
+    }
+
+    private FilterCriterion(Type type, String value, Double minimum, Double maximum) {
+        this.type = Objects.requireNonNull(type);
+        this.value = value;
+        this.minimum = minimum;
+        this.maximum = maximum;
+    }
+
+    public Type getType() { return type; }
+    public String getValue() { return value; }
+    public Double getMinimum() { return minimum; }
+    public Double getMaximum() { return maximum; }
+}
+
+// File: SelectionFilter.java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public class SelectionFilter {
+    private final String id;
+    private String name;
+    private final List<FilterCriterion> criteria = new ArrayList<>();
+
+    public SelectionFilter() {
+        this(UUID.randomUUID().toString(), "Untitled filter");
+    }
+
+    public SelectionFilter(String id, String name) {
+        this.id = id;
+        setName(name);
+    }
+
+    public synchronized String getId() { return id; }
+    public synchronized String getName() { return name; }
+
+    public synchronized void setName(String name) {
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Filter name is required");
+        this.name = name.trim();
+    }
+
+    public synchronized void addCriterion(FilterCriterion criterion) {
+        criteria.add(java.util.Objects.requireNonNull(criterion));
+    }
+
+    public synchronized boolean removeCriterion(FilterCriterion criterion) {
+        return criteria.remove(criterion);
+    }
+
+    public synchronized boolean removeCriterion(int index) {
+        if (index < 0 || index >= criteria.size()) return false;
+        criteria.remove(index);
+        return true;
+    }
+
+    public synchronized List<FilterCriterion> getCriteria() {
+        return List.copyOf(criteria);
+    }
+
+    public synchronized SelectionFilter copy() {
+        SelectionFilter copy = new SelectionFilter(id, name);
+        copy.criteria.addAll(criteria);
+        return copy;
+    }
+}
+
+// File: Occurrence.java
+import java.time.LocalDate;
+import java.util.Objects;
+
+public class Occurrence {
+    private final String id;
+    private final String taxon;
+    private final String dataset;
+    private final Double depth;
+    private final Double altitude;
+    private final String basisOfRecord;
+    private final double latitude;
+    private final double longitude;
+    private final LocalDate eventDate;
+
+    public Occurrence(String id, String taxon, String dataset, Double depth, Double altitude,
+                      String basisOfRecord, double latitude, double longitude, LocalDate eventDate) {
+        if (id == null || id.isBlank()) throw new IllegalArgumentException("Occurrence id is required");
+        if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            throw new IllegalArgumentException("Invalid coordinates");
+        }
+        this.id = id;
+        this.taxon = text(taxon);
+        this.dataset = text(dataset);
+        this.depth = depth;
+        this.altitude = altitude;
+        this.basisOfRecord = text(basisOfRecord);
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.eventDate = eventDate;
+    }
+
+    private static String text(String value) { return value == null ? "" : value; }
+
+    public String getId() { return id; }
+    public String getTaxon() { return taxon; }
+    public String getDataset() { return dataset; }
+    public Double getDepth() { return depth; }
+    public Double getAltitude() { return altitude; }
+    public String getBasisOfRecord() { return basisOfRecord; }
+    public double getLatitude() { return latitude; }
+    public double getLongitude() { return longitude; }
+    public LocalDate getEventDate() { return eventDate; }
+}
+
+// File: OccurrenceService.java
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class OccurrenceService {
+    private final Map<String, Occurrence> occurrences = new ConcurrentHashMap<>();
+
+    public void addOccurrence(Occurrence occurrence) {
+        if (occurrences.putIfAbsent(occurrence.getId(), occurrence) != null) {
+            throw new IllegalArgumentException("Duplicate occurrence id");
+        }
+    }
+
+    public List<Occurrence> select(SelectionFilter filter) {
+        if (filter == null) throw new IllegalArgumentException("Filter is required");
+        return occurrences.values().stream().filter(o -> matches(o, filter.getCriteria())).toList();
+    }
+
+    private boolean matches(Occurrence occurrence, List<FilterCriterion> criteria) {
+        for (FilterCriterion criterion : criteria) {
+            String value = criterion.getValue();
+            switch (criterion.getType()) {
+                case TAXONOMIC -> {
+                    if (!contains(occurrence.getTaxon(), value)) return false;
+                }
+                case DATASET -> {
+                    if (!contains(occurrence.getDataset(), value)) return false;
+                }
+                case BASIS_OF_RECORD -> {
+                    if (!contains(occurrence.getBasisOfRecord(), value)) return false;
+                }
+                case DEPTH -> {
+                    if (!within(occurrence.getDepth(), criterion)) return false;
+                }
+                case ALTITUDE -> {
+                    if (!within(occurrence.getAltitude(), criterion)) return false;
+                }
+                case GEOGRAPHIC -> {
+                    if (!matchesGeography(occurrence, value)) return false;
+                }
+                case DATE -> {
+                    if (!matchesDate(occurrence.getEventDate(), value)) return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean contains(String actual, String expected) {
+        return expected == null || actual.toLowerCase().contains(expected.toLowerCase());
+    }
+
+    private boolean within(Double value, FilterCriterion criterion) {
+        if (value == null) return false;
+        return (criterion.getMinimum() == null || value >= criterion.getMinimum())
+                && (criterion.getMaximum() == null || value <= criterion.getMaximum());
+    }
+
+    // Geographic value is "south,west,north,east".
+    private boolean matchesGeography(Occurrence o, String value) {
+        if (value == null || value.isBlank()) return true;
+        String[] parts = value.split(",");
+        if (parts.length != 4) throw new IllegalArgumentException("Geographic criterion must be south,west,north,east");
+        double south = Double.parseDouble(parts[0].trim());
+        double west = Double.parseDouble(parts[1].trim());
+        double north = Double.parseDouble(parts[2].trim());
+        double east = Double.parseDouble(parts[3].trim());
+        return o.getLatitude() >= south && o.getLatitude() <= north
+                && o.getLongitude() >= west && o.getLongitude() <= east;
+    }
+
+    // Date value accepts an ISO date or an inclusive "start/end" range.
+    private boolean matchesDate(LocalDate date, String value) {
+        if (value == null || value.isBlank()) return true;
+        if (date == null) return false;
+        String[] range = value.split("/", -1);
+        if (range.length == 1) return date.equals(LocalDate.parse(range[0]));
+        if (range.length != 2) throw new IllegalArgumentException("Date criterion must be a date or start/end");
+        LocalDate start = range[0].isBlank() ? LocalDate.MIN : LocalDate.parse(range[0]);
+        LocalDate end = range[1].isBlank() ? LocalDate.MAX : LocalDate.parse(range[1]);
+        return !date.isBefore(start) && !date.isAfter(end);
+    }
+
+    public String exportCsv(Collection<Occurrence> records) {
+        StringBuilder output = new StringBuilder("id,taxon,dataset,depth,altitude,basisOfRecord,latitude,longitude,eventDate\n");
+        for (Occurrence o : records) {
+            output.append(csv(o.getId())).append(',').append(csv(o.getTaxon())).append(',')
+                    .append(csv(o.getDataset())).append(',').append(o.getDepth()).append(',')
+                    .append(o.getAltitude()).append(',').append(csv(o.getBasisOfRecord())).append(',')
+                    .append(o.getLatitude()).append(',').append(o.getLongitude()).append(',')
+                    .append(o.getEventDate()).append('\n');
+        }
+        return output.toString();
+    }
+
+    private String csv(String text) {
+        if (text == null) return "";
+        return "\"" + text.replace("\"", "\"\"") + "\"";
+    }
+
+    public byte[] exportMapImage(Collection<Occurrence> records) {
+        StringBuilder svg = new StringBuilder(
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"400\" viewBox=\"-180 -90 360 180\">"
+                + "<rect x=\"-180\" y=\"-90\" width=\"360\" height=\"180\" fill=\"#eef5ff\"/>");
+        for (Occurrence o : records) {
+            svg.append("<circle cx=\"").append(o.getLongitude()).append("\" cy=\"")
+                    .append(-o.getLatitude()).append("\" r=\"1.5\" fill=\"#c33\"/>");
+        }
+        svg.append("</svg>");
+        return svg.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    public int size() { return occurrences.size(); }
+}
+
+// File: PortalVisitorService.java
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class PortalVisitorService {
+    private final ResourceCatalog catalog;
+    private final OccurrenceService occurrenceService;
+    private final PortalContentService contentService;
+    private final AdminService adminService;
+    private final Map<String, Map<String, SelectionFilter>> savedFilters = new ConcurrentHashMap<>();
+    private final List<String> feedback = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final List<String> publisherMessages = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final List<String> sharedMaps = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final Map<String, Long> dataMetrics = new ConcurrentHashMap<>();
+
+    public PortalVisitorService(ResourceCatalog catalog, OccurrenceService occurrenceService,
+                                PortalContentService contentService, AdminService adminService) {
+        this.catalog = catalog;
+        this.occurrenceService = occurrenceService;
+        this.contentService = contentService;
+        this.adminService = adminService;
+    }
+
+    public SelectionFilter buildOccurrenceFilter() {
+        return new SelectionFilter();
+    }
+
+    public void addCriterion(SelectionFilter filter, FilterCriterion criterion) {
+        filter.addCriterion(criterion);
+    }
+
+    public boolean removeCriterion(SelectionFilter filter, int index) {
+        return filter.removeCriterion(index);
+    }
+
+    public List<Occurrence> selectOccurrences(SelectionFilter filter) {
+        List<Occurrence> result = occurrenceService.select(filter);
+        dataMetrics.merge("occurrenceSelections", 1L, Long::sum);
+        return result;
+    }
+
+    public String viewOccurrencesAsTable(Collection<Occurrence> selection) {
+        return occurrenceService.exportCsv(selection);
+    }
+
+    public String exportOccurrenceSelection(Collection<Occurrence> selection) {
+        return occurrenceService.exportCsv(selection);
+    }
+
+    public byte[] exportDistributionMapImage(Collection<Occurrence> selection) {
+        return occurrenceService.exportMapImage(selection);
+    }
+
+    public String fullTextSearch(String keywords) {
+        List<String> results = new ArrayList<>();
+        for (Resource resource : catalog.searchAll(keywords)) {
+            results.add("RESOURCE " + resource.getType() + " " + resource.getId() + " " + resource.getMetadata());
+        }
+        for (PortalContentService.Entry entry : contentService.searchEntries(keywords)) {
+            results.add((entry.isBlogPost() ? "BLOG " : "NEWS ") + entry.getId() + " " + entry.getTitle());
+        }
+        for (PortalContentService.Page page : contentService.searchPages(keywords)) {
+            results.add("PAGE " + page.getId() + " " + page.getTitle());
+        }
+        return String.join("\n", results);
+    }
+
+    public void contactOccurrencePublisher(String resourceId, String message) {
+        Resource resource = catalog.require(resourceId);
+        if (resource.getType() != ResourceType.OCCURRENCE) {
+            throw new IllegalArgumentException("Resource is not an occurrence resource");
+        }
+        publisherMessages.add(resourceId + ": " + safe(message));
+    }
+
+    public String exportChecklist(String resourceId) {
+        Resource resource = requireType(resourceId, ResourceType.CHECKLIST);
+        String metadata = resource.getMetadata().toString();
+        return metadata + System.lineSeparator() + new String(resource.getContent(), StandardCharsets.UTF_8);
+    }
+
+    public void chooseLanguage(String language) {
+        if (!contentService.getAvailableLanguages().contains(language)) {
+            throw new IllegalArgumentException("Language is not enabled on this portal");
+        }
+    }
+
+    public void sendFeedback(String message) {
+        if (contentService.getContactEmail().isBlank()) {
+            throw new IllegalStateException("Portal contact person is not configured");
+        }
+        feedback.add(safe(message));
+    }
+
+    public List<PortalContentService.Entry> latestBlogPosts(int limit) {
+        return contentService.latestBlogPosts(limit);
+    }
+
+    public PortalContentService.Entry readBlogPost(String id) {
+        PortalContentService.Entry entry = contentService.requireEntry(id);
+        if (!entry.isBlogPost()) throw new IllegalArgumentException("Entry is not a blog post");
+        return entry;
+    }
+
+    public List<PortalContentService.Entry> latestNews(int limit) {
+        return contentService.latestNews(limit);
+    }
+
+    public PortalContentService.Entry readNewsEntry(String id) {
+        PortalContentService.Entry entry = contentService.requireEntry(id);
+        if (entry.isBlogPost()) throw new IllegalArgumentException("Entry is not a news item");
+        return entry;
+    }
+
+    public Resource viewTaxonDetails(String id) { return requireType(id, ResourceType.OCCURRENCE); }
+    public Resource viewDatasetMetadata(String id) { return requireType(id, ResourceType.OCCURRENCE); }
+    public Resource viewChecklistMetadata(String id) { return requireType(id, ResourceType.CHECKLIST); }
+    public Resource viewBibliographicDetails(String id) { return requireType(id, ResourceType.BIBLIOGRAPHIC); }
+    public Resource viewInstitutionDetails(String id) { return requireType(id, ResourceType.INSTITUTION); }
+    public Resource viewExpertDetails(String id) { return requireType(id, ResourceType.EXPERT); }
+    public Resource viewMultimediaMetadata(String id) { return requireType(id, ResourceType.MULTIMEDIA); }
+
+    public byte[] downloadMultimedia(String id) {
+        return requireType(id, ResourceType.MULTIMEDIA).getContent();
+    }
+
+    private Resource requireType(String id, ResourceType type) {
+        Resource resource = catalog.require(id);
+        if (resource.getType() != type) throw new IllegalArgumentException("Resource has the wrong type");
+        return resource;
+    }
+
+    public void panMap(double longitudeDelta, double latitudeDelta) {
+        if (!Double.isFinite(longitudeDelta) || !Double.isFinite(latitudeDelta)) {
+            throw new IllegalArgumentException("Pan values must be finite");
+        }
+    }
+
+    public double zoomMap(double currentZoom, double factor) {
+        if (currentZoom <= 0 || factor <= 0 || !Double.isFinite(factor)) {
+            throw new IllegalArgumentException("Zoom and factor must be positive");
+        }
+        return Math.max(0.1, Math.min(100.0, currentZoom * factor));
+    }
+
+    public void toggleLayer(AdminService admin, String layerId, boolean visible) {
+        admin.requireLayer(layerId).setVisible(visible);
+    }
+
+    public UserAccount register(String username, String email, String password) {
+        if (adminService.findUserByUsername(username) != null) {
+            throw new IllegalArgumentException("Username is already registered");
+        }
+        UserAccount user = new UserAccount(username, email, password);
+        user.addRole(Role.REGISTERED_VISITOR);
+        // Registration is exposed through the portal; the account is added via a dedicated method below.
+        return registerInSystem(user);
+    }
+
+    private UserAccount registerInSystem(UserAccount user) {
+        return adminService.registerPublicUser(user);
+    }
+
+    public boolean login(String username, String password) {
+        UserAccount user = adminService.findUserByUsername(username);
+        return user != null && user.authenticate(password);
+    }
+
+    public void requestPasswordByEmail(String email) {
+        if (email == null || email.isBlank()) throw new IllegalArgumentException("Email is required");
+        boolean found = adminService.getUsers().stream().anyMatch(u -> u.getEmail().equalsIgnoreCase(email));
+        if (!found) throw new IllegalArgumentException("No account is associated with this email");
+        // Password delivery is represented as a request; plaintext passwords are not exposed by the API.
+    }
+
+    public void shareMapOnTwitter(String mapDescription) {
+        sharedMaps.add(safe(mapDescription));
+    }
+
+    public Map<String, Long> viewDataDashboard() {
+        if (!contentService.areDataMetricsVisible()) throw new IllegalStateException("Data metrics are hidden");
+        return Map.copyOf(dataMetrics);
+    }
+
+    public String exportDataMetricArchive() {
+        return viewDataDashboard().toString();
+    }
+
+    public String viewNetworkSummary() {
+        return contentService.getNetworkSummary();
+    }
+
+    public Map<String, String> viewToolsAndServices() {
+        return contentService.getToolsAndServices();
+    }
+
+    public void saveCustomFilter(UserAccount registeredVisitor, SelectionFilter filter) {
+        requireRegistered(registeredVisitor);
+        savedFilters.computeIfAbsent(registeredVisitor.getId(), ignored -> new ConcurrentHashMap<>())
+                .put(filter.getName(), filter.copy());
+    }
+
+    public SelectionFilter loadCustomFilter(UserAccount registeredVisitor, String name) {
+        requireRegistered(registeredVisitor);
+        SelectionFilter filter = savedFilters.getOrDefault(registeredVisitor.getId(), Map.of()).get(name);
+        if (filter == null) throw new IllegalArgumentException("Unknown saved filter: " + name);
+        return filter.copy();
+    }
+
+    public void deleteCustomFilter(UserAccount registeredVisitor, String name) {
+        requireRegistered(registeredVisitor);
+        Map<String, SelectionFilter> filters = savedFilters.get(registeredVisitor.getId());
+        if (filters == null || filters.remove(name) == null) {
+            throw new IllegalArgumentException("Unknown saved filter: " + name);
+        }
+    }
+
+    private void requireRegistered(UserAccount user) {
+        if (!Role.hasAny(user, Role.REGISTERED_VISITOR)) {
+            throw new SecurityException("Registered visitor account required");
+        }
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    public List<String> getFeedbackMessages() { return List.copyOf(feedback); }
+    public List<String> getPublisherMessages() { return List.copyOf(publisherMessages); }
+    public List<String> getSharedMaps() { return List.copyOf(sharedMaps); }
+}
+
+// File: PortalSystem.java
+public class PortalSystem {
+    private final AdminService adminService = new AdminService();
+    private final ResourceCatalog resourceCatalog = new ResourceCatalog();
+    private final DataManagerService dataManagerService = new DataManagerService(resourceCatalog);
+    private final PortalContentService portalContentService = new PortalContentService();
+    private final OccurrenceService occurrenceService = new OccurrenceService();
+    private final PortalVisitorService visitorService =
+            new PortalVisitorService(resourceCatalog, occurrenceService, portalContentService, adminService);
+
+    public AdminService getAdminService() { return adminService; }
+    public ResourceCatalog getResourceCatalog() { return resourceCatalog; }
+    public DataManagerService getDataManagerService() { return dataManagerService; }
+    public PortalContentService getPortalContentService() { return portalContentService; }
+    public OccurrenceService getOccurrenceService() { return occurrenceService; }
+    public PortalVisitorService getVisitorService() { return visitorService; }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.util.Map;
+
+public class Main {
+    public static void main(String[] args) {
+        PortalSystem portal = new PortalSystem();
+
+        UserAccount securityOfficer = new UserAccount("security", "security@example.org", "demo");
+        securityOfficer.addRole(Role.SECURITY_OFFICER);
+        UserAccount dataManager = new UserAccount("data-manager", "data@example.org", "demo");
+        dataManager.addRole(Role.DATA_MANAGER);
+        UserAccount portalManager = new UserAccount("portal-manager", "portal@example.org", "demo");
+        portalManager.addRole(Role.PORTAL_MANAGER);
+        UserAccount administrator = new UserAccount("admin", "admin@example.org", "demo");
+        administrator.addRole(Role.ADMINISTRATOR);
+
+        AdminService admin = portal.getAdminService();
+        UserAccount visitor = admin.createUser(securityOfficer, "visitor", "visitor@example.org", "secret");
+        admin.assignRole(securityOfficer, visitor.getId(), Role.REGISTERED_VISITOR);
+
+        admin.installModule(administrator, "distribution-map");
+        SpatialLayer layer = admin.addLayer(administrator, "Protected areas", "https://example.org/layers/protected");
+
+        portal.getPortalContentService().configureContact(portalManager, "Portal Team", "contact@example.org");
+        portal.getPortalContentService().setDefaultLanguage(portalManager, "en");
+        portal.getPortalContentService().contributeNews(portalManager, "Portal launched", "Welcome to the biodiversity portal.");
+
+        portal.getDataManagerService().importResource(dataManager, ResourceType.CHECKLIST,
+                Map.of("title", "Demo checklist", "description", "Regional species checklist"));
+        portal.getOccurrenceService().addOccurrence(new Occurrence(
+                "occ-1", "Quercus robur", "dataset-1", 2.0, 15.0, "HumanObservation",
+                51.5, -0.1, LocalDate.of(2024, 5, 12)));
+
+        SelectionFilter filter = portal.getVisitorService().buildOccurrenceFilter();
+        portal.getVisitorService().addCriterion(filter,
+                new FilterCriterion(FilterCriterion.Type.TAXONOMIC, "Quercus"));
+        var selection = portal.getVisitorService().selectOccurrences(filter);
+        portal.getVisitorService().saveCustomFilter(visitor, filter);
+
+        System.out.println("Selected occurrences: " + selection.size());
+        System.out.println(portal.getVisitorService().viewOccurrencesAsTable(selection));
+        System.out.println("Map layer: " + layer.getName());
+    }
+}
+
+// File: AdminServiceRegistration.java
+final class AdminServiceRegistration {
+    private AdminServiceRegistration() {
+    }
+}

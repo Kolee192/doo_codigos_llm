@@ -1,0 +1,1160 @@
+// File: Role.java
+public enum Role {
+    DEPOSITOR,
+    DATA_REUSER,
+    EXTERNAL_COLLABORATOR,
+    EXTERNAL_COORDINATOR,
+    RESEARCH_FACILITY_MANAGER,
+    ARCHIVE_ADMINISTRATOR,
+    RESEARCH_INFORMATION_MANAGER,
+    UNIVERSITY_IT_SERVICE,
+    DEVELOPER,
+    ACADEMIC_PUBLISHER,
+    FUNDING_BODY
+}
+
+// File: DatasetStatus.java
+public enum DatasetStatus {
+    DRAFT,
+    SUBMITTED,
+    UNDER_REVIEW,
+    APPROVED,
+    PUBLISHED,
+    EMBARGOED,
+    DISPOSAL_REQUESTED,
+    DISPOSAL_APPROVED,
+    DISPOSED,
+    EXTERNAL
+}
+
+// File: AccessLevel.java
+public enum AccessLevel {
+    PUBLIC,
+    RESTRICTED,
+    PRIVILEGED,
+    EMBARGOED
+}
+
+// File: LicenseType.java
+public enum LicenseType {
+    CC_BY_4_0,
+    CC_BY_NC_4_0,
+    MIT,
+    APACHE_2_0,
+    CUSTOM
+}
+
+// File: User.java
+import java.util.*;
+
+public class User {
+    private final String id;
+    private final String name;
+    private final String email;
+    private final Set<Role> roles = new HashSet<>();
+    private String language = "en";
+    private String institution = "University of Bath";
+    private boolean onCampus = true;
+    private final Map<String, String> previousMetadata = new HashMap<>();
+
+    public User(String id, String name, String email, Role... roles) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.roles.addAll(Arrays.asList(roles));
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+    public Set<Role> getRoles() { return Collections.unmodifiableSet(roles); }
+    public boolean hasRole(Role role) { return roles.contains(role); }
+    public void addRole(Role role) { roles.add(role); }
+    public String getLanguage() { return language; }
+    public void setLanguage(String language) { this.language = language; }
+    public String getInstitution() { return institution; }
+    public void setInstitution(String institution) { this.institution = institution; }
+    public boolean isOnCampus() { return onCampus; }
+    public void setOnCampus(boolean onCampus) { this.onCampus = onCampus; }
+    public Map<String, String> getPreviousMetadata() { return previousMetadata; }
+}
+
+// File: DatasetFile.java
+public class DatasetFile {
+    private final String id;
+    private final String fileName;
+    private final long sizeBytes;
+    private final String format;
+    private final String contentPreview;
+    private String checksum;
+    private String objectStoreKey;
+
+    public DatasetFile(String id, String fileName, long sizeBytes, String format, String contentPreview) {
+        this.id = id;
+        this.fileName = fileName;
+        this.sizeBytes = sizeBytes;
+        this.format = format;
+        this.contentPreview = contentPreview;
+    }
+
+    public String getId() { return id; }
+    public String getFileName() { return fileName; }
+    public long getSizeBytes() { return sizeBytes; }
+    public String getFormat() { return format; }
+    public String getContentPreview() { return contentPreview; }
+    public String getChecksum() { return checksum; }
+    public void setChecksum(String checksum) { this.checksum = checksum; }
+    public String getObjectStoreKey() { return objectStoreKey; }
+    public void setObjectStoreKey(String objectStoreKey) { this.objectStoreKey = objectStoreKey; }
+}
+
+// File: ExternalRepositoryLink.java
+public class ExternalRepositoryLink {
+    private final String repositoryName;
+    private final String url;
+    private final String identifier;
+
+    public ExternalRepositoryLink(String repositoryName, String url, String identifier) {
+        this.repositoryName = repositoryName;
+        this.url = url;
+        this.identifier = identifier;
+    }
+
+    public String getRepositoryName() { return repositoryName; }
+    public String getUrl() { return url; }
+    public String getIdentifier() { return identifier; }
+}
+
+// File: PublicationLink.java
+public class PublicationLink {
+    private final String publicationId;
+    private final String title;
+    private final String url;
+
+    public PublicationLink(String publicationId, String title, String url) {
+        this.publicationId = publicationId;
+        this.title = title;
+        this.url = url;
+    }
+
+    public String getPublicationId() { return publicationId; }
+    public String getTitle() { return title; }
+    public String getUrl() { return url; }
+}
+
+// File: SubjectMetadata.java
+import java.util.*;
+
+public class SubjectMetadata {
+    private String discipline = "";
+    private final List<String> keywords = new ArrayList<>();
+    private final Map<String, String> fields = new HashMap<>();
+
+    public String getDiscipline() { return discipline; }
+    public void setDiscipline(String discipline) { this.discipline = discipline; }
+    public List<String> getKeywords() { return keywords; }
+    public Map<String, String> getFields() { return fields; }
+}
+
+// File: Project.java
+import java.util.*;
+
+public class Project {
+    private final String id;
+    private final String title;
+    private final String funder;
+    private final String dmpLink;
+    private final List<String> datasetIds = new ArrayList<>();
+
+    public Project(String id, String title, String funder, String dmpLink) {
+        this.id = id;
+        this.title = title;
+        this.funder = funder;
+        this.dmpLink = dmpLink;
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public String getFunder() { return funder; }
+    public String getDmpLink() { return dmpLink; }
+    public List<String> getDatasetIds() { return Collections.unmodifiableList(datasetIds); }
+    public void addDatasetId(String datasetId) { if (!datasetIds.contains(datasetId)) datasetIds.add(datasetId); }
+}
+
+// File: Citation.java
+import java.time.LocalDateTime;
+
+public class Citation {
+    private final int versionNumber;
+    private final String citationText;
+    private final String source;
+    private final LocalDateTime timestamp;
+
+    public Citation(int versionNumber, String citationText, String source, LocalDateTime timestamp) {
+        this.versionNumber = versionNumber;
+        this.citationText = citationText;
+        this.source = source;
+        this.timestamp = timestamp;
+    }
+
+    public int getVersionNumber() { return versionNumber; }
+    public String getCitationText() { return citationText; }
+    public String getSource() { return source; }
+    public LocalDateTime getTimestamp() { return timestamp; }
+}
+
+// File: DownloadRecord.java
+import java.time.LocalDateTime;
+
+public class DownloadRecord {
+    private final int versionNumber;
+    private final String country;
+    private final String sector;
+    private final LocalDateTime timestamp;
+
+    public DownloadRecord(int versionNumber, String country, String sector, LocalDateTime timestamp) {
+        this.versionNumber = versionNumber;
+        this.country = country;
+        this.sector = sector;
+        this.timestamp = timestamp;
+    }
+
+    public int getVersionNumber() { return versionNumber; }
+    public String getCountry() { return country; }
+    public String getSector() { return sector; }
+    public LocalDateTime getTimestamp() { return timestamp; }
+}
+
+// File: DisposalPolicy.java
+import java.time.LocalDate;
+
+public class DisposalPolicy {
+    private final LocalDate reviewDate;
+    private final String action;
+    private boolean approved;
+    private String approvedBy = "";
+
+    public DisposalPolicy(LocalDate reviewDate, String action) {
+        this.reviewDate = reviewDate;
+        this.action = action;
+    }
+
+    public LocalDate getReviewDate() { return reviewDate; }
+    public String getAction() { return action; }
+    public boolean isApproved() { return approved; }
+    public void setApproved(boolean approved) { this.approved = approved; }
+    public String getApprovedBy() { return approvedBy; }
+    public void setApprovedBy(String approvedBy) { this.approvedBy = approvedBy; }
+}
+
+// File: DatasetVersion.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+
+public class DatasetVersion {
+    private final int versionNumber;
+    private String description;
+    private DatasetStatus status;
+    private AccessLevel accessLevel;
+    private LicenseType license;
+    private LocalDate embargoUntil;
+    private final List<DatasetFile> files = new ArrayList<>();
+    private Map<String, String> metadata = new HashMap<>();
+    private String doi;
+    private String persistentUrl;
+    private String integrityChecksum;
+    private final LocalDateTime createdAt;
+    private String versionNote = "";
+    private final List<DownloadRecord> downloadRecords = new ArrayList<>();
+    private final List<Citation> citations = new ArrayList<>();
+
+    public DatasetVersion(int versionNumber, String description, DatasetStatus status, AccessLevel accessLevel, LicenseType license, LocalDate embargoUntil) {
+        this.versionNumber = versionNumber;
+        this.description = description;
+        this.status = status;
+        this.accessLevel = accessLevel;
+        this.license = license;
+        this.embargoUntil = embargoUntil;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    public int getVersionNumber() { return versionNumber; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public DatasetStatus getStatus() { return status; }
+    public void setStatus(DatasetStatus status) { this.status = status; }
+    public AccessLevel getAccessLevel() { return accessLevel; }
+    public void setAccessLevel(AccessLevel accessLevel) { this.accessLevel = accessLevel; }
+    public LicenseType getLicense() { return license; }
+    public void setLicense(LicenseType license) { this.license = license; }
+    public LocalDate getEmbargoUntil() { return embargoUntil; }
+    public void setEmbargoUntil(LocalDate embargoUntil) { this.embargoUntil = embargoUntil; }
+    public List<DatasetFile> getFiles() { return Collections.unmodifiableList(files); }
+    public void addFile(DatasetFile file) { files.add(file); }
+    public Map<String, String> getMetadata() { return metadata; }
+    public void setMetadata(Map<String, String> metadata) { this.metadata = new HashMap<>(metadata); }
+    public String getDoi() { return doi; }
+    public void setDoi(String doi) { this.doi = doi; }
+    public String getPersistentUrl() { return persistentUrl; }
+    public void setPersistentUrl(String persistentUrl) { this.persistentUrl = persistentUrl; }
+    public String getIntegrityChecksum() { return integrityChecksum; }
+    public void setIntegrityChecksum(String integrityChecksum) { this.integrityChecksum = integrityChecksum; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public String getVersionNote() { return versionNote; }
+    public void setVersionNote(String versionNote) { this.versionNote = versionNote; }
+    public List<DownloadRecord> getDownloadRecords() { return Collections.unmodifiableList(downloadRecords); }
+    public void addDownloadRecord(DownloadRecord record) { downloadRecords.add(record); }
+    public List<Citation> getCitations() { return Collections.unmodifiableList(citations); }
+    public void addCitation(Citation citation) { citations.add(citation); }
+}
+
+// File: Dataset.java
+import java.time.LocalDateTime;
+import java.util.*;
+
+public class Dataset {
+    private final String id;
+    private String title;
+    private final String ownerId;
+    private String projectId;
+    private String dmpLink = "";
+    private SubjectMetadata subjectMetadata;
+    private final List<PublicationLink> publicationLinks = new ArrayList<>();
+    private final List<ExternalRepositoryLink> externalLinks = new ArrayList<>();
+    private final Set<String> collaboratorIds = new HashSet<>();
+    private final Set<String> delegatedDepositorIds = new HashSet<>();
+    private final List<DatasetVersion> versions = new ArrayList<>();
+    private int currentVersionNumber = 0;
+    private boolean liveData;
+    private DisposalPolicy disposalPolicy;
+    private final LocalDateTime createdAt;
+
+    public Dataset(String id, String title, String ownerId) {
+        this.id = id;
+        this.title = title;
+        this.ownerId = ownerId;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public String getOwnerId() { return ownerId; }
+    public String getProjectId() { return projectId; }
+    public void setProjectId(String projectId) { this.projectId = projectId; }
+    public String getDmpLink() { return dmpLink; }
+    public void setDmpLink(String dmpLink) { this.dmpLink = dmpLink; }
+    public SubjectMetadata getSubjectMetadata() { return subjectMetadata; }
+    public void setSubjectMetadata(SubjectMetadata subjectMetadata) { this.subjectMetadata = subjectMetadata; }
+    public List<PublicationLink> getPublicationLinks() { return Collections.unmodifiableList(publicationLinks); }
+    public void addPublicationLink(PublicationLink link) { publicationLinks.add(link); }
+    public List<ExternalRepositoryLink> getExternalLinks() { return Collections.unmodifiableList(externalLinks); }
+    public void addExternalLink(ExternalRepositoryLink link) { externalLinks.add(link); }
+    public Set<String> getCollaboratorIds() { return Collections.unmodifiableSet(collaboratorIds); }
+    public void addCollaborator(String userId) { collaboratorIds.add(userId); }
+    public Set<String> getDelegatedDepositorIds() { return Collections.unmodifiableSet(delegatedDepositorIds); }
+    public void addDelegatedDepositor(String userId) { delegatedDepositorIds.add(userId); }
+    public List<DatasetVersion> getVersions() { return Collections.unmodifiableList(versions); }
+    public void addVersion(DatasetVersion version) {
+        versions.add(version);
+        currentVersionNumber = version.getVersionNumber();
+    }
+    public DatasetVersion getCurrentVersion() {
+        for (DatasetVersion v : versions) {
+            if (v.getVersionNumber() == currentVersionNumber) return v;
+        }
+        return versions.isEmpty() ? null : versions.get(versions.size() - 1);
+    }
+    public DatasetVersion getVersion(int versionNumber) {
+        for (DatasetVersion v : versions) {
+            if (v.getVersionNumber() == versionNumber) return v;
+        }
+        return null;
+    }
+    public boolean isLiveData() { return liveData; }
+    public void setLiveData(boolean liveData) { this.liveData = liveData; }
+    public DisposalPolicy getDisposalPolicy() { return disposalPolicy; }
+    public void setDisposalPolicy(DisposalPolicy disposalPolicy) { this.disposalPolicy = disposalPolicy; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+}
+
+// File: MetadataService.java
+import java.util.*;
+
+public class MetadataService {
+    public Map<String, String> autoFill(User user, Dataset previousDataset) {
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put("creator", user.getName());
+        metadata.put("creatorEmail", user.getEmail());
+        metadata.put("institution", user.getInstitution());
+        metadata.put("language", user.getLanguage());
+        if (previousDataset != null && previousDataset.getCurrentVersion() != null) {
+            metadata.putAll(previousDataset.getCurrentVersion().getMetadata());
+        }
+        metadata.putAll(user.getPreviousMetadata());
+        return metadata;
+    }
+
+    public void rememberMetadata(User user, Map<String, String> metadata) {
+        user.getPreviousMetadata().putAll(metadata);
+    }
+
+    public void validateMinimumMetadata(Map<String, String> metadata) {
+        String[] required = {"title", "creator", "description", "license"};
+        for (String req : required) {
+            if (metadata == null || !metadata.containsKey(req) || metadata.get(req) == null || metadata.get(req).isBlank()) {
+                throw new IllegalArgumentException("Missing required metadata: " + req);
+            }
+        }
+    }
+
+    public void applySubjectMetadata(SubjectMetadata sm, String discipline, List<String> keywords, Map<String, String> fields) {
+        sm.setDiscipline(discipline);
+        sm.getKeywords().clear();
+        sm.getKeywords().addAll(keywords);
+        sm.getFields().putAll(fields);
+    }
+}
+
+// File: DoiService.java
+public class DoiService {
+    private long counter = 1000;
+
+    public String mintDoi(DatasetVersion version) {
+        String doi = "10.1234/bath." + (counter++);
+        version.setDoi(doi);
+        version.setPersistentUrl("https://doi.org/" + doi);
+        return doi;
+    }
+}
+
+// File: AccessControlService.java
+import java.time.LocalDate;
+
+public class AccessControlService {
+    public boolean checkAccess(User user, Dataset dataset, DatasetVersion version) {
+        if (user == null || version == null) return false;
+        if (user.getId().equals(dataset.getOwnerId())) return true;
+        if (user.hasRole(Role.ARCHIVE_ADMINISTRATOR)) return true;
+        if (dataset.getCollaboratorIds().contains(user.getId())) return true;
+        if (dataset.getDelegatedDepositorIds().contains(user.getId())) return true;
+        if (version.getStatus() == DatasetStatus.PUBLISHED && version.getAccessLevel() == AccessLevel.PUBLIC) return true;
+        if (version.getAccessLevel() == AccessLevel.EMBARGOED) {
+            if (version.getEmbargoUntil() != null && LocalDate.now().isAfter(version.getEmbargoUntil())) return true;
+            return false;
+        }
+        if (version.getAccessLevel() == AccessLevel.RESTRICTED || version.getAccessLevel() == AccessLevel.PRIVILEGED) {
+            return dataset.getCollaboratorIds().contains(user.getId()) || user.hasRole(Role.ARCHIVE_ADMINISTRATOR);
+        }
+        return false;
+    }
+
+    public void grantPrivilegedAccess(Dataset dataset, User collaborator, User grantor) {
+        if (grantor == null || (!grantor.getId().equals(dataset.getOwnerId()) && !grantor.hasRole(Role.ARCHIVE_ADMINISTRATOR))) {
+            throw new SecurityException("Only owner or administrator can grant access");
+        }
+        dataset.addCollaborator(collaborator.getId());
+    }
+}
+
+// File: SearchService.java
+import java.util.*;
+
+public class SearchService {
+    public List<Dataset> search(List<Dataset> datasets, String query, String language) {
+        String q = query == null ? "" : query.toLowerCase();
+        List<Dataset> results = new ArrayList<>();
+        for (Dataset d : datasets) {
+            if (matches(d, q)) results.add(d);
+        }
+        return results;
+    }
+
+    private boolean matches(Dataset d, String q) {
+        if (d.getTitle() != null && d.getTitle().toLowerCase().contains(q)) return true;
+        DatasetVersion v = d.getCurrentVersion();
+        if (v != null) {
+            if (v.getDescription() != null && v.getDescription().toLowerCase().contains(q)) return true;
+            for (String val : v.getMetadata().values()) {
+                if (val != null && val.toLowerCase().contains(q)) return true;
+            }
+            for (DatasetFile f : v.getFiles()) {
+                if (f.getFileName().toLowerCase().contains(q)) return true;
+            }
+        }
+        SubjectMetadata sm = d.getSubjectMetadata();
+        if (sm != null) {
+            if (sm.getDiscipline() != null && sm.getDiscipline().toLowerCase().contains(q)) return true;
+            for (String k : sm.getKeywords()) {
+                if (k.toLowerCase().contains(q)) return true;
+            }
+            for (String val : sm.getFields().values()) {
+                if (val != null && val.toLowerCase().contains(q)) return true;
+            }
+        }
+        return false;
+    }
+
+    public List<String> examineFiles(Dataset dataset) {
+        List<String> result = new ArrayList<>();
+        DatasetVersion v = dataset.getCurrentVersion();
+        if (v == null) return result;
+        for (DatasetFile f : v.getFiles()) {
+            result.add(f.getFileName() + " (" + f.getSizeBytes() + " bytes, " + f.getFormat() + ")");
+        }
+        return result;
+    }
+
+    public String exampleCitation(Dataset dataset) {
+        DatasetVersion v = dataset.getCurrentVersion();
+        if (v == null) return "No version available";
+        String doi = v.getDoi() == null ? "DOI not minted" : v.getDoi();
+        return dataset.getOwnerId() + " (" + v.getCreatedAt().getYear() + "). " + dataset.getTitle()
+                + " (Version " + v.getVersionNumber() + "). University of Bath Data Archive. " + doi;
+    }
+}
+
+// File: StatisticsService.java
+import java.time.LocalDateTime;
+import java.util.*;
+
+public class StatisticsService {
+    public void recordDownload(DatasetVersion version, String country, String sector) {
+        version.addDownloadRecord(new DownloadRecord(version.getVersionNumber(), country, sector, LocalDateTime.now()));
+    }
+
+    public void recordCitation(DatasetVersion version, String text, String source) {
+        version.addCitation(new Citation(version.getVersionNumber(), text, source, LocalDateTime.now()));
+    }
+
+    public Map<String, Long> downloadsByCountry(Dataset dataset) {
+        Map<String, Long> map = new HashMap<>();
+        for (DatasetVersion v : dataset.getVersions()) {
+            for (DownloadRecord r : v.getDownloadRecords()) {
+                map.merge(r.getCountry(), 1L, Long::sum);
+            }
+        }
+        return map;
+    }
+
+    public Map<String, Long> downloadsBySector(Dataset dataset) {
+        Map<String, Long> map = new HashMap<>();
+        for (DatasetVersion v : dataset.getVersions()) {
+            for (DownloadRecord r : v.getDownloadRecords()) {
+                map.merge(r.getSector(), 1L, Long::sum);
+            }
+        }
+        return map;
+    }
+
+    public int citationCount(Dataset dataset) {
+        int count = 0;
+        for (DatasetVersion v : dataset.getVersions()) {
+            count += v.getCitations().size();
+        }
+        return count;
+    }
+}
+
+// File: IntegrityService.java
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
+public class IntegrityService {
+    public String computeChecksum(DatasetFile file) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            String data = file.getFileName() + file.getSizeBytes() + file.getFormat() + file.getContentPreview();
+            byte[] hash = md.digest(data.getBytes(StandardCharsets.UTF_8));
+            String checksum = toHex(hash);
+            file.setChecksum(checksum);
+            return checksum;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public String computeDatasetChecksum(DatasetVersion version) {
+        StringBuilder sb = new StringBuilder();
+        for (DatasetFile f : version.getFiles()) {
+            if (f.getChecksum() == null) computeChecksum(f);
+            sb.append(f.getChecksum());
+        }
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(sb.toString().getBytes(StandardCharsets.UTF_8));
+            String checksum = toHex(hash);
+            version.setIntegrityChecksum(checksum);
+            return checksum;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public boolean verify(DatasetVersion version) {
+        String old = version.getIntegrityChecksum();
+        if (old == null) return false;
+        String computed = computeDatasetChecksum(version);
+        return old.equals(computed);
+    }
+
+    private String toHex(byte[] hash) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : hash) sb.append(String.format("%02x", b));
+        return sb.toString();
+    }
+}
+
+// File: VersionService.java
+import java.util.HashMap;
+
+public class VersionService {
+    public DatasetVersion createNewVersion(Dataset dataset, User user, String description, String versionNote) {
+        if (user == null || (!user.getId().equals(dataset.getOwnerId())
+                && !dataset.getDelegatedDepositorIds().contains(user.getId())
+                && !user.hasRole(Role.ARCHIVE_ADMINISTRATOR))) {
+            throw new SecurityException("Not allowed to create version");
+        }
+        DatasetVersion current = dataset.getCurrentVersion();
+        DatasetVersion next = new DatasetVersion(current.getVersionNumber() + 1, description, DatasetStatus.DRAFT,
+                current.getAccessLevel(), current.getLicense(), current.getEmbargoUntil());
+        next.setMetadata(new HashMap<>(current.getMetadata()));
+        next.setVersionNote(versionNote);
+        dataset.addVersion(next);
+        return next;
+    }
+}
+
+// File: DisposalService.java
+public class DisposalService {
+    public void requestDisposal(Dataset dataset, DisposalPolicy policy, User user) {
+        if (user == null || (!user.getId().equals(dataset.getOwnerId()) && !user.hasRole(Role.ARCHIVE_ADMINISTRATOR))) {
+            throw new SecurityException("Not allowed to request disposal");
+        }
+        dataset.setDisposalPolicy(policy);
+        dataset.getCurrentVersion().setStatus(DatasetStatus.DISPOSAL_REQUESTED);
+    }
+
+    public void approveDisposal(Dataset dataset, User admin) {
+        if (admin == null || !admin.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Only archive administrator can approve disposal");
+        }
+        if (dataset.getDisposalPolicy() == null) {
+            throw new IllegalStateException("No disposal policy");
+        }
+        dataset.getDisposalPolicy().setApproved(true);
+        dataset.getDisposalPolicy().setApprovedBy(admin.getName());
+        dataset.getCurrentVersion().setStatus(DatasetStatus.DISPOSAL_APPROVED);
+    }
+}
+
+// File: AdminService.java
+import java.util.*;
+import java.util.function.Predicate;
+
+public class AdminService {
+    public void reviewDataset(Dataset dataset, User admin, boolean approve, MetadataService metadataService) {
+        if (admin == null || !admin.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Only archive administrator can review");
+        }
+        DatasetVersion v = dataset.getCurrentVersion();
+        if (approve) {
+            metadataService.validateMinimumMetadata(v.getMetadata());
+            v.setStatus(DatasetStatus.PUBLISHED);
+        } else {
+            v.setStatus(DatasetStatus.UNDER_REVIEW);
+        }
+    }
+
+    public List<Dataset> queryArchive(List<Dataset> datasets, Predicate<Dataset> predicate) {
+        List<Dataset> result = new ArrayList<>();
+        for (Dataset d : datasets) {
+            if (predicate.test(d)) result.add(d);
+        }
+        return result;
+    }
+
+    public Dataset importExternalDataset(String id, String title, String ownerId, String externalUrl) {
+        Dataset d = new Dataset(id, title, ownerId);
+        DatasetVersion v = new DatasetVersion(1, "Imported external dataset", DatasetStatus.EXTERNAL,
+                AccessLevel.PUBLIC, LicenseType.CUSTOM, null);
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put("title", title);
+        metadata.put("creator", ownerId);
+        metadata.put("description", "External dataset");
+        metadata.put("license", LicenseType.CUSTOM.name());
+        v.setMetadata(metadata);
+        d.addVersion(v);
+        d.addExternalLink(new ExternalRepositoryLink("External", externalUrl, id));
+        return d;
+    }
+}
+
+// File: ExportService.java
+import java.util.List;
+
+public class ExportService {
+    public String exportAll(List<Dataset> datasets) {
+        StringBuilder sb = new StringBuilder();
+        for (Dataset d : datasets) {
+            sb.append("DATASET|").append(d.getId()).append("|").append(d.getTitle()).append("|").append(d.getOwnerId()).append("\n");
+            for (DatasetVersion v : d.getVersions()) {
+                sb.append("VERSION|").append(d.getId()).append("|").append(v.getVersionNumber()).append("|")
+                        .append(v.getStatus()).append("|").append(v.getLicense()).append("\n");
+                for (DatasetFile f : v.getFiles()) {
+                    sb.append("FILE|").append(f.getFileName()).append("|").append(f.getSizeBytes()).append("|")
+                            .append(f.getChecksum()).append("\n");
+                }
+            }
+        }
+        return sb.toString();
+    }
+}
+
+// File: PureIntegration.java
+import java.util.HashMap;
+import java.util.Map;
+
+public class PureIntegration {
+    public Map<String, String> fetchMetadata(String pureId) {
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put("pureId", pureId);
+        metadata.put("source", "Pure");
+        metadata.put("institution", "University of Bath");
+        return metadata;
+    }
+
+    public void depositToPure(Dataset dataset) {
+    }
+}
+
+// File: CrisIntegration.java
+import java.util.Collection;
+import java.util.List;
+
+public class CrisIntegration {
+    public String harvestMetadata(List<Dataset> datasets, Collection<Project> projects, String funder) {
+        StringBuilder sb = new StringBuilder();
+        for (Dataset d : datasets) {
+            Project project = null;
+            for (Project p : projects) {
+                if (p.getId().equals(d.getProjectId())) {
+                    project = p;
+                    break;
+                }
+            }
+            if (project != null && funder.equalsIgnoreCase(project.getFunder())) {
+                sb.append(d.getId()).append("|").append(d.getTitle()).append("|")
+                        .append(project.getId()).append("|").append(project.getFunder()).append("\n");
+            }
+        }
+        return sb.toString();
+    }
+}
+
+// File: PrimoIntegration.java
+import java.util.List;
+
+public class PrimoIntegration {
+    public List<Dataset> search(List<Dataset> datasets, String query) {
+        SearchService searchService = new SearchService();
+        return searchService.search(datasets, query, "en");
+    }
+}
+
+// File: LdapIntegration.java
+import java.util.*;
+
+public class LdapIntegration {
+    public List<String> authenticate(String username, String password) {
+        if (username != null && password != null && !username.isBlank() && !password.isBlank()) {
+            return Arrays.asList("authenticated", "user:" + username);
+        }
+        return Collections.emptyList();
+    }
+}
+
+// File: HcpObjectStore.java
+public class HcpObjectStore {
+    private int counter = 0;
+
+    public String store(DatasetFile file) {
+        counter++;
+        return "hcp/" + counter + "/" + file.getFileName();
+    }
+}
+
+// File: Sword2Api.java
+public class Sword2Api {
+    public String receiveDeposit(String title, String description) {
+        return "SWORD2 deposit accepted: " + title + " - " + description;
+    }
+}
+
+// File: ArchiveSystem.java
+import java.time.LocalDate;
+import java.util.*;
+import java.util.function.Predicate;
+
+public class ArchiveSystem {
+    private final Map<String, User> users = new LinkedHashMap<>();
+    private final Map<String, Dataset> datasets = new LinkedHashMap<>();
+    private final Map<String, Project> projects = new LinkedHashMap<>();
+    private final MetadataService metadataService = new MetadataService();
+    private final DoiService doiService = new DoiService();
+    private final AccessControlService accessControlService = new AccessControlService();
+    private final SearchService searchService = new SearchService();
+    private final StatisticsService statisticsService = new StatisticsService();
+    private final IntegrityService integrityService = new IntegrityService();
+    private final VersionService versionService = new VersionService();
+    private final DisposalService disposalService = new DisposalService();
+    private final AdminService adminService = new AdminService();
+    private final ExportService exportService = new ExportService();
+    private final PureIntegration pureIntegration = new PureIntegration();
+    private final CrisIntegration crisIntegration = new CrisIntegration();
+    private final PrimoIntegration primoIntegration = new PrimoIntegration();
+    private final LdapIntegration ldapIntegration = new LdapIntegration();
+    private final HcpObjectStore hcpObjectStore = new HcpObjectStore();
+    private final Sword2Api sword2Api = new Sword2Api();
+    private int datasetCounter = 0;
+
+    public User registerUser(String name, String email, Role... roles) {
+        String id = "user-" + (users.size() + 1);
+        User u = new User(id, name, email, roles);
+        users.put(id, u);
+        return u;
+    }
+
+    public Project createProject(String title, String funder, String dmpLink) {
+        String id = "proj-" + (projects.size() + 1);
+        Project p = new Project(id, title, funder, dmpLink);
+        projects.put(id, p);
+        return p;
+    }
+
+    public Dataset depositDataset(User user, String title, String description, LicenseType license, AccessLevel access, String projectId) {
+        if (!user.hasRole(Role.DEPOSITOR)
+                && !user.hasRole(Role.RESEARCH_FACILITY_MANAGER)
+                && !user.hasRole(Role.ARCHIVE_ADMINISTRATOR)
+                && !user.hasRole(Role.DEVELOPER)) {
+            throw new SecurityException("User cannot deposit");
+        }
+        String id = "ds-" + (++datasetCounter);
+        Dataset dataset = new Dataset(id, title, user.getId());
+        dataset.setProjectId(projectId);
+        DatasetVersion version = new DatasetVersion(1, description, DatasetStatus.DRAFT, access, license, null);
+        Map<String, String> metadata = metadataService.autoFill(user, null);
+        metadata.put("title", title);
+        metadata.put("description", description);
+        metadata.put("license", license.name());
+        version.setMetadata(metadata);
+        dataset.addVersion(version);
+        datasets.put(id, dataset);
+        if (projectId != null && projects.containsKey(projectId)) {
+            projects.get(projectId).addDatasetId(id);
+        }
+        return dataset;
+    }
+
+    public void addFile(Dataset dataset, DatasetFile file) {
+        DatasetVersion v = dataset.getCurrentVersion();
+        String key = hcpObjectStore.store(file);
+        file.setObjectStoreKey(key);
+        integrityService.computeChecksum(file);
+        v.addFile(file);
+        integrityService.computeDatasetChecksum(v);
+    }
+
+    public void submitDataset(Dataset dataset, User user) {
+        if (!user.getId().equals(dataset.getOwnerId())
+                && !dataset.getDelegatedDepositorIds().contains(user.getId())
+                && !user.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Not allowed to submit");
+        }
+        dataset.getCurrentVersion().setStatus(DatasetStatus.SUBMITTED);
+    }
+
+    public void reviewDataset(Dataset dataset, User admin, boolean approve) {
+        adminService.reviewDataset(dataset, admin, approve, metadataService);
+    }
+
+    public String mintDoi(Dataset dataset, User user) {
+        if (!user.getId().equals(dataset.getOwnerId()) && !user.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Not allowed to mint DOI");
+        }
+        return doiService.mintDoi(dataset.getCurrentVersion());
+    }
+
+    public void publishDataset(Dataset dataset, User admin) {
+        if (!admin.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Only archive administrator can publish");
+        }
+        metadataService.validateMinimumMetadata(dataset.getCurrentVersion().getMetadata());
+        dataset.getCurrentVersion().setStatus(DatasetStatus.PUBLISHED);
+    }
+
+    public List<Dataset> search(String query, String language) {
+        return searchService.search(new ArrayList<>(datasets.values()), query, language);
+    }
+
+    public List<Dataset> searchPrimo(String query) {
+        return primoIntegration.search(new ArrayList<>(datasets.values()), query);
+    }
+
+    public boolean canAccess(User user, Dataset dataset) {
+        return accessControlService.checkAccess(user, dataset, dataset.getCurrentVersion());
+    }
+
+    public void grantPrivilegedAccess(Dataset dataset, User grantor, User collaborator) {
+        accessControlService.grantPrivilegedAccess(dataset, collaborator, grantor);
+    }
+
+    public void addCollaborator(Dataset dataset, User collaborator, User grantor) {
+        grantPrivilegedAccess(dataset, grantor, collaborator);
+    }
+
+    public void addDelegatedDepositor(Dataset dataset, User delegated, User owner) {
+        if (!owner.getId().equals(dataset.getOwnerId()) && !owner.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Not allowed to delegate depositor");
+        }
+        dataset.addDelegatedDepositor(delegated.getId());
+    }
+
+    public void addPublicationLink(Dataset dataset, PublicationLink link, User user) {
+        if (!user.getId().equals(dataset.getOwnerId()) && !user.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Not allowed to add publication link");
+        }
+        dataset.addPublicationLink(link);
+    }
+
+    public void addExternalRepositoryLink(Dataset dataset, ExternalRepositoryLink link, User user) {
+        if (!user.getId().equals(dataset.getOwnerId()) && !user.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Not allowed to add external repository link");
+        }
+        dataset.addExternalLink(link);
+    }
+
+    public void applySubjectMetadata(Dataset dataset, User user, String discipline, List<String> keywords, Map<String, String> fields) {
+        if (!user.getId().equals(dataset.getOwnerId()) && !user.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Not allowed to apply subject metadata");
+        }
+        SubjectMetadata sm = dataset.getSubjectMetadata();
+        if (sm == null) {
+            sm = new SubjectMetadata();
+            dataset.setSubjectMetadata(sm);
+        }
+        metadataService.applySubjectMetadata(sm, discipline, keywords, fields);
+    }
+
+    public void setDmpLink(Dataset dataset, User user, String dmpLink) {
+        if (!user.getId().equals(dataset.getOwnerId()) && !user.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Not allowed to set DMP link");
+        }
+        dataset.setDmpLink(dmpLink);
+    }
+
+    public void setEmbargo(Dataset dataset, User user, LocalDate embargoUntil) {
+        if (!user.getId().equals(dataset.getOwnerId()) && !user.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Not allowed to set embargo");
+        }
+        DatasetVersion v = dataset.getCurrentVersion();
+        v.setEmbargoUntil(embargoUntil);
+        v.setAccessLevel(AccessLevel.EMBARGOED);
+        v.setStatus(DatasetStatus.EMBARGOED);
+    }
+
+    public void recordDownload(Dataset dataset, User user, String country, String sector) {
+        if (!canAccess(user, dataset)) {
+            throw new SecurityException("No access to dataset");
+        }
+        statisticsService.recordDownload(dataset.getCurrentVersion(), country, sector);
+    }
+
+    public void recordCitation(Dataset dataset, String text, String source) {
+        statisticsService.recordCitation(dataset.getCurrentVersion(), text, source);
+    }
+
+    public Map<String, Long> getDownloadStatsByCountry(Dataset dataset) {
+        return statisticsService.downloadsByCountry(dataset);
+    }
+
+    public Map<String, Long> getDownloadStatsBySector(Dataset dataset) {
+        return statisticsService.downloadsBySector(dataset);
+    }
+
+    public int getCitationCount(Dataset dataset) {
+        return statisticsService.citationCount(dataset);
+    }
+
+    public DatasetVersion createNewVersion(Dataset dataset, User user, String description, String versionNote) {
+        return versionService.createNewVersion(dataset, user, description, versionNote);
+    }
+
+    public void requestDisposal(Dataset dataset, User user, LocalDate reviewDate, String action) {
+        DisposalPolicy policy = new DisposalPolicy(reviewDate, action);
+        disposalService.requestDisposal(dataset, policy, user);
+    }
+
+    public void approveDisposal(Dataset dataset, User admin) {
+        disposalService.approveDisposal(dataset, admin);
+    }
+
+    public List<Dataset> queryArchive(User admin, Predicate<Dataset> predicate) {
+        if (!admin.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Only archive administrator can query archive");
+        }
+        return adminService.queryArchive(new ArrayList<>(datasets.values()), predicate);
+    }
+
+    public Dataset importExternalDataset(User admin, String title, String ownerId, String externalUrl) {
+        if (!admin.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Only archive administrator can import external data");
+        }
+        String id = "ext-" + (++datasetCounter);
+        Dataset d = adminService.importExternalDataset(id, title, ownerId, externalUrl);
+        datasets.put(id, d);
+        return d;
+    }
+
+    public String exportAll(User user) {
+        if (!user.hasRole(Role.UNIVERSITY_IT_SERVICE) && !user.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Not allowed to export archive");
+        }
+        return exportService.exportAll(new ArrayList<>(datasets.values()));
+    }
+
+    public List<String> authenticateViaLdap(String username, String password) {
+        return ldapIntegration.authenticate(username, password);
+    }
+
+    public String harvestMetadataForFunder(User user, String funder) {
+        if (!user.hasRole(Role.FUNDING_BODY)
+                && !user.hasRole(Role.RESEARCH_INFORMATION_MANAGER)
+                && !user.hasRole(Role.ARCHIVE_ADMINISTRATOR)) {
+            throw new SecurityException("Not allowed to harvest metadata");
+        }
+        return crisIntegration.harvestMetadata(new ArrayList<>(datasets.values()), projects.values(), funder);
+    }
+
+    public Map<String, String> fetchPureMetadata(String pureId) {
+        return pureIntegration.fetchMetadata(pureId);
+    }
+
+    public String depositViaSword2(String title, String description) {
+        return sword2Api.receiveDeposit(title, description);
+    }
+
+    public String verifyIntegrity(Dataset dataset) {
+        boolean ok = integrityService.verify(dataset.getCurrentVersion());
+        return ok ? "INTEGRITY_OK" : "INTEGRITY_FAILED";
+    }
+
+    public List<String> examineFiles(Dataset dataset) {
+        return searchService.examineFiles(dataset);
+    }
+
+    public String exampleCitation(Dataset dataset) {
+        return searchService.exampleCitation(dataset);
+    }
+
+    public String getDoi(Dataset dataset) {
+        return dataset.getCurrentVersion().getDoi();
+    }
+
+    public String getPersistentUrl(Dataset dataset) {
+        return dataset.getCurrentVersion().getPersistentUrl();
+    }
+
+    public Collection<Dataset> getAllDatasets() {
+        return Collections.unmodifiableCollection(datasets.values());
+    }
+
+    public Collection<Project> getAllProjects() {
+        return Collections.unmodifiableCollection(projects.values());
+    }
+
+    public User getUser(String id) {
+        return users.get(id);
+    }
+
+    public Dataset getDataset(String id) {
+        return datasets.get(id);
+    }
+}
+
+// File: Main.java
+import java.time.LocalDate;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        ArchiveSystem archive = new ArchiveSystem();
+
+        User depositor = archive.registerUser("Alice Researcher", "alice@bath.ac.uk", Role.DEPOSITOR);
+        User collaborator = archive.registerUser("Bob External", "bob@external.org", Role.EXTERNAL_COLLABORATOR);
+        collaborator.setOnCampus(false);
+        User admin = archive.registerUser("Admin User", "admin@bath.ac.uk", Role.ARCHIVE_ADMINISTRATOR);
+        User itService = archive.registerUser("IT Service", "it@bath.ac.uk", Role.UNIVERSITY_IT_SERVICE);
+        User funder = archive.registerUser("Funder", "funder@example.org", Role.FUNDING_BODY);
+        User facility = archive.registerUser("Facility Manager", "facility@bath.ac.uk", Role.RESEARCH_FACILITY_MANAGER);
+        User reuser = archive.registerUser("Carol Reuser", "carol@bath.ac.uk", Role.DATA_REUSER);
+
+        Project project = archive.createProject("Climate Data Project", "EPSRC", "https://bath.ac.uk/dmp/climate");
+        Dataset dataset = archive.depositDataset(depositor, "Climate Measurements 2025", "Daily climate measurements from Bath.", LicenseType.CC_BY_4_0, AccessLevel.PUBLIC, project.getId());
+        archive.addFile(dataset, new DatasetFile("file-1", "measurements.csv", 250_000_000L, "CSV", "date,temp,rainfall\n2025-01-01,7.2,0.0"));
+        archive.addFile(dataset, new DatasetFile("file-2", "readme.txt", 2_000L, "TXT", "Dataset readme and methodology."));
+        archive.applySubjectMetadata(dataset, depositor, "Environmental Science", Arrays.asList("climate", "temperature", "rainfall"), Map.of("spatialCoverage", "Bath, UK", "temporalCoverage", "2025"));
+        archive.setDmpLink(dataset, depositor, project.getDmpLink());
+        archive.addPublicationLink(dataset, new PublicationLink("opus-123", "Climate Trends in Bath", "https://opus.bath.ac.uk/123"), depositor);
+        archive.addExternalRepositoryLink(dataset, new ExternalRepositoryLink("Zenodo", "https://zenodo.org/record/999", "zenodo-999"), depositor);
+        archive.addCollaborator(dataset, collaborator, depositor);
+        archive.addDelegatedDepositor(dataset, facility, depositor);
+
+        archive.submitDataset(dataset, depositor);
+        archive.reviewDataset(dataset, admin, true);
+        String doi = archive.mintDoi(dataset, depositor);
+        archive.publishDataset(dataset, admin);
+        archive.setEmbargo(dataset, depositor, LocalDate.now().plusMonths(6));
+
+        System.out.println("DOI: " + doi);
+        System.out.println("Persistent URL: " + archive.getPersistentUrl(dataset));
+        System.out.println("Example citation: " + archive.exampleCitation(dataset));
+        System.out.println("Can external collaborator access off campus? " + archive.canAccess(collaborator, dataset));
+        System.out.println("Can public reuser access embargoed dataset? " + archive.canAccess(reuser, dataset));
+        System.out.println("Files: " + archive.examineFiles(dataset));
+        System.out.println("Integrity: " + archive.verifyIntegrity(dataset));
+
+        archive.recordDownload(dataset, depositor, "UK", "academia");
+        archive.recordDownload(dataset, collaborator, "Germany", "industry");
+        archive.recordCitation(dataset, "Smith et al. (2025) reuse climate data.", "Crossref");
+        System.out.println("Downloads by country: " + archive.getDownloadStatsByCountry(dataset));
+        System.out.println("Downloads by sector: " + archive.getDownloadStatsBySector(dataset));
+        System.out.println("Citation count: " + archive.getCitationCount(dataset));
+
+        DatasetVersion v2 = archive.createNewVersion(dataset, depositor, "Updated climate measurements with 2026 data.", "Added 2026 observations");
+        archive.addFile(dataset, new DatasetFile("file-3", "measurements-2026.csv", 300_000_000L, "CSV", "date,temp,rainfall\n2026-01-01,7.5,0.1"));
+        archive.submitDataset(dataset, depositor);
+        archive.mintDoi(dataset, depositor);
+        archive.publishDataset(dataset, admin);
+        System.out.println("Current version: " + dataset.getCurrentVersion().getVersionNumber());
+        System.out.println("All versions: " + dataset.getVersions().size());
+
+        List<Dataset> searchResults = archive.search("climate", "en");
+        System.out.println("Search results: " + searchResults.size());
+        System.out.println("Primo results: " + archive.searchPrimo("temperature").size());
+
+        archive.requestDisposal(dataset, depositor, LocalDate.now().plusYears(10), "Review and dispose after retention period");
+        archive.approveDisposal(dataset, admin);
+        System.out.println("Disposal approved: " + dataset.getDisposalPolicy().isApproved());
+
+        Dataset imported = archive.importExternalDataset(admin, "External Data Centre Record", "external-owner", "https://external.example/data/1");
+        System.out.println("Imported external dataset: " + imported.getId());
+
+        System.out.println("Export:\n" + archive.exportAll(itService));
+        System.out.println("Harvest for EPSRC:\n" + archive.harvestMetadataForFunder(funder, "EPSRC"));
+        System.out.println("LDAP auth: " + archive.authenticateViaLdap("alice", "secret"));
+        System.out.println("Pure metadata: " + archive.fetchPureMetadata("pure-001"));
+        System.out.println("SWORD2: " + archive.depositViaSword2("API Dataset", "Deposited through SWORD2"));
+    }
+}

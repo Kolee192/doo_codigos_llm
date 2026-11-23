@@ -1,0 +1,2585 @@
+```java
+// File: Role.java
+public enum Role {
+    ADMINISTRATOR,
+    REPOSITORY_MANAGER,
+    BASIC_DATA_ENTRY,
+    READ_ONLY,
+    ADVANCED_DATA_ENTRY
+}
+```
+
+```java
+// File: LevelOfDescription.java
+public enum LevelOfDescription {
+    FONDS,
+    SERIES,
+    FILE,
+    ITEM,
+    COLLECTION,
+    OTHER
+}
+```
+
+```java
+// File: AgentType.java
+public enum AgentType {
+    PERSON,
+    CORPORATE_BODY,
+    FAMILY
+}
+```
+
+```java
+// File: EventType.java
+public enum EventType {
+    CREATION,
+    ACCESSION,
+    CUSTODY,
+    PROCESSING,
+    OTHER
+}
+```
+
+```java
+// File: EadFormat.java
+public enum EadFormat {
+    ARCHON,
+    ARCHIVISTS_TOOLKIT,
+    GENERIC
+}
+```
+
+```java
+// File: User.java
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+public class User {
+    private final long id;
+    private final String username;
+    private String passwordHash;
+    private String ldapDn;
+    private final Set<Role> globalRoles = new HashSet<>();
+    private final Map<Long, Role> repositoryRoles = new HashMap<>();
+
+    public User(long id, String username) {
+        this.id = id;
+        this.username = username;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getLdapDn() {
+        return ldapDn;
+    }
+
+    public void setLdapDn(String ldapDn) {
+        this.ldapDn = ldapDn;
+    }
+
+    public void setPassword(String password) {
+        this.passwordHash = hash(password);
+    }
+
+    public boolean checkPassword(String password) {
+        return passwordHash != null && passwordHash.equals(hash(password));
+    }
+
+    public Set<Role> getGlobalRoles() {
+        return Set.copyOf(globalRoles);
+    }
+
+    public void addGlobalRole(Role role) {
+        globalRoles.add(role);
+    }
+
+    public boolean hasGlobalRole(Role role) {
+        return globalRoles.contains(role);
+    }
+
+    public void setRepositoryRole(long repositoryId, Role role) {
+        repositoryRoles.put(repositoryId, role);
+    }
+
+    public Role getRepositoryRole(long repositoryId) {
+        return repositoryRoles.get(repositoryId);
+    }
+
+    public boolean hasRepositoryRole(long repositoryId, Role role) {
+        return repositoryRoles.get(repositoryId) == role;
+    }
+
+    public Map<Long, Role> getRepositoryRoles() {
+        return Map.copyOf(repositoryRoles);
+    }
+
+    private String hash(String password) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(password.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : bytes) {
+                sb.append(String.format("%02x", b & 0xff));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+}
+```
+
+```java
+// File: Repository.java
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class Repository {
+    private final long id;
+    private final String name;
+    private final Map<String, String> properties = new LinkedHashMap<>();
+
+    public Repository(long id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void addProperty(String key, String value) {
+        properties.put(key, value);
+    }
+
+    public Map<String, String> getProperties() {
+        return Collections.unmodifiableMap(properties);
+    }
+}
+```
+
+```java
+// File: SourceRecordId.java
+public class SourceRecordId {
+    private final String system;
+    private final String recordId;
+
+    public SourceRecordId(String system, String recordId) {
+        this.system = system;
+        this.recordId = recordId;
+    }
+
+    public String getSystem() {
+        return system;
+    }
+
+    public String getRecordId() {
+        return recordId;
+    }
+}
+```
+
+```java
+// File: DateValue.java
+public class DateValue {
+    private final long id;
+    private final String label;
+    private final String begin;
+    private final String end;
+    private final String type;
+
+    public DateValue(long id, String label, String begin, String end, String type) {
+        this.id = id;
+        this.label = label;
+        this.begin = begin;
+        this.end = end;
+        this.type = type;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public String getBegin() {
+        return begin;
+    }
+
+    public String getEnd() {
+        return end;
+    }
+
+    public String getType() {
+        return type;
+    }
+}
+```
+
+```java
+// File: Extent.java
+public class Extent {
+    private final long id;
+    private final String number;
+    private final String unit;
+
+    public Extent(long id, String number, String unit) {
+        this.id = id;
+        this.number = number;
+        this.unit = unit;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getNumber() {
+        return number;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+}
+```
+
+```java
+// File: Note.java
+public class Note {
+    private final long id;
+    private final String type;
+    private final String content;
+
+    public Note(long id, String type, String content) {
+        this.id = id;
+        this.type = type;
+        this.content = content;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public String getContent() {
+        return content;
+    }
+}
+```
+
+```java
+// File: Location.java
+public class Location {
+    private final long id;
+    private final String name;
+
+    public Location(long id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+```
+
+```java
+// File: Container.java
+public class Container {
+    private final long id;
+    private String barcode;
+    private Location location;
+
+    public Container(long id, String barcode, Location location) {
+        this.id = id;
+        this.barcode = barcode;
+        this.location = location;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getBarcode() {
+        return barcode;
+    }
+
+    public void setBarcode(String barcode) {
+        this.barcode = barcode;
+    }
+
+    public Location getLocation() {
+        return location;
+    }
+
+    public void setLocation(Location location) {
+        this.location = location;
+    }
+}
+```
+
+```java
+// File: Instance.java
+public class Instance {
+    private final long id;
+    private Long resourceId;
+    private Long componentId;
+    private Container container;
+
+    public Instance(long id, Long resourceId, Long componentId, Container container) {
+        this.id = id;
+        this.resourceId = resourceId;
+        this.componentId = componentId;
+        this.container = container;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public Long getResourceId() {
+        return resourceId;
+    }
+
+    public void setResourceId(Long resourceId) {
+        this.resourceId = resourceId;
+    }
+
+    public Long getComponentId() {
+        return componentId;
+    }
+
+    public void setComponentId(Long componentId) {
+        this.componentId = componentId;
+    }
+
+    public Container getContainer() {
+        return container;
+    }
+
+    public void setContainer(Container container) {
+        this.container = container;
+    }
+}
+```
+
+```java
+// File: DigitalObject.java
+public class DigitalObject {
+    private final long id;
+    private final long repositoryId;
+    private String title;
+    private String uri;
+    private Long resourceId;
+    private Long componentId;
+
+    public DigitalObject(long id, long repositoryId, String title, String uri) {
+        this.id = id;
+        this.repositoryId = repositoryId;
+        this.title = title;
+        this.uri = uri;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public long getRepositoryId() {
+        return repositoryId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getUri() {
+        return uri;
+    }
+
+    public void setUri(String uri) {
+        this.uri = uri;
+    }
+
+    public Long getResourceId() {
+        return resourceId;
+    }
+
+    public void setResourceId(Long resourceId) {
+        this.resourceId = resourceId;
+    }
+
+    public Long getComponentId() {
+        return componentId;
+    }
+
+    public void setComponentId(Long componentId) {
+        this.componentId = componentId;
+    }
+}
+```
+
+```java
+// File: FindingAid.java
+public class FindingAid {
+    private final long id;
+    private final long resourceId;
+    private String content;
+
+    public FindingAid(long id, long resourceId, String content) {
+        this.id = id;
+        this.resourceId = resourceId;
+        this.content = content;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public long getResourceId() {
+        return resourceId;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+}
+```
+
+```java
+// File: NameForm.java
+public class NameForm {
+    private final long id;
+    private String name;
+    private String source;
+
+    public NameForm(long id, String name, String source) {
+        this.id = id;
+        this.name = name;
+        this.source = source;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
+    }
+}
+```
+
+```java
+// File: Agent.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Agent {
+    private final long id;
+    private String name;
+    private AgentType type;
+    private final List<NameForm> nameForms = new ArrayList<>();
+    private final List<Note> notes = new ArrayList<>();
+
+    public Agent(long id, String name, AgentType type) {
+        this.id = id;
+        this.name = name;
+        this.type = type;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public AgentType getType() {
+        return type;
+    }
+
+    public void setType(AgentType type) {
+        this.type = type;
+    }
+
+    public void addNameForm(NameForm nameForm) {
+        nameForms.add(nameForm);
+    }
+
+    public List<NameForm> getNameForms() {
+        return List.copyOf(nameForms);
+    }
+
+    public void addNote(Note note) {
+        notes.add(note);
+    }
+
+    public List<Note> getNotes() {
+        return List.copyOf(notes);
+    }
+}
+```
+
+```java
+// File: Subject.java
+public class Subject {
+    private final long id;
+    private String heading;
+    private String standardIdentifier;
+
+    public Subject(long id, String heading, String standardIdentifier) {
+        this.id = id;
+        this.heading = heading;
+        this.standardIdentifier = standardIdentifier;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getHeading() {
+        return heading;
+    }
+
+    public void setHeading(String heading) {
+        this.heading = heading;
+    }
+
+    public String getStandardIdentifier() {
+        return standardIdentifier;
+    }
+
+    public void setStandardIdentifier(String standardIdentifier) {
+        this.standardIdentifier = standardIdentifier;
+    }
+}
+```
+
+```java
+// File: Resource.java
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class Resource {
+    private final long id;
+    private final long repositoryId;
+    private String title;
+    private LevelOfDescription level;
+    private String otherLevel;
+    private FindingAid findingAid;
+    private final List<DateValue> dates = new ArrayList<>();
+    private final List<Extent> extents = new ArrayList<>();
+    private final List<Subject> subjects = new ArrayList<>();
+    private final List<Agent> agents = new ArrayList<>();
+    private final List<Note> notes = new ArrayList<>();
+    private final List<Instance> instances = new ArrayList<>();
+    private final Map<String, String> administrativeData = new LinkedHashMap<>();
+    private SourceRecordId sourceRecordId;
+    private int version = 1;
+
+    public Resource(long id, long repositoryId, String title, LevelOfDescription level) {
+        this.id = id;
+        this.repositoryId = repositoryId;
+        this.title = title;
+        this.level = level;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public long getRepositoryId() {
+        return repositoryId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public LevelOfDescription getLevel() {
+        return level;
+    }
+
+    public void setLevel(LevelOfDescription level) {
+        this.level = level;
+    }
+
+    public String getOtherLevel() {
+        return otherLevel;
+    }
+
+    public void setOtherLevel(String otherLevel) {
+        this.otherLevel = otherLevel;
+    }
+
+    public FindingAid getFindingAid() {
+        return findingAid;
+    }
+
+    public void setFindingAid(FindingAid findingAid) {
+        this.findingAid = findingAid;
+    }
+
+    public void addDate(DateValue date) {
+        dates.add(date);
+    }
+
+    public List<DateValue> getDates() {
+        return List.copyOf(dates);
+    }
+
+    public void addExtent(Extent extent) {
+        extents.add(extent);
+    }
+
+    public List<Extent> getExtents() {
+        return List.copyOf(extents);
+    }
+
+    public void addSubject(Subject subject) {
+        subjects.add(subject);
+    }
+
+    public List<Subject> getSubjects() {
+        return List.copyOf(subjects);
+    }
+
+    public void addAgent(Agent agent) {
+        agents.add(agent);
+    }
+
+    public List<Agent> getAgents() {
+        return List.copyOf(agents);
+    }
+
+    public void addNote(Note note) {
+        notes.add(note);
+    }
+
+    public List<Note> getNotes() {
+        return List.copyOf(notes);
+    }
+
+    public void addInstance(Instance instance) {
+        instances.add(instance);
+    }
+
+    public List<Instance> getInstances() {
+        return List.copyOf(instances);
+    }
+
+    public void addAdministrativeData(String key, String value) {
+        administrativeData.put(key, value);
+    }
+
+    public Map<String, String> getAdministrativeData() {
+        return Map.copyOf(administrativeData);
+    }
+
+    public SourceRecordId getSourceRecordId() {
+        return sourceRecordId;
+    }
+
+    public void setSourceRecordId(SourceRecordId sourceRecordId) {
+        this.sourceRecordId = sourceRecordId;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void incrementVersion() {
+        version++;
+    }
+}
+```
+
+```java
+// File: ResourceComponent.java
+public class ResourceComponent {
+    private final long id;
+    private final long resourceId;
+    private Long parentId;
+    private String title;
+    private LevelOfDescription level;
+    private String otherLevel;
+    private String componentUniqueIdentifier;
+    private int position;
+    private int version = 1;
+
+    public ResourceComponent(long id, long resourceId, Long parentId, String title, LevelOfDescription level) {
+        this.id = id;
+        this.resourceId = resourceId;
+        this.parentId = parentId;
+        this.title = title;
+        this.level = level;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public long getResourceId() {
+        return resourceId;
+    }
+
+    public Long getParentId() {
+        return parentId;
+    }
+
+    public void setParentId(Long parentId) {
+        this.parentId = parentId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public LevelOfDescription getLevel() {
+        return level;
+    }
+
+    public void setLevel(LevelOfDescription level) {
+        this.level = level;
+    }
+
+    public String getOtherLevel() {
+        return otherLevel;
+    }
+
+    public void setOtherLevel(String otherLevel) {
+        this.otherLevel = otherLevel;
+    }
+
+    public String getComponentUniqueIdentifier() {
+        return componentUniqueIdentifier;
+    }
+
+    public void setComponentUniqueIdentifier(String componentUniqueIdentifier) {
+        this.componentUniqueIdentifier = componentUniqueIdentifier;
+    }
+
+    public int getPosition() {
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void incrementVersion() {
+        version++;
+    }
+}
+```
+
+```java
+// File: Accession.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Accession {
+    private final long id;
+    private final long repositoryId;
+    private String title;
+    private final List<DateValue> dates = new ArrayList<>();
+    private final List<Extent> extents = new ArrayList<>();
+    private final List<Subject> subjects = new ArrayList<>();
+    private final List<Agent> agents = new ArrayList<>();
+    private final List<Note> notes = new ArrayList<>();
+    private SourceRecordId sourceRecordId;
+    private int version = 1;
+
+    public Accession(long id, long repositoryId, String title) {
+        this.id = id;
+        this.repositoryId = repositoryId;
+        this.title = title;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public long getRepositoryId() {
+        return repositoryId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void addDate(DateValue date) {
+        dates.add(date);
+    }
+
+    public List<DateValue> getDates() {
+        return List.copyOf(dates);
+    }
+
+    public void addExtent(Extent extent) {
+        extents.add(extent);
+    }
+
+    public List<Extent> getExtents() {
+        return List.copyOf(extents);
+    }
+
+    public void addSubject(Subject subject) {
+        subjects.add(subject);
+    }
+
+    public List<Subject> getSubjects() {
+        return List.copyOf(subjects);
+    }
+
+    public void addAgent(Agent agent) {
+        agents.add(agent);
+    }
+
+    public List<Agent> getAgents() {
+        return List.copyOf(agents);
+    }
+
+    public void addNote(Note note) {
+        notes.add(note);
+    }
+
+    public List<Note> getNotes() {
+        return List.copyOf(notes);
+    }
+
+    public SourceRecordId getSourceRecordId() {
+        return sourceRecordId;
+    }
+
+    public void setSourceRecordId(SourceRecordId sourceRecordId) {
+        this.sourceRecordId = sourceRecordId;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void incrementVersion() {
+        version++;
+    }
+}
+```
+
+```java
+// File: UserService.java
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+
+public class UserService {
+    private final Map<Long, User> usersById = new LinkedHashMap<>();
+    private final Map<String, User> usersByUsername = new LinkedHashMap<>();
+    private long nextId = 1;
+
+    public User createInitialAdministrator(String username, String password) {
+        return createUserInternal(username, password, Set.of(Role.ADMINISTRATOR));
+    }
+
+    public User createUser(User admin, String username, String password, Set<Role> globalRoles) {
+        if (admin == null || !admin.hasGlobalRole(Role.ADMINISTRATOR)) {
+            throw new SecurityException("Administrator required");
+        }
+        return createUserInternal(username, password, globalRoles);
+    }
+
+    private User createUserInternal(String username, String password, Set<Role> globalRoles) {
+        if (usersByUsername.containsKey(username)) {
+            throw new IllegalArgumentException("Username already exists: " + username);
+        }
+        User user = new User(nextId++, username);
+        user.setPassword(password);
+        for (Role role : globalRoles) {
+            user.addGlobalRole(role);
+        }
+        usersById.put(user.getId(), user);
+        usersByUsername.put(username, user);
+        return user;
+    }
+
+    public User findById(long id) {
+        return usersById.get(id);
+    }
+
+    public User findByUsername(String username) {
+        return usersByUsername.get(username);
+    }
+
+    public void assignRepositoryRole(User admin, long userId, long repositoryId, Role role) {
+        if (admin == null || !admin.hasGlobalRole(Role.ADMINISTRATOR)) {
+            throw new SecurityException("Administrator required");
+        }
+        User user = usersById.get(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Unknown user: " + userId);
+        }
+        user.setRepositoryRole(repositoryId, role);
+    }
+
+    public void assignAdvancedDataEntry(User admin, long userId, AdvancedDataEntry ade) {
+        if (admin == null || !admin.hasGlobalRole(Role.ADMINISTRATOR)) {
+            throw new SecurityException("Administrator required");
+        }
+        User user = usersById.get(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Unknown user: " + userId);
+        }
+        ade.addUser(userId);
+        user.setRepositoryRole(ade.getRepositoryId(), Role.ADVANCED_DATA_ENTRY);
+    }
+}
+```
+
+```java
+// File: PasswordResetService.java
+public class PasswordResetService {
+    private final UserService userService;
+
+    public PasswordResetService(UserService userService) {
+        this.userService = userService;
+    }
+
+    public void resetPassword(User admin, String targetUsername, String newPassword) {
+        if (admin == null || !admin.hasGlobalRole(Role.ADMINISTRATOR)) {
+            throw new SecurityException("Administrator required");
+        }
+        User target = userService.findByUsername(targetUsername);
+        if (target == null) {
+            throw new IllegalArgumentException("Unknown user: " + targetUsername);
+        }
+        target.setPassword(newPassword);
+    }
+}
+```
+
+```java
+// File: LdapAuthenticator.java
+public interface LdapAuthenticator {
+    boolean authenticate(String dn, String password);
+}
+```
+
+```java
+// File: SimpleLdapAuthenticator.java
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class SimpleLdapAuthenticator implements LdapAuthenticator {
+    private final Map<String, String> credentials = new LinkedHashMap<>();
+
+    public void addCredential(String dn, String password) {
+        credentials.put(dn, password);
+    }
+
+    @Override
+    public boolean authenticate(String dn, String password) {
+        return dn != null && password != null && password.equals(credentials.get(dn));
+    }
+}
+```
+
+```java
+// File: AuthenticationService.java
+public class AuthenticationService {
+    private final UserService userService;
+    private final LdapAuthenticator ldapAuthenticator;
+
+    public AuthenticationService(UserService userService, LdapAuthenticator ldapAuthenticator) {
+        this.userService = userService;
+        this.ldapAuthenticator = ldapAuthenticator;
+    }
+
+    public User loginLocal(String username, String password) {
+        User user = userService.findByUsername(username);
+        if (user == null || !user.checkPassword(password)) {
+            throw new SecurityException("Invalid local credentials");
+        }
+        return user;
+    }
+
+    public User loginLdap(String username, String password) {
+        User user = userService.findByUsername(username);
+        if (user == null || user.getLdapDn() == null || !ldapAuthenticator.authenticate(user.getLdapDn(), password)) {
+            throw new SecurityException("Invalid LDAP credentials");
+        }
+        return user;
+    }
+}
+```
+
+```java
+// File: PermissionService.java
+public class PermissionService {
+    public void requireAuthenticated(User user) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+    }
+
+    public boolean isAdministrator(User user) {
+        return user != null && user.hasGlobalRole(Role.ADMINISTRATOR);
+    }
+
+    public boolean canView(User user, long repositoryId) {
+        if (user == null) {
+            return false;
+        }
+        if (isAdministrator(user)) {
+            return true;
+        }
+        return user.getRepositoryRole(repositoryId) != null;
+    }
+
+    public boolean canCreate(User user, long repositoryId) {
+        if (user == null) {
+            return false;
+        }
+        if (isAdministrator(user)) {
+            return true;
+        }
+        Role role = user.getRepositoryRole(repositoryId);
+        return role == Role.REPOSITORY_MANAGER || role == Role.BASIC_DATA_ENTRY || role == Role.ADVANCED_DATA_ENTRY;
+    }
+
+    public boolean canUpdate(User user, long repositoryId) {
+        return canCreate(user, repositoryId);
+    }
+
+    public boolean canDelete(User user, long repositoryId) {
+        if (user == null) {
+            return false;
+        }
+        if (isAdministrator(user)) {
+            return true;
+        }
+        return user.getRepositoryRole(repositoryId) == Role.REPOSITORY_MANAGER;
+    }
+
+    public boolean canManageRepository(User user, long repositoryId) {
+        if (user == null) {
+            return false;
+        }
+        if (isAdministrator(user)) {
+            return true;
+        }
+        return user.getRepositoryRole(repositoryId) == Role.REPOSITORY_MANAGER;
+    }
+
+    public void requireView(User user, long repositoryId) {
+        if (!canView(user, repositoryId)) {
+            throw new SecurityException("View permission denied");
+        }
+    }
+
+    public void requireCreate(User user, long repositoryId) {
+        if (!canCreate(user, repositoryId)) {
+            throw new SecurityException("Create permission denied");
+        }
+    }
+
+    public void requireUpdate(User user, long repositoryId) {
+        if (!canUpdate(user, repositoryId)) {
+            throw new SecurityException("Update permission denied");
+        }
+    }
+
+    public void requireDelete(User user, long repositoryId) {
+        if (!canDelete(user, repositoryId)) {
+            throw new SecurityException("Delete permission denied");
+        }
+    }
+
+    public void requireManageRepository(User user, long repositoryId) {
+        if (!canManageRepository(user, repositoryId)) {
+            throw new SecurityException("Repository management permission denied");
+        }
+    }
+}
+```
+
+```java
+// File: RepositoryService.java
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class RepositoryService {
+    private final PermissionService permissionService;
+    private final Map<Long, Repository> repositories = new LinkedHashMap<>();
+    private long nextId = 1;
+
+    public RepositoryService(PermissionService permissionService) {
+        this.permissionService = permissionService;
+    }
+
+    public Repository createRepository(User admin, String name) {
+        if (admin == null || !admin.hasGlobalRole(Role.ADMINISTRATOR)) {
+            throw new SecurityException("Administrator required");
+        }
+        Repository repository = new Repository(nextId++, name);
+        repositories.put(repository.getId(), repository);
+        return repository;
+    }
+
+    public Repository getRepository(long id) {
+        return repositories.get(id);
+    }
+
+    public void addProperty(User user, long repositoryId, String key, String value) {
+        permissionService.requireManageRepository(user, repositoryId);
+        Repository repository = requireRepository(repositoryId);
+        repository.addProperty(key, value);
+    }
+
+    public void assignRepositoryManager(User admin, User target, long repositoryId) {
+        if (admin == null || !admin.hasGlobalRole(Role.ADMINISTRATOR)) {
+            throw new SecurityException("Administrator required");
+        }
+        requireRepository(repositoryId);
+        target.setRepositoryRole(repositoryId, Role.REPOSITORY_MANAGER);
+    }
+
+    public Collection<Repository> listRepositories() {
+        return repositories.values();
+    }
+
+    private Repository requireRepository(long id) {
+        Repository repository = repositories.get(id);
+        if (repository == null) {
+            throw new IllegalArgumentException("Unknown repository: " + id);
+        }
+        return repository;
+    }
+}
+```
+
+```java
+// File: AdvancedDataEntry.java
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+public class AdvancedDataEntry {
+    private final long id;
+    private final String name;
+    private final long repositoryId;
+    private final Set<Long> userIds = new LinkedHashSet<>();
+
+    public AdvancedDataEntry(long id, String name, long repositoryId) {
+        this.id = id;
+        this.name = name;
+        this.repositoryId = repositoryId;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public long getRepositoryId() {
+        return repositoryId;
+    }
+
+    public void addUser(long userId) {
+        userIds.add(userId);
+    }
+
+    public boolean containsUser(long userId) {
+        return userIds.contains(userId);
+    }
+
+    public Set<Long> getUserIds() {
+        return Set.copyOf(userIds);
+    }
+}
+```
+
+```java
+// File: AdvancedDataEntryService.java
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class AdvancedDataEntryService {
+    private final Map<Long, AdvancedDataEntry> entries = new LinkedHashMap<>();
+    private long nextId = 1;
+
+    public AdvancedDataEntry create(User admin, String name, long repositoryId) {
+        if (admin == null || !admin.hasGlobalRole(Role.ADMINISTRATOR)) {
+            throw new SecurityException("Administrator required");
+        }
+        AdvancedDataEntry ade = new AdvancedDataEntry(nextId++, name, repositoryId);
+        entries.put(ade.getId(), ade);
+        return ade;
+    }
+
+    public void assignUser(User admin, long adeId, User target) {
+        if (admin == null || !admin.hasGlobalRole(Role.ADMINISTRATOR)) {
+            throw new SecurityException("Administrator required");
+        }
+        AdvancedDataEntry ade = entries.get(adeId);
+        if (ade == null) {
+            throw new IllegalArgumentException("Unknown ADE: " + adeId);
+        }
+        ade.addUser(target.getId());
+        target.setRepositoryRole(ade.getRepositoryId(), Role.ADVANCED_DATA_ENTRY);
+    }
+
+    public AdvancedDataEntry get(long id) {
+        return entries.get(id);
+    }
+}
+```
+
+```java
+// File: EnumValue.java
+public class EnumValue {
+    private final long id;
+    private String value;
+
+    public EnumValue(long id, String value) {
+        this.id = id;
+        this.value = value;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+}
+```
+
+```java
+// File: EnumList.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class EnumList {
+    private final long id;
+    private final String name;
+    private final List<EnumValue> values = new ArrayList<>();
+
+    public EnumList(long id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void addValue(EnumValue value) {
+        values.add(value);
+    }
+
+    public boolean replaceValue(String oldValue, String newValue) {
+        boolean changed = false;
+        for (EnumValue value : values) {
+            if (value.getValue().equals(oldValue)) {
+                value.setValue(newValue);
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    public List<EnumValue> getValues() {
+        return List.copyOf(values);
+    }
+}
+```
+
+```java
+// File: EnumListService.java
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class EnumListService {
+    private final Map<String, EnumList> lists = new LinkedHashMap<>();
+    private long nextListId = 1;
+    private long nextValueId = 1;
+
+    public EnumList addList(String name) {
+        EnumList list = new EnumList(nextListId++, name);
+        lists.put(name, list);
+        return list;
+    }
+
+    public void addValue(String listName, String value) {
+        EnumList list = lists.computeIfAbsent(listName, n -> new EnumList(nextListId++, n));
+        list.addValue(new EnumValue(nextValueId++, value));
+    }
+
+    public Collection<EnumList> loadFromDatabase() {
+        return lists.values();
+    }
+
+    public boolean bulkUpdate(String listName, String oldValue, String newValue) {
+        EnumList list = lists.get(listName);
+        return list != null && list.replaceValue(oldValue, newValue);
+    }
+
+    public EnumList getList(String name) {
+        return lists.get(name);
+    }
+}
+```
+
+```java
+// File: HelpTopicMapping.java
+public class HelpTopicMapping {
+    private final String topic;
+    private final String url;
+
+    public HelpTopicMapping(String topic, String url) {
+        this.topic = topic;
+        this.url = url;
+    }
+
+    public String getTopic() {
+        return topic;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+}
+```
+
+```java
+// File: HelpCenterService.java
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class HelpCenterService {
+    private String helpCenterUrl = "https://help.example/";
+    private final Map<String, String> topicMappings = new LinkedHashMap<>();
+
+    public void configure(User admin, String helpCenterUrl) {
+        if (admin == null || !admin.hasGlobalRole(Role.ADMINISTRATOR)) {
+            throw new SecurityException("Administrator required");
+        }
+        this.helpCenterUrl = helpCenterUrl;
+    }
+
+    public void addTopicMapping(User admin, String topic, String path) {
+        if (admin == null || !admin.hasGlobalRole(Role.ADMINISTRATOR)) {
+            throw new SecurityException("Administrator required");
+        }
+        topicMappings.put(topic, path);
+    }
+
+    public String getHelpLink(User user, String topic) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        String path = topicMappings.getOrDefault(topic, topic);
+        String base = helpCenterUrl.endsWith("/") ? helpCenterUrl : helpCenterUrl + "/";
+        return base + path;
+    }
+
+    public String getHelpCenterUrl() {
+        return helpCenterUrl;
+    }
+
+    public Map<String, String> getTopicMappings() {
+        return Map.copyOf(topicMappings);
+    }
+}
+```
+
+```java
+// File: ConfigurationService.java
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Properties;
+
+public class ConfigurationService {
+    private final Map<String, String> configuration = new LinkedHashMap<>();
+
+    public void loadFromFile(Path path) throws IOException {
+        Properties properties = new Properties();
+        try (InputStream in = Files.newInputStream(path)) {
+            properties.load(in);
+        }
+        for (String name : properties.stringPropertyNames()) {
+            configuration.put(name, properties.getProperty(name));
+        }
+    }
+
+    public void put(String key, String value) {
+        configuration.put(key, value);
+    }
+
+    public String get(String key) {
+        return configuration.get(key);
+    }
+
+    public Map<String, String> asMap() {
+        return Map.copyOf(configuration);
+    }
+}
+```
+
+```java
+// File: DemoDatabaseService.java
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public class DemoDatabaseService {
+    private Path location;
+
+    public void setLocation(Path location) throws IOException {
+        this.location = location;
+        Files.createDirectories(location);
+    }
+
+    public Path getLocation() {
+        return location;
+    }
+
+    public void backup(Path backupDirectory) throws IOException {
+        if (location == null) {
+            throw new IllegalStateException("Demo database location not configured");
+        }
+        Files.createDirectories(backupDirectory);
+        Path marker = backupDirectory.resolve("demo-db-backup.txt");
+        Files.writeString(marker, "Backup of " + location.toAbsolutePath());
+    }
+}
+```
+
+```java
+// File: ImportError.java
+public class ImportError {
+    private final String message;
+    private final int line;
+    private final String cause;
+
+    public ImportError(String message, int line, String cause) {
+        this.message = message;
+        this.line = line;
+        this.cause = cause;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public int getLine() {
+        return line;
+    }
+
+    public String getCause() {
+        return cause;
+    }
+
+    @Override
+    public String toString() {
+        return "ImportError{message='" + message + "', line=" + line + ", cause='" + cause + "'}";
+    }
+}
+```
+
+```java
+// File: ImportResult.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class ImportResult {
+    private int importedCount;
+    private final List<ImportError> errors = new ArrayList<>();
+    private final List<String> importedRecords = new ArrayList<>();
+
+    public void addError(ImportError error) {
+        errors.add(error);
+    }
+
+    public void addRecord(String record) {
+        importedRecords.add(record);
+        importedCount++;
+    }
+
+    public int getImportedCount() {
+        return importedCount;
+    }
+
+    public List<ImportError> getErrors() {
+        return List.copyOf(errors);
+    }
+
+    public List<String> getImportedRecords() {
+        return List.copyOf(importedRecords);
+    }
+
+    public boolean isSuccess() {
+        return errors.isEmpty();
+    }
+}
+```
+
+```java
+// File: CustomImporter.java
+public interface CustomImporter {
+    ImportResult importData(String content);
+}
+```
+
+```java
+// File: ImportService.java
+public class ImportService {
+    public ImportResult importEadArchon(String content) {
+        return importEad(content, EadFormat.ARCHON);
+    }
+
+    public ImportResult importEadAt(String content) {
+        return importEad(content, EadFormat.ARCHIVISTS_TOOLKIT);
+    }
+
+    public ImportResult importEad(String content, EadFormat format) {
+        ImportResult result = new ImportResult();
+        if (content == null || content.isBlank()) {
+            result.addError(new ImportError("Empty EAD import content", 1, format.name()));
+            return result;
+        }
+        String lower = content.toLowerCase();
+        if (!lower.contains("<ead") && !lower.contains("<?xml")) {
+            result.addError(new ImportError("EAD root element not found", 1, format.name()));
+        }
+        int count = countOccurrences(lower, "<archivalobject") + countOccurrences(lower, "<resource");
+        if (count == 0) {
+            result.addError(new ImportError("No importable EAD descriptions found", 1, format.name()));
+        }
+        for (int i = 0; i < count; i++) {
+            result.addRecord(format + " EAD record " + (i + 1));
+        }
+        return result;
+    }
+
+    public ImportResult importMarcXml(String content, boolean onlyAgentsAndSubjects) {
+        ImportResult result = new ImportResult();
+        if (content == null || content.isBlank()) {
+            result.addError(new ImportError("Empty MARCXML import content", 1, "MARCXML"));
+            return result;
+        }
+        String lower = content.toLowerCase();
+        int recordCount = countOccurrences(lower, "<record") + countOccurrences(lower, "<marc:record");
+        if (recordCount == 0) {
+            result.addError(new ImportError("No MARCXML records found", 1, "MARCXML"));
+        }
+        String type = onlyAgentsAndSubjects ? "Agent/Subject-only MARCXML" : "MARCXML";
+        for (int i = 0; i < recordCount; i++) {
+            result.addRecord(type + " record " + (i + 1));
+        }
+        return result;
+    }
+
+    public ImportResult importEacCpf(String content) {
+        ImportResult result = new ImportResult();
+        if (content == null || content.isBlank()) {
+            result.addError(new ImportError("Empty EAC-CPF import content", 1, "EAC-CPF"));
+            return result;
+        }
+        String lower = content.toLowerCase();
+        int count = countOccurrences(lower, "<cpf");
+        if (count == 0) {
+            result.addError(new ImportError("EAC-CPF cpf element not found", 1, "EAC-CPF"));
+        }
+        for (int i = 0; i < count; i++) {
+            result.addRecord("EAC-CPF record " + (i + 1));
+        }
+        return result;
+    }
+
+    public ImportResult importAccessionsCsv(String content) {
+        ImportResult result = new ImportResult();
+        if (content == null || content.isBlank()) {
+            result.addError(new ImportError("Empty accession CSV content", 1, "CSV"));
+            return result;
+        }
+        String[] lines = content.split("\\R");
+        if (lines.length <= 1) {
+            result.addError(new ImportError("No accession data rows found", 1, "CSV"));
+        }
+        for (int i = 1; i < lines.length; i++) {
+            if (!lines[i].isBlank()) {
+                result.addRecord("Accession CSV row " + i);
+            }
+        }
+        return result;
+    }
+
+    public ImportResult importCustom(String content, CustomImporter importer) {
+        if (importer == null) {
+            throw new IllegalArgumentException("Custom importer required");
+        }
+        return importer.importData(content);
+    }
+
+    private int countOccurrences(String text, String needle) {
+        int count = 0;
+        int index = 0;
+        while ((index = text.indexOf(needle, index)) >= 0) {
+            count++;
+            index += needle.length();
+        }
+        return count;
+    }
+}
+```
+
+```java
+// File: ExportService.java
+public class ExportService {
+    public String exportEad(Resource resource) {
+        if (resource == null) {
+            throw new IllegalArgumentException("Resource required");
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("<ead><archdesc level=\"").append(resource.getLevel()).append("\">");
+        sb.append("<did><unittitle>").append(escape(resource.getTitle())).append("</unittitle></did>");
+        if (resource.getFindingAid() != null) {
+            sb.append("<findingaid>").append(escape(resource.getFindingAid().getContent())).append("</findingaid>");
+        }
+        sb.append("</archdesc></ead>");
+        return sb.toString();
+    }
+
+    public String exportEacCpf(Agent agent) {
+        if (agent == null) {
+            throw new IllegalArgumentException("Agent required");
+        }
+        return "<eac-cpf><cpf><name>" + escape(agent.getName()) + "</name><type>" + agent.getType() + "</type></cpf></eac-cpf>";
+    }
+
+    private String escape(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+}
+```
+
+```java
+// File: ResourceService.java
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentModificationException;
+
+public class ResourceService {
+    private final PermissionService permissionService;
+    private final Map<Long, Resource> resources = new LinkedHashMap<>();
+    private final Map<Long, ResourceComponent> components = new LinkedHashMap<>();
+    private long nextResourceId = 1;
+    private long nextComponentId = 1;
+
+    public ResourceService(PermissionService permissionService) {
+        this.permissionService = permissionService;
+    }
+
+    public Resource createResource(User user, long repositoryId, String title, LevelOfDescription level, String otherLevel) {
+        permissionService.requireCreate(user, repositoryId);
+        Resource resource = new Resource(nextResourceId++, repositoryId, title, level);
+        resource.setOtherLevel(otherLevel);
+        resources.put(resource.getId(), resource);
+        return resource;
+    }
+
+    public Resource updateResource(User user, long resourceId, String title, LevelOfDescription level, String otherLevel, int expectedVersion) {
+        Resource resource = requireResource(resourceId);
+        permissionService.requireUpdate(user, resource.getRepositoryId());
+        if (resource.getVersion() != expectedVersion) {
+            throw new ConcurrentModificationException("Resource was modified by another user");
+        }
+        resource.setTitle(title);
+        resource.setLevel(level);
+        resource.setOtherLevel(otherLevel);
+        resource.incrementVersion();
+        return resource;
+    }
+
+    public void deleteResource(User user, long resourceId) {
+        Resource resource = requireResource(resourceId);
+        permissionService.requireDelete(user, resource.getRepositoryId());
+        resources.remove(resourceId);
+        components.values().removeIf(c -> c.getResourceId() == resourceId);
+    }
+
+    public ResourceComponent addComponent(User user, long resourceId, Long parentId, String title, LevelOfDescription level) {
+        Resource resource = requireResource(resourceId);
+        permissionService.requireUpdate(user, resource.getRepositoryId());
+        if (parentId != null && !components.containsKey(parentId)) {
+            throw new IllegalArgumentException("Unknown parent component: " + parentId);
+        }
+        ResourceComponent component = new ResourceComponent(nextComponentId++, resourceId, parentId, title, level);
+        component.setPosition(countComponents(resourceId));
+        components.put(component.getId(), component);
+        return component;
+    }
+
+    public void assignComponentUniqueId(User user, long componentId, String uniqueId) {
+        ResourceComponent component = requireComponent(componentId);
+        Resource resource = requireResource(component.getResourceId());
+        permissionService.requireUpdate(user, resource.getRepositoryId());
+        component.setComponentUniqueIdentifier(uniqueId);
+        component.incrementVersion();
+    }
+
+    public void moveComponent(User user, long componentId, Long newParentId, int newPosition) {
+        ResourceComponent component = requireComponent(componentId);
+        Resource resource = requireResource(component.getResourceId());
+        permissionService.requireUpdate(user, resource.getRepositoryId());
+        if (newParentId != null && !components.containsKey(newParentId)) {
+            throw new IllegalArgumentException("Unknown parent component: " + newParentId);
+        }
+        component.setParentId(newParentId);
+        component.setPosition(newPosition);
+        component.incrementVersion();
+    }
+
+    public void moveComponentByKeyboard(User user, long componentId, int delta) {
+        ResourceComponent component = requireComponent(componentId);
+        Resource resource = requireResource(component.getResourceId());
+        permissionService.requireUpdate(user, resource.getRepositoryId());
+        int newPosition = component.getPosition() + delta;
+        if (newPosition < 0) {
+            newPosition = 0;
+        }
+        component.setPosition(newPosition);
+        component.incrementVersion();
+    }
+
+    public void addSubjectToResource(User user, long resourceId, Subject subject) {
+        Resource resource = requireResource(resourceId);
+        permissionService.requireUpdate(user, resource.getRepositoryId());
+        resource.addSubject(subject);
+        resource.incrementVersion();
+    }
+
+    public void addAgentToResource(User user, long resourceId, Agent agent) {
+        Resource resource = requireResource(resourceId);
+        permissionService.requireUpdate(user, resource.getRepositoryId());
+        resource.addAgent(agent);
+        resource.incrementVersion();
+    }
+
+    public void addNoteToResource(User user, long resourceId, Note note) {
+        Resource resource = requireResource(resourceId);
+        permissionService.requireUpdate(user, resource.getRepositoryId());
+        resource.addNote(note);
+        resource.incrementVersion();
+    }
+
+    public void addInstanceToResource(User user, long resourceId, Instance instance) {
+        Resource resource = requireResource(resourceId);
+        permissionService.requireUpdate(user, resource.getRepositoryId());
+        resource.addInstance(instance);
+        resource.incrementVersion();
+    }
+
+    public Resource getResource(long id) {
+        return resources.get(id);
+    }
+
+    public ResourceComponent getComponent(long id) {
+        return components.get(id);
+    }
+
+    public Collection<Resource> listResources() {
+        return resources.values();
+    }
+
+    public Collection<ResourceComponent> listComponents() {
+        return components.values();
+    }
+
+    public List<ResourceComponent> listComponentsForResource(long resourceId) {
+        List<ResourceComponent> result = new ArrayList<>();
+        for (ResourceComponent component : components.values()) {
+            if (component.getResourceId() == resourceId) {
+                result.add(component);
+            }
+        }
+        result.sort((a, b) -> Integer.compare(a.getPosition(), b.getPosition()));
+        return result;
+    }
+
+    private int countComponents(long resourceId) {
+        int count = 0;
+        for (ResourceComponent component : components.values()) {
+            if (component.getResourceId() == resourceId) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private Resource requireResource(long id) {
+        Resource resource = resources.get(id);
+        if (resource == null) {
+            throw new IllegalArgumentException("Unknown resource: " + id);
+        }
+        return resource;
+    }
+
+    private ResourceComponent requireComponent(long id) {
+        ResourceComponent component = components.get(id);
+        if (component == null) {
+            throw new IllegalArgumentException("Unknown component: " + id);
+        }
+        return component;
+    }
+}
+```
+
+```java
+// File: AccessionService.java
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentModificationException;
+
+public class AccessionService {
+    private final PermissionService permissionService;
+    private final Map<Long, Accession> accessions = new LinkedHashMap<>();
+    private long nextId = 1;
+
+    public AccessionService(PermissionService permissionService) {
+        this.permissionService = permissionService;
+    }
+
+    public Accession createAccession(User user, long repositoryId, String title) {
+        permissionService.requireCreate(user, repositoryId);
+        Accession accession = new Accession(nextId++, repositoryId, title);
+        accessions.put(accession.getId(), accession);
+        return accession;
+    }
+
+    public Accession updateAccession(User user, long accessionId, String title, int expectedVersion) {
+        Accession accession = requireAccession(accessionId);
+        permissionService.requireUpdate(user, accession.getRepositoryId());
+        if (accession.getVersion() != expectedVersion) {
+            throw new ConcurrentModificationException("Accession was modified by another user");
+        }
+        accession.setTitle(title);
+        accession.incrementVersion();
+        return accession;
+    }
+
+    public void addDate(User user, long accessionId, DateValue date) {
+        Accession accession = requireAccession(accessionId);
+        permissionService.requireUpdate(user, accession.getRepositoryId());
+        accession.addDate(date);
+        accession.incrementVersion();
+    }
+
+    public void addExtent(User user, long accessionId, Extent extent) {
+        Accession accession = requireAccession(accessionId);
+        permissionService.requireUpdate(user, accession.getRepositoryId());
+        accession.addExtent(extent);
+        accession.incrementVersion();
+    }
+
+    public void addSubject(User user, long accessionId, Subject subject) {
+        Accession accession = requireAccession(accessionId);
+        permissionService.requireUpdate(user, accession.getRepositoryId());
+        accession.addSubject(subject);
+        accession.incrementVersion();
+    }
+
+    public void addAgent(User user, long accessionId, Agent agent) {
+        Accession accession = requireAccession(accessionId);
+        permissionService.requireUpdate(user, accession.getRepositoryId());
+        accession.addAgent(agent);
+        accession.incrementVersion();
+    }
+
+    public void addNote(User user, long accessionId, Note note) {
+        Accession accession = requireAccession(accessionId);
+        permissionService.requireUpdate(user, accession.getRepositoryId());
+        accession.addNote(note);
+        accession.incrementVersion();
+    }
+
+    public void setSourceRecordId(User user, long accessionId, SourceRecordId sourceRecordId) {
+        Accession accession = requireAccession(accessionId);
+        permissionService.requireUpdate(user, accession.getRepositoryId());
+        accession.setSourceRecordId(sourceRecordId);
+        accession.incrementVersion();
+    }
+
+    public Accession getAccession(long id) {
+        return accessions.get(id);
+    }
+
+    public Collection<Accession> listAccessions() {
+        return accessions.values();
+    }
+
+    private Accession requireAccession(long id) {
+        Accession accession = accessions.get(id);
+        if (accession == null) {
+            throw new IllegalArgumentException("Unknown accession: " + id);
+        }
+        return accession;
+    }
+}
+```
+
+```java
+// File: AgentService.java
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+
+public class AgentService {
+    private final Map<Long, Agent> agents = new LinkedHashMap<>();
+    private long nextAgentId = 1;
+    private long nextNameFormId = 1;
+
+    public Agent createAgent(User user, String name, AgentType type) {
+        requireUser(user);
+        Agent agent = new Agent(nextAgentId++, name, type);
+        agents.put(agent.getId(), agent);
+        return agent;
+    }
+
+    public void updateAgentName(User user, long agentId, String name) {
+        requireUser(user);
+        requireAgent(agentId).setName(name);
+    }
+
+    public void addNameForm(User user, long agentId, String name, String source) {
+        requireUser(user);
+        requireAgent(agentId).addNameForm(new NameForm(nextNameFormId++, name, source));
+    }
+
+    public void updateSource(User user, long agentId, String oldSource, String newSource) {
+        requireUser(user);
+        Agent agent = requireAgent(agentId);
+        for (NameForm form : agent.getNameForms()) {
+            if (Objects.equals(form.getSource(), oldSource)) {
+                form.setSource(newSource);
+            }
+        }
+    }
+
+    public void addNote(User user, long agentId, Note note) {
+        requireUser(user);
+        requireAgent(agentId).addNote(note);
+    }
+
+    public Agent getAgent(long id) {
+        return agents.get(id);
+    }
+
+    public Collection<Agent> listAgents() {
+        return agents.values();
+    }
+
+    private void requireUser(User user) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+    }
+
+    private Agent requireAgent(long id) {
+        Agent agent = agents.get(id);
+        if (agent == null) {
+            throw new IllegalArgumentException("Unknown agent: " + id);
+        }
+        return agent;
+    }
+}
+```
+
+```java
+// File: SubjectService.java
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class SubjectService {
+    private final Map<Long, Subject> subjects = new LinkedHashMap<>();
+    private long nextId = 1;
+
+    public Subject createSubject(User user, String heading, String standardIdentifier) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        Subject subject = new Subject(nextId++, heading, standardIdentifier);
+        subjects.put(subject.getId(), subject);
+        return subject;
+    }
+
+    public void associateWithResource(User user, long subjectId, ResourceService resourceService, long resourceId) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        Subject subject = requireSubject(subjectId);
+        resourceService.addSubjectToResource(user, resourceId, subject);
+    }
+
+    public Subject getSubject(long id) {
+        return subjects.get(id);
+    }
+
+    public Collection<Subject> listSubjects() {
+        return subjects.values();
+    }
+
+    private Subject requireSubject(long id) {
+        Subject subject = subjects.get(id);
+        if (subject == null) {
+            throw new IllegalArgumentException("Unknown subject: " + id);
+        }
+        return subject;
+    }
+}
+```
+
+```java
+// File: DigitalObjectService.java
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class DigitalObjectService {
+    private final Map<Long, DigitalObject> digitalObjects = new LinkedHashMap<>();
+    private long nextId = 1;
+
+    public DigitalObject createDigitalObject(User user, long repositoryId, String title, String uri) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        DigitalObject digitalObject = new DigitalObject(nextId++, repositoryId, title, uri);
+        digitalObjects.put(digitalObject.getId(), digitalObject);
+        return digitalObject;
+    }
+
+    public void updateDigitalObject(User user, long id, String title, String uri) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        DigitalObject digitalObject = requireDigitalObject(id);
+        digitalObject.setTitle(title);
+        digitalObject.setUri(uri);
+    }
+
+    public void deleteDigitalObject(User user, long id) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        digitalObjects.remove(id);
+    }
+
+    public void associateWithResource(User user, long digitalObjectId, long resourceId) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        requireDigitalObject(digitalObjectId).setResourceId(resourceId);
+    }
+
+    public void associateWithComponent(User user, long digitalObjectId, long componentId) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        requireDigitalObject(digitalObjectId).setComponentId(componentId);
+    }
+
+    public DigitalObject getDigitalObject(long id) {
+        return digitalObjects.get(id);
+    }
+
+    public Collection<DigitalObject> listDigitalObjects() {
+        return digitalObjects.values();
+    }
+
+    private DigitalObject requireDigitalObject(long id) {
+        DigitalObject digitalObject = digitalObjects.get(id);
+        if (digitalObject == null) {
+            throw new IllegalArgumentException("Unknown digital object: " + id);
+        }
+        return digitalObject;
+    }
+}
+```
+
+```java
+// File: Event.java
+public class Event {
+    private final long id;
+    private EventType type;
+    private String date;
+    private String description;
+
+    public Event(long id, EventType type, String date, String description) {
+        this.id = id;
+        this.type = type;
+        this.date = date;
+        this.description = description;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public EventType getType() {
+        return type;
+    }
+
+    public void setType(EventType type) {
+        this.type = type;
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+}
+```
+
+```java
+// File: EventService.java
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class EventService {
+    private final Map<Long, Event> events = new LinkedHashMap<>();
+    private long nextId = 1;
+
+    public Event createEvent(User user, EventType type, String date, String description) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        Event event = new Event(nextId++, type, date, description);
+        events.put(event.getId(), event);
+        return event;
+    }
+
+    public void updateEvent(User user, long id, String description) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        Event event = requireEvent(id);
+        event.setDescription(description);
+    }
+
+    public Event getEvent(long id) {
+        return events.get(id);
+    }
+
+    public Collection<Event> listEvents() {
+        return events.values();
+    }
+
+    private Event requireEvent(long id) {
+        Event event = events.get(id);
+        if (event == null) {
+            throw new IllegalArgumentException("Unknown event: " + id);
+        }
+        return event;
+    }
+}
+```
+
+```java
+// File: RightsManagement.java
+public class RightsManagement {
+    private final long id;
+    private String statement;
+
+    public RightsManagement(long id, String statement) {
+        this.id = id;
+        this.statement = statement;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getStatement() {
+        return statement;
+    }
+
+    public void setStatement(String statement) {
+        this.statement = statement;
+    }
+}
+```
+
+```java
+// File: RightsManagementService.java
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class RightsManagementService {
+    private final Map<Long, RightsManagement> statements = new LinkedHashMap<>();
+    private long nextId = 1;
+
+    public RightsManagement create(User user, String statement) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        RightsManagement rights = new RightsManagement(nextId++, statement);
+        statements.put(rights.getId(), rights);
+        return rights;
+    }
+
+    public void update(User user, long id, String statement) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        RightsManagement rights = statements.get(id);
+        if (rights == null) {
+            throw new IllegalArgumentException("Unknown rights statement: " + id);
+        }
+        rights.setStatement(statement);
+    }
+
+    public Collection<RightsManagement> list() {
+        return statements.values();
+    }
+}
+```
+
+```java
+// File: CollectionManagement.java
+public class CollectionManagement {
+    private final long id;
+    private String notes;
+
+    public CollectionManagement(long id, String notes) {
+        this.id = id;
+        this.notes = notes;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+}
+```
+
+```java
+// File: CollectionManagementService.java
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class CollectionManagementService {
+    private final Map<Long, CollectionManagement> records = new LinkedHashMap<>();
+    private long nextId = 1;
+
+    public CollectionManagement create(User user, String notes) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        CollectionManagement record = new CollectionManagement(nextId++, notes);
+        records.put(record.getId(), record);
+        return record;
+    }
+
+    public void update(User user, long id, String notes) {
+        if (user == null) {
+            throw new SecurityException("Authentication required");
+        }
+        CollectionManagement record = records.get(id);
+        if (record == null) {
+            throw new IllegalArgumentException("Unknown collection management record: " + id);
+        }
+        record.setNotes(notes);
+    }
+
+    public Collection<CollectionManagement> list() {
+        return records.values();
+    }
+}
+```
+
+```java
+// File: NoteService.java
+public class NoteService {
+    public void addNoteToResource(User user, ResourceService resourceService, long resourceId, Note note) {
+        resourceService.addNoteToResource(user, resourceId, note);
+    }
+
+    public void addNoteToAgent(User user, AgentService agentService, long agentId, Note note) {
+        agentService.addNote(user, agentId, note);
+    }
+
+    public void addNoteToAccession(User user, AccessionService accessionService, long accessionId, Note note) {
+        accessionService.addNote(user, accessionId, note);
+    }
+}
+```
+
+```java
+// File: SearchService.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class SearchService {
+    public List<String> searchWithinRepository(long repositoryId, String query, ResourceService resourceService, AccessionService accessionService, DigitalObjectService digitalObjectService) {
+        String q = query == null ? "" : query.toLowerCase();
+        List<String> results = new ArrayList<>();
+
+        for (Resource resource : resourceService.listResources()) {
+            if (resource.getRepositoryId() == repositoryId && resource.getTitle().toLowerCase().contains(q)) {
+                results.add("Resource: " + resource.getTitle());
+            }
+        }
+
+        for (Accession accession : accessionService.listAccessions()) {
+            if (accession.getRepositoryId() == repositoryId && accession.getTitle().toLowerCase().contains(q)) {
+                results.add("Accession: " + accession.getTitle());
+            }
+        }
+
+        for (DigitalObject digitalObject : digitalObjectService.listDigitalObjects()) {
+            if (digitalObject.getRepositoryId() == repositoryId && digitalObject.getTitle().toLowerCase().contains(q)) {
+                results.add("DigitalObject: " + digitalObject.getTitle());
+            }
+        }
+
+        return results;
+    }
+}
+```
+
+```java
+// File: Main.java
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Set;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        PermissionService permissions = new PermissionService();
+        UserService userService = new UserService();
+        User admin = userService.createInitialAdministrator("admin", "adminPass");
+
+        RepositoryService repositoryService = new RepositoryService(permissions);
+        Repository repo = repositoryService.createRepository(admin, "Demo Repository");
+        repositoryService.addProperty(admin, repo.getId(), "contact", "archives@example.org");
+
+        User archivist = userService.createUser(admin, "archivist", "secret", Set.of());
+        userService.assignRepositoryRole(admin, archivist.getId(), repo.getId(), Role.REPOSITORY_MANAGER);
+
+        SimpleLdapAuthenticator ldap = new SimpleLdapAuthenticator();
+        archivist.setLdapDn("uid=archivist,dc=demo");
+        ldap.addCredential("uid=archivist,dc=demo", "ldapPass");
+        AuthenticationService auth = new AuthenticationService(userService, ldap);
+        User loggedIn = auth.loginLocal("archivist", "secret");
+
+        PasswordResetService passwordResetService = new PasswordResetService(userService);
+        passwordResetService.resetPassword(admin, "archivist", "newSecret");
+        loggedIn = auth.loginLocal("archivist", "newSecret");
+
+        EnumListService enumListService = new EnumListService();
+        enumListService.addList("levelOfDescription");
+        enumListService.addValue("levelOfDescription", "file");
+        enumListService.bulkUpdate("levelOfDescription", "file", "item");
+
+        HelpCenterService helpCenterService = new HelpCenterService();
+        helpCenterService.configure(admin, "https://help.example.org/");
+        helpCenterService.addTopicMapping(admin, "resource", "resources/overview");
+        String helpLink = helpCenterService.getHelpLink(loggedIn, "resource");
+
+        ResourceService resourceService = new ResourceService(permissions);
+        Resource resource = resourceService.createResource(loggedIn, repo.getId(), "Demo Fonds", LevelOfDescription.FONDS, null);
+        resource.addAdministrativeData("processingStatus", "completed");
+
+        SubjectService subjectService = new SubjectService();
+        Subject subject = subjectService.createSubject(loggedIn, "Archives", "LOC-123");
+        subjectService.associateWithResource(loggedIn, subject.getId(), resourceService, resource.getId());
+
+        AgentService agentService = new AgentService();
+        Agent agent = agentService.createAgent(loggedIn, "Jane Doe", AgentType.PERSON);
+        agentService.addNameForm(loggedIn, agent.getId(), "Jane Doe", "local");
+        agentService.updateSource(loggedIn, agent.getId(), "local", "authority");
+        resourceService.addAgentToResource(loggedIn, resource.getId(), agent);
+        resourceService.addNoteToResource(loggedIn, resource.getId(), new Note(1, "admin", "Processed"));
+
+        ResourceComponent component = resourceService.addComponent(loggedIn, resource.getId(), null, "Series 1", LevelOfDescription.SERIES);
+        resourceService.assignComponentUniqueId(loggedIn, component.getId(), "ABC-001");
+        resourceService.moveComponentByKeyboard(loggedIn, component.getId(), 1);
+
+        AccessionService accessionService = new AccessionService(permissions);
+        Accession accession = accessionService.createAccession(loggedIn, repo.getId(), "Demo Accession");
+        accessionService.addDate(loggedIn, accession.getId(), new DateValue(1, "Creation", "2020", "2020", "single"));
+        accessionService.addExtent(loggedIn, accession.getId(), new Extent(1, "1", "linear feet"));
+        accessionService.addNote(loggedIn, accession.getId(), new Note(2, "accession", "Gift"));
+        accessionService.setSourceRecordId(loggedIn, accession.getId(), new SourceRecordId("Archon", "A-123"));
+
+        DigitalObjectService digitalObjectService = new DigitalObjectService();
+        DigitalObject digitalObject = digitalObjectService.createDigitalObject(loggedIn, repo.getId(), "Demo image", "https://example.org/image.jpg");
+        digitalObjectService.associateWithResource(loggedIn, digitalObject.getId(), resource.getId());
+
+        ImportService importService = new ImportService();
+        ImportResult eadResult = importService.importEadArchon("<ead><archivalobject/></ead>");
+        ImportResult badResult = importService.importEadArchon("");
+        ImportResult marcResult = importService.importMarcXml("<marc:collection><marc:record/></marc:collection>", true);
+        ImportResult eacResult = importService.importEacCpf("<eac-cpf><cpf/></eac-cpf>");
+        ImportResult csvResult = importService.importAccessionsCsv("title\nAccession 1");
+
+        ExportService exportService = new ExportService();
+        String ead = exportService.exportEad(resource);
+        String eacCpf = exportService.exportEacCpf(agent);
+
+        SearchService searchService = new SearchService();
+        List<String> searchResults = searchService.searchWithinRepository(repo.getId(), "Demo", resourceService, accessionService, digitalObjectService);
+
+        EventService eventService = new EventService();
+        eventService.createEvent(loggedIn, EventType.PROCESSING, "2024-01-01", "Demo event");
+
+        RightsManagementService rightsManagementService = new RightsManagementService();
+        rightsManagementService.create(loggedIn, "Open for research");
+
+        CollectionManagementService collectionManagementService = new CollectionManagementService();
+        collectionManagementService.create(loggedIn, "Collection management note");
+
+        AdvancedDataEntryService advancedDataEntryService = new AdvancedDataEntryService();
+        AdvancedDataEntry ade = advancedDataEntryService.create(admin, "Basic data entry", repo.getId());
+        User dataEntryUser = userService.createUser(admin, "dataEntry", "dataPass", Set.of());
+        advancedDataEntryService.assignUser(admin, ade.getId(), dataEntryUser);
+
+        ConfigurationService configurationService = new ConfigurationService();
+        configurationService.put("help.center.url", helpCenterService.getHelpCenterUrl());
+
+        DemoDatabaseService demoDatabaseService = new DemoDatabaseService();
+        demoDatabaseService.setLocation(Path.of("demo-database"));
+        demoDatabaseService.backup(Path.of("demo-database-backup"));
+
+        System.out.println("Logged in user: " + loggedIn.getUsername());
+        System.out.println("Help link: " + helpLink);
+        System.out.println("Enum loaded: " + enumListService.loadFromDatabase().size());
+        System.out.println("EAD import records: " + eadResult.getImportedCount());
+        System.out.println("Bad import errors: " + badResult.getErrors().size() + " -> " + badResult.getErrors().get(0).getMessage());
+        System.out.println("MARCXML records: " + marcResult.getImportedCount());
+        System.out.println("EAC-CPF records: " + eacResult.getImportedCount());
+        System.out.println("CSV records: " + csvResult.getImportedCount());
+        System.out.println("Search hits: " + searchResults);
+        System.out.println("Exported EAD: " + ead);
+        System.out.println("Exported EAC-CPF: " + eacCpf);
+        System.out.println("Demo database backed up at: demo-database-backup");
+    }
+}
+```

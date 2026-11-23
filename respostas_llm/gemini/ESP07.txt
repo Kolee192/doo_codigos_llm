@@ -1,0 +1,1627 @@
+// File: AuthProvider.java
+package dataregistry;
+
+public enum AuthProvider {
+    LOCAL,
+    GITHUB,
+    GOOGLE
+}
+// File: Role.java
+package dataregistry;
+
+public enum Role {
+    ADMIN,
+    OWNER,
+    MEMBER,
+    CONSUMER
+}
+// File: Visibility.java
+package dataregistry;
+
+public enum Visibility {
+    PUBLIC,
+    PRIVATE
+}
+// File: FieldType.java
+package dataregistry;
+
+public enum FieldType {
+    STRING,
+    INTEGER,
+    NUMBER,
+    BOOLEAN,
+    DATE,
+    JSON
+}
+// File: Field.java
+package dataregistry;
+
+import java.util.Objects;
+
+public class Field {
+    private final String name;
+    private final FieldType type;
+    private final String description;
+
+    public Field(String name, FieldType type, String description) {
+        this.name = Objects.requireNonNull(name, "Field name cannot be null");
+        this.type = Objects.requireNonNull(type, "Field type cannot be null");
+        this.description = description == null ? "" : description;
+    }
+
+    public Field(String name, FieldType type) {
+        this(name, type, "");
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public FieldType getType() {
+        return type;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Field field)) return false;
+        return name.equalsIgnoreCase(field.name) && type == field.type;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name.toLowerCase(), type);
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + type + ")";
+    }
+}
+// File: SchemaDiff.java
+package dataregistry;
+
+import java.util.Collections;
+import java.util.List;
+
+public class SchemaDiff {
+    private final List<Field> addedFields;
+    private final List<Field> removedFields;
+    private final List<String> modifiedFields;
+
+    public SchemaDiff(List<Field> addedFields, List<Field> removedFields, List<String> modifiedFields) {
+        this.addedFields = Collections.unmodifiableList(addedFields);
+        this.removedFields = Collections.unmodifiableList(removedFields);
+        this.modifiedFields = Collections.unmodifiableList(modifiedFields);
+    }
+
+    public List<Field> getAddedFields() {
+        return addedFields;
+    }
+
+    public List<Field> getRemovedFields() {
+        return removedFields;
+    }
+
+    public List<String> getModifiedFields() {
+        return modifiedFields;
+    }
+
+    public boolean hasChanges() {
+        return !addedFields.isEmpty() || !removedFields.isEmpty() || !modifiedFields.isEmpty();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SchemaDiff:\n");
+        sb.append("  Added fields: ").append(addedFields).append("\n");
+        sb.append("  Removed fields: ").append(removedFields).append("\n");
+        sb.append("  Modified fields: ").append(modifiedFields);
+        return sb.toString();
+    }
+}
+// File: Schema.java
+package dataregistry;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+public class Schema {
+    private final List<Field> fields;
+
+    public Schema(List<Field> fields) {
+        this.fields = fields != null ? new ArrayList<>(fields) : new ArrayList<>();
+    }
+
+    public Schema() {
+        this(new ArrayList<>());
+    }
+
+    public List<Field> getFields() {
+        return Collections.unmodifiableList(fields);
+    }
+
+    public Optional<Field> getField(String name) {
+        return fields.stream()
+                .filter(f -> f.getName().equalsIgnoreCase(name))
+                .findFirst();
+    }
+
+    public SchemaDiff compareTo(Schema other) {
+        if (other == null) {
+            return new SchemaDiff(new ArrayList<>(fields), Collections.emptyList(), Collections.emptyList());
+        }
+
+        List<Field> added = new ArrayList<>();
+        List<Field> removed = new ArrayList<>();
+        List<String> modified = new ArrayList<>();
+
+        for (Field f : fields) {
+            Optional<Field> otherField = other.getField(f.getName());
+            if (otherField.isEmpty()) {
+                added.add(f);
+            } else if (otherField.get().getType() != f.getType()) {
+                modified.add(f.getName() + " changed type from " + otherField.get().getType() + " to " + f.getType());
+            }
+        }
+
+        for (Field of : other.getFields()) {
+            if (getField(of.getName()).isEmpty()) {
+                removed.add(of);
+            }
+        }
+
+        return new SchemaDiff(added, removed, modified);
+    }
+}
+// File: Resource.java
+package dataregistry;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+public class Resource {
+    private final String name;
+    private final String pathOrUrl;
+    private final Schema schema;
+    private final List<Map<String, Object>> dataRows;
+    private final boolean remoteCached;
+
+    public Resource(String name, String pathOrUrl, Schema schema, List<Map<String, Object>> dataRows, boolean remoteCached) {
+        this.name = name;
+        this.pathOrUrl = pathOrUrl;
+        this.schema = schema != null ? schema : new Schema();
+        this.dataRows = dataRows != null ? new ArrayList<>(dataRows) : new ArrayList<>();
+        this.remoteCached = remoteCached;
+    }
+
+    public Resource(String name, String pathOrUrl, Schema schema, List<Map<String, Object>> dataRows) {
+        this(name, pathOrUrl, schema, dataRows, false);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getPathOrUrl() {
+        return pathOrUrl;
+    }
+
+    public Schema getSchema() {
+        return schema;
+    }
+
+    public List<Map<String, Object>> getDataRows() {
+        return Collections.unmodifiableList(dataRows);
+    }
+
+    public boolean isRemoteCached() {
+        return remoteCached;
+    }
+}
+// File: DataPackageView.java
+package dataregistry;
+
+public class DataPackageView {
+    private final String name;
+    private final String viewType; // e.g. "table", "chart", "geo"
+    private final String specJson;
+
+    public DataPackageView(String name, String viewType, String specJson) {
+        this.name = name;
+        this.viewType = viewType;
+        this.specJson = specJson;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getViewType() {
+        return viewType;
+    }
+
+    public String getSpecJson() {
+        return specJson;
+    }
+
+    @Override
+    public String toString() {
+        return "View[" + name + " (" + viewType + "): " + specJson + "]";
+    }
+}
+// File: DataPackageDescriptor.java
+package dataregistry;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class DataPackageDescriptor {
+    private final String name;
+    private final String title;
+    private final String description;
+    private final String version;
+    private final List<Resource> resources;
+    private final List<DataPackageView> views;
+
+    public DataPackageDescriptor(String name, String title, String description, String version,
+                                 List<Resource> resources, List<DataPackageView> views) {
+        this.name = name;
+        this.title = title;
+        this.description = description;
+        this.version = version == null ? "1.0.0" : version;
+        this.resources = resources != null ? new ArrayList<>(resources) : new ArrayList<>();
+        this.views = views != null ? new ArrayList<>(views) : new ArrayList<>();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public List<Resource> getResources() {
+        return Collections.unmodifiableList(resources);
+    }
+
+    public List<DataPackageView> getViews() {
+        return Collections.unmodifiableList(views);
+    }
+}
+// File: ValidationResult.java
+package dataregistry;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class ValidationResult {
+    private final boolean valid;
+    private final List<String> errors;
+
+    public ValidationResult(boolean valid, List<String> errors) {
+        this.valid = valid;
+        this.errors = errors != null ? new ArrayList<>(errors) : new ArrayList<>();
+    }
+
+    public static ValidationResult success() {
+        return new ValidationResult(true, Collections.emptyList());
+    }
+
+    public static ValidationResult failure(List<String> errors) {
+        return new ValidationResult(false, errors);
+    }
+
+    public boolean isValid() {
+        return valid;
+    }
+
+    public List<String> getErrors() {
+        return Collections.unmodifiableList(errors);
+    }
+
+    @Override
+    public String toString() {
+        if (valid) {
+            return "Validation SUCCESS";
+        }
+        return "Validation FAILED: " + String.join(", ", errors);
+    }
+}
+// File: DataPackageValidator.java
+package dataregistry;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+public class DataPackageValidator {
+
+    public ValidationResult validate(DataPackageDescriptor descriptor) {
+        List<String> errors = new ArrayList<>();
+
+        if (descriptor == null) {
+            errors.add("Descriptor cannot be null");
+            return ValidationResult.failure(errors);
+        }
+
+        if (descriptor.getName() == null || descriptor.getName().trim().isEmpty()) {
+            errors.add("Package name is required");
+        } else if (!descriptor.getName().matches("^[a-z0-9-_]+$")) {
+            errors.add("Package name must only contain lowercase alphanumeric, hyphen or underscore characters");
+        }
+
+        if (descriptor.getResources() == null || descriptor.getResources().isEmpty()) {
+            errors.add("At least one resource must be provided");
+        } else {
+            for (Resource res : descriptor.getResources()) {
+                if (res.getName() == null || res.getName().isBlank()) {
+                    errors.add("Resource name cannot be blank");
+                }
+                if (res.getSchema() == null || res.getSchema().getFields().isEmpty()) {
+                    errors.add("Resource " + res.getName() + " must have a defined schema with fields");
+                } else {
+                    validateResourceData(res, errors);
+                }
+            }
+        }
+
+        return errors.isEmpty() ? ValidationResult.success() : ValidationResult.failure(errors);
+    }
+
+    private void validateResourceData(Resource res, List<String> errors) {
+        Schema schema = res.getSchema();
+        for (int i = 0; i < res.getDataRows().size(); i++) {
+            Map<String, Object> row = res.getDataRows().get(i);
+            for (Field field : schema.getFields()) {
+                Object val = row.get(field.getName());
+                if (val != null && !isTypeCompatible(val, field.getType())) {
+                    errors.add(String.format("Row %d: value '%s' in field '%s' does not match declared type %s",
+                            i + 1, val, field.getName(), field.getType()));
+                }
+            }
+        }
+    }
+
+    private boolean isTypeCompatible(Object value, FieldType expectedType) {
+        return switch (expectedType) {
+            case STRING -> value instanceof String;
+            case INTEGER -> value instanceof Integer || value instanceof Long;
+            case NUMBER -> value instanceof Number;
+            case BOOLEAN -> value instanceof Boolean;
+            case DATE -> value instanceof String && ((String) value).matches("^\\d{4}-\\d{2}-\\d{2}$");
+            case JSON -> value instanceof String || value instanceof Map || value instanceof List;
+        };
+    }
+}
+// File: PricingPlan.java
+package dataregistry;
+
+public class PricingPlan {
+    public static final PricingPlan FREE = new PricingPlan("Free", 0.0, 1, false, 50);
+    public static final PricingPlan PRO = new PricingPlan("Pro", 29.0, 20, true, 5000);
+    public static final PricingPlan ENTERPRISE = new PricingPlan("Enterprise", 199.0, 1000, true, 500000);
+
+    private final String name;
+    private final double monthlyPriceUsd;
+    private final int maxPrivatePackages;
+    private final boolean remoteCachingAllowed;
+    private final int maxStorageMb;
+
+    public PricingPlan(String name, double monthlyPriceUsd, int maxPrivatePackages, boolean remoteCachingAllowed, int maxStorageMb) {
+        this.name = name;
+        this.monthlyPriceUsd = monthlyPriceUsd;
+        this.maxPrivatePackages = maxPrivatePackages;
+        this.remoteCachingAllowed = remoteCachingAllowed;
+        this.maxStorageMb = maxStorageMb;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public double getMonthlyPriceUsd() {
+        return monthlyPriceUsd;
+    }
+
+    public int getMaxPrivatePackages() {
+        return maxPrivatePackages;
+    }
+
+    public boolean isRemoteCachingAllowed() {
+        return remoteCachingAllowed;
+    }
+
+    public int getMaxStorageMb() {
+        return maxStorageMb;
+    }
+
+    @Override
+    public String toString() {
+        return name + " ($" + monthlyPriceUsd + "/mo) [Private packages: " + maxPrivatePackages + ", Storage: " + maxStorageMb + "MB]";
+    }
+}
+// File: User.java
+package dataregistry;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+public class User {
+    private final String id;
+    private final String username;
+    private final String email;
+    private String fullName;
+    private final AuthProvider authProvider;
+    private final Instant registeredAt;
+    private final List<String> onboardingChecklist;
+
+    public User(String id, String username, String email, String fullName, AuthProvider authProvider) {
+        this.id = Objects.requireNonNull(id);
+        this.username = Objects.requireNonNull(username);
+        this.email = Objects.requireNonNull(email);
+        this.fullName = fullName == null ? username : fullName;
+        this.authProvider = authProvider != null ? authProvider : AuthProvider.LOCAL;
+        this.registeredAt = Instant.now();
+        this.onboardingChecklist = new ArrayList<>(List.of(
+                "1. Configure CLI client with your API key",
+                "2. Create or join a Publisher organization",
+                "3. Validate your first dataset locally",
+                "4. Run publish command to upload your data package"
+        ));
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public AuthProvider getAuthProvider() {
+        return authProvider;
+    }
+
+    public Instant getRegisteredAt() {
+        return registeredAt;
+    }
+
+    public List<String> getOnboardingChecklist() {
+        return Collections.unmodifiableList(onboardingChecklist);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User user)) return false;
+        return id.equals(user.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return username + " (" + email + ", " + authProvider + ")";
+    }
+}
+// File: PublisherOrganization.java
+package dataregistry;
+
+import java.time.Instant;
+import java.util.*;
+
+public class PublisherOrganization {
+    private final String id;
+    private final String name;
+    private String displayName;
+    private String description;
+    private final Map<User, Role> members = new HashMap<>();
+    private PricingPlan pricingPlan = PricingPlan.FREE;
+    private final Instant createdAt;
+
+    public PublisherOrganization(String id, String name, String displayName, String description, User creator) {
+        this.id = id;
+        this.name = name;
+        this.displayName = displayName != null ? displayName : name;
+        this.description = description != null ? description : "";
+        this.createdAt = Instant.now();
+        if (creator != null) {
+            members.put(creator, Role.OWNER);
+        }
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public PricingPlan getPricingPlan() {
+        return pricingPlan;
+    }
+
+    public void setPricingPlan(PricingPlan pricingPlan) {
+        this.pricingPlan = pricingPlan != null ? pricingPlan : PricingPlan.FREE;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Map<User, Role> getMembers() {
+        return Collections.unmodifiableMap(members);
+    }
+
+    public void addMember(User user, Role role) {
+        members.put(user, role);
+    }
+
+    public void removeMember(User user) {
+        members.remove(user);
+    }
+
+    public void setRole(User user, Role newRole) {
+        if (members.containsKey(user)) {
+            members.put(user, newRole);
+        }
+    }
+
+    public boolean isOwner(User user) {
+        return members.get(user) == Role.OWNER;
+    }
+
+    public boolean hasPublishAccess(User user) {
+        Role role = members.get(user);
+        return role == Role.OWNER || role == Role.MEMBER;
+    }
+
+    @Override
+    public String toString() {
+        return displayName + " (@" + name + ") - Plan: " + pricingPlan.getName();
+    }
+}
+// File: DataPackageSnapshot.java
+package dataregistry;
+
+import java.time.Instant;
+
+public class DataPackageSnapshot {
+    private final String tagOrVersion;
+    private final DataPackageDescriptor descriptor;
+    private final Instant timestamp;
+    private final boolean cachedCopyAvailable;
+
+    public DataPackageSnapshot(String tagOrVersion, DataPackageDescriptor descriptor, boolean cachedCopyAvailable) {
+        this.tagOrVersion = tagOrVersion;
+        this.descriptor = descriptor;
+        this.timestamp = Instant.now();
+        this.cachedCopyAvailable = cachedCopyAvailable;
+    }
+
+    public String getTagOrVersion() {
+        return tagOrVersion;
+    }
+
+    public DataPackageDescriptor getDescriptor() {
+        return descriptor;
+    }
+
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+
+    public boolean isCachedCopyAvailable() {
+        return cachedCopyAvailable;
+    }
+}
+// File: DataPackage.java
+package dataregistry;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+
+public class DataPackage {
+    private final String id;
+    private final String publisherId;
+    private String name;
+    private Visibility visibility;
+    private boolean published;
+    private boolean deleted;
+    private int downloadCount;
+    private final Instant createdAt;
+    private Instant updatedAt;
+    private DataPackageDescriptor currentDescriptor;
+    private final Map<String, DataPackageSnapshot> snapshots = new LinkedHashMap<>();
+    private final Set<String> subscriberEmails = new HashSet<>();
+
+    public DataPackage(String id, String publisherId, DataPackageDescriptor initialDescriptor, Visibility visibility) {
+        this.id = id;
+        this.publisherId = publisherId;
+        this.name = initialDescriptor.getName();
+        this.currentDescriptor = initialDescriptor;
+        this.visibility = visibility != null ? visibility : Visibility.PUBLIC;
+        this.published = true;
+        this.deleted = false;
+        this.downloadCount = 0;
+        this.createdAt = Instant.now();
+        this.updatedAt = this.createdAt;
+        snapshot(initialDescriptor.getVersion(), false);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getPublisherId() {
+        return publisherId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Visibility getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(Visibility visibility) {
+        this.visibility = visibility;
+    }
+
+    public boolean isPublished() {
+        return published;
+    }
+
+    public void setPublished(boolean published) {
+        this.published = published;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public int getDownloadCount() {
+        return downloadCount;
+    }
+
+    public void incrementDownloadCount() {
+        this.downloadCount++;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public Duration getAge() {
+        return Duration.between(updatedAt, Instant.now());
+    }
+
+    public DataPackageDescriptor getCurrentDescriptor() {
+        return currentDescriptor;
+    }
+
+    public void updateDescriptor(DataPackageDescriptor newDescriptor, boolean overwriteSnapshot) {
+        this.currentDescriptor = newDescriptor;
+        this.name = newDescriptor.getName();
+        this.updatedAt = Instant.now();
+        snapshot(newDescriptor.getVersion(), overwriteSnapshot);
+    }
+
+    public void snapshot(String tagOrVersion, boolean overwrite) {
+        boolean remoteCaching = currentDescriptor.getResources().stream().anyMatch(Resource::isRemoteCached);
+        if (!overwrite && snapshots.containsKey(tagOrVersion)) {
+            throw new IllegalStateException("Tag/Version '" + tagOrVersion + "' already exists! Use force/overwrite to replace.");
+        }
+        snapshots.put(tagOrVersion, new DataPackageSnapshot(tagOrVersion, currentDescriptor, remoteCaching));
+    }
+
+    public boolean hasTag(String tag) {
+        return snapshots.containsKey(tag);
+    }
+
+    public Optional<DataPackageSnapshot> getSnapshot(String tagOrVersion) {
+        return Optional.ofNullable(snapshots.get(tagOrVersion));
+    }
+
+    public Map<String, DataPackageSnapshot> getAllSnapshots() {
+        return Collections.unmodifiableMap(snapshots);
+    }
+
+    public void addSubscriber(String email) {
+        subscriberEmails.add(email);
+    }
+
+    public Set<String> getSubscribers() {
+        return Collections.unmodifiableSet(subscriberEmails);
+    }
+}
+// File: SiteConfig.java
+package dataregistry;
+
+public class SiteConfig {
+    private String siteTitle = "DataHub Registry";
+    private String adminContact = "admin@datahub.io";
+    private boolean allowPublicRegistration = true;
+    private int maxGlobalStorageGb = 1000;
+
+    public String getSiteTitle() {
+        return siteTitle;
+    }
+
+    public void setSiteTitle(String siteTitle) {
+        this.siteTitle = siteTitle;
+    }
+
+    public String getAdminContact() {
+        return adminContact;
+    }
+
+    public void setAdminContact(String adminContact) {
+        this.adminContact = adminContact;
+    }
+
+    public boolean isAllowPublicRegistration() {
+        return allowPublicRegistration;
+    }
+
+    public void setAllowPublicRegistration(boolean allowPublicRegistration) {
+        this.allowPublicRegistration = allowPublicRegistration;
+    }
+
+    public int getMaxGlobalStorageGb() {
+        return maxGlobalStorageGb;
+    }
+
+    public void setMaxGlobalStorageGb(int maxGlobalStorageGb) {
+        this.maxGlobalStorageGb = maxGlobalStorageGb;
+    }
+}
+// File: SiteMetrics.java
+package dataregistry;
+
+public class SiteMetrics {
+    private final int totalUsers;
+    private final int totalOrganizations;
+    private final int totalPackages;
+    private final int totalDownloads;
+    private final long totalApiCalls;
+
+    public SiteMetrics(int totalUsers, int totalOrganizations, int totalPackages, int totalDownloads, long totalApiCalls) {
+        this.totalUsers = totalUsers;
+        this.totalOrganizations = totalOrganizations;
+        this.totalPackages = totalPackages;
+        this.totalDownloads = totalDownloads;
+        this.totalApiCalls = totalApiCalls;
+    }
+
+    public int getTotalUsers() {
+        return totalUsers;
+    }
+
+    public int getTotalOrganizations() {
+        return totalOrganizations;
+    }
+
+    public int getTotalPackages() {
+        return totalPackages;
+    }
+
+    public int getTotalDownloads() {
+        return totalDownloads;
+    }
+
+    public long getTotalApiCalls() {
+        return totalApiCalls;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Site Metrics -> Users: %d, Orgs: %d, Packages: %d, Total Downloads: %d, API Calls: %d",
+                totalUsers, totalOrganizations, totalPackages, totalDownloads, totalApiCalls);
+    }
+}
+// File: NotificationService.java
+package dataregistry;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class NotificationService {
+    private final List<String> notificationLog = new ArrayList<>();
+
+    public void notifySubscribers(DataPackage dataPackage, String message) {
+        for (String email : dataPackage.getSubscribers()) {
+            String entry = "[To: " + email + "] Update on " + dataPackage.getName() + ": " + message;
+            notificationLog.add(entry);
+        }
+    }
+
+    public void sendInviteNotification(String email, String publisherName, String invitedBy) {
+        notificationLog.add("[To: " + email + "] You have been invited to join publisher '" + publisherName + "' by " + invitedBy);
+    }
+
+    public List<String> getNotificationLog() {
+        return new ArrayList<>(notificationLog);
+    }
+}
+// File: DataPackageExporter.java
+package dataregistry;
+
+import java.util.Map;
+
+public class DataPackageExporter {
+
+    public String exportToZipArchiveBundle(DataPackageDescriptor descriptor) {
+        StringBuilder zipBundle = new StringBuilder();
+        zipBundle.append("=== ZIP ARCHIVE BUNDLE: ").append(descriptor.getName()).append(".zip ===\n");
+        zipBundle.append("1. /datapackage.json (descriptor: name=").append(descriptor.getName())
+                .append(", version=").append(descriptor.getVersion()).append(")\n");
+
+        for (Resource res : descriptor.getResources()) {
+            zipBundle.append("2. /data/").append(res.getName()).append(".csv (")
+                    .append(res.getDataRows().size()).append(" records, remoteCached=")
+                    .append(res.isRemoteCached()).append(")\n");
+        }
+        zipBundle.append("=== END ARCHIVE ===");
+        return zipBundle.toString();
+    }
+
+    public String exportToSqliteDdlAndInsert(DataPackageDescriptor descriptor) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("-- SQLite database export for DataPackage: ").append(descriptor.getName()).append("\n");
+
+        for (Resource res : descriptor.getResources()) {
+            String tableName = res.getName().replaceAll("[^a-zA-Z0-9_]", "_");
+            sql.append("CREATE TABLE IF NOT EXISTS ").append(tableName).append(" (\n");
+
+            List<Field> fields = res.getSchema().getFields();
+            for (int i = 0; i < fields.size(); i++) {
+                Field f = fields.get(i);
+                String sqlType = switch (f.getType()) {
+                    case INTEGER -> "INTEGER";
+                    case NUMBER -> "REAL";
+                    case BOOLEAN -> "INTEGER";
+                    default -> "TEXT";
+                };
+                sql.append("    ").append(f.getName()).append(" ").append(sqlType);
+                if (i < fields.size() - 1) sql.append(",");
+                sql.append("\n");
+            }
+            sql.append(");\n");
+
+            for (Map<String, Object> row : res.getDataRows()) {
+                sql.append("INSERT INTO ").append(tableName).append(" VALUES (");
+                for (int i = 0; i < fields.size(); i++) {
+                    Field f = fields.get(i);
+                    Object val = row.get(f.getName());
+                    if (val == null) {
+                        sql.append("NULL");
+                    } else if (val instanceof Number || val instanceof Boolean) {
+                        sql.append(val);
+                    } else {
+                        sql.append("'").append(val.toString().replace("'", "''")).append("'");
+                    }
+                    if (i < fields.size() - 1) sql.append(", ");
+                }
+                sql.append(");\n");
+            }
+        }
+        return sql.toString();
+    }
+
+    public String generateNodeLibraryCode(String publisherName, String packageName, String version) {
+        return """
+               // Node.js client dependency snippet
+               // package.json:
+               // "dependencies": { "@datapackage/%s_%s": "^%s" }
+               const { Dataset } = require('data.js');
+               async function load() {
+                 const dataset = await Dataset.load('https://registry.datahub.io/%s/%s@%s');
+                 const table = await dataset.resources[0].read();
+                 console.log(table);
+               }
+               load();
+               """.formatted(publisherName, packageName, version, publisherName, packageName, version);
+    }
+
+    public String generateRLoaderCode(String publisherName, String packageName, String version) {
+        return """
+               # R snippet to load DataPackage
+               library(datapkg)
+               dp <- datapkg::datapackage.read("https://registry.datahub.io/%s/%s@%s")
+               data <- datapkg::resource.read(dp, dp$resources[[1]]$name)
+               summary(data)
+               """.formatted(publisherName, packageName, version);
+    }
+}
+// File: ProjectDependency.java
+package dataregistry;
+
+public class ProjectDependency {
+    private final String packageName;
+    private final String pinnedVersion;
+
+    public ProjectDependency(String packageName, String pinnedVersion) {
+        this.packageName = packageName;
+        this.pinnedVersion = pinnedVersion;
+    }
+
+    public String getPackageName() {
+        return packageName;
+    }
+
+    public String getPinnedVersion() {
+        return pinnedVersion;
+    }
+
+    @Override
+    public String toString() {
+        return packageName + "@" + pinnedVersion;
+    }
+}
+// File: LocalProjectEnvironment.java
+package dataregistry;
+
+import java.util.*;
+
+public class LocalProjectEnvironment {
+    private final String projectName;
+    private final Map<String, ProjectDependency> manifestDependencies = new LinkedHashMap<>();
+    // Local storage of installed packages: packageName -> (version -> DataPackageSnapshot)
+    private final Map<String, Map<String, DataPackageSnapshot>> installedPackages = new HashMap<>();
+
+    public LocalProjectEnvironment(String projectName) {
+        this.projectName = projectName;
+    }
+
+    public String getProjectName() {
+        return projectName;
+    }
+
+    public void pinDependency(String packageName, String version) {
+        manifestDependencies.put(packageName, new ProjectDependency(packageName, version));
+    }
+
+    public Map<String, ProjectDependency> getManifestDependencies() {
+        return Collections.unmodifiableMap(manifestDependencies);
+    }
+
+    public void installPackageVersion(String packageName, DataPackageSnapshot snapshot) {
+        installedPackages
+                .computeIfAbsent(packageName, k -> new HashMap<>())
+                .put(snapshot.getTagOrVersion(), snapshot);
+    }
+
+    public Optional<DataPackageSnapshot> getInstalledVersion(String packageName, String version) {
+        Map<String, DataPackageSnapshot> versions = installedPackages.get(packageName);
+        if (versions == null) return Optional.empty();
+        return Optional.ofNullable(versions.get(version));
+    }
+
+    public List<String> listInstalledVersions(String packageName) {
+        Map<String, DataPackageSnapshot> versions = installedPackages.get(packageName);
+        if (versions == null) return Collections.emptyList();
+        return new ArrayList<>(versions.keySet());
+    }
+}
+// File: RegistryService.java
+package dataregistry;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+
+public class RegistryService {
+    private final SiteConfig siteConfig = new SiteConfig();
+    private final NotificationService notificationService = new NotificationService();
+    private final DataPackageValidator validator = new DataPackageValidator();
+    private final DataPackageExporter exporter = new DataPackageExporter();
+
+    private final Map<String, User> usersById = new HashMap<>();
+    private final Map<String, User> usersByEmail = new HashMap<>();
+    private final Map<String, PublisherOrganization> publishersById = new HashMap<>();
+    private final Map<String, PublisherOrganization> publishersByName = new HashMap<>();
+    private final Map<String, DataPackage> packagesById = new HashMap<>();
+
+    private final AtomicLong apiCallCount = new AtomicLong(0);
+
+    public RegistryService() {
+        // Seed default example data package and publisher
+        User demoAdmin = new User("usr_admin", "admin", "admin@datahub.io", "Site Admin", AuthProvider.LOCAL);
+        registerUser(demoAdmin);
+
+        PublisherOrganization coreOrg = createPublisher("core", "Core Data Examples", "High quality open reference data", demoAdmin);
+        coreOrg.setPricingPlan(PricingPlan.ENTERPRISE);
+
+        Schema schema = new Schema(List.of(
+                new Field("code", FieldType.STRING, "ISO Country Code"),
+                new Field("name", FieldType.STRING, "Country Name"),
+                new Field("population", FieldType.INTEGER, "Estimated population")
+        ));
+        Resource resource = new Resource("countries", "data/countries.csv", schema, List.of(
+                Map.of("code", "US", "name", "United States", "population", 331000000),
+                Map.of("code", "FR", "name", "France", "population", 67000000),
+                Map.of("code", "JP", "name", "Japan", "population", 125000000)
+        ), true);
+
+        DataPackageDescriptor exampleDescriptor = new DataPackageDescriptor(
+                "country-codes",
+                "Standard Country Codes and Names",
+                "Comprehensive ISO 3166-1 country codes with population counts",
+                "1.0.0",
+                List.of(resource),
+                List.of(new DataPackageView("table-view", "table", "{\"columns\": [\"code\", \"name\", \"population\"]}"))
+        );
+
+        publishPackage(demoAdmin, coreOrg.getName(), exampleDescriptor, Visibility.PUBLIC);
+    }
+
+    public SiteConfig getSiteConfig() {
+        apiCallCount.incrementAndGet();
+        return siteConfig;
+    }
+
+    public NotificationService getNotificationService() {
+        return notificationService;
+    }
+
+    public DataPackageValidator getValidator() {
+        return validator;
+    }
+
+    public DataPackageExporter getExporter() {
+        return exporter;
+    }
+
+    public User registerUser(User user) {
+        apiCallCount.incrementAndGet();
+        usersById.put(user.getId(), user);
+        usersByEmail.put(user.getEmail().toLowerCase(), user);
+        return user;
+    }
+
+    public User signUpViaOAuth(String username, String email, String fullName, AuthProvider provider) {
+        apiCallCount.incrementAndGet();
+        String id = "usr_" + UUID.randomUUID().toString().substring(0, 8);
+        User user = new User(id, username, email, fullName, provider);
+        return registerUser(user);
+    }
+
+    public Optional<User> getUserById(String id) {
+        apiCallCount.incrementAndGet();
+        return Optional.ofNullable(usersById.get(id));
+    }
+
+    public Optional<User> getUserByEmail(String email) {
+        apiCallCount.incrementAndGet();
+        return Optional.ofNullable(usersByEmail.get(email.toLowerCase()));
+    }
+
+    public PublisherOrganization createPublisher(String name, String displayName, String description, User creator) {
+        apiCallCount.incrementAndGet();
+        String id = "pub_" + UUID.randomUUID().toString().substring(0, 8);
+        PublisherOrganization org = new PublisherOrganization(id, name, displayName, description, creator);
+        publishersById.put(id, org);
+        publishersByName.put(name.toLowerCase(), org);
+        return org;
+    }
+
+    public Optional<PublisherOrganization> getPublisherByName(String name) {
+        apiCallCount.incrementAndGet();
+        return Optional.ofNullable(publishersByName.get(name.toLowerCase()));
+    }
+
+    public List<PublisherOrganization> getAllPublishers() {
+        apiCallCount.incrementAndGet();
+        return new ArrayList<>(publishersByName.values());
+    }
+
+    public void inviteMemberToPublisher(User actor, String publisherName, String targetEmail, Role role) {
+        apiCallCount.incrementAndGet();
+        PublisherOrganization org = publishersByName.get(publisherName.toLowerCase());
+        if (org == null) throw new IllegalArgumentException("Publisher not found");
+        if (!org.isOwner(actor)) throw new SecurityException("Only owners can invite members");
+
+        Optional<User> existing = getUserByEmail(targetEmail);
+        if (existing.isPresent()) {
+            org.addMember(existing.get(), role);
+        }
+        notificationService.sendInviteNotification(targetEmail, org.getDisplayName(), actor.getFullName());
+    }
+
+    public void updateMemberRole(User actor, String publisherName, User targetUser, Role newRole) {
+        apiCallCount.incrementAndGet();
+        PublisherOrganization org = publishersByName.get(publisherName.toLowerCase());
+        if (org == null) throw new IllegalArgumentException("Publisher not found");
+        if (!org.isOwner(actor)) throw new SecurityException("Only owners can alter roles");
+        org.setRole(targetUser, newRole);
+    }
+
+    public void removeMember(User actor, String publisherName, User targetUser) {
+        apiCallCount.incrementAndGet();
+        PublisherOrganization org = publishersByName.get(publisherName.toLowerCase());
+        if (org == null) throw new IllegalArgumentException("Publisher not found");
+        if (!org.isOwner(actor)) throw new SecurityException("Only owners can remove members");
+        org.removeMember(targetUser);
+    }
+
+    public void subscribePublisherToPlan(User actor, String publisherName, PricingPlan plan) {
+        apiCallCount.incrementAndGet();
+        PublisherOrganization org = publishersByName.get(publisherName.toLowerCase());
+        if (org == null) throw new IllegalArgumentException("Publisher not found");
+        if (!org.isOwner(actor)) throw new SecurityException("Only owners can update billing plans");
+        org.setPricingPlan(plan);
+    }
+
+    public DataPackage publishPackage(User actor, String publisherName, DataPackageDescriptor descriptor, Visibility visibility) {
+        apiCallCount.incrementAndGet();
+        PublisherOrganization org = publishersByName.get(publisherName.toLowerCase());
+        if (org == null) throw new IllegalArgumentException("Publisher not found: " + publisherName);
+        if (!org.hasPublishAccess(actor)) throw new SecurityException("User does not have publishing permissions for " + publisherName);
+
+        // Validation upon publishing
+        ValidationResult valResult = validator.validate(descriptor);
+        if (!valResult.isValid()) {
+            throw new IllegalArgumentException("Package validation failed: " + String.join(", ", valResult.getErrors()));
+        }
+
+        // Plan limitation check for private packages
+        if (visibility == Visibility.PRIVATE) {
+            long existingPrivates = packagesById.values().stream()
+                    .filter(p -> p.getPublisherId().equals(org.getId()) && p.getVisibility() == Visibility.PRIVATE && !p.isDeleted())
+                    .count();
+            if (existingPrivates >= org.getPricingPlan().getMaxPrivatePackages()) {
+                throw new IllegalStateException("Pricing plan quota exceeded: cannot create more private packages under " + org.getPricingPlan().getName());
+            }
+        }
+
+        String packageKey = org.getName() + "/" + descriptor.getName();
+        DataPackage existing = packagesById.get(packageKey);
+        if (existing == null) {
+            DataPackage created = new DataPackage("pkg_" + UUID.randomUUID().toString().substring(0, 8), org.getId(), descriptor, visibility);
+            packagesById.put(packageKey, created);
+            return created;
+        } else {
+            existing.updateDescriptor(descriptor, false);
+            existing.setVisibility(visibility);
+            existing.setPublished(true);
+            existing.setDeleted(false);
+            notificationService.notifySubscribers(existing, "Package updated to version " + descriptor.getVersion());
+            return existing;
+        }
+    }
+
+    public void tagPackage(User actor, String publisherName, String packageName, String tag, boolean overwrite) {
+        apiCallCount.incrementAndGet();
+        DataPackage pkg = getPackage(publisherName, packageName)
+                .orElseThrow(() -> new IllegalArgumentException("Package not found: " + publisherName + "/" + packageName));
+
+        PublisherOrganization org = publishersById.get(pkg.getPublisherId());
+        if (!org.hasPublishAccess(actor)) throw new SecurityException("User cannot tag package");
+
+        pkg.snapshot(tag, overwrite);
+    }
+
+    public void unpublishPackage(User actor, String publisherName, String packageName) {
+        apiCallCount.incrementAndGet();
+        DataPackage pkg = getPackage(publisherName, packageName)
+                .orElseThrow(() -> new IllegalArgumentException("Package not found"));
+        PublisherOrganization org = publishersById.get(pkg.getPublisherId());
+        if (!org.hasPublishAccess(actor)) throw new SecurityException("Unauthorized");
+        pkg.setPublished(false);
+    }
+
+    public void deletePackage(User actor, String publisherName, String packageName) {
+        apiCallCount.incrementAndGet();
+        DataPackage pkg = getPackage(publisherName, packageName)
+                .orElseThrow(() -> new IllegalArgumentException("Package not found"));
+        PublisherOrganization org = publishersById.get(pkg.getPublisherId());
+        if (!org.hasPublishAccess(actor)) throw new SecurityException("Unauthorized");
+        pkg.setDeleted(true);
+    }
+
+    public void restorePackage(User actor, String publisherName, String packageName) {
+        apiCallCount.incrementAndGet();
+        DataPackage pkg = packagesById.get(publisherName.toLowerCase() + "/" + packageName.toLowerCase());
+        if (pkg == null) throw new IllegalArgumentException("Package not found");
+        PublisherOrganization org = publishersById.get(pkg.getPublisherId());
+        if (!org.hasPublishAccess(actor)) throw new SecurityException("Unauthorized");
+        pkg.setDeleted(false);
+        pkg.setPublished(true);
+    }
+
+    public void permanentlyDeletePackage(User actor, String publisherName, String packageName) {
+        apiCallCount.incrementAndGet();
+        PublisherOrganization org = publishersByName.get(publisherName.toLowerCase());
+        if (org == null || !org.isOwner(actor)) throw new SecurityException("Only owners can permanently delete packages");
+        packagesById.remove(publisherName.toLowerCase() + "/" + packageName.toLowerCase());
+    }
+
+    public Optional<DataPackage> getPackage(String publisherName, String packageName) {
+        apiCallCount.incrementAndGet();
+        DataPackage pkg = packagesById.get(publisherName.toLowerCase() + "/" + packageName.toLowerCase());
+        if (pkg != null && !pkg.isDeleted()) {
+            return Optional.of(pkg);
+        }
+        return Optional.empty();
+    }
+
+    public DataPackageSnapshot downloadPackage(String publisherName, String packageName, Optional<String> versionTag, User consumer) {
+        apiCallCount.incrementAndGet();
+        DataPackage pkg = getPackage(publisherName, packageName)
+                .orElseThrow(() -> new IllegalArgumentException("Package not found or deleted"));
+
+        PublisherOrganization org = publishersById.get(pkg.getPublisherId());
+        if (pkg.getVisibility() == Visibility.PRIVATE) {
+            if (consumer == null || !org.getMembers().containsKey(consumer)) {
+                throw new SecurityException("Private package can only be accessed by publisher members");
+            }
+        }
+
+        pkg.incrementDownloadCount();
+
+        if (versionTag.isPresent()) {
+            return pkg.getSnapshot(versionTag.get())
+                    .orElseThrow(() -> new IllegalArgumentException("Version/Tag " + versionTag.get() + " not found"));
+        } else {
+            return pkg.getSnapshot(pkg.getCurrentDescriptor().getVersion())
+                    .orElseGet(() -> new DataPackageSnapshot("latest", pkg.getCurrentDescriptor(), true));
+        }
+    }
+
+    public List<DataPackage> searchPackages(String query, Optional<String> publisherFilter) {
+        apiCallCount.incrementAndGet();
+        String q = query.toLowerCase();
+        return packagesById.values().stream()
+                .filter(p -> !p.isDeleted() && p.isPublished() && p.getVisibility() == Visibility.PUBLIC)
+                .filter(p -> publisherFilter.isEmpty() || publishersById.get(p.getPublisherId()).getName().equalsIgnoreCase(publisherFilter.get()))
+                .filter(p -> p.getName().toLowerCase().contains(q) ||
+                             p.getCurrentDescriptor().getTitle().toLowerCase().contains(q) ||
+                             p.getCurrentDescriptor().getDescription().toLowerCase().contains(q))
+                .sorted(Comparator.comparingInt(DataPackage::getDownloadCount).reversed())
+                .collect(Collectors.toList());
+    }
+
+    public List<DataPackage> getExamplePackages() {
+        return searchPackages("", Optional.empty());
+    }
+
+    public SiteMetrics getMetrics() {
+        int totalDownloads = packagesById.values().stream().mapToInt(DataPackage::getDownloadCount).sum();
+        return new SiteMetrics(usersById.size(), publishersById.size(), packagesById.size(), totalDownloads, apiCallCount.get());
+    }
+}
+// File: ClientCli.java
+package dataregistry;
+
+import java.util.Optional;
+
+public class ClientCli {
+    private String configuredRegistryUrl = "https://registry.datahub.io";
+    private String userApiKey = "";
+    private final RegistryService registryService;
+    private final LocalProjectEnvironment localEnv;
+
+    public ClientCli(RegistryService registryService, String projectName) {
+        this.registryService = registryService;
+        this.localEnv = new LocalProjectEnvironment(projectName);
+    }
+
+    public void configure(String registryUrl, String apiKey) {
+        this.configuredRegistryUrl = registryUrl;
+        this.userApiKey = apiKey;
+        System.out.println("[CLI] Client configured: endpoint=" + configuredRegistryUrl + ", key=" + (apiKey.isEmpty() ? "none" : "****"));
+    }
+
+    public ValidationResult validate(DataPackageDescriptor descriptor) {
+        System.out.println("[CLI] Validating package: " + descriptor.getName());
+        return registryService.getValidator().validate(descriptor);
+    }
+
+    public void previewViews(DataPackageDescriptor descriptor) {
+        System.out.println("[CLI] Previewing views for: " + descriptor.getName());
+        if (descriptor.getViews().isEmpty()) {
+            System.out.println("  No views declared in datapackage descriptor.");
+        } else {
+            for (DataPackageView view : descriptor.getViews()) {
+                System.out.println("  -> View [" + view.getName() + " | type: " + view.getViewType() + "]");
+                System.out.println("     Declaration: " + view.getSpecJson());
+            }
+        }
+    }
+
+    public DataPackage publish(User user, String publisherName, DataPackageDescriptor descriptor, Visibility visibility) {
+        System.out.println("[CLI] Running publish command for " + publisherName + "/" + descriptor.getName() + "...");
+        return registryService.publishPackage(user, publisherName, descriptor, visibility);
+    }
+
+    public void undelete(User user, String publisherName, String packageName) {
+        System.out.println("[CLI] Running undelete/restore command for " + publisherName + "/" + packageName);
+        registryService.restorePackage(user, publisherName, packageName);
+    }
+
+    public SchemaDiff diffVersionsLocally(DataPackageDescriptor v1, DataPackageDescriptor v2) {
+        System.out.println("[CLI] Comparing schema diff between v" + v1.getVersion() + " and v" + v2.getVersion());
+        Schema s1 = v1.getResources().isEmpty() ? new Schema() : v1.getResources().get(0).getSchema();
+        Schema s2 = v2.getResources().isEmpty() ? new Schema() : v2.getResources().get(0).getSchema();
+        return s2.compareTo(s1);
+    }
+
+    public void installPackageVersionLocally(String publisherName, String packageName, String version, User consumer) {
+        DataPackageSnapshot snapshot = registryService.downloadPackage(publisherName, packageName, Optional.of(version), consumer);
+        localEnv.installPackageVersion(packageName, snapshot);
+        localEnv.pinDependency(packageName, version);
+        System.out.println("[CLI] Installed " + packageName + "@" + version + " into local project environment.");
+    }
+
+    public LocalProjectEnvironment getLocalEnv() {
+        return localEnv;
+    }
+}
+// File: Main.java
+package dataregistry;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("================================================================");
+        System.out.println("      DATA PACKAGE REGISTRY & CLI PLATFORM DEMO");
+        System.out.println("================================================================\n");
+
+        RegistryService registry = new RegistryService();
+
+        // 1. Visitor sign-up via OAuth (GitHub / Google) & Onboarding
+        System.out.println("--- 1. User Registration & Onboarding Guidance ---");
+        User alice = registry.signUpViaOAuth("alice_dev", "alice@cloud.org", "Alice Wonderland", AuthProvider.GITHUB);
+        System.out.println("Registered user via OAuth: " + alice);
+        System.out.println("Onboarding checklist for new publisher:");
+        alice.getOnboardingChecklist().forEach(step -> System.out.println("  " + step));
+
+        User bob = registry.signUpViaOAuth("bob_analyst", "bob@data.org", "Bob Analyst", AuthProvider.GOOGLE);
+        System.out.println("Consumer registered: " + bob);
+
+        // 2. Organization, Membership Roles & Pricing Plans
+        System.out.println("\n--- 2. Publisher Organizations, Team Roles & Pricing ---");
+        PublisherOrganization org = registry.createPublisher("acme-data", "ACME Data Lab", "High frequency environmental metrics", alice);
+        System.out.println("Created Publisher: " + org);
+
+        // Owner invites existing user or via email
+        registry.inviteMemberToPublisher(alice, "acme-data", "bob@data.org", Role.MEMBER);
+        System.out.println("Alice invited Bob to acme-data. Members:");
+        org.getMembers().forEach((user, role) -> System.out.println("  - " + user.getFullName() + ": " + role));
+
+        // Owner upgrades pricing plan
+        System.out.println("Exploring pricing plans: Free, Pro ($29/mo), Enterprise ($199/mo)");
+        registry.subscribePublisherToPlan(alice, "acme-data", PricingPlan.PRO);
+        System.out.println("Updated publisher pricing plan: " + org.getPricingPlan());
+
+        // 3. CLI Configuration, Data Package Preparation & Validation
+        System.out.println("\n--- 3. Client CLI Configuration & Validation ---");
+        ClientCli cli = new ClientCli(registry, "AirQualityResearchProject");
+        cli.configure("https://registry.datahub.io", "sec_token_alice_12345");
+
+        Schema weatherSchemaV1 = new Schema(List.of(
+                new Field("city", FieldType.STRING),
+                new Field("pm25", FieldType.NUMBER, "Fine particulate matter"),
+                new Field("recorded_date", FieldType.DATE)
+        ));
+
+        Resource weatherResourceV1 = new Resource(
+                "air_quality",
+                "https://acme-sensors.io/exports/aqi.csv",
+                weatherSchemaV1,
+                List.of(
+                        Map.of("city", "Berlin", "pm25", 14.5, "recorded_date", "2023-10-01"),
+                        Map.of("city", "Paris", "pm25", 18.2, "recorded_date", "2023-10-01")
+                ),
+                true // Remote data cached in registry
+        );
+
+        DataPackageView chartView = new DataPackageView(
+                "aqi-chart",
+                "chart",
+                "{\"type\": \"line\", \"spec\": {\"x\": \"city\", \"y\": \"pm25\"}}"
+        );
+
+        DataPackageDescriptor v1Descriptor = new DataPackageDescriptor(
+                "air-quality",
+                "Global Urban Air Quality",
+                "Realtime particulate matter indicators by city",
+                "1.0.0",
+                List.of(weatherResourceV1),
+                List.of(chartView)
+        );
+
+        // Preview views via CLI
+        cli.previewViews(v1Descriptor);
+
+        // Validate package before publishing
+        ValidationResult valResult = cli.validate(v1Descriptor);
+        System.out.println("Pre-publish validation: " + valResult);
+
+        // 4. Publishing Public & Private Packages
+        System.out.println("\n--- 4. Publishing & Version Tagging ---");
+        DataPackage publishedPkg = cli.publish(alice, "acme-data", v1Descriptor, Visibility.PUBLIC);
+        System.out.println("Successfully published package: " + publishedPkg.getName() + " v" + publishedPkg.getCurrentDescriptor().getVersion());
+
+        // Tag snapshot
+        registry.tagPackage(alice, "acme-data", "air-quality", "v1.0.0-gold", false);
+        System.out.println("Tagged snapshot: v1.0.0-gold");
+
+        // Attempting to overwrite tag without force flag produces warning/error
+        try {
+            registry.tagPackage(alice, "acme-data", "air-quality", "v1.0.0-gold", false);
+        } catch (IllegalStateException e) {
+            System.out.println("Warning caught as expected: " + e.getMessage());
+        }
+        // Force overwrite
+        registry.tagPackage(alice, "acme-data", "air-quality", "v1.0.0-gold", true);
+        System.out.println("Successfully re-tagged snapshot with overwrite flag: v1.0.0-gold");
+
+        // 5. Version Update & Schema Comparison
+        System.out.println("\n--- 5. Schema Evolution & Version Comparison ---");
+        // Bob subscribes to updates
+        publishedPkg.addSubscriber(bob.getEmail());
+
+        Schema weatherSchemaV2 = new Schema(List.of(
+                new Field("city", FieldType.STRING),
+                new Field("pm25", FieldType.NUMBER),
+                new Field("recorded_date", FieldType.DATE),
+                new Field("pm10", FieldType.NUMBER, "Coarse particulate matter") // Added field
+        ));
+
+        Resource weatherResourceV2 = new Resource(
+                "air_quality",
+                "https://acme-sensors.io/exports/aqi_v2.csv",
+                weatherSchemaV2,
+                List.of(
+                        Map.of("city", "Berlin", "pm25", 14.5, "recorded_date", "2023-10-01", "pm10", 24.0),
+                        Map.of("city", "Paris", "pm25", 18.2, "recorded_date", "2023-10-01", "pm10", 30.1)
+                ),
+                true
+        );
+
+        DataPackageDescriptor v2Descriptor = new DataPackageDescriptor(
+                "air-quality",
+                "Global Urban Air Quality",
+                "Updated with PM10 measurement readings",
+                "2.0.0",
+                List.of(weatherResourceV2),
+                List.of(chartView)
+        );
+
+        SchemaDiff diff = cli.diffVersionsLocally(v1Descriptor, v2Descriptor);
+        System.out.println(diff);
+
+        // Publish update
+        cli.publish(alice, "acme-data", v2Descriptor, Visibility.PUBLIC);
+        System.out.println("Notification log after v2 release:");
+        registry.getNotificationService().getNotificationLog().forEach(n -> System.out.println("  " + n));
+
+        // 6. Search, Discovery & Remote Cache Resilience
+        System.out.println("\n--- 6. Search, Discovery & Remote Cache Resilience ---");
+        List<DataPackage> searchResults = registry.searchPackages("particulate", Optional.empty());
+        System.out.println("Search results for keyword 'particulate': " + searchResults.size() + " package(s) found.");
+        for (DataPackage p : searchResults) {
+            System.out.println("  - " + p.getName() + " (Age: " + p.getAge().toSeconds() + "s ago, Downloads: " + p.getDownloadCount() + ")");
+        }
+
+        // Consumer downloads cached copy even if original server changed
+        DataPackageSnapshot downloadedV1 = registry.downloadPackage("acme-data", "air-quality", Optional.of("1.0.0"), bob);
+        System.out.println("Bob downloaded specific version 1.0.0 (Remote cached available: " + downloadedV1.isCachedCopyAvailable() + ")");
+
+        // 7. Data Exports: Single Zip Bundle, SQLite Database & Node/R Integration Snippets
+        System.out.println("\n--- 7. Download Representations & Developer Integration ---");
+        String zipSummary = registry.getExporter().exportToZipArchiveBundle(v2Descriptor);
+        System.out.println(zipSummary);
+
+        String sqliteScript = registry.getExporter().exportToSqliteDdlAndInsert(v2Descriptor);
+        System.out.println("Generated SQLite Import Script preview:");
+        System.out.println(sqliteScript.lines().limit(6).reduce("", (a, b) -> a + "\n" + b));
+
+        System.out.println("R Loader snippet preview:");
+        System.out.println(registry.getExporter().generateRLoaderCode("acme-data", "air-quality", "2.0.0"));
+
+        // 8. Multi-version Local Installation & Project Lockfile Pinning
+        System.out.println("--- 8. Multi-Version Local Dependency Management ---");
+        cli.installPackageVersionLocally("acme-data", "air-quality", "1.0.0", bob);
+        cli.installPackageVersionLocally("acme-data", "air-quality", "2.0.0", bob);
+        System.out.println("Installed versions locally in project '" + cli.getLocalEnv().getProjectName() + "': "
+                + cli.getLocalEnv().listInstalledVersions("air-quality"));
+        System.out.println("Pinned dependencies in project lockfile: " + cli.getLocalEnv().getManifestDependencies());
+
+        // 9. Unpublish, Soft Delete, Undelete / Restore & Permanent Deletion
+        System.out.println("\n--- 9. Lifecycle: Unpublish, Delete, Restore & Purge ---");
+        registry.unpublishPackage(alice, "acme-data", "air-quality");
+        System.out.println("Package unpublished. Available in public search? "
+                + !registry.searchPackages("air-quality", Optional.empty()).isEmpty());
+
+        registry.deletePackage(alice, "acme-data", "air-quality");
+        System.out.println("Package soft deleted. Found in active lookup? "
+                + registry.getPackage("acme-data", "air-quality").isPresent());
+
+        // Restore via CLI
+        cli.undelete(alice, "acme-data", "air-quality");
+        System.out.println("Package undeleted/restored. Found in active lookup? "
+                + registry.getPackage("acme-data", "air-quality").isPresent());
+
+        // 10. Platform Administration, Site Configuration & Key Metrics
+        System.out.println("\n--- 10. Administration & Platform Activity Metrics ---");
+        SiteConfig siteConfig = registry.getSiteConfig();
+        siteConfig.setSiteTitle("Open DataHub Enterprise Cloud");
+        System.out.println("Updated Site Title: " + registry.getSiteConfig().getSiteTitle());
+
+        SiteMetrics metrics = registry.getMetrics();
+        System.out.println(metrics);
+        System.out.println("\nDemo completed successfully.");
+    }
+}

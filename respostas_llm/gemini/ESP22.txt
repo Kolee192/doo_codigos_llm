@@ -1,0 +1,1414 @@
+// File: Role.java
+public enum Role {
+    WAITER,
+    CHEF,
+    SUPERVISOR
+}
+
+// File: OrderStatus.java
+public enum OrderStatus {
+    PENDING,
+    PLACED,
+    ACCEPTED_BY_WAITER,
+    REJECTED_BY_WAITER,
+    CANCELLED
+}
+
+// File: OrderItemStatus.java
+public enum OrderItemStatus {
+    ORDERED,
+    ACCEPTED_BY_KITCHEN,
+    READY_TO_SERVE,
+    DELIVERED,
+    REJECTED_BY_KITCHEN,
+    PURGED,
+    REFUNDED
+}
+
+// File: PaymentType.java
+public enum PaymentType {
+    CASH,
+    BANKCARD
+}
+
+// File: TipDenomination.java
+public enum TipDenomination {
+    ONE(1.00),
+    TWO(2.00),
+    FIVE(5.00),
+    TEN(10.00),
+    TWENTY(20.00);
+
+    private final double amount;
+
+    TipDenomination(double amount) {
+        this.amount = amount;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+}
+
+// File: AlertNotificationType.java
+public enum AlertNotificationType {
+    ORDER_PLACED,
+    ITEM_REJECTED,
+    ITEM_READY,
+    WAITER_ASSISTANCE
+}
+
+// File: StaffMember.java
+public class StaffMember {
+    private final String id;
+    private final String name;
+    private final String username;
+    private final String password;
+    private final Role role;
+
+    public StaffMember(String id, String name, String username, String password, Role role) {
+        this.id = id;
+        this.name = name;
+        this.username = username;
+        this.password = password;
+        this.role = role;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public boolean authenticate(String password) {
+        return this.password.equals(password);
+    }
+}
+
+// File: MenuItem.java
+public class MenuItem {
+    private final String id;
+    private final String name;
+    private final double price;
+    private final String description;
+
+    public MenuItem(String id, String name, double price, String description) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.description = description;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return name + " ($" + String.format("%.2f", price) + ")";
+    }
+}
+
+// File: DietaryRequirement.java
+public class DietaryRequirement {
+    private final String description;
+    private final boolean wildcard;
+
+    public DietaryRequirement(String description, boolean wildcard) {
+        this.description = description;
+        this.wildcard = wildcard;
+    }
+
+    public static DietaryRequirement standard(String description) {
+        return new DietaryRequirement(description, false);
+    }
+
+    public static DietaryRequirement wildcard(String customRequirement) {
+        return new DietaryRequirement(customRequirement, true);
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public boolean isWildcard() {
+        return wildcard;
+    }
+
+    @Override
+    public String toString() {
+        return wildcard ? "[Wildcard] " + description : description;
+    }
+}
+
+// File: OrderItem.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class OrderItem {
+    private final String id;
+    private final MenuItem menuItem;
+    private final int customerId;
+    private final List<DietaryRequirement> dietaryRequirements;
+    private OrderItemStatus status;
+
+    public OrderItem(String id, MenuItem menuItem, int customerId) {
+        this.id = id;
+        this.menuItem = menuItem;
+        this.customerId = customerId;
+        this.dietaryRequirements = new ArrayList<>();
+        this.status = OrderItemStatus.ORDERED;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public MenuItem getMenuItem() {
+        return menuItem;
+    }
+
+    public int getCustomerId() {
+        return customerId;
+    }
+
+    public List<DietaryRequirement> getDietaryRequirements() {
+        return dietaryRequirements;
+    }
+
+    public void addDietaryRequirement(DietaryRequirement requirement) {
+        this.dietaryRequirements.add(requirement);
+    }
+
+    public OrderItemStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(OrderItemStatus status) {
+        this.status = status;
+    }
+
+    public double getPrice() {
+        return menuItem.getPrice();
+    }
+
+    @Override
+    public String toString() {
+        return id + ": " + menuItem.getName() + " for Customer " + customerId + " [" + status + "]";
+    }
+}
+
+// File: Order.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Order {
+    private final String id;
+    private final int tableId;
+    private final List<OrderItem> items;
+    private final List<DietaryRequirement> orderRequirements;
+    private OrderStatus status;
+
+    public Order(String id, int tableId) {
+        this.id = id;
+        this.tableId = tableId;
+        this.items = new ArrayList<>();
+        this.orderRequirements = new ArrayList<>();
+        this.status = OrderStatus.PENDING;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public int tableId() {
+        return tableId;
+    }
+
+    public List<OrderItem> getItems() {
+        return Collections.unmodifiableList(items);
+    }
+
+    public List<DietaryRequirement> getOrderRequirements() {
+        return Collections.unmodifiableList(orderRequirements);
+    }
+
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(OrderStatus status) {
+        this.status = status;
+    }
+
+    public boolean addItem(OrderItem item) {
+        if (status == OrderStatus.PENDING) {
+            return items.add(item);
+        }
+        return false;
+    }
+
+    public boolean removeItem(OrderItem item) {
+        if (status == OrderStatus.PENDING) {
+            return items.remove(item);
+        }
+        return false;
+    }
+
+    public boolean addDietaryRequirement(DietaryRequirement req) {
+        if (status == OrderStatus.PENDING) {
+            return orderRequirements.add(req);
+        }
+        return false;
+    }
+
+    public boolean isEmpty() {
+        return items.isEmpty();
+    }
+}
+
+// File: Payment.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Payment {
+    private final String id;
+    private final PaymentType paymentType;
+    private final int tableId;
+    private final Integer customerId; // null if for whole table
+    private final List<OrderItem> assignedMeals;
+    private final List<Double> assignedTips;
+    private boolean processed;
+    private boolean refunded;
+
+    public Payment(String id, PaymentType paymentType, int tableId, Integer customerId) {
+        this.id = id;
+        this.paymentType = paymentType;
+        this.tableId = tableId;
+        this.customerId = customerId;
+        this.assignedMeals = new ArrayList<>();
+        this.assignedTips = new ArrayList<>();
+        this.processed = false;
+        this.refunded = false;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public PaymentType getPaymentType() {
+        return paymentType;
+    }
+
+    public int getTableId() {
+        return tableId;
+    }
+
+    public Integer getCustomerId() {
+        return customerId;
+    }
+
+    public List<OrderItem> getAssignedMeals() {
+        return Collections.unmodifiableList(assignedMeals);
+    }
+
+    public List<Double> getAssignedTips() {
+        return Collections.unmodifiableList(assignedTips);
+    }
+
+    public boolean addMeal(OrderItem item) {
+        if (!processed && !assignedMeals.contains(item)) {
+            return assignedMeals.add(item);
+        }
+        return false;
+    }
+
+    public boolean removeMeal(OrderItem item) {
+        if (!processed) {
+            return assignedMeals.remove(item);
+        }
+        return false;
+    }
+
+    public boolean addTip(double tipAmount) {
+        if (!processed) {
+            return assignedTips.add(tipAmount);
+        }
+        return false;
+    }
+
+    public boolean removeTip(double tipAmount) {
+        if (!processed) {
+            return assignedTips.remove(Double.valueOf(tipAmount));
+        }
+        return false;
+    }
+
+    public double getMealsTotal() {
+        double total = 0.0;
+        for (OrderItem item : assignedMeals) {
+            total += item.getPrice();
+        }
+        return total;
+    }
+
+    public double getTipsTotal() {
+        double total = 0.0;
+        for (Double tip : assignedTips) {
+            total += tip;
+        }
+        return total;
+    }
+
+    public double getTotalAmount() {
+        return getMealsTotal() + getTipsTotal();
+    }
+
+    public boolean isProcessed() {
+        return processed;
+    }
+
+    public void setProcessed(boolean processed) {
+        this.processed = processed;
+    }
+
+    public boolean isRefunded() {
+        return refunded;
+    }
+
+    public void setRefunded(boolean refunded) {
+        this.refunded = refunded;
+    }
+}
+
+// File: TableAccount.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class TableAccount {
+    private final String id;
+    private final int tableId;
+    private final List<Order> orders;
+    private final List<Payment> payments;
+    private boolean open;
+    private boolean purged;
+
+    public TableAccount(String id, int tableId) {
+        this.id = id;
+        this.tableId = tableId;
+        this.orders = new ArrayList<>();
+        this.payments = new ArrayList<>();
+        this.open = true;
+        this.purged = false;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public int getTableId() {
+        return tableId;
+    }
+
+    public boolean isOpen() {
+        return open;
+    }
+
+    public void close() {
+        this.open = false;
+    }
+
+    public boolean isPurged() {
+        return purged;
+    }
+
+    public void purge() {
+        this.purged = true;
+        this.open = false;
+        for (Order order : orders) {
+            for (OrderItem item : order.getItems()) {
+                item.setStatus(OrderItemStatus.PURGED);
+            }
+        }
+    }
+
+    public void addOrder(Order order) {
+        orders.add(order);
+    }
+
+    public List<Order> getOrders() {
+        return Collections.unmodifiableList(orders);
+    }
+
+    public void addPayment(Payment payment) {
+        payments.add(payment);
+    }
+
+    public List<Payment> getPayments() {
+        return Collections.unmodifiableList(payments);
+    }
+
+    public List<OrderItem> getAllMeals() {
+        List<OrderItem> all = new ArrayList<>();
+        for (Order order : orders) {
+            all.addAll(order.getItems());
+        }
+        return all;
+    }
+}
+
+// File: Alert.java
+import java.time.Instant;
+
+public class Alert {
+    private final AlertNotificationType type;
+    private final int tableId;
+    private final String message;
+    private final Instant timestamp;
+
+    public Alert(AlertNotificationType type, int tableId, String message) {
+        this.type = type;
+        this.tableId = tableId;
+        this.message = message;
+        this.timestamp = Instant.now();
+    }
+
+    public AlertNotificationType getType() {
+        return type;
+    }
+
+    public int getTableId() {
+        return tableId;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + type + " - Table " + tableId + "] " + message;
+    }
+}
+
+// File: AlertListener.java
+public interface AlertListener {
+    void onAlert(Alert alert);
+}
+
+// File: Register.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Register {
+    private final List<String> transactionLogs;
+
+    public Register() {
+        this.transactionLogs = new ArrayList<>();
+    }
+
+    public boolean processCashPayment(Payment payment, double tenderedAmount) {
+        double total = payment.getTotalAmount();
+        if (tenderedAmount >= total) {
+            payment.setProcessed(true);
+            double change = tenderedAmount - total;
+            String log = "CASH PAYMENT ACCEPTED. PaymentId=" + payment.getId() +
+                    ", Total=$" + String.format("%.2f", total) +
+                    ", Tendered=$" + String.format("%.2f", tenderedAmount) +
+                    ", Change=$" + String.format("%.2f", change);
+            transactionLogs.add(log);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean processBankcardPayment(Payment payment, String cardNumber) {
+        if (cardNumber != null && cardNumber.replaceAll("\\s+", "").length() >= 12) {
+            payment.setProcessed(true);
+            String masked = "**** **** **** " + cardNumber.substring(cardNumber.length() - 4);
+            String log = "BANKCARD PAYMENT APPROVED. PaymentId=" + payment.getId() +
+                    ", Card=" + masked +
+                    ", Total=$" + String.format("%.2f", payment.getTotalAmount());
+            transactionLogs.add(log);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean processRefund(Payment payment, double refundAmount) {
+        payment.setRefunded(true);
+        String log = "REFUND PROCESSED. PaymentId=" + payment.getId() +
+                ", Amount=$" + String.format("%.2f", refundAmount);
+        transactionLogs.add(log);
+        return true;
+    }
+
+    public List<String> getTransactionLogs() {
+        return new ArrayList<>(transactionLogs);
+    }
+}
+
+// File: RMOSServer.java
+import java.util.*;
+
+public class RMOSServer {
+    private final Map<Integer, TableAccount> activeAccounts;
+    private final Map<Integer, TableAccount> allAccounts;
+    private final Map<Integer, String> tableAssignedWaiters;
+    private final Map<String, AlertListener> waiterListeners;
+    private final Map<String, StaffMember> staffMembers;
+    private final List<MenuItem> menuCatalog;
+    private final Map<String, Order> orders;
+    private final Map<String, OrderItem> orderItems;
+    private final Map<String, Payment> payments;
+    private final Register register;
+    private int accountCounter = 1;
+    private int orderCounter = 1;
+    private int itemCounter = 1;
+    private int paymentCounter = 1;
+
+    public RMOSServer(Register register) {
+        this.register = register;
+        this.activeAccounts = new HashMap<>();
+        this.allAccounts = new HashMap<>();
+        this.tableAssignedWaiters = new HashMap<>();
+        this.waiterListeners = new HashMap<>();
+        this.staffMembers = new HashMap<>();
+        this.menuCatalog = new ArrayList<>();
+        this.orders = new HashMap<>();
+        this.orderItems = new HashMap<>();
+        this.payments = new HashMap<>();
+    }
+
+    public void registerStaff(StaffMember staff) {
+        staffMembers.put(staff.getUsername(), staff);
+    }
+
+    public StaffMember authenticateStaff(String username, String password) {
+        StaffMember staff = staffMembers.get(username);
+        if (staff != null && staff.authenticate(password)) {
+            return staff;
+        }
+        return null;
+    }
+
+    public void addMenuItem(MenuItem item) {
+        menuCatalog.add(item);
+    }
+
+    public List<MenuItem> getMenuCatalog() {
+        return Collections.unmodifiableList(menuCatalog);
+    }
+
+    public Register getRegister() {
+        return register;
+    }
+
+    public void registerAlertListener(String waiterId, AlertListener listener) {
+        waiterListeners.put(waiterId, listener);
+    }
+
+    public void unregisterAlertListener(String waiterId) {
+        waiterListeners.remove(waiterId);
+    }
+
+    public TableAccount openAccount(int tableId, String waiterId) {
+        String accId = "ACC-" + (accountCounter++);
+        TableAccount account = new TableAccount(accId, tableId);
+        activeAccounts.put(tableId, account);
+        allAccounts.put(tableId, account);
+        tableAssignedWaiters.put(tableId, waiterId);
+        return account;
+    }
+
+    public TableAccount getActiveAccount(int tableId) {
+        return activeAccounts.get(tableId);
+    }
+
+    public TableAccount closeAccount(int tableId) {
+        TableAccount account = activeAccounts.remove(tableId);
+        if (account != null) {
+            account.close();
+        }
+        tableAssignedWaiters.remove(tableId);
+        return account;
+    }
+
+    public String getAssignedWaiterId(int tableId) {
+        return tableAssignedWaiters.get(tableId);
+    }
+
+    public OrderItem createOrderItem(MenuItem menuItem, int customerId) {
+        String itemId = "ITEM-" + (itemCounter++);
+        OrderItem orderItem = new OrderItem(itemId, menuItem, customerId);
+        orderItems.put(itemId, orderItem);
+        return orderItem;
+    }
+
+    public Order createOrder(int tableId) {
+        String ordId = "ORD-" + (orderCounter++);
+        Order order = new Order(ordId, tableId);
+        orders.put(ordId, order);
+        return order;
+    }
+
+    public Order getOrder(String orderId) {
+        return orders.get(orderId);
+    }
+
+    public OrderItem getOrderItem(String itemId) {
+        return orderItems.get(itemId);
+    }
+
+    public void placeOrder(Order order) {
+        order.setStatus(OrderStatus.PLACED);
+        TableAccount acc = activeAccounts.get(order.tableId());
+        if (acc != null) {
+            acc.addOrder(order);
+        }
+        notifyAssignedWaiter(order.tableId(),
+                new Alert(AlertNotificationType.ORDER_PLACED, order.tableId(),
+                        "New order placed: " + order.getId() + " with " + order.getItems().size() + " items."));
+    }
+
+    public void notifyAssignedWaiter(int tableId, Alert alert) {
+        String waiterId = tableAssignedWaiters.get(tableId);
+        if (waiterId != null) {
+            AlertListener listener = waiterListeners.get(waiterId);
+            if (listener != null) {
+                listener.onAlert(alert);
+            }
+        }
+    }
+
+    public Payment createPayment(PaymentType type, int tableId, Integer customerId) {
+        String pid = "PAY-" + (paymentCounter++);
+        Payment payment = new Payment(pid, type, tableId, customerId);
+        payments.put(pid, payment);
+        TableAccount acc = activeAccounts.get(tableId);
+        if (acc != null) {
+            acc.addPayment(payment);
+        }
+        return payment;
+    }
+
+    public Payment getPayment(String paymentId) {
+        return payments.get(paymentId);
+    }
+
+    public boolean purgeMeal(String orderItemId) {
+        OrderItem item = orderItems.get(orderItemId);
+        if (item != null) {
+            item.setStatus(OrderItemStatus.PURGED);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean purgeTableAccount(int tableId) {
+        TableAccount acc = activeAccounts.remove(tableId);
+        if (acc != null) {
+            acc.purge();
+            tableAssignedWaiters.remove(tableId);
+            return true;
+        }
+        return false;
+    }
+}
+
+// File: SurfaceComputer.java
+import java.util.*;
+
+public class SurfaceComputer {
+    private final int tableId;
+    private final int numberOfSeats;
+    private final RMOSServer server;
+
+    private boolean activated;
+    private boolean menuEngaged;
+    private boolean billModeEngaged;
+
+    private Order pendingOrder;
+
+    private Payment cashPayment;
+    private final Map<Integer, Payment> bankcardPayments;
+
+    public SurfaceComputer(int tableId, int numberOfSeats, RMOSServer server) {
+        this.tableId = tableId;
+        this.numberOfSeats = numberOfSeats;
+        this.server = server;
+        this.activated = false;
+        this.menuEngaged = false;
+        this.billModeEngaged = false;
+        this.bankcardPayments = new HashMap<>();
+    }
+
+    public int getTableId() {
+        return tableId;
+    }
+
+    public int getNumberOfSeats() {
+        return numberOfSeats;
+    }
+
+    public boolean isActivated() {
+        return activated;
+    }
+
+    public void setActivated(boolean activated) {
+        this.activated = activated;
+        if (!activated) {
+            this.menuEngaged = false;
+            this.billModeEngaged = false;
+            this.pendingOrder = null;
+            this.cashPayment = null;
+            this.bankcardPayments.clear();
+        }
+    }
+
+    public boolean isMenuEngaged() {
+        return menuEngaged;
+    }
+
+    public boolean isBillModeEngaged() {
+        return billModeEngaged;
+    }
+
+    // C01: Double tap activated surface computer to engage menu
+    public boolean doubleTapSurface() {
+        if (activated) {
+            this.menuEngaged = true;
+            return true;
+        }
+        return false;
+    }
+
+    // C02 & C04: Double tap dismiss option; cannot dismiss if non-empty pending order
+    public boolean doubleTapDismiss() {
+        if (!menuEngaged) {
+            return false;
+        }
+        if (pendingOrder != null && !pendingOrder.isEmpty()) {
+            return false; // C04
+        }
+        this.menuEngaged = false;
+        return true;
+    }
+
+    // C03: Create an empty pending order through engaged menu
+    public Order createPendingOrder() {
+        if (!menuEngaged) {
+            throw new IllegalStateException("Menu must be engaged to create an order");
+        }
+        this.pendingOrder = server.createOrder(tableId);
+        return this.pendingOrder;
+    }
+
+    public Order getPendingOrder() {
+        return pendingOrder;
+    }
+
+    // C05: Navigate through available items in engaged menu
+    public List<MenuItem> getAvailableMenuItems() {
+        if (!menuEngaged) {
+            throw new IllegalStateException("Menu is not engaged");
+        }
+        return server.getMenuCatalog();
+    }
+
+    // C06: Add item to pending order by dragging item onto order
+    public OrderItem dragItemToOrder(MenuItem item, int customerId) {
+        if (!menuEngaged || pendingOrder == null) {
+            throw new IllegalStateException("Engaged menu and pending order required");
+        }
+        OrderItem orderItem = server.createOrderItem(item, customerId);
+        pendingOrder.addItem(orderItem);
+        return orderItem;
+    }
+
+    // C07: Remove item from pending order by dragging item off order
+    public boolean dragItemOffOrder(OrderItem item) {
+        if (!menuEngaged || pendingOrder == null) {
+            return false;
+        }
+        return pendingOrder.removeItem(item);
+    }
+
+    // C08: Add special dietary requirement to order by dragging requirement onto order
+    public boolean dragDietaryRequirementToOrder(DietaryRequirement req) {
+        if (!menuEngaged || pendingOrder == null) {
+            return false;
+        }
+        return pendingOrder.addDietaryRequirement(req);
+    }
+
+    // C09: Add wildcard special dietary requirement to order
+    public DietaryRequirement addWildcardDietaryRequirement(String customRequirement) {
+        if (!menuEngaged || pendingOrder == null) {
+            throw new IllegalStateException("Engaged menu and pending order required");
+        }
+        DietaryRequirement wildcardReq = DietaryRequirement.wildcard(customRequirement);
+        pendingOrder.addDietaryRequirement(wildcardReq);
+        return wildcardReq;
+    }
+
+    // C10: Place order through engaged menu if pending and not empty
+    public boolean placeOrder() {
+        if (menuEngaged && pendingOrder != null && !pendingOrder.isEmpty() && pendingOrder.getStatus() == OrderStatus.PENDING) {
+            server.placeOrder(pendingOrder);
+            pendingOrder = null;
+            return true;
+        }
+        return false;
+    }
+
+    // C11: Cancel order through engaged menu if pending and not yet placed
+    public boolean cancelOrder() {
+        if (menuEngaged && pendingOrder != null && pendingOrder.getStatus() == OrderStatus.PENDING) {
+            pendingOrder.setStatus(OrderStatus.CANCELLED);
+            pendingOrder = null;
+            return true;
+        }
+        return false;
+    }
+
+    // C12: Call for waiter assistance through engaged menu
+    public void callWaiterAssistance() {
+        if (!menuEngaged) {
+            throw new IllegalStateException("Menu is not engaged");
+        }
+        server.notifyAssignedWaiter(tableId,
+                new Alert(AlertNotificationType.WAITER_ASSISTANCE, tableId, "Table " + tableId + " requested waiter assistance."));
+    }
+
+    // C13: Engage bill mode to finalise payment through engaged menu
+    public void engageBillMode() {
+        if (!menuEngaged) {
+            throw new IllegalStateException("Menu is not engaged");
+        }
+        this.billModeEngaged = true;
+        // C15: Cash payment for the whole table
+        this.cashPayment = server.createPayment(PaymentType.CASH, tableId, null);
+        // C16: Bankcard payment representation for each customer
+        this.bankcardPayments.clear();
+        for (int i = 1; i <= numberOfSeats; i++) {
+            this.bankcardPayments.put(i, server.createPayment(PaymentType.BANKCARD, tableId, i));
+        }
+    }
+
+    // C14: Disengage bill mode to cancel the billing process through engaged menu
+    public void disengageBillMode() {
+        if (!menuEngaged) {
+            throw new IllegalStateException("Menu is not engaged");
+        }
+        this.billModeEngaged = false;
+        this.cashPayment = null;
+        this.bankcardPayments.clear();
+    }
+
+    // C15: Display cash payment representation
+    public Payment getCashPaymentRepresentation() {
+        if (!billModeEngaged) {
+            throw new IllegalStateException("Bill mode is not engaged");
+        }
+        return cashPayment;
+    }
+
+    // C16: Display bankcard payment representation for customer
+    public Payment getBankcardPaymentRepresentation(int customerId) {
+        if (!billModeEngaged) {
+            throw new IllegalStateException("Bill mode is not engaged");
+        }
+        return bankcardPayments.get(customerId);
+    }
+
+    // C17: Display every meal ordered that may be dragged into a payment
+    public List<OrderItem> getMealsOrderedForBilling() {
+        if (!billModeEngaged) {
+            throw new IllegalStateException("Bill mode is not engaged");
+        }
+        TableAccount acc = server.getActiveAccount(tableId);
+        if (acc == null) return Collections.emptyList();
+        List<OrderItem> eligible = new ArrayList<>();
+        for (OrderItem item : acc.getAllMeals()) {
+            if (item.getStatus() == OrderItemStatus.DELIVERED || item.getStatus() == OrderItemStatus.READY_TO_SERVE) {
+                eligible.add(item);
+            }
+        }
+        return eligible;
+    }
+
+    // C18: Display tip denominations
+    public List<TipDenomination> getTipDenominations() {
+        if (!billModeEngaged) {
+            throw new IllegalStateException("Bill mode is not engaged");
+        }
+        return Arrays.asList(TipDenomination.values());
+    }
+
+    // C19: Drag meal into a bankcard or cash payment
+    public boolean dragMealToPayment(OrderItem meal, Payment payment) {
+        if (!billModeEngaged || payment == null || meal == null) {
+            return false;
+        }
+        return payment.addMeal(meal);
+    }
+
+    // C20: Drag meal out of a bankcard or cash payment
+    public boolean dragMealOutOfPayment(OrderItem meal, Payment payment) {
+        if (!billModeEngaged || payment == null || meal == null) {
+            return false;
+        }
+        return payment.removeMeal(meal);
+    }
+
+    // C21: Drag tip denomination into a bankcard or cash payment
+    public boolean dragTipToPayment(TipDenomination tip, Payment payment) {
+        if (!billModeEngaged || payment == null || tip == null) {
+            return false;
+        }
+        return payment.addTip(tip.getAmount());
+    }
+
+    // C22: Drag tip denomination out of a bankcard or cash payment
+    public boolean dragTipOutOfPayment(TipDenomination tip, Payment payment) {
+        if (!billModeEngaged || payment == null || tip == null) {
+            return false;
+        }
+        return payment.removeTip(tip.getAmount());
+    }
+}
+
+// File: KitchenDisplay.java
+public class KitchenDisplay {
+    private final RMOSServer server;
+    private StaffMember currentUser;
+
+    public KitchenDisplay(RMOSServer server) {
+        this.server = server;
+    }
+
+    public boolean login(String username, String password) {
+        StaffMember staff = server.authenticateStaff(username, password);
+        if (staff != null && (staff.getRole() == Role.CHEF || staff.getRole() == Role.SUPERVISOR)) {
+            this.currentUser = staff;
+            return true;
+        }
+        return false;
+    }
+
+    public void logout() {
+        this.currentUser = null;
+    }
+
+    public StaffMember getCurrentUser() {
+        return currentUser;
+    }
+
+    // K01: Chef accepts a customer's order item
+    public boolean acceptOrderItem(String orderItemId) {
+        if (currentUser == null) throw new IllegalStateException("User not logged in");
+        OrderItem item = server.getOrderItem(orderItemId);
+        if (item != null && item.getStatus() == OrderItemStatus.ORDERED) {
+            item.setStatus(OrderItemStatus.ACCEPTED_BY_KITCHEN);
+            return true;
+        }
+        return false;
+    }
+
+    // K02: Chef rejects a customer's order item
+    public boolean rejectOrderItem(String orderItemId, int tableId) {
+        if (currentUser == null) throw new IllegalStateException("User not logged in");
+        OrderItem item = server.getOrderItem(orderItemId);
+        if (item != null) {
+            item.setStatus(OrderItemStatus.REJECTED_BY_KITCHEN);
+            server.notifyAssignedWaiter(tableId,
+                    new Alert(AlertNotificationType.ITEM_REJECTED, tableId,
+                            "Item rejected by kitchen: " + item.getMenuItem().getName()));
+            return true;
+        }
+        return false;
+    }
+
+    // K03: Chef indicates that an order item is ready to be served
+    public boolean markItemReady(String orderItemId, int tableId) {
+        if (currentUser == null) throw new IllegalStateException("User not logged in");
+        OrderItem item = server.getOrderItem(orderItemId);
+        if (item != null) {
+            item.setStatus(OrderItemStatus.READY_TO_SERVE);
+            server.notifyAssignedWaiter(tableId,
+                    new Alert(AlertNotificationType.ITEM_READY, tableId,
+                            "Item ready to serve: " + item.getMenuItem().getName()));
+            return true;
+        }
+        return false;
+    }
+}
+
+// File: Tablet.java
+import java.util.*;
+
+public class Tablet implements AlertListener {
+    private final RMOSServer server;
+    private StaffMember currentUser;
+    private final List<Alert> receivedAlerts;
+
+    public Tablet(RMOSServer server) {
+        this.server = server;
+        this.receivedAlerts = new ArrayList<>();
+    }
+
+    // W01: Waiter / supervisor logs into tablet
+    public boolean login(String username, String password) {
+        StaffMember staff = server.authenticateStaff(username, password);
+        if (staff != null && (staff.getRole() == Role.WAITER || staff.getRole() == Role.SUPERVISOR)) {
+            this.currentUser = staff;
+            server.registerAlertListener(staff.getId(), this);
+            return true;
+        }
+        return false;
+    }
+
+    // W02: Waiter logs out of tablet
+    public void logout() {
+        if (currentUser != null) {
+            server.unregisterAlertListener(currentUser.getId());
+            this.currentUser = null;
+        }
+    }
+
+    public StaffMember getCurrentUser() {
+        return currentUser;
+    }
+
+    // W03 & W05: Activate surface computer and open its account, assigned to table
+    public TableAccount activateSurfaceComputer(SurfaceComputer surfaceComputer) {
+        if (currentUser == null) throw new IllegalStateException("Staff must be logged in");
+        TableAccount account = server.openAccount(surfaceComputer.getTableId(), currentUser.getId());
+        surfaceComputer.setActivated(true);
+        return account;
+    }
+
+    // W04: Deactivate surface computer and close its account
+    public TableAccount deactivateSurfaceComputer(SurfaceComputer surfaceComputer) {
+        if (currentUser == null) throw new IllegalStateException("Staff must be logged in");
+        surfaceComputer.setActivated(false);
+        return server.closeAccount(surfaceComputer.getTableId());
+    }
+
+    // W06: Alerted via wireless tablet
+    @Override
+    public void onAlert(Alert alert) {
+        receivedAlerts.add(alert);
+    }
+
+    public List<Alert> getReceivedAlerts() {
+        return Collections.unmodifiableList(receivedAlerts);
+    }
+
+    public void clearAlerts() {
+        receivedAlerts.clear();
+    }
+
+    // W07: Accept order placed by customer
+    public boolean acceptOrder(String orderId) {
+        if (currentUser == null) throw new IllegalStateException("Staff must be logged in");
+        Order order = server.getOrder(orderId);
+        if (order != null && order.getStatus() == OrderStatus.PLACED) {
+            order.setStatus(OrderStatus.ACCEPTED_BY_WAITER);
+            return true;
+        }
+        return false;
+    }
+
+    // W08: Reject order placed by customer
+    public boolean rejectOrder(String orderId) {
+        if (currentUser == null) throw new IllegalStateException("Staff must be logged in");
+        Order order = server.getOrder(orderId);
+        if (order != null && order.getStatus() == OrderStatus.PLACED) {
+            order.setStatus(OrderStatus.REJECTED_BY_WAITER);
+            return true;
+        }
+        return false;
+    }
+
+    // W09: Indicate delivery of an item to customer
+    public boolean indicateDelivery(String orderItemId) {
+        if (currentUser == null) throw new IllegalStateException("Staff must be logged in");
+        OrderItem item = server.getOrderItem(orderItemId);
+        if (item != null && item.getStatus() == OrderItemStatus.READY_TO_SERVE) {
+            item.setStatus(OrderItemStatus.DELIVERED);
+            return true;
+        }
+        return false;
+    }
+
+    // G06 & W10: Process payment using cash (interfacing with register)
+    public boolean processPaymentCash(Payment payment, double tenderedAmount) {
+        if (currentUser == null) throw new IllegalStateException("Staff must be logged in");
+        return server.getRegister().processCashPayment(payment, tenderedAmount);
+    }
+
+    // G06 & W11: Process payment using bankcard (interfacing with register)
+    public boolean processPaymentBankcard(Payment payment, String cardNumber) {
+        if (currentUser == null) throw new IllegalStateException("Staff must be logged in");
+        return server.getRegister().processBankcardPayment(payment, cardNumber);
+    }
+
+    // S01 & S02: Supervisor can do chef operations
+    public boolean chefAcceptOrderItem(String orderItemId, KitchenDisplay display) {
+        checkSupervisorRole();
+        return display.acceptOrderItem(orderItemId);
+    }
+
+    public boolean chefRejectOrderItem(String orderItemId, int tableId, KitchenDisplay display) {
+        checkSupervisorRole();
+        return display.rejectOrderItem(orderItemId, tableId);
+    }
+
+    public boolean chefMarkItemReady(String orderItemId, int tableId, KitchenDisplay display) {
+        checkSupervisorRole();
+        return display.markItemReady(orderItemId, tableId);
+    }
+
+    // S03: Supervisor can abort/purge a customer's meal from active system with no expectation of payment
+    public boolean abortMeal(String orderItemId) {
+        checkSupervisorRole();
+        return server.purgeMeal(orderItemId);
+    }
+
+    // S04: Supervisor can abort/purge a table's account/meals with no expectation of payment
+    public boolean abortTableAccount(int tableId, SurfaceComputer surface) {
+        checkSupervisorRole();
+        surface.setActivated(false);
+        return server.purgeTableAccount(tableId);
+    }
+
+    // S05: Supervisor can issue a refund for one or more items to a customer
+    public boolean issueRefund(Payment payment, List<OrderItem> itemsToRefund) {
+        checkSupervisorRole();
+        if (!payment.isProcessed()) {
+            return false;
+        }
+        double refundTotal = 0.0;
+        for (OrderItem item : itemsToRefund) {
+            item.setStatus(OrderItemStatus.REFUNDED);
+            refundTotal += item.getPrice();
+        }
+        return server.getRegister().processRefund(payment, refundTotal);
+    }
+
+    private void checkSupervisorRole() {
+        if (currentUser == null || currentUser.getRole() != Role.SUPERVISOR) {
+            throw new SecurityException("Supervisor role required for this action");
+        }
+    }
+}
+
+// File: Main.java
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=== RMOS System Initialization ===");
+        Register register = new Register();
+        RMOSServer server = new RMOSServer(register);
+
+        // Staff members
+        StaffMember waiter = new StaffMember("W1", "Alice Waiter", "alice", "pass123", Role.WAITER);
+        StaffMember chef = new StaffMember("C1", "Bob Chef", "bob", "chef123", Role.CHEF);
+        StaffMember supervisor = new StaffMember("S1", "Carol Supervisor", "carol", "super123", Role.SUPERVISOR);
+
+        server.registerStaff(waiter);
+        server.registerStaff(chef);
+        server.registerStaff(supervisor);
+
+        // Menu items
+        MenuItem steak = new MenuItem("M1", "Ribeye Steak", 32.50, "Prime beef cut");
+        MenuItem salad = new MenuItem("M2", "Garden Salad", 12.00, "Fresh organic vegetables");
+        MenuItem wine = new MenuItem("M3", "Red Wine Glass", 9.50, "Cabernet Sauvignon");
+
+        server.addMenuItem(steak);
+        server.addMenuItem(salad);
+        server.addMenuItem(wine);
+
+        // Hardware terminals
+        Tablet waiterTablet = new Tablet(server);
+        KitchenDisplay kitchenDisplay = new KitchenDisplay(server);
+        SurfaceComputer tableSurface = new SurfaceComputer(5, 2, server);
+
+        // W01: Waiter login
+        boolean waiterLoggedIn = waiterTablet.login("alice", "pass123");
+        System.out.println("W01: Alice logged into tablet: " + waiterLoggedIn);
+
+        // W03, W05: Activate surface computer & open table account, waiter assigned
+        TableAccount account = waiterTablet.activateSurfaceComputer(tableSurface);
+        System.out.println("W03 & W05: Table 5 activated. Account opened: " + account.getId() +
+                ", Assigned Waiter: " + server.getAssignedWaiterId(5));
+
+        // C01: Engage menu by double tapping activated surface computer
+        tableSurface.doubleTapSurface();
+        System.out.println("C01: Customer double-tapped surface. Menu engaged: " + tableSurface.isMenuEngaged());
+
+        // C03: Create empty pending order
+        Order order = tableSurface.createPendingOrder();
+        System.out.println("C03: Empty pending order created: " + order.getId());
+
+        // C05 & C06: Navigate and drag items onto pending order
+        System.out.println("C05: Available menu items: " + tableSurface.getAvailableMenuItems().size());
+        OrderItem meal1 = tableSurface.dragItemToOrder(steak, 1);
+        OrderItem meal2 = tableSurface.dragItemToOrder(salad, 2);
+        OrderItem meal3 = tableSurface.dragItemToOrder(wine, 1);
+        System.out.println("C06: Added items: " + meal1.getMenuItem().getName() + ", " +
+                meal2.getMenuItem().getName() + ", " + meal3.getMenuItem().getName());
+
+        // C04: Customer cannot dismiss engaged menu while there is a non-empty pending order
+        boolean dismissedAttempt = tableSurface.doubleTapDismiss();
+        System.out.println("C04: Attempted dismiss with non-empty pending order: " + dismissedAttempt +
+                " (Menu still engaged: " + tableSurface.isMenuEngaged() + ")");
+
+        // C07: Drag item off order
+        boolean itemRemoved = tableSurface.dragItemOffOrder(meal3);
+        System.out.println("C07: Dragged wine off order: " + itemRemoved);
+
+        // C08 & C09: Add dietary requirements (standard and wildcard)
+        DietaryRequirement glutenFree = DietaryRequirement.standard("Gluten Free");
+        tableSurface.dragDietaryRequirementToOrder(glutenFree);
+        DietaryRequirement wildcardReq = tableSurface.addWildcardDietaryRequirement("No garlic or onion in sauce");
+        System.out.println("C08: Added dietary req: " + glutenFree);
+        System.out.println("C09: Added wildcard dietary req: " + wildcardReq);
+
+        // C10: Place order
+        boolean placed = tableSurface.placeOrder();
+        System.out.println("C10: Order placed: " + placed);
+
+        // W06: Alert received on waiter tablet for order placed
+        System.out.println("W06: Waiter alerts: " + waiterTablet.getReceivedAlerts());
+        waiterTablet.clearAlerts();
+
+        // W07: Waiter accepts placed order
+        boolean acceptedByWaiter = waiterTablet.acceptOrder(order.getId());
+        System.out.println("W07: Waiter accepted order: " + acceptedByWaiter);
+
+        // K01, K02, K03: Kitchen chef actions
+        kitchenDisplay.login("bob", "chef123");
+        kitchenDisplay.acceptOrderItem(meal1.getId());
+        kitchenDisplay.markItemReady(meal1.getId(), 5);
+        System.out.println("K01 & K03: Chef accepted and marked steak ready.");
+
+        kitchenDisplay.rejectOrderItem(meal2.getId(), 5);
+        System.out.println("K02: Chef rejected salad.");
+
+        // W06: Verify alerts received on waiter tablet for item ready & item rejected
+        System.out.println("W06: Waiter received kitchen alerts: " + waiterTablet.getReceivedAlerts());
+        waiterTablet.clearAlerts();
+
+        // C12: Customer calls for waiter assistance
+        tableSurface.callWaiterAssistance();
+        System.out.println("C12 & W06: Waiter assistance requested alert: " + waiterTablet.getReceivedAlerts());
+        waiterTablet.clearAlerts();
+
+        // W09: Waiter delivers steak to customer
+        boolean delivered = waiterTablet.indicateDelivery(meal1.getId());
+        System.out.println("W09: Waiter indicated delivery of steak: " + delivered);
+
+        // C13: Customer engages bill mode
+        tableSurface.engageBillMode();
+        System.out.println("C13: Billing mode engaged: " + tableSurface.isBillModeEngaged());
+
+        // C15 & C16: Representations of Cash for table & Bankcard for each customer
+        Payment cashRep = tableSurface.getCashPaymentRepresentation();
+        Payment cardRepCust1 = tableSurface.getBankcardPaymentRepresentation(1);
+        System.out.println("C15: Cash payment representation: " + cashRep.getId());
+        System.out.println("C16: Bankcard payment representation for Customer 1: " + cardRepCust1.getId());
+
+        // C17 & C18: Ordered meals and tip denominations
+        System.out.println("C17: Delivered meals ready for billing: " + tableSurface.getMealsOrderedForBilling());
+        System.out.println("C18: Tip denominations available: " + tableSurface.getTipDenominations());
+
+        // C19 & C21: Drag meal and tip into Customer 1 bankcard payment
+        tableSurface.dragMealToPayment(meal1, cardRepCust1);
+        tableSurface.dragTipToPayment(TipDenomination.FIVE, cardRepCust1);
+        System.out.println("C19 & C21: Meal and $5 tip added to Customer 1 card payment. Total: $" +
+                String.format("%.2f", cardRepCust1.getTotalAmount()));
+
+        // C20 & C22: Test dragging out and re-adding
+        tableSurface.dragTipOutOfPayment(TipDenomination.FIVE, cardRepCust1);
+        System.out.println("C22: Tip removed. New total: $" + String.format("%.2f", cardRepCust1.getTotalAmount()));
+        tableSurface.dragTipToPayment(TipDenomination.TEN, cardRepCust1);
+        System.out.println("C21: $10 tip added. New total: $" + String.format("%.2f", cardRepCust1.getTotalAmount()));
+
+        // G06 & W11: Tablet interfaces with register to process bankcard payment
+        boolean paid = waiterTablet.processPaymentBankcard(cardRepCust1, "4111 2222 3333 4444");
+        System.out.println("G06 & W11: Tablet processed bankcard payment: " + paid);
+
+        // W04: Deactivate surface computer and close account
+        tableSurface.disengageBillMode();
+        waiterTablet.deactivateSurfaceComputer(tableSurface);
+        System.out.println("W04: Surface computer deactivated. Account closed.");
+
+        // S01-S05: Supervisor capabilities demonstration
+        System.out.println("\n=== Supervisor Privileges Demo ===");
+        Tablet supervisorTablet = new Tablet(server);
+        supervisorTablet.login("carol", "super123");
+
+        // Open Table 2 for supervisor demo
+        SurfaceComputer table2 = new SurfaceComputer(2, 2, server);
+        supervisorTablet.activateSurfaceComputer(table2);
+        table2.doubleTapSurface();
+        table2.createPendingOrder();
+        OrderItem supMeal = table2.dragItemToOrder(steak, 1);
+        table2.placeOrder();
+        supervisorTablet.acceptOrder(table2.getPendingOrder() != null ? "" : server.getActiveAccount(2).getOrders().get(0).getId());
+
+        // S02: Supervisor performs chef operation
+        supervisorTablet.chefMarkItemReady(supMeal.getId(), 2, kitchenDisplay);
+        supervisorTablet.indicateDelivery(supMeal.getId());
+
+        // S03: Supervisor aborts/purges meal from active system with no expectation of payment
+        boolean mealPurged = supervisorTablet.abortMeal(supMeal.getId());
+        System.out.println("S03: Supervisor purged meal: " + mealPurged + " (Status=" + supMeal.getStatus() + ")");
+
+        // S04: Supervisor aborts/purges entire table account
+        boolean accountPurged = supervisorTablet.abortTableAccount(2, table2);
+        System.out.println("S04: Supervisor purged table 2 account: " + accountPurged);
+
+        // S05: Supervisor issues refund for customer 1's previous payment
+        boolean refundSuccess = supervisorTablet.issueRefund(cardRepCust1, Collections.singletonList(meal1));
+        System.out.println("S05: Supervisor issued refund for steak: " + refundSuccess);
+
+        System.out.println("\nRegister Transaction Audit Logs:");
+        for (String log : register.getTransactionLogs()) {
+            System.out.println(" - " + log);
+        }
+
+        System.out.println("\n=== RMOS Demo Completed Successfully ===");
+    }
+}

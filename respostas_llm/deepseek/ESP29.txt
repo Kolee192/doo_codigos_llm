@@ -1,0 +1,1111 @@
+// File: Gender.java
+public enum Gender {
+    MALE,
+    FEMALE,
+    OTHER,
+    UNSPECIFIED
+}
+
+// File: ChildStatus.java
+public enum ChildStatus {
+    ENROLLED,
+    WAITING_LIST
+}
+
+// File: EmployeeClassification.java
+public enum EmployeeClassification {
+    ADMINISTRATOR,
+    TEACHER,
+    ASSISTANT
+}
+
+// File: Parent.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Parent {
+    private final int parentId;
+    private String name;
+    private String address;
+    private String homePhone;
+    private String workPhone;
+    private String email;
+    private String emgName;
+    private String emgPhone;
+    private String authPickUp;
+    private final List<Child> children = new ArrayList<>();
+    private final List<Bill> bills = new ArrayList<>();
+
+    public Parent(int parentId, String name, String address, String homePhone, String workPhone,
+                  String email, String emgName, String emgPhone, String authPickUp) {
+        this.parentId = parentId;
+        this.name = name;
+        this.address = address;
+        this.homePhone = homePhone;
+        this.workPhone = workPhone;
+        this.email = email;
+        this.emgName = emgName;
+        this.emgPhone = emgPhone;
+        this.authPickUp = authPickUp;
+    }
+
+    public void addChild(Child child) {
+        if (child == null) {
+            throw new IllegalArgumentException("Child cannot be null");
+        }
+        if (!children.contains(child)) {
+            children.add(child);
+        }
+    }
+
+    public void removeChild(Child child) {
+        children.remove(child);
+    }
+
+    public void addBill(Bill bill) {
+        if (bill == null) {
+            throw new IllegalArgumentException("Bill cannot be null");
+        }
+        if (!bills.contains(bill)) {
+            bills.add(bill);
+        }
+    }
+
+    public boolean hasChildren() {
+        return !children.isEmpty();
+    }
+
+    public int getParentId() {
+        return parentId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getHomePhone() {
+        return homePhone;
+    }
+
+    public void setHomePhone(String homePhone) {
+        this.homePhone = homePhone;
+    }
+
+    public String getWorkPhone() {
+        return workPhone;
+    }
+
+    public void setWorkPhone(String workPhone) {
+        this.workPhone = workPhone;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getEmgName() {
+        return emgName;
+    }
+
+    public void setEmgName(String emgName) {
+        this.emgName = emgName;
+    }
+
+    public String getEmgPhone() {
+        return emgPhone;
+    }
+
+    public void setEmgPhone(String emgPhone) {
+        this.emgPhone = emgPhone;
+    }
+
+    public String getAuthPickUp() {
+        return authPickUp;
+    }
+
+    public void setAuthPickUp(String authPickUp) {
+        this.authPickUp = authPickUp;
+    }
+
+    public List<Child> getChildren() {
+        return Collections.unmodifiableList(children);
+    }
+
+    public List<Bill> getBills() {
+        return Collections.unmodifiableList(bills);
+    }
+}
+
+// File: Child.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Child {
+    private final int childId;
+    private final Parent parent;
+    private String name;
+    private LocalDate birthDate;
+    private Gender gender;
+    private Classroom classroom;
+    private String specialNeeds;
+    private String photo;
+    private ChildStatus status;
+    private String comments;
+    private final List<Immunization> immunizations = new ArrayList<>();
+    private final List<CallSheet> callSheets = new ArrayList<>();
+    private final List<Registration> registrations = new ArrayList<>();
+
+    public Child(int childId, Parent parent, String name, LocalDate birthDate, Gender gender,
+                 String specialNeeds, String photo) {
+        if (parent == null) {
+            throw new IllegalArgumentException("Parent cannot be null");
+        }
+        this.childId = childId;
+        this.parent = parent;
+        this.name = name;
+        this.birthDate = birthDate;
+        this.gender = gender;
+        this.specialNeeds = specialNeeds;
+        this.photo = photo;
+        this.status = ChildStatus.WAITING_LIST;
+        parent.addChild(this);
+    }
+
+    public void addImmunization(Immunization immunization) {
+        if (immunization == null) {
+            throw new IllegalArgumentException("Immunization cannot be null");
+        }
+        if (immunization.getChildId() != childId) {
+            throw new IllegalArgumentException("Immunization belongs to another child");
+        }
+        if (!immunizations.contains(immunization)) {
+            immunizations.add(immunization);
+        }
+    }
+
+    public void addCallSheet(CallSheet callSheet) {
+        if (callSheet == null) {
+            throw new IllegalArgumentException("Call sheet cannot be null");
+        }
+        if (callSheet.getChildId() != childId) {
+            throw new IllegalArgumentException("Call sheet belongs to another child");
+        }
+        if (!callSheets.contains(callSheet)) {
+            callSheets.add(callSheet);
+        }
+    }
+
+    public void addRegistration(Registration registration) {
+        if (registration == null) {
+            throw new IllegalArgumentException("Registration cannot be null");
+        }
+        if (registration.getChildId() != childId) {
+            throw new IllegalArgumentException("Registration belongs to another child");
+        }
+        if (!registrations.contains(registration)) {
+            registrations.add(registration);
+        }
+    }
+
+    public boolean hasImmunizations() {
+        return !immunizations.isEmpty();
+    }
+
+    public boolean isAdmissible() {
+        return hasImmunizations();
+    }
+
+    public void assignToClassroom(Classroom classroom, ChildStatus status) {
+        if (classroom == null || status == null) {
+            throw new IllegalArgumentException("Classroom and status cannot be null");
+        }
+        this.classroom = classroom;
+        this.status = status;
+    }
+
+    public void clearClassroom() {
+        this.classroom = null;
+        this.status = ChildStatus.WAITING_LIST;
+    }
+
+    public int getChildId() {
+        return childId;
+    }
+
+    public int getParentId() {
+        return parent.getParentId();
+    }
+
+    public Parent getParent() {
+        return parent;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
+
+    public void setBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    public Gender getGender() {
+        return gender;
+    }
+
+    public void setGender(Gender gender) {
+        this.gender = gender;
+    }
+
+    public Classroom getClassroom() {
+        return classroom;
+    }
+
+    public String getSpecialNeeds() {
+        return specialNeeds;
+    }
+
+    public void setSpecialNeeds(String specialNeeds) {
+        this.specialNeeds = specialNeeds;
+    }
+
+    public String getPhoto() {
+        return photo;
+    }
+
+    public void setPhoto(String photo) {
+        this.photo = photo;
+    }
+
+    public ChildStatus getStatus() {
+        return status;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public void setComments(String comments) {
+        this.comments = comments;
+    }
+
+    public List<Immunization> getImmunizations() {
+        return Collections.unmodifiableList(immunizations);
+    }
+
+    public List<CallSheet> getCallSheets() {
+        return Collections.unmodifiableList(callSheets);
+    }
+
+    public List<Registration> getRegistrations() {
+        return Collections.unmodifiableList(registrations);
+    }
+}
+
+// File: Classroom.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Classroom {
+    public static final int CAPACITY = 20;
+    private final int classroomId;
+    private String name;
+    private String roomNo;
+    private String phoneNumber;
+    private String teacher;
+    private String assistant;
+    private final List<Child> children = new ArrayList<>();
+    private final WaitingList waitingList;
+
+    public Classroom(int classroomId, String name, String roomNo, String phoneNumber,
+                     String teacher, String assistant) {
+        this.classroomId = classroomId;
+        this.name = name;
+        this.roomNo = roomNo;
+        this.phoneNumber = phoneNumber;
+        this.teacher = teacher;
+        this.assistant = assistant;
+        this.waitingList = new WaitingList(this);
+    }
+
+    public boolean hasSpace() {
+        return children.size() < CAPACITY;
+    }
+
+    public void addChild(Child child) {
+        if (child == null) {
+            throw new IllegalArgumentException("Child cannot be null");
+        }
+        if (children.size() >= CAPACITY) {
+            throw new IllegalStateException("Classroom is full");
+        }
+        if (!children.contains(child)) {
+            children.add(child);
+            child.assignToClassroom(this, ChildStatus.ENROLLED);
+        }
+    }
+
+    public void removeChild(Child child) {
+        if (children.remove(child)) {
+            child.clearClassroom();
+        }
+    }
+
+    public void addToWaitingList(Child child) {
+        waitingList.addChild(child);
+    }
+
+    public int getClassroomId() {
+        return classroomId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getRoomNo() {
+        return roomNo;
+    }
+
+    public void setRoomNo(String roomNo) {
+        this.roomNo = roomNo;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getTeacher() {
+        return teacher;
+    }
+
+    public void setTeacher(String teacher) {
+        this.teacher = teacher;
+    }
+
+    public String getAssistant() {
+        return assistant;
+    }
+
+    public void setAssistant(String assistant) {
+        this.assistant = assistant;
+    }
+
+    public List<Child> getChildren() {
+        return Collections.unmodifiableList(children);
+    }
+
+    public WaitingList getWaitingList() {
+        return waitingList;
+    }
+}
+
+// File: WaitingList.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class WaitingList {
+    private final Classroom classroom;
+    private final List<Child> children = new ArrayList<>();
+
+    public WaitingList(Classroom classroom) {
+        if (classroom == null) {
+            throw new IllegalArgumentException("Classroom cannot be null");
+        }
+        this.classroom = classroom;
+    }
+
+    public void addChild(Child child) {
+        if (child == null) {
+            throw new IllegalArgumentException("Child cannot be null");
+        }
+        if (!children.contains(child)) {
+            children.add(child);
+            child.assignToClassroom(classroom, ChildStatus.WAITING_LIST);
+        }
+    }
+
+    public void removeChild(Child child) {
+        if (children.remove(child)) {
+            if (child.getClassroom() == classroom) {
+                child.clearClassroom();
+            }
+        }
+    }
+
+    public List<Child> getChildren() {
+        return Collections.unmodifiableList(children);
+    }
+
+    public Classroom getClassroom() {
+        return classroom;
+    }
+
+    public int size() {
+        return children.size();
+    }
+}
+
+// File: Bill.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public class Bill {
+    private final int invoiceId;
+    private final int parentId;
+    private BigDecimal amountDue;
+    private BigDecimal amountPaid;
+    private LocalDate datePaid;
+
+    public Bill(int invoiceId, Parent parent, BigDecimal amountDue) {
+        if (parent == null) {
+            throw new IllegalArgumentException("Parent cannot be null");
+        }
+        if (amountDue == null || amountDue.signum() < 0) {
+            throw new IllegalArgumentException("Amount due must be non-negative");
+        }
+        this.invoiceId = invoiceId;
+        this.parentId = parent.getParentId();
+        this.amountDue = amountDue;
+        this.amountPaid = BigDecimal.ZERO;
+        this.datePaid = null;
+        parent.addBill(this);
+    }
+
+    public void pay(BigDecimal amount, LocalDate date) {
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("Payment amount must be positive");
+        }
+        if (date == null) {
+            throw new IllegalArgumentException("Payment date cannot be null");
+        }
+        amountPaid = amountPaid.add(amount);
+        if (amountPaid.compareTo(amountDue) >= 0) {
+            datePaid = date;
+        }
+    }
+
+    public BigDecimal getBalance() {
+        BigDecimal balance = amountDue.subtract(amountPaid);
+        return balance.signum() < 0 ? BigDecimal.ZERO : balance;
+    }
+
+    public int getInvoiceId() {
+        return invoiceId;
+    }
+
+    public int getParentId() {
+        return parentId;
+    }
+
+    public BigDecimal getAmountDue() {
+        return amountDue;
+    }
+
+    public void setAmountDue(BigDecimal amountDue) {
+        if (amountDue == null || amountDue.signum() < 0) {
+            throw new IllegalArgumentException("Amount due must be non-negative");
+        }
+        this.amountDue = amountDue;
+    }
+
+    public BigDecimal getAmountPaid() {
+        return amountPaid;
+    }
+
+    public LocalDate getDatePaid() {
+        return datePaid;
+    }
+}
+
+// File: CallSheet.java
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+public class CallSheet {
+    private final int childId;
+    private final LocalDate date;
+    private LocalTime signIn;
+    private LocalTime signOut;
+
+    public CallSheet(Child child, LocalDate date) {
+        if (child == null) {
+            throw new IllegalArgumentException("Child cannot be null");
+        }
+        if (date == null) {
+            throw new IllegalArgumentException("Date cannot be null");
+        }
+        this.childId = child.getChildId();
+        this.date = date;
+        child.addCallSheet(this);
+    }
+
+    public void signIn(LocalTime time) {
+        if (time == null) {
+            throw new IllegalArgumentException("Sign-in time cannot be null");
+        }
+        this.signIn = time;
+    }
+
+    public void signOut(LocalTime time) {
+        if (time == null) {
+            throw new IllegalArgumentException("Sign-out time cannot be null");
+        }
+        this.signOut = time;
+    }
+
+    public int getChildId() {
+        return childId;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public LocalTime getSignIn() {
+        return signIn;
+    }
+
+    public LocalTime getSignOut() {
+        return signOut;
+    }
+}
+
+// File: Change.java
+import java.time.LocalDateTime;
+
+public class Change {
+    private final int userId;
+    private final LocalDateTime time;
+    private final String description;
+
+    public Change(Employee employee, String description) {
+        if (employee == null) {
+            throw new IllegalArgumentException("Employee cannot be null");
+        }
+        if (description == null) {
+            throw new IllegalArgumentException("Description cannot be null");
+        }
+        this.userId = employee.getUserId();
+        this.time = LocalDateTime.now();
+        this.description = description;
+        employee.addChange(this);
+    }
+
+    public int getUserId() {
+        return userId;
+    }
+
+    public LocalDateTime getTime() {
+        return time;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+}
+
+// File: Immunization.java
+import java.time.LocalDate;
+
+public class Immunization {
+    private final int immuneId;
+    private final int childId;
+    private final String type;
+    private final LocalDate date;
+
+    public Immunization(int immuneId, Child child, String type, LocalDate date) {
+        if (child == null) {
+            throw new IllegalArgumentException("Child cannot be null");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("Type cannot be null");
+        }
+        if (date == null) {
+            throw new IllegalArgumentException("Date cannot be null");
+        }
+        this.immuneId = immuneId;
+        this.childId = child.getChildId();
+        this.type = type;
+        this.date = date;
+        child.addImmunization(this);
+    }
+
+    public int getImmuneId() {
+        return immuneId;
+    }
+
+    public int getChildId() {
+        return childId;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+}
+
+// File: Registration.java
+import java.time.LocalDate;
+
+public class Registration {
+    private final int childId;
+    private final LocalDate registerDate;
+    private LocalDate enrollDate;
+    private LocalDate withdrawDate;
+
+    public Registration(Child child, LocalDate registerDate) {
+        if (child == null) {
+            throw new IllegalArgumentException("Child cannot be null");
+        }
+        if (registerDate == null) {
+            throw new IllegalArgumentException("Register date cannot be null");
+        }
+        this.childId = child.getChildId();
+        this.registerDate = registerDate;
+        child.addRegistration(this);
+    }
+
+    public void enroll(LocalDate enrollDate) {
+        if (enrollDate == null) {
+            throw new IllegalArgumentException("Enroll date cannot be null");
+        }
+        if (enrollDate.isBefore(registerDate)) {
+            throw new IllegalArgumentException("Enroll date cannot be before register date");
+        }
+        this.enrollDate = enrollDate;
+    }
+
+    public void withdraw(LocalDate withdrawDate) {
+        if (withdrawDate == null) {
+            throw new IllegalArgumentException("Withdraw date cannot be null");
+        }
+        if (enrollDate == null) {
+            throw new IllegalStateException("Cannot withdraw before enrollment");
+        }
+        if (withdrawDate.isBefore(enrollDate)) {
+            throw new IllegalArgumentException("Withdraw date cannot be before enroll date");
+        }
+        this.withdrawDate = withdrawDate;
+    }
+
+    public int getChildId() {
+        return childId;
+    }
+
+    public LocalDate getRegisterDate() {
+        return registerDate;
+    }
+
+    public LocalDate getEnrollDate() {
+        return enrollDate;
+    }
+
+    public LocalDate getWithdrawDate() {
+        return withdrawDate;
+    }
+}
+
+// File: Reminder.java
+import java.time.LocalDate;
+
+public class Reminder {
+    private final int reminderId;
+    private final int employeeId;
+    private final LocalDate date;
+    private final String message;
+
+    public Reminder(int reminderId, Employee employee, LocalDate date, String message) {
+        if (employee == null) {
+            throw new IllegalArgumentException("Employee cannot be null");
+        }
+        if (date == null) {
+            throw new IllegalArgumentException("Date cannot be null");
+        }
+        if (message == null) {
+            throw new IllegalArgumentException("Message cannot be null");
+        }
+        this.reminderId = reminderId;
+        this.employeeId = employee.getUserId();
+        this.date = date;
+        this.message = message;
+        employee.addReminder(this);
+    }
+
+    public int getReminderId() {
+        return reminderId;
+    }
+
+    public int getEmployeeId() {
+        return employeeId;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+}
+
+// File: Employee.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Employee {
+    private final int userId;
+    private String password;
+    private String firstName;
+    private String lastName;
+    private EmployeeClassification classification;
+    private final List<Reminder> reminders = new ArrayList<>();
+    private final List<Change> changes = new ArrayList<>();
+
+    public Employee(int userId, String password, String firstName, String lastName,
+                    EmployeeClassification classification) {
+        if (classification == null) {
+            throw new IllegalArgumentException("Classification cannot be null");
+        }
+        this.userId = userId;
+        this.password = password;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.classification = classification;
+    }
+
+    public void addReminder(Reminder reminder) {
+        if (reminder == null) {
+            throw new IllegalArgumentException("Reminder cannot be null");
+        }
+        if (reminder.getEmployeeId() != userId) {
+            throw new IllegalArgumentException("Reminder belongs to another employee");
+        }
+        if (!reminders.contains(reminder)) {
+            reminders.add(reminder);
+        }
+    }
+
+    public void addChange(Change change) {
+        if (change == null) {
+            throw new IllegalArgumentException("Change cannot be null");
+        }
+        if (change.getUserId() != userId) {
+            throw new IllegalArgumentException("Change belongs to another employee");
+        }
+        if (!changes.contains(change)) {
+            changes.add(change);
+        }
+    }
+
+    public int getUserId() {
+        return userId;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public EmployeeClassification getClassification() {
+        return classification;
+    }
+
+    public void setClassification(EmployeeClassification classification) {
+        if (classification == null) {
+            throw new IllegalArgumentException("Classification cannot be null");
+        }
+        this.classification = classification;
+    }
+
+    public List<Reminder> getReminders() {
+        return Collections.unmodifiableList(reminders);
+    }
+
+    public List<Change> getChanges() {
+        return Collections.unmodifiableList(changes);
+    }
+}
+
+// File: DayCareCenter.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class DayCareCenter {
+    private final Map<Integer, Parent> parents = new HashMap<>();
+    private final Map<Integer, Child> children = new HashMap<>();
+    private final Map<Integer, Employee> employees = new HashMap<>();
+    private final Map<Integer, Classroom> classrooms = new HashMap<>();
+    private final List<Bill> bills = new ArrayList<>();
+
+    public void addParent(Parent parent) {
+        if (parent == null) {
+            throw new IllegalArgumentException("Parent cannot be null");
+        }
+        if (!parent.hasChildren()) {
+            throw new IllegalArgumentException("Parent must have at least one child");
+        }
+        if (parents.putIfAbsent(parent.getParentId(), parent) != null) {
+            throw new IllegalArgumentException("Parent ID already exists");
+        }
+    }
+
+    public void addChild(Child child) {
+        if (child == null) {
+            throw new IllegalArgumentException("Child cannot be null");
+        }
+        if (children.putIfAbsent(child.getChildId(), child) != null) {
+            throw new IllegalArgumentException("Child ID already exists");
+        }
+    }
+
+    public void addEmployee(Employee employee) {
+        if (employee == null) {
+            throw new IllegalArgumentException("Employee cannot be null");
+        }
+        if (employees.putIfAbsent(employee.getUserId(), employee) != null) {
+            throw new IllegalArgumentException("Employee ID already exists");
+        }
+    }
+
+    public void addClassroom(Classroom classroom) {
+        if (classroom == null) {
+            throw new IllegalArgumentException("Classroom cannot be null");
+        }
+        if (classrooms.putIfAbsent(classroom.getClassroomId(), classroom) != null) {
+            throw new IllegalArgumentException("Classroom ID already exists");
+        }
+    }
+
+    public Registration registerChild(Child child, LocalDate registerDate) {
+        if (child == null || !children.containsKey(child.getChildId())) {
+            throw new IllegalArgumentException("Child is not registered with the center");
+        }
+        return new Registration(child, registerDate);
+    }
+
+    public Immunization addImmunization(Child child, int immuneId, String type, LocalDate date) {
+        return new Immunization(immuneId, child, type, date);
+    }
+
+    public CallSheet addCallSheet(Child child, LocalDate date) {
+        return new CallSheet(child, date);
+    }
+
+    public void assignChildToClassroom(Child child, Classroom classroom) {
+        if (child == null || classroom == null) {
+            throw new IllegalArgumentException("Child and classroom cannot be null");
+        }
+        if (!child.isAdmissible()) {
+            throw new IllegalStateException("Child cannot be admitted without immunization");
+        }
+        if (child.getClassroom() != null) {
+            if (child.getStatus() == ChildStatus.ENROLLED) {
+                child.getClassroom().removeChild(child);
+            } else {
+                child.getClassroom().getWaitingList().removeChild(child);
+            }
+        }
+        if (classroom.hasSpace()) {
+            classroom.addChild(child);
+        } else {
+            classroom.addToWaitingList(child);
+        }
+    }
+
+    public void addReminder(Employee employee, int reminderId, LocalDate date, String message) {
+        if (employee == null || !employees.containsKey(employee.getUserId())) {
+            throw new IllegalArgumentException("Employee is not registered with the center");
+        }
+        new Reminder(reminderId, employee, date, message);
+    }
+
+    public void recordChange(Employee employee, String description) {
+        if (employee == null || !employees.containsKey(employee.getUserId())) {
+            throw new IllegalArgumentException("Employee is not registered with the center");
+        }
+        new Change(employee, description);
+    }
+
+    public Bill generateMonthlyBill(Parent parent, int invoiceId, BigDecimal amountDue) {
+        if (parent == null || !parents.containsKey(parent.getParentId())) {
+            throw new IllegalArgumentException("Parent is not registered with the center");
+        }
+        Bill bill = new Bill(invoiceId, parent, amountDue);
+        bills.add(bill);
+        return bill;
+    }
+
+    public Collection<Parent> getParents() {
+        return Collections.unmodifiableCollection(parents.values());
+    }
+
+    public Collection<Child> getChildren() {
+        return Collections.unmodifiableCollection(children.values());
+    }
+
+    public Collection<Employee> getEmployees() {
+        return Collections.unmodifiableCollection(employees.values());
+    }
+
+    public Collection<Classroom> getClassrooms() {
+        return Collections.unmodifiableCollection(classrooms.values());
+    }
+
+    public List<Bill> getBills() {
+        return Collections.unmodifiableList(bills);
+    }
+}
+
+// File: Main.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+public class Main {
+    public static void main(String[] args) {
+        DayCareCenter center = new DayCareCenter();
+
+        Parent parent = new Parent(
+                1,
+                "Jane Doe",
+                "123 Main St",
+                "555-1000",
+                "555-2000",
+                "jane@example.com",
+                "John Doe",
+                "555-3000",
+                "Mary Doe"
+        );
+
+        Child firstChild = new Child(
+                1,
+                parent,
+                "Alice Doe",
+                LocalDate.of(2020, 5, 10),
+                Gender.FEMALE,
+                "Peanut allergy",
+                "alice.jpg"
+        );
+
+        center.addParent(parent);
+        center.addChild(firstChild);
+
+        Employee admin = new Employee(1, "admin123", "Sam", "Admin", EmployeeClassification.ADMINISTRATOR);
+        Employee teacher = new Employee(2, "teach123", "Tina", "Teacher", EmployeeClassification.TEACHER);
+        center.addEmployee(admin);
+        center.addEmployee(teacher);
+
+        Classroom sunflower = new Classroom(1, "Sunflower", "101", "555-4000", "Tina Teacher", "Assistant Ann");
+        center.addClassroom(sunflower);
+
+        center.addImmunization(firstChild, 1, "MMR", LocalDate.of(2021, 1, 15));
+        center.registerChild(firstChild, LocalDate.of(2023, 1, 1));
+        center.assignChildToClassroom(firstChild, sunflower);
+
+        CallSheet callSheet = center.addCallSheet(firstChild, LocalDate.now());
+        callSheet.signIn(LocalTime.of(8, 30));
+        callSheet.signOut(LocalTime.of(15, 45));
+
+        center.addReminder(teacher, 1, LocalDate.now().plusDays(1), "Prepare art supplies");
+        center.recordChange(admin, "Updated child allergy information");
+
+        Bill bill = center.generateMonthlyBill(parent, 1, new BigDecimal("500.00"));
+        bill.pay(new BigDecimal("500.00"), LocalDate.now());
+
+        for (int i = 2; i <= 21; i++) {
+            Child child = new Child(
+                    i,
+                    parent,
+                    "Child " + i,
+                    LocalDate.of(2020, 1, 1),
+                    Gender.UNSPECIFIED,
+                    "None",
+                    "photo" + i + ".jpg"
+            );
+            center.addChild(child);
+            center.addImmunization(child, i + 100, "Vaccine", LocalDate.of(2021, 1, 1));
+            center.registerChild(child, LocalDate.now());
+            center.assignChildToClassroom(child, sunflower);
+        }
+
+        Child waitingChild = center.getChildren().stream()
+                .filter(c -> c.getChildId() == 21)
+                .findFirst()
+                .orElseThrow();
+
+        System.out.println("Parent: " + parent.getName() + ", children: " + parent.getChildren().size());
+        System.out.println("Classroom enrolled children: " + sunflower.getChildren().size());
+        System.out.println("Waiting list size: " + sunflower.getWaitingList().size());
+        System.out.println("Child 1 status: " + firstChild.getStatus());
+        System.out.println("Child 21 status: " + waitingChild.getStatus());
+        System.out.println("Bill balance: " + bill.getBalance());
+        System.out.println("Teacher reminders: " + teacher.getReminders().size());
+        System.out.println("Admin changes: " + admin.getChanges().size());
+    }
+}

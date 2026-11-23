@@ -1,0 +1,746 @@
+// File: Person.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public abstract class Person {
+    private final String name;
+    private final String title;
+    private final String notes;
+    private final List<Booking> bookings = new ArrayList<>();
+    private final List<BankAccount> bankAccounts = new ArrayList<>();
+    private final List<Fax> faxes = new ArrayList<>();
+    private final List<Phone> phones = new ArrayList<>();
+    private final List<Email> emails = new ArrayList<>();
+    private final List<SocialMediaAccount> socialMediaAccounts = new ArrayList<>();
+    private final List<PersonLocation> locations = new ArrayList<>();
+    private final List<Connection> connections = new ArrayList<>();
+
+    protected Person(String name, String title, String notes) {
+        this.name = name;
+        this.title = title;
+        this.notes = notes;
+    }
+
+    public String getName() { return name; }
+    public String getTitle() { return title; }
+    public String getNotes() { return notes; }
+
+    public List<Booking> getBookings() { return Collections.unmodifiableList(bookings); }
+    public List<BankAccount> getBankAccounts() { return Collections.unmodifiableList(bankAccounts); }
+    public List<Fax> getFaxes() { return Collections.unmodifiableList(faxes); }
+    public List<Phone> getPhones() { return Collections.unmodifiableList(phones); }
+    public List<Email> getEmails() { return Collections.unmodifiableList(emails); }
+    public List<SocialMediaAccount> getSocialMediaAccounts() { return Collections.unmodifiableList(socialMediaAccounts); }
+    public List<PersonLocation> getLocations() { return Collections.unmodifiableList(locations); }
+    public List<Connection> getConnections() { return Collections.unmodifiableList(connections); }
+
+    void addBooking(Booking booking) { bookings.add(booking); }
+    void addBankAccount(BankAccount account) { bankAccounts.add(account); }
+    void addFax(Fax fax) { faxes.add(fax); }
+    void addPhone(Phone phone) { phones.add(phone); }
+    void addEmail(Email email) { emails.add(email); }
+    void addSocialMediaAccount(SocialMediaAccount account) { socialMediaAccounts.add(account); }
+    void addLocation(PersonLocation location) { locations.add(location); }
+    void addConnection(Connection connection) { connections.add(connection); }
+}
+
+// File: NaturalPerson.java
+import java.time.LocalDate;
+
+public class NaturalPerson extends Person {
+    private final String firstName;
+    private final String lastName;
+    private final String gender;
+    private final LocalDate birthdate;
+    private final String passportId;
+    private final String nationalRegisterNumber;
+
+    public NaturalPerson(String name, String title, String notes, String firstName,
+                         String lastName, String gender, LocalDate birthdate,
+                         String passportId, String nationalRegisterNumber) {
+        super(name, title, notes);
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.gender = gender;
+        this.birthdate = birthdate;
+        this.passportId = passportId;
+        this.nationalRegisterNumber = nationalRegisterNumber;
+    }
+
+    public String getFirstName() { return firstName; }
+    public String getLastName() { return lastName; }
+    public String getGender() { return gender; }
+    public LocalDate getBirthdate() { return birthdate; }
+    public String getPassportId() { return passportId; }
+    public String getNationalRegisterNumber() { return nationalRegisterNumber; }
+}
+
+// File: LegalPerson.java
+public class LegalPerson extends Person {
+    private final String vatNumber;
+    private final String companyNumber;
+    private final Industry industry;
+
+    public LegalPerson(String name, String title, String notes, String vatNumber,
+                       String companyNumber, Industry industry) {
+        super(name, title, notes);
+        this.vatNumber = vatNumber;
+        this.companyNumber = companyNumber;
+        this.industry = industry;
+    }
+
+    public String getVatNumber() { return vatNumber; }
+    public String getCompanyNumber() { return companyNumber; }
+    public Industry getIndustry() { return industry; }
+}
+
+// File: Industry.java
+public class Industry {
+    private final String name;
+
+    public Industry(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+
+// File: Booking.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Booking {
+    private final Person person;
+    private final String name;
+    private String status;
+    private final List<BookingInvoice> invoices = new ArrayList<>();
+    private final List<Rental> rentals = new ArrayList<>();
+
+    public Booking(Person person, String name, String status) {
+        if (person == null) throw new IllegalArgumentException("A booking must belong to a person.");
+        this.person = person;
+        this.name = name;
+        this.status = status;
+        person.addBooking(this);
+    }
+
+    public Person getPerson() { return person; }
+    public String getName() { return name; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public List<BookingInvoice> getInvoices() { return Collections.unmodifiableList(invoices); }
+    public List<Rental> getRentals() { return Collections.unmodifiableList(rentals); }
+    public void addInvoice(BookingInvoice invoice) { invoices.add(invoice); }
+    void addRental(Rental rental) { rentals.add(rental); }
+}
+
+// File: BookingInvoice.java
+import java.math.BigDecimal;
+
+public class BookingInvoice {
+    private final Booking booking;
+    private final BigDecimal totalAmount;
+
+    public BookingInvoice(Booking booking, BigDecimal totalAmount) {
+        if (booking == null || totalAmount == null) throw new IllegalArgumentException("Booking and total amount are required.");
+        this.booking = booking;
+        this.totalAmount = totalAmount;
+        booking.addInvoice(this);
+    }
+
+    public Booking getBooking() { return booking; }
+    public BigDecimal getTotalAmount() { return totalAmount; }
+}
+
+// File: CarCategory.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class CarCategory {
+    private final String name;
+    private final int carSize;
+    private final List<CarModel> models = new ArrayList<>();
+
+    public CarCategory(String name, int carSize) {
+        this.name = name;
+        this.carSize = carSize;
+    }
+
+    public String getName() { return name; }
+    public int getCarSize() { return carSize; }
+    public List<CarModel> getModels() { return Collections.unmodifiableList(models); }
+    void addModel(CarModel model) { models.add(model); }
+}
+
+// File: CarBrand.java
+public class CarBrand {
+    private final String name;
+
+    public CarBrand(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+
+// File: CarModel.java
+import java.math.BigDecimal;
+
+public class CarModel {
+    private final CarCategory category;
+    private final String name;
+    private final BigDecimal dayPrice;
+    private final int designYear;
+    private final CarBrand brand;
+
+    public CarModel(CarCategory category, String name, BigDecimal dayPrice, int designYear, CarBrand brand) {
+        if (category == null) throw new IllegalArgumentException("A car model must belong to a category.");
+        this.category = category;
+        this.name = name;
+        this.dayPrice = dayPrice;
+        this.designYear = designYear;
+        this.brand = brand;
+        category.addModel(this);
+    }
+
+    public CarCategory getCategory() { return category; }
+    public String getName() { return name; }
+    public BigDecimal getDayPrice() { return dayPrice; }
+    public int getDesignYear() { return designYear; }
+    public CarBrand getBrand() { return brand; }
+}
+
+// File: Car.java
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Car {
+    private final CarModel model;
+    private final String color;
+    private final String licensePlate;
+    private final int productionYear;
+    private String status;
+    private final FleetLocation fleetLocation;
+    private final List<Rental> rentals = new ArrayList<>();
+
+    public Car(CarModel model, String color, String licensePlate, int productionYear,
+               String status, FleetLocation fleetLocation) {
+        if (model == null || fleetLocation == null) throw new IllegalArgumentException("Model and fleet location are required.");
+        this.model = model;
+        this.color = color;
+        this.licensePlate = licensePlate;
+        this.productionYear = productionYear;
+        this.status = status;
+        this.fleetLocation = fleetLocation;
+    }
+
+    public CarModel getModel() { return model; }
+    public String getColor() { return color; }
+    public String getLicensePlate() { return licensePlate; }
+    public int getProductionYear() { return productionYear; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public FleetLocation getFleetLocation() { return fleetLocation; }
+    public List<Rental> getRentals() { return Collections.unmodifiableList(rentals); }
+
+    void addRental(Rental rental) { rentals.add(rental); }
+
+    public BigDecimal getAverageRentalPrice() {
+        if (rentals.isEmpty()) return BigDecimal.ZERO;
+        BigDecimal total = rentals.stream().map(Rental::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return total.divide(BigDecimal.valueOf(rentals.size()), MathContext.DECIMAL64);
+    }
+}
+
+// File: Rental.java
+import java.math.BigDecimal;
+
+public class Rental {
+    private final Booking booking;
+    private final Car car;
+    private final BigDecimal price;
+    private final RentalType type;
+    private CarPickup pickup;
+    private CarDropoff dropoff;
+
+    public Rental(Booking booking, Car car, BigDecimal price, RentalType type) {
+        if (booking == null || car == null || price == null || type == null) {
+            throw new IllegalArgumentException("Booking, car, price, and rental type are required.");
+        }
+        this.booking = booking;
+        this.car = car;
+        this.price = price;
+        this.type = type;
+        booking.addRental(this);
+        car.addRental(this);
+    }
+
+    public Booking getBooking() { return booking; }
+    public Car getCar() { return car; }
+    public BigDecimal getPrice() { return price; }
+    public RentalType getType() { return type; }
+    public CarPickup getPickup() { return pickup; }
+    public CarDropoff getDropoff() { return dropoff; }
+
+    public void setPickup(CarPickup pickup) {
+        if (pickup != null && pickup.getRental() != this) throw new IllegalArgumentException("Pickup belongs to another rental.");
+        this.pickup = pickup;
+    }
+
+    public void setDropoff(CarDropoff dropoff) {
+        if (dropoff != null && dropoff.getRental() != this) throw new IllegalArgumentException("Dropoff belongs to another rental.");
+        this.dropoff = dropoff;
+    }
+
+    public boolean isBookedToday() {
+        if (pickup == null) return false;
+        return !java.time.LocalDate.now().isBefore(pickup.getDate())
+                && (dropoff == null || !java.time.LocalDate.now().isAfter(dropoff.getDate()));
+    }
+}
+
+// File: RentalType.java
+public class RentalType {
+    private final String name;
+
+    public RentalType(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+
+// File: CarPickup.java
+import java.time.LocalDate;
+
+public class CarPickup {
+    private final Rental rental;
+    private final LocalDate date;
+    private final ParkingLot parkingLot;
+
+    public CarPickup(Rental rental, LocalDate date, ParkingLot parkingLot) {
+        if (rental == null || date == null || parkingLot == null) throw new IllegalArgumentException("Pickup details are required.");
+        this.rental = rental;
+        this.date = date;
+        this.parkingLot = parkingLot;
+        rental.setPickup(this);
+    }
+
+    public Rental getRental() { return rental; }
+    public LocalDate getDate() { return date; }
+    public ParkingLot getParkingLot() { return parkingLot; }
+}
+
+// File: CarDropoff.java
+import java.time.LocalDate;
+
+public class CarDropoff {
+    private final Rental rental;
+    private final LocalDate date;
+    private final ParkingLot parkingLot;
+    private final boolean returnedDamaged;
+
+    public CarDropoff(Rental rental, LocalDate date, ParkingLot parkingLot, boolean returnedDamaged) {
+        if (rental == null || date == null || parkingLot == null) throw new IllegalArgumentException("Dropoff details are required.");
+        this.rental = rental;
+        this.date = date;
+        this.parkingLot = parkingLot;
+        this.returnedDamaged = returnedDamaged;
+        rental.setDropoff(this);
+    }
+
+    public Rental getRental() { return rental; }
+    public LocalDate getDate() { return date; }
+    public ParkingLot getParkingLot() { return parkingLot; }
+    public boolean isReturnedDamaged() { return returnedDamaged; }
+}
+
+// File: ParkingLot.java
+import java.math.BigDecimal;
+
+public class ParkingLot {
+    private final String lotNumber;
+    private final BigDecimal squareMetres;
+    private final FleetLocation fleetLocation;
+
+    public ParkingLot(String lotNumber, BigDecimal squareMetres, FleetLocation fleetLocation) {
+        this.lotNumber = lotNumber;
+        this.squareMetres = squareMetres;
+        this.fleetLocation = fleetLocation;
+    }
+
+    public String getLotNumber() { return lotNumber; }
+    public BigDecimal getSquareMetres() { return squareMetres; }
+    public FleetLocation getFleetLocation() { return fleetLocation; }
+}
+
+// File: FleetLocation.java
+public class FleetLocation {
+    private final String name;
+    private final int capacity;
+    private final Location location;
+
+    public FleetLocation(String name, int capacity, Location location) {
+        this.name = name;
+        this.capacity = capacity;
+        this.location = location;
+    }
+
+    public String getName() { return name; }
+    public int getCapacity() { return capacity; }
+    public Location getLocation() { return location; }
+}
+
+// File: Location.java
+public class Location {
+    private final String street;
+    private final String number;
+    private final City city;
+
+    public Location(String street, String number, City city) {
+        this.street = street;
+        this.number = number;
+        this.city = city;
+    }
+
+    public String getStreet() { return street; }
+    public String getNumber() { return number; }
+    public City getCity() { return city; }
+}
+
+// File: City.java
+public class City {
+    private final String name;
+    private final String zipCode;
+    private final Country country;
+
+    public City(String name, String zipCode, Country country) {
+        this.name = name;
+        this.zipCode = zipCode;
+        this.country = country;
+    }
+
+    public String getName() { return name; }
+    public String getZipCode() { return zipCode; }
+    public Country getCountry() { return country; }
+}
+
+// File: Country.java
+public class Country {
+    private final String name;
+    private final String abbreviation;
+
+    public Country(String name, String abbreviation) {
+        this.name = name;
+        this.abbreviation = abbreviation;
+    }
+
+    public String getName() { return name; }
+    public String getAbbreviation() { return abbreviation; }
+}
+
+// File: BankAccount.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class BankAccount {
+    private final Person owner;
+    private final String accountNumber;
+    private final String iban;
+    private final BankAccountType type;
+    private final Bank bank;
+    private final List<BankCard> cards = new ArrayList<>();
+
+    public BankAccount(Person owner, String accountNumber, String iban, BankAccountType type, Bank bank) {
+        if (owner == null) throw new IllegalArgumentException("A bank account must have an owner.");
+        this.owner = owner;
+        this.accountNumber = accountNumber;
+        this.iban = iban;
+        this.type = type;
+        this.bank = bank;
+        owner.addBankAccount(this);
+    }
+
+    public Person getOwner() { return owner; }
+    public String getAccountNumber() { return accountNumber; }
+    public String getIban() { return iban; }
+    public BankAccountType getType() { return type; }
+    public Bank getBank() { return bank; }
+    public List<BankCard> getCards() { return Collections.unmodifiableList(cards); }
+    void addCard(BankCard card) { cards.add(card); }
+}
+
+// File: Bank.java
+public class Bank {
+    private final String name;
+    private final String bic;
+
+    public Bank(String name, String bic) {
+        this.name = name;
+        this.bic = bic;
+    }
+
+    public String getName() { return name; }
+    public String getBic() { return bic; }
+}
+
+// File: BankAccountType.java
+public class BankAccountType {
+    private final String name;
+
+    public BankAccountType(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+
+// File: BankCard.java
+import java.time.YearMonth;
+
+public class BankCard {
+    private final BankAccount account;
+    private final String cardNumber;
+    private final BankCardType type;
+    private final YearMonth expirationDate;
+
+    public BankCard(BankAccount account, String cardNumber, BankCardType type, YearMonth expirationDate) {
+        if (account == null) throw new IllegalArgumentException("A card must belong to a bank account.");
+        this.account = account;
+        this.cardNumber = cardNumber;
+        this.type = type;
+        this.expirationDate = expirationDate;
+        account.addCard(this);
+    }
+
+    public BankAccount getAccount() { return account; }
+    public String getCardNumber() { return cardNumber; }
+    public BankCardType getType() { return type; }
+    public YearMonth getExpirationDate() { return expirationDate; }
+}
+
+// File: BankCardType.java
+public class BankCardType {
+    private final String name;
+
+    public BankCardType(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+
+// File: Connection.java
+import java.time.LocalDate;
+
+public class Connection {
+    private final Person firstPerson;
+    private final Person secondPerson;
+    private final LocalDate startDate;
+    private final LocalDate endDate;
+    private final ConnectionType type;
+
+    public Connection(Person firstPerson, Person secondPerson, LocalDate startDate,
+                      LocalDate endDate, ConnectionType type) {
+        if (firstPerson == null || secondPerson == null) throw new IllegalArgumentException("Both people are required.");
+        this.firstPerson = firstPerson;
+        this.secondPerson = secondPerson;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.type = type;
+        firstPerson.addConnection(this);
+        secondPerson.addConnection(this);
+    }
+
+    public Person getFirstPerson() { return firstPerson; }
+    public Person getSecondPerson() { return secondPerson; }
+    public LocalDate getStartDate() { return startDate; }
+    public LocalDate getEndDate() { return endDate; }
+    public ConnectionType getType() { return type; }
+}
+
+// File: ConnectionType.java
+public class ConnectionType {
+    private final String name;
+
+    public ConnectionType(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+
+// File: Fax.java
+public class Fax {
+    private final Person person;
+    private final String faxNumber;
+    private final FaxType type;
+    private final boolean preferred;
+
+    public Fax(Person person, String faxNumber, FaxType type, boolean preferred) {
+        if (person == null) throw new IllegalArgumentException("A fax must belong to a person.");
+        this.person = person;
+        this.faxNumber = faxNumber;
+        this.type = type;
+        this.preferred = preferred;
+        person.addFax(this);
+    }
+
+    public Person getPerson() { return person; }
+    public String getFaxNumber() { return faxNumber; }
+    public FaxType getType() { return type; }
+    public boolean isPreferred() { return preferred; }
+}
+
+// File: FaxType.java
+public class FaxType {
+    private final String name;
+
+    public FaxType(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+
+// File: Phone.java
+public class Phone {
+    private final Person person;
+    private final String phoneNumber;
+    private final PhoneType type;
+    private final boolean preferred;
+
+    public Phone(Person person, String phoneNumber, PhoneType type, boolean preferred) {
+        if (person == null) throw new IllegalArgumentException("A phone must belong to a person.");
+        this.person = person;
+        this.phoneNumber = phoneNumber;
+        this.type = type;
+        this.preferred = preferred;
+        person.addPhone(this);
+    }
+
+    public Person getPerson() { return person; }
+    public String getPhoneNumber() { return phoneNumber; }
+    public PhoneType getType() { return type; }
+    public boolean isPreferred() { return preferred; }
+}
+
+// File: PhoneType.java
+public class PhoneType {
+    private final String name;
+
+    public PhoneType(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+
+// File: Email.java
+public class Email {
+    private final Person person;
+    private final String address;
+    private final EmailType type;
+    private final boolean preferred;
+
+    public Email(Person person, String address, EmailType type, boolean preferred) {
+        if (person == null) throw new IllegalArgumentException("An email must belong to a person.");
+        this.person = person;
+        this.address = address;
+        this.type = type;
+        this.preferred = preferred;
+        person.addEmail(this);
+    }
+
+    public Person getPerson() { return person; }
+    public String getAddress() { return address; }
+    public EmailType getType() { return type; }
+    public boolean isPreferred() { return preferred; }
+}
+
+// File: EmailType.java
+public class EmailType {
+    private final String name;
+
+    public EmailType(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+
+// File: SocialMediaAccount.java
+public class SocialMediaAccount {
+    private final Person person;
+    private final String accountName;
+    private final SocialMediaType type;
+
+    public SocialMediaAccount(Person person, String accountName, SocialMediaType type) {
+        if (person == null) throw new IllegalArgumentException("A social media account must belong to a person.");
+        this.person = person;
+        this.accountName = accountName;
+        this.type = type;
+        person.addSocialMediaAccount(this);
+    }
+
+    public Person getPerson() { return person; }
+    public String getAccountName() { return accountName; }
+    public SocialMediaType getType() { return type; }
+}
+
+// File: SocialMediaType.java
+public class SocialMediaType {
+    private final String name;
+
+    public SocialMediaType(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+
+// File: PersonLocation.java
+import java.time.LocalDate;
+
+public class PersonLocation {
+    private final Person person;
+    private final LocalDate startDate;
+    private final LocalDate endDate;
+    private final PersonLocationType type;
+    private final Location location;
+
+    public PersonLocation(Person person, LocalDate startDate, LocalDate endDate,
+                          PersonLocationType type, Location location) {
+        if (person == null || location == null) throw new IllegalArgumentException("Person and location are required.");
+        this.person = person;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.type = type;
+        this.location = location;
+        person.addLocation(this);
+    }
+
+    public Person getPerson() { return person; }
+    public LocalDate getStartDate() { return startDate; }
+    public LocalDate getEndDate() { return endDate; }
+    public PersonLocationType getType() { return type; }
+    public Location getLocation() { return location; }
+}
+
+// File: PersonLocationType.java
+public class PersonLocationType {
+    private final String name;
+
+    public PersonLocationType(String name) { this.name = name; }
+    public String getName() { return name; }
+}
+
+// File: Main.java
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public class Main {
+    public static void main(String[] args) {
+        Country country = new Country("Exampleland", "EX");
+        City city = new City("Sample City", "1000", country);
+        Location address = new Location("Main Street", "1", city);
+        FleetLocation fleet = new FleetLocation("Central Fleet", 50, address);
+
+        NaturalPerson customer = new NaturalPerson(
+                "Alex Morgan", "Mx", "Demo customer", "Alex", "Morgan",
+                "Unspecified", LocalDate.of(1990, 5, 12), "P123456", "RN987654");
+        Booking booking = new Booking(customer, "Weekend trip", "Confirmed");
+
+        CarCategory category = new CarCategory("Compact", 2);
+        CarBrand brand = new CarBrand("Example Motors");
+        CarModel model = new CarModel(category, "City", new BigDecimal("45.00"), 2022, brand);
+        Car car = new Car(model, "Blue", "EX-1234", 2023, "Available", fleet);
+
+        Rental rental = new Rental(booking, car, new BigDecimal("90.00"), new RentalType("Standard"));
+        ParkingLot lot = new ParkingLot("A-12", new BigDecimal("15.5"), fleet);
+        new CarPickup(rental, LocalDate.now(), lot);
+
+        System.out.println("Booking: " + booking.getName());
+        System.out.println("Customer: " + booking.getPerson().getName());
+        System.out.println("Car: " + car.getModel().getBrand().getName() + " " + car.getModel().getName());
+        System.out.println("Booked today: " + rental.isBookedToday());
+        System.out.println("Average rental price: " + car.getAverageRentalPrice());
+    }
+}

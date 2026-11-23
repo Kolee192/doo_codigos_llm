@@ -1,0 +1,1012 @@
+// File: ColorRGB.java
+import java.util.Objects;
+
+public class ColorRGB {
+    private final int red;
+    private final int green;
+    private final int blue;
+
+    public ColorRGB(int red, int green, int blue) {
+        this.red = clamp(red);
+        this.green = clamp(green);
+        this.blue = clamp(blue);
+    }
+
+    public static ColorRGB fromHex(String hex) {
+        if (hex == null) {
+            throw new IllegalArgumentException("Hex string cannot be null");
+        }
+        String cleanHex = hex.trim().replace("#", "");
+        if (cleanHex.length() != 6) {
+            throw new IllegalArgumentException("Hex color must be 6 hex characters");
+        }
+        int r = Integer.parseInt(cleanHex.substring(0, 2), 16);
+        int g = Integer.parseInt(cleanHex.substring(2, 4), 16);
+        int b = Integer.parseInt(cleanHex.substring(4, 6), 16);
+        return new ColorRGB(r, g, b);
+    }
+
+    private static int clamp(int val) {
+        return Math.max(0, Math.min(255, val));
+    }
+
+    public int getRed() {
+        return red;
+    }
+
+    public int getGreen() {
+        return green;
+    }
+
+    public int getBlue() {
+        return blue;
+    }
+
+    public double distanceTo(ColorRGB other) {
+        if (other == null) {
+            return Double.MAX_VALUE;
+        }
+        long dr = (long) this.red - other.red;
+        long dg = (long) this.green - other.green;
+        long db = (long) this.blue - other.blue;
+        return Math.sqrt(dr * dr + dg * dg + db * db);
+    }
+
+    public String toHex() {
+        return String.format("#%02X%02X%02X", red, green, blue);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ColorRGB colorRGB)) return false;
+        return red == colorRGB.red && green == colorRGB.green && blue == colorRGB.blue;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(red, green, blue);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("RGB(%d, %d, %d) [%s]", red, green, blue, toHex());
+    }
+}
+// File: Paint.java
+import java.util.Objects;
+
+public class Paint {
+    private final String paintNumber;
+    private String paintName;
+    private String collection;
+    private ColorRGB color;
+
+    public Paint(String paintNumber, String paintName, String collection, ColorRGB color) {
+        if (paintNumber == null || paintNumber.isBlank()) {
+            throw new IllegalArgumentException("Paint number cannot be empty");
+        }
+        this.paintNumber = paintNumber.trim();
+        this.paintName = paintName != null ? paintName.trim() : "";
+        this.collection = collection != null ? collection.trim() : "Default";
+        this.color = Objects.requireNonNull(color, "Color cannot be null");
+    }
+
+    public String getPaintNumber() {
+        return paintNumber;
+    }
+
+    public String getPaintName() {
+        return paintName;
+    }
+
+    public void setPaintName(String paintName) {
+        this.paintName = paintName != null ? paintName.trim() : "";
+    }
+
+    public String getCollection() {
+        return collection;
+    }
+
+    public void setCollection(String collection) {
+        this.collection = collection != null ? collection.trim() : "Default";
+    }
+
+    public ColorRGB getColor() {
+        return color;
+    }
+
+    public void setColor(ColorRGB color) {
+        this.color = Objects.requireNonNull(color, "Color cannot be null");
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Paint paint)) return false;
+        return paintNumber.equalsIgnoreCase(paint.paintNumber) &&
+                collection.equalsIgnoreCase(paint.collection);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(paintNumber.toUpperCase(), collection.toUpperCase());
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[%s] #%s - %s (%s)", collection, paintNumber, paintName, color);
+    }
+}
+// File: PaintDatabase.java
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class PaintDatabase {
+    private final Map<String, Paint> paints = new ConcurrentHashMap<>();
+
+    private String makeKey(String collection, String paintNumber) {
+        return collection.trim().toUpperCase() + "::" + paintNumber.trim().toUpperCase();
+    }
+
+    public synchronized void addPaint(Paint paint) {
+        if (paint == null) throw new IllegalArgumentException("Paint cannot be null");
+        String key = makeKey(paint.getCollection(), paint.getPaintNumber());
+        paints.put(key, paint);
+    }
+
+    public synchronized boolean updatePaint(Paint paint) {
+        if (paint == null) return false;
+        String key = makeKey(paint.getCollection(), paint.getPaintNumber());
+        if (paints.containsKey(key)) {
+            paints.put(key, paint);
+            return true;
+        }
+        return false;
+    }
+
+    public synchronized boolean deletePaint(String collection, String paintNumber) {
+        if (collection == null || paintNumber == null) return false;
+        String key = makeKey(collection, paintNumber);
+        return paints.remove(key) != null;
+    }
+
+    public Optional<Paint> findByNumber(String collection, String paintNumber) {
+        if (collection == null || paintNumber == null) return Optional.empty();
+        return Optional.ofNullable(paints.get(makeKey(collection, paintNumber)));
+    }
+
+    public List<Paint> getAllPaints() {
+        return new ArrayList<>(paints.values());
+    }
+
+    public List<Paint> getByCollection(String collection) {
+        if (collection == null) return Collections.emptyList();
+        List<Paint> result = new ArrayList<>();
+        for (Paint p : paints.values()) {
+            if (p.getCollection().equalsIgnoreCase(collection.trim())) {
+                result.add(p);
+            }
+        }
+        return result;
+    }
+
+    public Set<String> getCollections() {
+        Set<String> collections = new HashSet<>();
+        for (Paint p : paints.values()) {
+            collections.add(p.getCollection());
+        }
+        return collections;
+    }
+}
+// File: AdminLevel.java
+public enum AdminLevel {
+    LEVEL_1(1, "Level 1 Administrator (Add permissions)"),
+    LEVEL_2(2, "Level 2 Administrator (Add, Update permissions)"),
+    LEVEL_3(3, "Level 3 Administrator (Add, Update, Delete, All permissions)");
+
+    private final int rank;
+    private final String description;
+
+    AdminLevel(int rank, String description) {
+        this.rank = rank;
+        this.description = description;
+    }
+
+    public int getRank() {
+        return rank;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+}
+// File: User.java
+import java.util.Optional;
+
+public class User {
+    private final String userId;
+    private final String username;
+    private final boolean isAdministrative;
+    private final AdminLevel adminLevel;
+
+    public User(String userId, String username) {
+        this(userId, username, false, null);
+    }
+
+    public User(String userId, String username, boolean isAdministrative, AdminLevel adminLevel) {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("User ID cannot be empty");
+        }
+        this.userId = userId;
+        this.username = username != null ? username : userId;
+        this.isAdministrative = isAdministrative;
+        this.adminLevel = isAdministrative ? (adminLevel != null ? adminLevel : AdminLevel.LEVEL_1) : null;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public boolean isAdministrative() {
+        return isAdministrative;
+    }
+
+    public Optional<AdminLevel> getAdminLevel() {
+        return Optional.ofNullable(adminLevel);
+    }
+
+    @Override
+    public String toString() {
+        if (!isAdministrative) {
+            return String.format("User[Default]: %s (%s)", username, userId);
+        }
+        return String.format("User[Admin L%d]: %s (%s)", adminLevel.getRank(), username, userId);
+    }
+}
+// File: ErrorReportingService.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class ErrorReportingService {
+    private static final ErrorReportingService INSTANCE = new ErrorReportingService();
+    private final List<String> errorLogs = Collections.synchronizedList(new ArrayList<>());
+
+    private ErrorReportingService() {}
+
+    public static ErrorReportingService getInstance() {
+        return INSTANCE;
+    }
+
+    public void reportError(String context, Throwable throwable) {
+        String logEntry = String.format("[%s] ERROR in %s: %s",
+                Instant.now(),
+                context,
+                throwable != null ? throwable.getMessage() : "Unknown error");
+        errorLogs.add(logEntry);
+        // Automated quiet recovery logging without interrupting client experience
+    }
+
+    public List<String> getErrorLogs() {
+        return new ArrayList<>(errorLogs);
+    }
+
+    public void clearLogs() {
+        errorLogs.clear();
+    }
+}
+// File: ColorSearchEngine.java
+import java.util.*;
+
+public class ColorSearchEngine {
+    private final PaintDatabase database;
+
+    public ColorSearchEngine(PaintDatabase database) {
+        this.database = Objects.requireNonNull(database, "PaintDatabase cannot be null");
+    }
+
+    public List<Paint> search(String query, String collectionFilter, int limit) {
+        try {
+            List<Paint> pool = (collectionFilter == null || collectionFilter.isBlank())
+                    ? database.getAllPaints()
+                    : database.getByCollection(collectionFilter);
+
+            if (query == null || query.isBlank()) {
+                return pool.stream().limit(Math.max(1, limit)).toList();
+            }
+
+            String q = query.trim();
+
+            if (q.startsWith("#") || (q.length() == 6 && q.matches("^[0-9a-fA-F]{6}$"))) {
+                try {
+                    ColorRGB target = ColorRGB.fromHex(q);
+                    return findNearest(target, pool, limit);
+                } catch (Exception ignored) {
+                    // fall back to text matching
+                }
+            }
+
+            List<Paint> exactNumberMatches = new ArrayList<>();
+            List<Paint> nameMatches = new ArrayList<>();
+
+            for (Paint p : pool) {
+                if (p.getPaintNumber().equalsIgnoreCase(q)) {
+                    exactNumberMatches.add(p);
+                } else if (p.getPaintName().toLowerCase().contains(q.toLowerCase())) {
+                    nameMatches.add(p);
+                }
+            }
+
+            List<Paint> combined = new ArrayList<>(exactNumberMatches);
+            for (Paint p : nameMatches) {
+                if (!combined.contains(p)) {
+                    combined.add(p);
+                }
+            }
+
+            if (combined.isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            return combined.subList(0, Math.min(combined.size(), Math.max(1, limit)));
+        } catch (Exception e) {
+            ErrorReportingService.getInstance().reportError("ColorSearchEngine.search", e);
+            return Collections.emptyList();
+        }
+    }
+
+    public List<Paint> findNearest(ColorRGB targetColor, List<Paint> candidates, int limit) {
+        try {
+            if (candidates == null || candidates.isEmpty() || targetColor == null) {
+                return Collections.emptyList();
+            }
+            List<Paint> sorted = new ArrayList<>(candidates);
+            sorted.sort(Comparator.comparingDouble(p -> p.getColor().distanceTo(targetColor)));
+            return sorted.subList(0, Math.min(sorted.size(), Math.max(1, limit)));
+        } catch (Exception e) {
+            ErrorReportingService.getInstance().reportError("ColorSearchEngine.findNearest", e);
+            return Collections.emptyList();
+        }
+    }
+
+    public PaintDatabase getDatabase() {
+        return database;
+    }
+}
+// File: ColorTranslator.java
+import java.util.List;
+import java.util.Optional;
+
+public class ColorTranslator {
+    private final ColorSearchEngine searchEngine;
+
+    public ColorTranslator(ColorSearchEngine searchEngine) {
+        this.searchEngine = searchEngine;
+    }
+
+    public Optional<Paint> translate(String oldPaintNumber, String oldCollection, String targetCollection) {
+        try {
+            Optional<Paint> oldPaintOpt = searchEngine.getDatabase().findByNumber(oldCollection, oldPaintNumber);
+            if (oldPaintOpt.isEmpty()) {
+                return Optional.empty();
+            }
+
+            Paint oldPaint = oldPaintOpt.get();
+            List<Paint> targetPaints = searchEngine.getDatabase().getByCollection(targetCollection);
+            if (targetPaints.isEmpty()) {
+                return Optional.empty();
+            }
+
+            List<Paint> nearest = searchEngine.findNearest(oldPaint.getColor(), targetPaints, 1);
+            return nearest.isEmpty() ? Optional.empty() : Optional.of(nearest.get(0));
+        } catch (Exception e) {
+            ErrorReportingService.getInstance().reportError("ColorTranslator.translate", e);
+            return Optional.empty();
+        }
+    }
+}
+// File: ClosestColorTool.java
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+public class ClosestColorTool {
+    private final ColorSearchEngine searchEngine;
+
+    public ClosestColorTool(ColorSearchEngine searchEngine) {
+        this.searchEngine = searchEngine;
+    }
+
+    public List<Paint> findClosestByPaintNumber(String paintNumber, String collection, String targetCollection, int count) {
+        try {
+            Optional<Paint> basePaintOpt = searchEngine.getDatabase().findByNumber(collection, paintNumber);
+            if (basePaintOpt.isEmpty()) {
+                return Collections.emptyList();
+            }
+            ColorRGB baseColor = basePaintOpt.get().getColor();
+            return findClosestByColor(baseColor, targetCollection, count);
+        } catch (Exception e) {
+            ErrorReportingService.getInstance().reportError("ClosestColorTool.findClosestByPaintNumber", e);
+            return Collections.emptyList();
+        }
+    }
+
+    public List<Paint> findClosestByColor(ColorRGB color, String targetCollection, int count) {
+        try {
+            List<Paint> candidates = (targetCollection == null || targetCollection.isBlank())
+                    ? searchEngine.getDatabase().getAllPaints()
+                    : searchEngine.getDatabase().getByCollection(targetCollection);
+
+            return searchEngine.findNearest(color, candidates, count);
+        } catch (Exception e) {
+            ErrorReportingService.getInstance().reportError("ClosestColorTool.findClosestByColor", e);
+            return Collections.emptyList();
+        }
+    }
+}
+// File: UploadedImage.java
+public class UploadedImage {
+    private final String filename;
+    private final int width;
+    private final int height;
+    private final ColorRGB[][] pixels;
+
+    public UploadedImage(String filename, int width, int height) {
+        this.filename = filename != null ? filename : "image.png";
+        this.width = Math.max(1, width);
+        this.height = Math.max(1, height);
+        this.pixels = new ColorRGB[this.height][this.width];
+        for (int y = 0; y < this.height; y++) {
+            for (int x = 0; x < this.width; x++) {
+                pixels[y][x] = new ColorRGB(255, 255, 255);
+            }
+        }
+    }
+
+    public void setPixel(int x, int y, ColorRGB color) {
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+            pixels[y][x] = color != null ? color : new ColorRGB(0, 0, 0);
+        }
+    }
+
+    public ColorRGB getPixel(int x, int y) {
+        int clampedX = Math.max(0, Math.min(width - 1, x));
+        int clampedY = Math.max(0, Math.min(height - 1, y));
+        return pixels[clampedY][clampedX];
+    }
+
+    public ColorRGB getBlendedRegionColor(int startX, int startY, int regionWidth, int regionHeight) {
+        int x1 = Math.max(0, startX);
+        int y1 = Math.max(0, startY);
+        int x2 = Math.min(width, startX + regionWidth);
+        int y2 = Math.min(height, startY + regionHeight);
+
+        long rSum = 0;
+        long gSum = 0;
+        long bSum = 0;
+        int count = 0;
+
+        for (int y = y1; y < y2; y++) {
+            for (int x = x1; x < x2; x++) {
+                ColorRGB c = pixels[y][x];
+                rSum += c.getRed();
+                gSum += c.getGreen();
+                bSum += c.getBlue();
+                count++;
+            }
+        }
+
+        if (count == 0) {
+            return getPixel(startX, startY);
+        }
+        return new ColorRGB((int)(rSum / count), (int)(gSum / count), (int)(bSum / count));
+    }
+
+    public String getFilename() {
+        return filename;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+}
+// File: ColorSampleMatcher.java
+import java.util.List;
+
+public class ColorSampleMatcher {
+    private final ColorSearchEngine searchEngine;
+
+    public ColorSampleMatcher(ColorSearchEngine searchEngine) {
+        this.searchEngine = searchEngine;
+    }
+
+    public ColorRGB samplePixel(UploadedImage image, int x, int y) {
+        return image.getPixel(x, y);
+    }
+
+    public ColorRGB sampleBlendedRegion(UploadedImage image, int startX, int startY, int w, int h) {
+        return image.getBlendedRegionColor(startX, startY, w, h);
+    }
+
+    public List<Paint> matchPixel(UploadedImage image, int x, int y, String targetCollection, int count) {
+        ColorRGB sampled = samplePixel(image, x, y);
+        List<Paint> pool = (targetCollection == null || targetCollection.isBlank())
+                ? searchEngine.getDatabase().getAllPaints()
+                : searchEngine.getDatabase().getByCollection(targetCollection);
+        return searchEngine.findNearest(sampled, pool, count);
+    }
+
+    public List<Paint> matchBlendedRegion(UploadedImage image, int x, int y, int w, int h, String targetCollection, int count) {
+        ColorRGB sampled = sampleBlendedRegion(image, x, y, w, h);
+        List<Paint> pool = (targetCollection == null || targetCollection.isBlank())
+                ? searchEngine.getDatabase().getAllPaints()
+                : searchEngine.getDatabase().getByCollection(targetCollection);
+        return searchEngine.findNearest(sampled, pool, count);
+    }
+}
+// File: UserColorPalette.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class UserColorPalette {
+    private final List<ColorRGB> savedColors = new ArrayList<>();
+    private final List<String> recentSearches = new ArrayList<>();
+    private final List<UploadedImage> uploadedImages = new ArrayList<>();
+
+    public synchronized void addSavedColor(ColorRGB color) {
+        if (color != null && !savedColors.contains(color)) {
+            savedColors.add(color);
+        }
+    }
+
+    public synchronized void recordSearch(String searchQuery) {
+        if (searchQuery != null && !searchQuery.isBlank()) {
+            recentSearches.remove(searchQuery);
+            recentSearches.add(0, searchQuery);
+            if (recentSearches.size() > 50) {
+                recentSearches.remove(recentSearches.size() - 1);
+            }
+        }
+    }
+
+    public synchronized void addUploadedImage(UploadedImage image) {
+        if (image != null) {
+            uploadedImages.add(image);
+        }
+    }
+
+    public synchronized List<ColorRGB> getSavedColors() {
+        return Collections.unmodifiableList(new ArrayList<>(savedColors));
+    }
+
+    public synchronized List<String> getRecentSearches() {
+        return Collections.unmodifiableList(new ArrayList<>(recentSearches));
+    }
+
+    public synchronized List<UploadedImage> getUploadedImages() {
+        return Collections.unmodifiableList(new ArrayList<>(uploadedImages));
+    }
+
+    public synchronized void clear() {
+        savedColors.clear();
+        recentSearches.clear();
+        uploadedImages.clear();
+    }
+}
+// File: UserSession.java
+import java.time.Duration;
+import java.time.Instant;
+
+public class UserSession {
+    public static final Duration EXPIRATION_TTL = Duration.ofDays(30);
+
+    private final String sessionId;
+    private final User user;
+    private final UserColorPalette colorPalette;
+    private Instant lastAccessed;
+
+    public UserSession(String sessionId, User user) {
+        this.sessionId = sessionId;
+        this.user = user != null ? user : new User("guest_" + sessionId, "Guest");
+        this.colorPalette = new UserColorPalette();
+        this.lastAccessed = Instant.now();
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public UserColorPalette getColorPalette() {
+        touch();
+        return colorPalette;
+    }
+
+    public Instant getLastAccessed() {
+        return lastAccessed;
+    }
+
+    public void touch() {
+        this.lastAccessed = Instant.now();
+    }
+
+    public void setLastAccessed(Instant instant) {
+        this.lastAccessed = instant;
+    }
+
+    public boolean isExpired(Instant currentInstant) {
+        return Duration.between(lastAccessed, currentInstant).compareTo(EXPIRATION_TTL) > 0;
+    }
+}
+// File: SessionManager.java
+import java.time.Instant;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class SessionManager {
+    private final Map<String, UserSession> sessions = new ConcurrentHashMap<>();
+
+    public UserSession createSession(User user) {
+        String sessionId = UUID.randomUUID().toString();
+        UserSession session = new UserSession(sessionId, user);
+        sessions.put(sessionId, session);
+        return session;
+    }
+
+    public Optional<UserSession> getSession(String sessionId) {
+        if (sessionId == null) return Optional.empty();
+        UserSession session = sessions.get(sessionId);
+        if (session != null) {
+            if (session.isExpired(Instant.now())) {
+                sessions.remove(sessionId);
+                return Optional.empty();
+            }
+            session.touch();
+            return Optional.of(session);
+        }
+        return Optional.empty();
+    }
+
+    public int cleanExpiredSessions(Instant referenceInstant) {
+        int removedCount = 0;
+        for (Map.Entry<String, UserSession> entry : sessions.entrySet()) {
+            if (entry.getValue().isExpired(referenceInstant)) {
+                sessions.remove(entry.getKey());
+                removedCount++;
+            }
+        }
+        return removedCount;
+    }
+
+    public int getActiveSessionCount() {
+        return sessions.size();
+    }
+}
+// File: AdminService.java
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class AdminService {
+    private final PaintDatabase database;
+    private final Map<String, User> userAccounts = new ConcurrentHashMap<>();
+
+    public AdminService(PaintDatabase database) {
+        this.database = database;
+    }
+
+    public boolean canAdd(User user) {
+        return user != null && user.isAdministrative() && user.getAdminLevel().isPresent();
+    }
+
+    public boolean canUpdate(User user) {
+        return user != null && user.isAdministrative() &&
+                user.getAdminLevel().map(l -> l.getRank() >= AdminLevel.LEVEL_2.getRank()).orElse(false);
+    }
+
+    public boolean canDelete(User user) {
+        return user != null && user.isAdministrative() &&
+                user.getAdminLevel().map(l -> l.getRank() >= AdminLevel.LEVEL_3.getRank()).orElse(false);
+    }
+
+    public boolean canCreateAdminUser(User creator, AdminLevel targetLevel) {
+        if (creator == null || !creator.isAdministrative() || creator.getAdminLevel().isEmpty()) {
+            return false;
+        }
+        int creatorRank = creator.getAdminLevel().get().getRank();
+        return creatorRank >= targetLevel.getRank();
+    }
+
+    public boolean addPaint(User admin, Paint paint) {
+        if (!canAdd(admin)) {
+            ErrorReportingService.getInstance().reportError(
+                    "AdminService.addPaint",
+                    new SecurityException("User " + (admin != null ? admin.getUsername() : "null") + " has insufficient permission to add paint"));
+            return false;
+        }
+        database.addPaint(paint);
+        return true;
+    }
+
+    public boolean updatePaint(User admin, Paint paint) {
+        if (!canUpdate(admin)) {
+            ErrorReportingService.getInstance().reportError(
+                    "AdminService.updatePaint",
+                    new SecurityException("User " + (admin != null ? admin.getUsername() : "null") + " has insufficient permission to update paint"));
+            return false;
+        }
+        return database.updatePaint(paint);
+    }
+
+    public boolean deletePaint(User admin, String collection, String paintNumber) {
+        if (!canDelete(admin)) {
+            ErrorReportingService.getInstance().reportError(
+                    "AdminService.deletePaint",
+                    new SecurityException("User " + (admin != null ? admin.getUsername() : "null") + " has insufficient permission to delete paint"));
+            return false;
+        }
+        return database.deletePaint(collection, paintNumber);
+    }
+
+    public boolean createAdminUser(User creator, String newUserId, String newUsername, AdminLevel level) {
+        if (!canCreateAdminUser(creator, level)) {
+            ErrorReportingService.getInstance().reportError(
+                    "AdminService.createAdminUser",
+                    new SecurityException("User " + (creator != null ? creator.getUsername() : "null") + " cannot create admin user of rank " + level.getRank()));
+            return false;
+        }
+        User newUser = new User(newUserId, newUsername, true, level);
+        userAccounts.put(newUserId, newUser);
+        return true;
+    }
+
+    public void registerUser(User user) {
+        if (user != null) {
+            userAccounts.put(user.getUserId(), user);
+        }
+    }
+
+    public User getUser(String userId) {
+        return userAccounts.get(userId);
+    }
+}
+// File: Theme.java
+public class Theme {
+    private final String themeName;
+    private final String primaryColorHex;
+    private final String secondaryColorHex;
+    private final String fontFamily;
+
+    public Theme(String themeName, String primaryColorHex, String secondaryColorHex, String fontFamily) {
+        this.themeName = themeName != null ? themeName : "ABC-Default";
+        this.primaryColorHex = primaryColorHex != null ? primaryColorHex : "#003366";
+        this.secondaryColorHex = secondaryColorHex != null ? secondaryColorHex : "#FFCC00";
+        this.fontFamily = fontFamily != null ? fontFamily : "Arial, sans-serif";
+    }
+
+    public static Theme abcPaintCorporate() {
+        return new Theme("ABC Paint Corporate", "#1A365D", "#D69E2E", "Helvetica, Arial, sans-serif");
+    }
+
+    public String renderCss() {
+        return String.format(
+                "/* Theme: %s */ :root { --abc-primary: %s; --abc-secondary: %s; --abc-font: %s; }",
+                themeName, primaryColorHex, secondaryColorHex, fontFamily
+        );
+    }
+
+    public String getThemeName() {
+        return themeName;
+    }
+}
+// File: ColorChooser.java
+public class ColorChooser {
+    // Utility supporting pointing-device coordinates (x, y) on a 256x256 color palette canvas
+    public ColorRGB selectFromPaletteMap(int mouseX, int mouseY, int hueIndex) {
+        int x = Math.max(0, Math.min(255, mouseX));
+        int y = Math.max(0, Math.min(255, mouseY));
+        int hue = Math.max(0, Math.min(359, hueIndex));
+
+        float saturation = x / 255.0f;
+        float brightness = 1.0f - (y / 255.0f);
+
+        return hsbToRgb(hue, saturation, brightness);
+    }
+
+    // Direct RGB selection (supports keyboard input navigation as required for accessibility)
+    public ColorRGB selectFromRgbValues(int red, int green, int blue) {
+        return new ColorRGB(red, green, blue);
+    }
+
+    private ColorRGB hsbToRgb(int hue, float saturation, float brightness) {
+        float r = 0, g = 0, b = 0;
+        if (saturation == 0) {
+            r = g = b = brightness;
+        } else {
+            float h = (hue - (float) Math.floor(hue / 360.0f) * 360.0f) / 60.0f;
+            int i = (int) h;
+            float f = h - i;
+            float p = brightness * (1.0f - saturation);
+            float q = brightness * (1.0f - saturation * f);
+            float t = brightness * (1.0f - (saturation * (1.0f - f)));
+            switch (i) {
+                case 0 -> { r = brightness; g = t; b = p; }
+                case 1 -> { r = q; g = brightness; b = p; }
+                case 2 -> { r = p; g = brightness; b = t; }
+                case 3 -> { r = p; g = q; b = brightness; }
+                case 4 -> { r = t; g = p; b = brightness; }
+                case 5 -> { r = brightness; g = p; b = q; }
+            }
+        }
+        return new ColorRGB(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
+    }
+}
+// File: Main.java
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Optional;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=== ColorKast Paint Application for ABC Paint ===");
+
+        // 1. Initialize databases and core services
+        PaintDatabase db = new PaintDatabase();
+        ColorSearchEngine searchEngine = new ColorSearchEngine(db);
+        ColorTranslator translator = new ColorTranslator(searchEngine);
+        ClosestColorTool closestColorTool = new ClosestColorTool(searchEngine);
+        ColorSampleMatcher sampleMatcher = new ColorSampleMatcher(searchEngine);
+        AdminService adminService = new AdminService(db);
+        SessionManager sessionManager = new SessionManager();
+        ColorChooser colorChooser = new ColorChooser();
+
+        // 2. Setup theme mechanism for ABC Paint website integration
+        Theme abcTheme = Theme.abcPaintCorporate();
+        System.out.println("\n[Theme Mechanism] Loaded Theme: " + abcTheme.getThemeName());
+        System.out.println("CSS root styles: " + abcTheme.renderCss());
+
+        // 3. User Setup (Default and Administrative subclasses L1, L2, L3)
+        User defaultUser = new User("guest-101", "John Doe (Default Consumer)");
+        User adminL1 = new User("admin-01", "Alice L1", true, AdminLevel.LEVEL_1);
+        User adminL2 = new User("admin-02", "Bob L2", true, AdminLevel.LEVEL_2);
+        User adminL3 = new User("admin-03", "Carol L3", true, AdminLevel.LEVEL_3);
+
+        adminService.registerUser(adminL1);
+        adminService.registerUser(adminL2);
+        adminService.registerUser(adminL3);
+
+        System.out.println("\n[Users Initialized]");
+        System.out.println("  - " + defaultUser);
+        System.out.println("  - " + adminL1);
+        System.out.println("  - " + adminL2);
+        System.out.println("  - " + adminL3);
+
+        // 4. Administrative operations: adding paints into Old and New collections
+        System.out.println("\n--- Administrative Interface: Adding Paint Line ---");
+        // Old Product Line (mechanical hand-select palette board system data)
+        adminService.addPaint(adminL1, new Paint("OLD-101", "Classic Navy", "OldScheme", new ColorRGB(15, 30, 85)));
+        adminService.addPaint(adminL1, new Paint("OLD-102", "Colonial Red", "OldScheme", new ColorRGB(180, 25, 30)));
+        adminService.addPaint(adminL1, new Paint("OLD-103", "Meadow Green", "OldScheme", new ColorRGB(40, 130, 45)));
+
+        // New Product Line (ColorKast transition palette)
+        adminService.addPaint(adminL1, new Paint("NEW-201", "Midnight Cobalt", "NewScheme", new ColorRGB(18, 32, 90)));
+        adminService.addPaint(adminL1, new Paint("NEW-202", "Sunset Crimson", "NewScheme", new ColorRGB(185, 20, 25)));
+        adminService.addPaint(adminL1, new Paint("NEW-203", "Alpine Forest", "NewScheme", new ColorRGB(38, 128, 50)));
+        adminService.addPaint(adminL1, new Paint("NEW-204", "Ocean Breeze", "NewScheme", new ColorRGB(50, 150, 200)));
+
+        System.out.println("Added paints successfully. Total paints in DB: " + db.getAllPaints().size());
+
+        // Test Administrative hierarchy permissions
+        System.out.println("\n--- Testing Admin Permission Hierarchy ---");
+        // L1 tries to update (should fail)
+        Paint updatedPaint = new Paint("NEW-201", "Cobalt Blue v2", "NewScheme", new ColorRGB(20, 35, 95));
+        boolean l1Update = adminService.updatePaint(adminL1, updatedPaint);
+        System.out.println("Admin L1 attempts to update paint: " + (l1Update ? "SUCCESS" : "REJECTED (as expected)"));
+
+        // L2 updates (should succeed)
+        boolean l2Update = adminService.updatePaint(adminL2, updatedPaint);
+        System.out.println("Admin L2 attempts to update paint: " + (l2Update ? "SUCCESS" : "FAILED"));
+
+        // L2 tries to delete (should fail)
+        boolean l2Delete = adminService.deletePaint(adminL2, "NewScheme", "NEW-204");
+        System.out.println("Admin L2 attempts to delete paint: " + (l2Delete ? "SUCCESS" : "REJECTED (as expected)"));
+
+        // L3 deletes (should succeed)
+        boolean l3Delete = adminService.deletePaint(adminL3, "NewScheme", "NEW-204");
+        System.out.println("Admin L3 attempts to delete paint: " + (l3Delete ? "SUCCESS" : "FAILED"));
+
+        // Admin User creation permission hierarchy
+        boolean l1CreateL2 = adminService.createAdminUser(adminL1, "admin-sub", "Sub Admin", AdminLevel.LEVEL_2);
+        System.out.println("Admin L1 attempts to create Admin L2: " + (l1CreateL2 ? "ALLOWED" : "REJECTED (as expected)"));
+        boolean l3CreateL2 = adminService.createAdminUser(adminL3, "admin-04", "David L2", AdminLevel.LEVEL_2);
+        System.out.println("Admin L3 creates Admin L2: " + (l3CreateL2 ? "SUCCESS" : "FAILED"));
+
+        // 5. Old-to-New Scheme Translator
+        System.out.println("\n--- Old to New Product-Line Translator ---");
+        Optional<Paint> translated = translator.translate("OLD-101", "OldScheme", "NewScheme");
+        translated.ifPresent(p -> System.out.println("OLD-101 (Classic Navy) translated to NewScheme: " + p));
+
+        // 6. Color Chooser (pointing device & keyboard values)
+        System.out.println("\n--- Color Chooser Utility ---");
+        ColorRGB chosenFromMap = colorChooser.selectFromPaletteMap(128, 128, 210);
+        ColorRGB chosenFromKeyb = colorChooser.selectFromRgbValues(18, 30, 88);
+        System.out.println("Color picked via Pointing Device (x=128, y=128): " + chosenFromMap);
+        System.out.println("Color picked via Keyboard Direct Input: " + chosenFromKeyb);
+
+        // 7. Closest Color Tool in RGB color space
+        System.out.println("\n--- Closest Colors Tool ---");
+        List<Paint> closestList = closestColorTool.findClosestByPaintNumber("OLD-102", "OldScheme", "NewScheme", 2);
+        System.out.println("Closest paints to OLD-102 in 'NewScheme':");
+        for (Paint p : closestList) {
+            System.out.println("  -> " + p);
+        }
+
+        // 8. Color Search Engine (all collections & query by hex / name)
+        System.out.println("\n--- Color Search Engine ---");
+        List<Paint> searchResults = searchEngine.search("Midnight", null, 5);
+        System.out.println("Search results for query 'Midnight':");
+        searchResults.forEach(p -> System.out.println("  -> " + p));
+
+        // 9. Color Sample Matcher with Uploaded Image
+        System.out.println("\n--- Color Sample Matcher ---");
+        UploadedImage uploadedImg = new UploadedImage("living_room_wall.jpg", 10, 10);
+        // Paint a section of the image with a shade of green
+        for (int y = 0; y < 5; y++) {
+            for (int x = 0; x < 5; x++) {
+                uploadedImg.setPixel(x, y, new ColorRGB(36, 125, 48));
+            }
+        }
+        ColorRGB blended = sampleMatcher.sampleBlendedRegion(uploadedImg, 0, 0, 3, 3);
+        System.out.println("Sampled blended color from uploaded image: " + blended);
+        List<Paint> matchedPaints = sampleMatcher.matchBlendedRegion(uploadedImg, 0, 0, 3, 3, "NewScheme", 1);
+        System.out.println("Best matching paint for uploaded sample: " + matchedPaints.get(0));
+
+        // 10. Persistent Session & User Color Palette (30-day lifecycle)
+        System.out.println("\n--- User Session & Persistent Palette ---");
+        UserSession session = sessionManager.createSession(defaultUser);
+        UserColorPalette palette = session.getColorPalette();
+        palette.addSavedColor(chosenFromKeyb);
+        palette.recordSearch("Midnight");
+        palette.addUploadedImage(uploadedImg);
+
+        System.out.println("Session ID: " + session.getSessionId());
+        System.out.println("Saved Colors in Palette: " + palette.getSavedColors());
+        System.out.println("Recent Searches in Palette: " + palette.getRecentSearches());
+        System.out.println("Uploaded Images stored in Palette: " + palette.getUploadedImages().size());
+
+        // Simulate session aging and 30-day purge
+        System.out.println("\n--- 30-Day Session Cleanup Test ---");
+        // Artificially age the session to 31 days ago
+        session.setLastAccessed(Instant.now().minus(31, ChronoUnit.DAYS));
+        System.out.println("Active sessions before cleanup: " + sessionManager.getActiveSessionCount());
+        int purged = sessionManager.cleanExpiredSessions(Instant.now());
+        System.out.println("Purged expired sessions count: " + purged);
+        System.out.println("Active sessions after cleanup: " + sessionManager.getActiveSessionCount());
+
+        // 11. Error Reporting Utility Check
+        System.out.println("\n--- Error Reporting Utility ---");
+        System.out.println("Error logs recorded quietly without breaking user workflow: " +
+                ErrorReportingService.getInstance().getErrorLogs().size());
+        for (String log : ErrorReportingService.getInstance().getErrorLogs()) {
+            System.out.println("  " + log);
+        }
+
+        System.out.println("\n=== All ColorKast components executed successfully. ===");
+    }
+}

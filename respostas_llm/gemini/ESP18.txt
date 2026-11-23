@@ -1,0 +1,1267 @@
+// File: UserRole.java
+public enum UserRole {
+    SYSTEM_ADMIN,
+    PRIMARY_REPRESENTATIVE,
+    AUTHORIZED_EDITOR
+}
+// File: EntityProfileStatus.java
+public enum EntityProfileStatus {
+    PENDING_APPROVAL,
+    APPROVED,
+    REJECTED
+}
+// File: ExportFormat.java
+public enum ExportFormat {
+    EXCEL,
+    PDF
+}
+// File: ExternalSystemLinks.java
+public class ExternalSystemLinks {
+    private String samGovUrl;
+    private String federalAuditClearinghouseUrl;
+    private String fcoiClearinghouseUrl;
+
+    public ExternalSystemLinks(String samGovUrl, String federalAuditClearinghouseUrl, String fcoiClearinghouseUrl) {
+        this.samGovUrl = samGovUrl;
+        this.federalAuditClearinghouseUrl = federalAuditClearinghouseUrl;
+        this.fcoiClearinghouseUrl = fcoiClearinghouseUrl;
+    }
+
+    public String getSamGovUrl() {
+        return samGovUrl;
+    }
+
+    public void setSamGovUrl(String samGovUrl) {
+        this.samGovUrl = samGovUrl;
+    }
+
+    public String getFederalAuditClearinghouseUrl() {
+        return federalAuditClearinghouseUrl;
+    }
+
+    public void setFederalAuditClearinghouseUrl(String federalAuditClearinghouseUrl) {
+        this.federalAuditClearinghouseUrl = federalAuditClearinghouseUrl;
+    }
+
+    public String getFcoiClearinghouseUrl() {
+        return fcoiClearinghouseUrl;
+    }
+
+    public void setFcoiClearinghouseUrl(String fcoiClearinghouseUrl) {
+        this.fcoiClearinghouseUrl = fcoiClearinghouseUrl;
+    }
+
+    @Override
+    public String toString() {
+        return "ExternalSystemLinks{" +
+                "SAM.gov='" + samGovUrl + '\'' +
+                ", FAC='" + federalAuditClearinghouseUrl + '\'' +
+                ", FCOI='" + fcoiClearinghouseUrl + '\'' +
+                '}';
+    }
+}
+// File: ComplianceDates.java
+import java.time.LocalDate;
+
+public class ComplianceDates {
+    private LocalDate samExpirationDate;
+    private LocalDate lastAuditCompletionDate;
+    private LocalDate annualReportDate;
+
+    public ComplianceDates(LocalDate samExpirationDate, LocalDate lastAuditCompletionDate, LocalDate annualReportDate) {
+        this.samExpirationDate = samExpirationDate;
+        this.lastAuditCompletionDate = lastAuditCompletionDate;
+        this.annualReportDate = annualReportDate;
+    }
+
+    public LocalDate getSamExpirationDate() {
+        return samExpirationDate;
+    }
+
+    public void setSamExpirationDate(LocalDate samExpirationDate) {
+        this.samExpirationDate = samExpirationDate;
+    }
+
+    public LocalDate getLastAuditCompletionDate() {
+        return lastAuditCompletionDate;
+    }
+
+    public void setLastAuditCompletionDate(LocalDate lastAuditCompletionDate) {
+        this.lastAuditCompletionDate = lastAuditCompletionDate;
+    }
+
+    public LocalDate getAnnualReportDate() {
+        return annualReportDate;
+    }
+
+    public void setAnnualReportDate(LocalDate annualReportDate) {
+        this.annualReportDate = annualReportDate;
+    }
+
+    public boolean isSamExpired(LocalDate currentDate) {
+        return samExpirationDate != null && samExpirationDate.isBefore(currentDate);
+    }
+
+    public boolean isAuditExpired(LocalDate currentDate) {
+        // Typically single audits expire 1 year after fiscal year end
+        return lastAuditCompletionDate != null && lastAuditCompletionDate.plusYears(1).isBefore(currentDate);
+    }
+
+    public boolean isAnnualReportDue(LocalDate currentDate) {
+        return annualReportDate != null && annualReportDate.plusYears(1).isBefore(currentDate);
+    }
+}
+// File: ProfileChangeLogEntry.java
+import java.time.LocalDateTime;
+
+public class ProfileChangeLogEntry {
+    private final String id;
+    private final LocalDateTime timestamp;
+    private final String username;
+    private final String fieldName;
+    private final String oldValue;
+    private final String newValue;
+
+    public ProfileChangeLogEntry(String id, LocalDateTime timestamp, String username, String fieldName, String oldValue, String newValue) {
+        this.id = id;
+        this.timestamp = timestamp;
+        this.username = username;
+        this.fieldName = fieldName;
+        this.oldValue = oldValue;
+        this.newValue = newValue;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getFieldName() {
+        return fieldName;
+    }
+
+    public String getOldValue() {
+        return oldValue;
+    }
+
+    public String getNewValue() {
+        return newValue;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[%s] User '%s' updated '%s' from '%s' to '%s'",
+                timestamp, username, fieldName, oldValue, newValue);
+    }
+}
+// File: EntityProfile.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class EntityProfile {
+    private final String institutionId;
+    private String legalName;
+    private String uei;
+    private String dunsNumber;
+    private String publicEmail;
+    private boolean hideEmailFromPublic;
+    private String websiteUrl;
+    private ComplianceDates complianceDates;
+    private ExternalSystemLinks externalLinks;
+    private EntityProfileStatus status;
+    private LocalDateTime approvalTimestamp;
+    private String approvedByAdminUsername;
+    private LocalDateTime lastModifiedTimestamp;
+    private final List<ProfileChangeLogEntry> changeLogs;
+
+    public EntityProfile(String institutionId, String legalName, String uei, String dunsNumber,
+                         String publicEmail, boolean hideEmailFromPublic, String websiteUrl,
+                         ComplianceDates complianceDates, ExternalSystemLinks externalLinks) {
+        this.institutionId = institutionId;
+        this.legalName = legalName;
+        this.uei = uei;
+        this.dunsNumber = dunsNumber;
+        this.publicEmail = publicEmail;
+        this.hideEmailFromPublic = hideEmailFromPublic;
+        this.websiteUrl = websiteUrl;
+        this.complianceDates = complianceDates;
+        this.externalLinks = externalLinks;
+        this.status = EntityProfileStatus.PENDING_APPROVAL;
+        this.lastModifiedTimestamp = LocalDateTime.now();
+        this.changeLogs = new ArrayList<>();
+    }
+
+    public String getInstitutionId() {
+        return institutionId;
+    }
+
+    public String getLegalName() {
+        return legalName;
+    }
+
+    public void setLegalName(String legalName) {
+        this.legalName = legalName;
+    }
+
+    public String getUei() {
+        return uei;
+    }
+
+    public void setUei(String uei) {
+        this.uei = uei;
+    }
+
+    public String getDunsNumber() {
+        return dunsNumber;
+    }
+
+    public void setDunsNumber(String dunsNumber) {
+        this.dunsNumber = dunsNumber;
+    }
+
+    public String getPublicEmail() {
+        return publicEmail;
+    }
+
+    public void setPublicEmail(String publicEmail) {
+        this.publicEmail = publicEmail;
+    }
+
+    public boolean isHideEmailFromPublic() {
+        return hideEmailFromPublic;
+    }
+
+    public void setHideEmailFromPublic(boolean hideEmailFromPublic) {
+        this.hideEmailFromPublic = hideEmailFromPublic;
+    }
+
+    public String getWebsiteUrl() {
+        return websiteUrl;
+    }
+
+    public void setWebsiteUrl(String websiteUrl) {
+        this.websiteUrl = websiteUrl;
+    }
+
+    public ComplianceDates getComplianceDates() {
+        return complianceDates;
+    }
+
+    public void setComplianceDates(ComplianceDates complianceDates) {
+        this.complianceDates = complianceDates;
+    }
+
+    public ExternalSystemLinks getExternalLinks() {
+        return externalLinks;
+    }
+
+    public void setExternalLinks(ExternalSystemLinks externalLinks) {
+        this.externalLinks = externalLinks;
+    }
+
+    public EntityProfileStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(EntityProfileStatus status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getApprovalTimestamp() {
+        return approvalTimestamp;
+    }
+
+    public void setApprovalTimestamp(LocalDateTime approvalTimestamp) {
+        this.approvalTimestamp = approvalTimestamp;
+    }
+
+    public String getApprovedByAdminUsername() {
+        return approvedByAdminUsername;
+    }
+
+    public void setApprovedByAdminUsername(String approvedByAdminUsername) {
+        this.approvedByAdminUsername = approvedByAdminUsername;
+    }
+
+    public LocalDateTime getLastModifiedTimestamp() {
+        return lastModifiedTimestamp;
+    }
+
+    public void setLastModifiedTimestamp(LocalDateTime lastModifiedTimestamp) {
+        this.lastModifiedTimestamp = lastModifiedTimestamp;
+    }
+
+    public List<ProfileChangeLogEntry> getChangeLogs() {
+        return Collections.unmodifiableList(changeLogs);
+    }
+
+    public void addChangeLog(ProfileChangeLogEntry entry) {
+        this.changeLogs.add(entry);
+        this.lastModifiedTimestamp = entry.getTimestamp();
+    }
+}
+// File: EntityProfileRequest.java
+import java.time.LocalDateTime;
+
+public class EntityProfileRequest {
+    private final String requestId;
+    private final String institutionName;
+    private final String uei;
+    private final String primaryContactEmail;
+    private final String primaryContactName;
+    private final LocalDateTime requestedAt;
+    private boolean processed;
+
+    public EntityProfileRequest(String requestId, String institutionName, String uei,
+                                String primaryContactEmail, String primaryContactName) {
+        this.requestId = requestId;
+        this.institutionName = institutionName;
+        this.uei = uei;
+        this.primaryContactEmail = primaryContactEmail;
+        this.primaryContactName = primaryContactName;
+        this.requestedAt = LocalDateTime.now();
+        this.processed = false;
+    }
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public String getInstitutionName() {
+        return institutionName;
+    }
+
+    public String getUei() {
+        return uei;
+    }
+
+    public String getPrimaryContactEmail() {
+        return primaryContactEmail;
+    }
+
+    public String getPrimaryContactName() {
+        return primaryContactName;
+    }
+
+    public LocalDateTime getRequestedAt() {
+        return requestedAt;
+    }
+
+    public boolean isProcessed() {
+        return processed;
+    }
+
+    public void setProcessed(boolean processed) {
+        this.processed = processed;
+    }
+}
+// File: UserAccount.java
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+
+public class UserAccount {
+    private final String userId;
+    private String username;
+    private String passwordHash;
+    private String email;
+    private String institutionId; // null if SYSTEM_ADMIN
+    private UserRole role;
+    private boolean active;
+    private LocalDateTime lastLoginTimestamp;
+
+    public UserAccount(String userId, String username, String rawPassword, String email, String institutionId, UserRole role) {
+        this.userId = userId;
+        this.username = username;
+        this.passwordHash = hashPassword(rawPassword);
+        this.email = email;
+        this.institutionId = institutionId;
+        this.role = role;
+        this.active = true;
+    }
+
+    public static String hashPassword(String password) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encodedHash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : encodedHash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
+    }
+
+    public boolean verifyPassword(String rawPassword) {
+        return this.passwordHash.equals(hashPassword(rawPassword));
+    }
+
+    public void setPassword(String newRawPassword) {
+        this.passwordHash = hashPassword(newRawPassword);
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getInstitutionId() {
+        return institutionId;
+    }
+
+    public void setInstitutionId(String institutionId) {
+        this.institutionId = institutionId;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public LocalDateTime getLastLoginTimestamp() {
+        return lastLoginTimestamp;
+    }
+
+    public void setLastLoginTimestamp(LocalDateTime lastLoginTimestamp) {
+        this.lastLoginTimestamp = lastLoginTimestamp;
+    }
+}
+// File: PasswordResetToken.java
+import java.time.LocalDateTime;
+
+public class PasswordResetToken {
+    private final String token;
+    private final String username;
+    private final LocalDateTime expiryDate;
+    private boolean used;
+
+    public PasswordResetToken(String token, String username, LocalDateTime expiryDate) {
+        this.token = token;
+        this.username = username;
+        this.expiryDate = expiryDate;
+        this.used = false;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public LocalDateTime getExpiryDate() {
+        return expiryDate;
+    }
+
+    public boolean isUsed() {
+        return used;
+    }
+
+    public void setUsed(boolean used) {
+        this.used = used;
+    }
+
+    public boolean isValid(LocalDateTime currentTime) {
+        return !used && currentTime.isBefore(expiryDate);
+    }
+}
+// File: ApiAccessTracker.java
+import java.time.LocalDateTime;
+import java.util.concurrent.atomic.AtomicReference;
+
+public class ApiAccessTracker {
+    private final AtomicReference<LocalDateTime> lastApiPullTime = new AtomicReference<>();
+    private final AtomicReference<String> lastClientIpOrName = new AtomicReference<>();
+
+    public void recordAccess(String clientIdentifier) {
+        LocalDateTime now = LocalDateTime.now();
+        lastApiPullTime.set(now);
+        lastClientIpOrName.set(clientIdentifier);
+    }
+
+    public LocalDateTime getLastApiPullTime() {
+        return lastApiPullTime.get();
+    }
+
+    public String getLastClientIpOrName() {
+        return lastClientIpOrName.get();
+    }
+}
+// File: DocumentExportService.java
+import java.nio.charset.StandardCharsets;
+
+public class DocumentExportService {
+
+    public byte[] exportProfile(EntityProfile profile, ExportFormat format, boolean isPublicView) {
+        String emailDisplayed = (isPublicView && profile.isHideEmailFromPublic())
+                ? "[PROTECTED / HIDDEN]"
+                : profile.getPublicEmail();
+
+        return switch (format) {
+            case EXCEL -> generateExcelSpreadsheet(profile, emailDisplayed);
+            case PDF -> generatePdfDocument(profile, emailDisplayed);
+        };
+    }
+
+    private byte[] generateExcelSpreadsheet(EntityProfile profile, String email) {
+        // Tab-delimited spreadsheet output compatible with Excel
+        StringBuilder sb = new StringBuilder();
+        sb.append("FIELD\tVALUE\n");
+        sb.append("Institution ID\t").append(profile.getInstitutionId()).append("\n");
+        sb.append("Legal Name\t").append(profile.getLegalName()).append("\n");
+        sb.append("UEI\t").append(profile.getUei()).append("\n");
+        sb.append("DUNS\t").append(profile.getDunsNumber()).append("\n");
+        sb.append("Email\t").append(email).append("\n");
+        sb.append("Website\t").append(profile.getWebsiteUrl()).append("\n");
+        sb.append("Status\t").append(profile.getStatus()).append("\n");
+        if (profile.getComplianceDates() != null) {
+            sb.append("SAM Expiration\t").append(profile.getComplianceDates().getSamExpirationDate()).append("\n");
+            sb.append("Last Audit Date\t").append(profile.getComplianceDates().getLastAuditCompletionDate()).append("\n");
+            sb.append("Annual Report Date\t").append(profile.getComplianceDates().getAnnualReportDate()).append("\n");
+        }
+        if (profile.getExternalLinks() != null) {
+            sb.append("SAM.gov Link\t").append(profile.getExternalLinks().getSamGovUrl()).append("\n");
+            sb.append("FAC Link\t").append(profile.getExternalLinks().getFederalAuditClearinghouseUrl()).append("\n");
+            sb.append("FCOI Link\t").append(profile.getExternalLinks().getFcoiClearinghouseUrl()).append("\n");
+        }
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private byte[] generatePdfDocument(EntityProfile profile, String email) {
+        // Formatted PDF mock representation
+        StringBuilder sb = new StringBuilder();
+        sb.append("%PDF-1.4\n");
+        sb.append("1 0 obj << /Title (FDP Entity Profile: ").append(profile.getLegalName()).append(") >> endobj\n");
+        sb.append("stream\n");
+        sb.append("--- FEDERAL DEMONSTRATION PARTNERSHIP ENTITY PROFILE ---\n");
+        sb.append("Legal Name: ").append(profile.getLegalName()).append("\n");
+        sb.append("Institution ID: ").append(profile.getInstitutionId()).append("\n");
+        sb.append("UEI: ").append(profile.getUei()).append(" | DUNS: ").append(profile.getDunsNumber()).append("\n");
+        sb.append("Contact: ").append(email).append("\n");
+        sb.append("Web: ").append(profile.getWebsiteUrl()).append("\n");
+        if (profile.getComplianceDates() != null) {
+            sb.append("SAM Expiration Date: ").append(profile.getComplianceDates().getSamExpirationDate()).append("\n");
+            sb.append("Last Audit Completed: ").append(profile.getComplianceDates().getLastAuditCompletionDate()).append("\n");
+        }
+        sb.append("endstream\n%%EOF");
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
+    }
+}
+// File: NotificationService.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+public class NotificationService {
+    private final List<String> emailOutbox = new ArrayList<>();
+
+    public void sendEmail(String toEmail, String subject, String body) {
+        String message = String.format("TO: %s | SUBJECT: %s | BODY: %s", toEmail, subject, body);
+        emailOutbox.add(message);
+        System.out.println("[EMAIL DISPATCHED] " + message);
+    }
+
+    public List<String> checkAndSendIntegrityReminders(List<EntityProfile> profiles, LocalDate today) {
+        List<String> reminderLogs = new ArrayList<>();
+        for (EntityProfile profile : profiles) {
+            if (profile.getStatus() != EntityProfileStatus.APPROVED) {
+                continue;
+            }
+
+            ComplianceDates dates = profile.getComplianceDates();
+            if (dates == null) continue;
+
+            // 1. Monthly general reminder check
+            sendEmail(profile.getPublicEmail(), "Monthly FDP Clearinghouse Profile Review",
+                    "Please log in to review and keep your institutional profile up to date.");
+            reminderLogs.add("Monthly reminder sent to: " + profile.getLegalName());
+
+            // 2. Specific data elements out-of-date reminders (SAM expiration, Audit, Annual Report)
+            if (dates.isSamExpired(today)) {
+                sendEmail(profile.getPublicEmail(), "URGENT: SAM.gov Registration Expired",
+                        "Your SAM.gov expiration date (" + dates.getSamExpirationDate() + ") is in the past. Update required.");
+                reminderLogs.add("SAM expiration reminder sent to: " + profile.getLegalName());
+            }
+
+            if (dates.isAuditExpired(today)) {
+                sendEmail(profile.getPublicEmail(), "REMINDER: Institutional Single Audit Data Overdue",
+                        "Your audit on record is older than one year. Please submit the newest FAC audit details.");
+                reminderLogs.add("Audit reminder sent to: " + profile.getLegalName());
+            }
+
+            if (dates.isAnnualReportDue(today)) {
+                sendEmail(profile.getPublicEmail(), "FDP Annual Report Profile Update Required",
+                        "Annual FDP profile verification is due. Please review all compliance links.");
+                reminderLogs.add("Annual report reminder sent to: " + profile.getLegalName());
+            }
+        }
+        return reminderLogs;
+    }
+
+    public List<String> evaluateSignInAlerts(EntityProfile profile, LocalDate today) {
+        List<String> alerts = new ArrayList<>();
+        if (profile == null) return alerts;
+
+        ComplianceDates dates = profile.getComplianceDates();
+        if (dates != null) {
+            if (dates.isSamExpired(today)) {
+                alerts.add("ALERT: SAM.gov registration expired on " + dates.getSamExpirationDate() + ". Immediate update required.");
+            }
+            if (dates.isAuditExpired(today)) {
+                alerts.add("ALERT: Single audit on file is over 12 months old. Please provide updated FAC completion date.");
+            }
+            if (dates.isAnnualReportDue(today)) {
+                alerts.add("ALERT: Annual FDP reporting period has arrived. Please verify and confirm all profile fields.");
+            }
+        }
+        return alerts;
+    }
+
+    public List<String> getEmailOutbox() {
+        return emailOutbox;
+    }
+}
+// File: ClearinghouseRepository.java
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class ClearinghouseRepository {
+    private final Map<String, EntityProfile> profiles = new ConcurrentHashMap<>();
+    private final Map<String, UserAccount> users = new ConcurrentHashMap<>();
+    private final Map<String, EntityProfileRequest> requests = new ConcurrentHashMap<>();
+    private final Map<String, PasswordResetToken> resetTokens = new ConcurrentHashMap<>();
+
+    public void saveProfile(EntityProfile profile) {
+        profiles.put(profile.getInstitutionId(), profile);
+    }
+
+    public Optional<EntityProfile> findProfileById(String institutionId) {
+        return Optional.ofNullable(profiles.get(institutionId));
+    }
+
+    public Collection<EntityProfile> findAllProfiles() {
+        return profiles.values();
+    }
+
+    public void saveUser(UserAccount user) {
+        users.put(user.getUserId(), user);
+    }
+
+    public Optional<UserAccount> findUserById(String userId) {
+        return Optional.ofNullable(users.get(userId));
+    }
+
+    public Optional<UserAccount> findUserByUsername(String username) {
+        return users.values().stream()
+                .filter(u -> u.getUsername().equalsIgnoreCase(username))
+                .findFirst();
+    }
+
+    public Collection<UserAccount> findAllUsers() {
+        return users.values();
+    }
+
+    public void saveRequest(EntityProfileRequest request) {
+        requests.put(request.getRequestId(), request);
+    }
+
+    public Optional<EntityProfileRequest> findRequestById(String requestId) {
+        return Optional.ofNullable(requests.get(requestId));
+    }
+
+    public Collection<EntityProfileRequest> findAllRequests() {
+        return requests.values();
+    }
+
+    public void saveResetToken(PasswordResetToken token) {
+        resetTokens.put(token.getToken(), token);
+    }
+
+    public Optional<PasswordResetToken> findResetToken(String token) {
+        return Optional.ofNullable(resetTokens.get(token));
+    }
+}
+// File: ClearinghouseService.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public class ClearinghouseService {
+    private final ClearinghouseRepository repository;
+    private final NotificationService notificationService;
+
+    public record LoginResult(UserAccount user, List<String> pendingAlerts) {}
+
+    public ClearinghouseService(ClearinghouseRepository repository, NotificationService notificationService) {
+        this.repository = repository;
+        this.notificationService = notificationService;
+    }
+
+    public LoginResult authenticate(String username, String password, LocalDate today) {
+        UserAccount user = repository.findUserByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
+
+        if (!user.isActive()) {
+            throw new IllegalStateException("User account has been disabled");
+        }
+        if (!user.verifyPassword(password)) {
+            throw new IllegalArgumentException("Invalid username or password");
+        }
+
+        user.setLastLoginTimestamp(LocalDateTime.now());
+        List<String> alerts = new ArrayList<>();
+        if (user.getInstitutionId() != null) {
+            repository.findProfileById(user.getInstitutionId())
+                    .ifPresent(profile -> alerts.addAll(notificationService.evaluateSignInAlerts(profile, today)));
+        }
+
+        return new LoginResult(user, alerts);
+    }
+
+    public String requestPasswordReset(String emailOrUsername) {
+        UserAccount user = repository.findUserByUsername(emailOrUsername)
+                .or(() -> repository.findAllUsers().stream().filter(u -> u.getEmail().equalsIgnoreCase(emailOrUsername)).findFirst())
+                .orElseThrow(() -> new IllegalArgumentException("User not found for password reset"));
+
+        String tokenStr = UUID.randomUUID().toString();
+        PasswordResetToken resetToken = new PasswordResetToken(tokenStr, user.getUsername(), LocalDateTime.now().plusHours(24));
+        repository.saveResetToken(resetToken);
+
+        notificationService.sendEmail(user.getEmail(), "FDP Password Reset Request",
+                "Use token: " + tokenStr + " to reset your password. Valid for 24 hours.");
+        return tokenStr;
+    }
+
+    public void completePasswordReset(String tokenStr, String newPassword) {
+        PasswordResetToken token = repository.findResetToken(tokenStr)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid token"));
+
+        if (!token.isValid(LocalDateTime.now())) {
+            throw new IllegalStateException("Token expired or already used");
+        }
+
+        UserAccount user = repository.findUserByUsername(token.getUsername())
+                .orElseThrow(() -> new IllegalStateException("Associated user not found"));
+
+        user.setPassword(newPassword);
+        token.setUsed(true);
+    }
+
+    public EntityProfileRequest submitProfileRequest(String instName, String uei, String contactEmail, String contactName) {
+        String reqId = "REQ-" + UUID.randomUUID().toString().substring(0, 8);
+        EntityProfileRequest req = new EntityProfileRequest(reqId, instName, uei, contactEmail, contactName);
+        repository.saveRequest(req);
+        notificationService.sendEmail(contactEmail, "Entity Profile Request Received",
+                "Your request for " + instName + " was received and is pending FDP Admin approval.");
+        return req;
+    }
+
+    public void delegateEditingRights(UserAccount actingUser, String targetUsername) {
+        if (actingUser.getRole() != UserRole.PRIMARY_REPRESENTATIVE && actingUser.getRole() != UserRole.SYSTEM_ADMIN) {
+            throw new SecurityException("Only Primary Representatives or Admins can delegate editing rights");
+        }
+
+        UserAccount targetUser = repository.findUserByUsername(targetUsername)
+                .orElseThrow(() -> new IllegalArgumentException("Target user not found"));
+
+        if (actingUser.getRole() == UserRole.PRIMARY_REPRESENTATIVE) {
+            if (!actingUser.getInstitutionId().equals(targetUser.getInstitutionId())) {
+                throw new SecurityException("Cannot delegate rights outside your own institution");
+            }
+        }
+
+        targetUser.setRole(UserRole.AUTHORIZED_EDITOR);
+        notificationService.sendEmail(targetUser.getEmail(), "Editing Rights Delegated",
+                "You have been granted editing rights for institution ID: " + targetUser.getInstitutionId());
+    }
+
+    public void updateEntityProfile(UserAccount actingUser, String institutionId, String newLegalName,
+                                   String newEmail, Boolean hideEmail, ComplianceDates newDates,
+                                   ExternalSystemLinks newLinks) {
+        if (!actingUser.isActive()) {
+            throw new SecurityException("User account is inactive");
+        }
+        if (actingUser.getRole() != UserRole.SYSTEM_ADMIN) {
+            if (!institutionId.equals(actingUser.getInstitutionId())) {
+                throw new SecurityException("Unauthorized to edit an external institution profile");
+            }
+            if (actingUser.getRole() != UserRole.PRIMARY_REPRESENTATIVE && actingUser.getRole() != UserRole.AUTHORIZED_EDITOR) {
+                throw new SecurityException("Insufficient permissions to edit profile");
+            }
+        }
+
+        EntityProfile profile = repository.findProfileById(institutionId)
+                .orElseThrow(() -> new IllegalArgumentException("Profile not found: " + institutionId));
+
+        LocalDateTime now = LocalDateTime.now();
+        String username = actingUser.getUsername();
+
+        if (newLegalName != null && !newLegalName.equals(profile.getLegalName())) {
+            profile.addChangeLog(new ProfileChangeLogEntry(UUID.randomUUID().toString(), now, username, "legalName", profile.getLegalName(), newLegalName));
+            profile.setLegalName(newLegalName);
+        }
+        if (newEmail != null && !newEmail.equals(profile.getPublicEmail())) {
+            profile.addChangeLog(new ProfileChangeLogEntry(UUID.randomUUID().toString(), now, username, "publicEmail", profile.getPublicEmail(), newEmail));
+            profile.setPublicEmail(newEmail);
+        }
+        if (hideEmail != null && hideEmail != profile.isHideEmailFromPublic()) {
+            profile.addChangeLog(new ProfileChangeLogEntry(UUID.randomUUID().toString(), now, username, "hideEmailFromPublic",
+                    String.valueOf(profile.isHideEmailFromPublic()), String.valueOf(hideEmail)));
+            profile.setHideEmailFromPublic(hideEmail);
+        }
+        if (newDates != null) {
+            profile.addChangeLog(new ProfileChangeLogEntry(UUID.randomUUID().toString(), now, username, "complianceDates",
+                    "Updated", newDates.getSamExpirationDate().toString()));
+            profile.setComplianceDates(newDates);
+        }
+        if (newLinks != null) {
+            profile.addChangeLog(new ProfileChangeLogEntry(UUID.randomUUID().toString(), now, username, "externalLinks",
+                    "Updated", newLinks.getSamGovUrl()));
+            profile.setExternalLinks(newLinks);
+        }
+    }
+}
+// File: PublicClearinghouseController.java
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+public class PublicClearinghouseController {
+    private final ClearinghouseRepository repository;
+    private final DocumentExportService exportService;
+
+    public record PublicProfileView(
+            String institutionId,
+            String legalName,
+            String uei,
+            String dunsNumber,
+            String contactEmail,
+            String websiteUrl,
+            ComplianceDates complianceDates,
+            ExternalSystemLinks externalLinks,
+            EntityProfileStatus status
+    ) {}
+
+    public PublicClearinghouseController(ClearinghouseRepository repository, DocumentExportService exportService) {
+        this.repository = repository;
+        this.exportService = exportService;
+    }
+
+    public List<PublicProfileView> searchProfiles(String keyword) {
+        String lowerKeyword = keyword == null ? "" : keyword.toLowerCase();
+        return repository.findAllProfiles().stream()
+                .filter(p -> p.getStatus() == EntityProfileStatus.APPROVED)
+                .filter(p -> p.getLegalName().toLowerCase().contains(lowerKeyword)
+                        || p.getUei().toLowerCase().contains(lowerKeyword)
+                        || p.getDunsNumber().toLowerCase().contains(lowerKeyword))
+                .map(this::toPublicView)
+                .collect(Collectors.toList());
+    }
+
+    public Optional<PublicProfileView> getPublicProfile(String institutionId) {
+        return repository.findProfileById(institutionId)
+                .filter(p -> p.getStatus() == EntityProfileStatus.APPROVED)
+                .map(this::toPublicView);
+    }
+
+    public byte[] downloadProfileDocument(String institutionId, ExportFormat format) {
+        EntityProfile profile = repository.findProfileById(institutionId)
+                .filter(p -> p.getStatus() == EntityProfileStatus.APPROVED)
+                .orElseThrow(() -> new IllegalArgumentException("Approved profile not found"));
+
+        return exportService.exportProfile(profile, format, true);
+    }
+
+    private PublicProfileView toPublicView(EntityProfile profile) {
+        String email = profile.isHideEmailFromPublic() ? "[PROTECTED: Hidden from public view]" : profile.getPublicEmail();
+        return new PublicProfileView(
+                profile.getInstitutionId(),
+                profile.getLegalName(),
+                profile.getUei(),
+                profile.getDunsNumber(),
+                email,
+                profile.getWebsiteUrl(),
+                profile.getComplianceDates(),
+                profile.getExternalLinks(),
+                profile.getStatus()
+        );
+    }
+}
+// File: HttpApiEndpoint.java
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+public class HttpApiEndpoint {
+    private final ClearinghouseRepository repository;
+    private final ApiAccessTracker apiAccessTracker;
+
+    public HttpApiEndpoint(ClearinghouseRepository repository, ApiAccessTracker apiAccessTracker) {
+        this.repository = repository;
+        this.apiAccessTracker = apiAccessTracker;
+    }
+
+    // Read-only system-to-system pull
+    public Map<String, Object> getEntityProfileJson(String institutionId, String clientIdentifier) {
+        apiAccessTracker.recordAccess(clientIdentifier);
+
+        Optional<EntityProfile> opt = repository.findProfileById(institutionId)
+                .filter(p -> p.getStatus() == EntityProfileStatus.APPROVED);
+
+        if (opt.isEmpty()) {
+            return Map.of("error", "404 Not Found", "timestamp", LocalDateTime.now().toString());
+        }
+
+        EntityProfile p = opt.get();
+        return Map.of(
+                "institutionId", p.getInstitutionId(),
+                "legalName", p.getLegalName(),
+                "uei", p.getUei(),
+                "samExpirationDate", String.valueOf(p.getComplianceDates().getSamExpirationDate()),
+                "lastAuditDate", String.valueOf(p.getComplianceDates().getLastAuditCompletionDate()),
+                "samGovLink", p.getExternalLinks() != null ? p.getExternalLinks().getSamGovUrl() : "",
+                "status", p.getStatus().name()
+        );
+    }
+
+    public List<Map<String, String>> getAllApprovedEntities(String clientIdentifier) {
+        apiAccessTracker.recordAccess(clientIdentifier);
+        return repository.findAllProfiles().stream()
+                .filter(p -> p.getStatus() == EntityProfileStatus.APPROVED)
+                .map(p -> Map.of(
+                        "institutionId", p.getInstitutionId(),
+                        "legalName", p.getLegalName(),
+                        "uei", p.getUei()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    public LocalDateTime getLastApiPullTimestamp() {
+        return apiAccessTracker.getLastApiPullTime();
+    }
+
+    public String getLastClientIdentifier() {
+        return apiAccessTracker.getLastClientIpOrName();
+    }
+}
+// File: AdminController.java
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+public class AdminController {
+    private final ClearinghouseRepository repository;
+
+    public AdminController(ClearinghouseRepository repository) {
+        this.repository = repository;
+    }
+
+    public EntityProfile approveAndCreateProfile(UserAccount adminUser, String requestId, String dunsNumber,
+                                                String website, ComplianceDates dates, ExternalSystemLinks links) {
+        ensureAdmin(adminUser);
+
+        EntityProfileRequest req = repository.findRequestById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found: " + requestId));
+
+        String instId = "INST-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        EntityProfile profile = new EntityProfile(
+                instId,
+                req.getInstitutionName(),
+                req.getUei(),
+                dunsNumber,
+                req.getPrimaryContactEmail(),
+                false,
+                website,
+                dates,
+                links
+        );
+
+        profile.setStatus(EntityProfileStatus.APPROVED);
+        profile.setApprovedByAdminUsername(adminUser.getUsername());
+        profile.setApprovalTimestamp(LocalDateTime.now());
+        profile.addChangeLog(new ProfileChangeLogEntry(
+                UUID.randomUUID().toString(),
+                LocalDateTime.now(),
+                adminUser.getUsername(),
+                "status",
+                EntityProfileStatus.PENDING_APPROVAL.name(),
+                EntityProfileStatus.APPROVED.name()
+        ));
+
+        repository.saveProfile(profile);
+        req.setProcessed(true);
+
+        return profile;
+    }
+
+    public UserAccount designateFirstPrimaryUser(UserAccount adminUser, String institutionId, String username,
+                                                 String tempPassword, String email) {
+        ensureAdmin(adminUser);
+
+        repository.findProfileById(institutionId)
+                .orElseThrow(() -> new IllegalArgumentException("Institution not found"));
+
+        String userId = "USR-" + UUID.randomUUID().toString().substring(0, 6);
+        UserAccount primaryUser = new UserAccount(userId, username, tempPassword, email, institutionId, UserRole.PRIMARY_REPRESENTATIVE);
+        repository.saveUser(primaryUser);
+        return primaryUser;
+    }
+
+    public UserAccount createUser(UserAccount adminUser, String username, String password, String email,
+                                  String institutionId, UserRole role) {
+        ensureAdmin(adminUser);
+
+        if (role != UserRole.SYSTEM_ADMIN && (institutionId == null || institutionId.isBlank())) {
+            throw new IllegalArgumentException("Non-system admin users must be tied to an institution");
+        }
+
+        String userId = "USR-" + UUID.randomUUID().toString().substring(0, 6);
+        UserAccount user = new UserAccount(userId, username, password, email, institutionId, role);
+        repository.saveUser(user);
+        return user;
+    }
+
+    public void editUser(UserAccount adminUser, String userId, String newEmail, UserRole newRole) {
+        ensureAdmin(adminUser);
+
+        UserAccount user = repository.findUserById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        if (newEmail != null) user.setEmail(newEmail);
+        if (newRole != null) {
+            if (newRole != UserRole.SYSTEM_ADMIN && user.getInstitutionId() == null) {
+                throw new IllegalArgumentException("Cannot change role without an institution");
+            }
+            user.setRole(newRole);
+        }
+    }
+
+    public void setUserActiveStatus(UserAccount adminUser, String userId, boolean active) {
+        ensureAdmin(adminUser);
+
+        UserAccount user = repository.findUserById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        user.setActive(active);
+    }
+
+    private void ensureAdmin(UserAccount user) {
+        if (user.getRole() != UserRole.SYSTEM_ADMIN || !user.isActive()) {
+            throw new SecurityException("Operation requires active FDP System Administrator privileges");
+        }
+    }
+}
+// File: Main.java
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=== INITIALIZING FDP CLEARINGHOUSE SYSTEM ===");
+
+        // 1. Setup repository & core services
+        ClearinghouseRepository repository = new ClearinghouseRepository();
+        NotificationService notificationService = new NotificationService();
+        DocumentExportService exportService = new DocumentExportService();
+        ApiAccessTracker apiTracker = new ApiAccessTracker();
+        ClearinghouseService clearinghouseService = new ClearinghouseService(repository, notificationService);
+        PublicClearinghouseController publicController = new PublicClearinghouseController(repository, exportService);
+        HttpApiEndpoint apiEndpoint = new HttpApiEndpoint(repository, apiTracker);
+        AdminController adminController = new AdminController(repository);
+
+        // 2. Seed FDP System Administrator
+        UserAccount fdpAdmin = new UserAccount(
+                "USR-ADMIN-1",
+                "fdp_admin",
+                "AdminSecret123!",
+                "admin@fdp.org",
+                null, // System admin is not tied to an institution
+                UserRole.SYSTEM_ADMIN
+        );
+        repository.saveUser(fdpAdmin);
+        System.out.println("FDP Administrator created: " + fdpAdmin.getUsername());
+
+        // 3. Institution submits request to be added
+        System.out.println("\n--- Step 1: Online Request Submission ---");
+        EntityProfileRequest req = clearinghouseService.submitProfileRequest(
+                "Great Lakes University",
+                "UEI-GLU-987654321",
+                "sponsoredprograms@greatlakes.edu",
+                "Dr. Jane Doe"
+        );
+        System.out.println("Submitted request ID: " + req.getRequestId() + " for " + req.getInstitutionName());
+
+        // 4. Admin Panel: Admin approves profile & creates primary representative
+        System.out.println("\n--- Step 2: FDP Admin Approval & Primary User Designation ---");
+        LocalDate now = LocalDate.now();
+        ComplianceDates initialDates = new ComplianceDates(
+                now.minusDays(5), // SAM expired 5 days ago (triggers alerts & reminders)
+                now.minusMonths(8), // Single audit completed 8 months ago
+                now.minusYears(1).minusDays(2) // Annual report overdue
+        );
+        ExternalSystemLinks links = new ExternalSystemLinks(
+                "https://sam.gov/entity/UEI-GLU-987654321",
+                "https://fac.gov/audit/GLU-2023",
+                "https://fcoi.nih.gov/registry/GLU"
+        );
+
+        EntityProfile profile = adminController.approveAndCreateProfile(
+                fdpAdmin,
+                req.getRequestId(),
+                "123456789",
+                "https://www.greatlakes.edu",
+                initialDates,
+                links
+        );
+        System.out.println("Profile approved with Institution ID: " + profile.getInstitutionId());
+
+        UserAccount primaryRep = adminController.designateFirstPrimaryUser(
+                fdpAdmin,
+                profile.getInstitutionId(),
+                "jane_doe",
+                "InitialPass123!",
+                "jdoe@greatlakes.edu"
+        );
+        System.out.println("Primary Representative designated: " + primaryRep.getUsername());
+
+        // 5. User signs in: system provides alerts on out-of-date elements
+        System.out.println("\n--- Step 3: Sign-In and Out-of-Date Data Alerts ---");
+        ClearinghouseService.LoginResult loginResult = clearinghouseService.authenticate("jane_doe", "InitialPass123!", now);
+        System.out.println("User " + loginResult.user().getUsername() + " signed in successfully.");
+        System.out.println("Sign-in Alerts received:");
+        for (String alert : loginResult.pendingAlerts()) {
+            System.out.println(" -> " + alert);
+        }
+
+        // 6. Delegation: Primary Rep delegates editing rights to colleague
+        System.out.println("\n--- Step 4: Delegation of Editing Rights ---");
+        UserAccount editor = adminController.createUser(
+                fdpAdmin,
+                "bob_smith",
+                "EditorPass456!",
+                "bsmith@greatlakes.edu",
+                profile.getInstitutionId(),
+                UserRole.AUTHORIZED_EDITOR
+        );
+        System.out.println("Colleague user registered: " + editor.getUsername());
+        clearinghouseService.delegateEditingRights(loginResult.user(), "bob_smith");
+        System.out.println("Primary rep delegated authorized editor rights to 'bob_smith'.");
+
+        // 7. Profile Update with logging (date, username logged)
+        System.out.println("\n--- Step 5: Updating Profile & Audit Logging ---");
+        ComplianceDates updatedDates = new ComplianceDates(
+                now.plusMonths(12), // SAM renewed for 1 year
+                now.minusMonths(8),
+                now
+        );
+        clearinghouseService.updateEntityProfile(
+                editor,
+                profile.getInstitutionId(),
+                "Great Lakes University - Main Campus",
+                "osp-updates@greatlakes.edu",
+                true, // Hide email from public to avoid spam scrapers
+                updatedDates,
+                null
+        );
+
+        System.out.println("Change log after update:");
+        for (ProfileChangeLogEntry log : profile.getChangeLogs()) {
+            System.out.println(" -> " + log);
+        }
+
+        // 8. Public website search and email privacy protection
+        System.out.println("\n--- Step 6: Public Search & Export ---");
+        List<PublicClearinghouseController.PublicProfileView> searchResults = publicController.searchProfiles("Great Lakes");
+        System.out.println("Search results found: " + searchResults.size());
+        for (PublicClearinghouseController.PublicProfileView view : searchResults) {
+            System.out.println("Entity: " + view.legalName() + " | Email status: " + view.contactEmail());
+        }
+
+        // Excel and PDF downloads
+        byte[] excelBytes = publicController.downloadProfileDocument(profile.getInstitutionId(), ExportFormat.EXCEL);
+        byte[] pdfBytes = publicController.downloadProfileDocument(profile.getInstitutionId(), ExportFormat.PDF);
+        System.out.println("Downloaded Excel size: " + excelBytes.length + " bytes");
+        System.out.println("Downloaded PDF size: " + pdfBytes.length + " bytes");
+        System.out.println("PDF preview snippet:\n" + new String(pdfBytes, StandardCharsets.UTF_8).substring(0, 150) + "...\n");
+
+        // 9. Direct System-to-System HTTP API Read-Only Pull
+        System.out.println("--- Step 7: System-to-System Read-Only API Pull ---");
+        var apiResponse = apiEndpoint.getEntityProfileJson(profile.getInstitutionId(), "Federal-Grant-System-10.1.2.3");
+        System.out.println("API Output: " + apiResponse);
+        System.out.println("Last API pull timestamp recorded: " + apiEndpoint.getLastApiPullTimestamp()
+                + " by client: " + apiEndpoint.getLastClientIdentifier());
+
+        // 10. Automated Data Integrity Check & Notification Emails
+        System.out.println("\n--- Step 8: Automated Data Integrity Checks ---");
+        notificationService.checkAndSendIntegrityReminders(List.of(profile), now);
+
+        // 11. Password Reset Handling
+        System.out.println("\n--- Step 9: Password Reset Handling ---");
+        String resetToken = clearinghouseService.requestPasswordReset("jane_doe");
+        clearinghouseService.completePasswordReset(resetToken, "NewSecurePassword2024!");
+        System.out.println("Password successfully reset. Verifying new login...");
+        ClearinghouseService.LoginResult newLogin = clearinghouseService.authenticate("jane_doe", "NewSecurePassword2024!", now);
+        System.out.println("Login confirmed for: " + newLogin.user().getUsername());
+
+        // 12. Account Management: Disable user
+        System.out.println("\n--- Step 10: Admin Disables User Account ---");
+        adminController.setUserActiveStatus(fdpAdmin, editor.getUserId(), false);
+        System.out.println("User " + editor.getUsername() + " disabled.");
+        try {
+            clearinghouseService.authenticate("bob_smith", "EditorPass456!", now);
+        } catch (IllegalStateException e) {
+            System.out.println("Caught expected rejection: " + e.getMessage());
+        }
+
+        System.out.println("\n=== ALL FDP CLEARINGHOUSE SPECIFICATION REQUIREMENTS DEMONSTRATED SUCCESSFULLY ===");
+    }
+}

@@ -1,0 +1,1739 @@
+// File: Suit.java
+public enum Suit {
+    BAMBOO,
+    CHARACTERS,
+    DOTS,
+    WINDS,
+    DRAGONS
+}
+
+// File: Wind.java
+public enum Wind {
+    EAST,
+    SOUTH,
+    WEST,
+    NORTH
+}
+
+// File: Dragon.java
+public enum Dragon {
+    RED,
+    GREEN,
+    WHITE
+}
+
+// File: Tile.java
+import java.io.Serializable;
+import java.util.Objects;
+
+public class Tile implements Comparable<Tile>, Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final Suit suit;
+    private final int rank; // 1-9 for bamboo/characters/dots; 1-4 for East/South/West/North; 1-3 for Red/Green/White
+    private final String name;
+
+    public Tile(Suit suit, int rank) {
+        this.suit = suit;
+        this.rank = rank;
+        this.name = buildName(suit, rank);
+    }
+
+    private static String buildName(Suit suit, int rank) {
+        return switch (suit) {
+            case BAMBOO -> rank + " Bamboo";
+            case CHARACTERS -> rank + " Character";
+            case DOTS -> rank + " Dot";
+            case WINDS -> switch (rank) {
+                case 1 -> "East Wind";
+                case 2 -> "South Wind";
+                case 3 -> "West Wind";
+                case 4 -> "North Wind";
+                default -> "Unknown Wind";
+            };
+            case DRAGONS -> switch (rank) {
+                case 1 -> "Red Dragon";
+                case 2 -> "Green Dragon";
+                case 3 -> "White Dragon";
+                default -> "Unknown Dragon";
+            };
+        };
+    }
+
+    public Suit getSuit() {
+        return suit;
+    }
+
+    public int getRank() {
+        return rank;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public boolean isHonor() {
+        return suit == Suit.WINDS || suit == Suit.DRAGONS;
+    }
+
+    @Override
+    public int compareTo(Tile o) {
+        if (this.suit != o.suit) {
+            return this.suit.compareTo(o.suit);
+        }
+        return Integer.compare(this.rank, o.rank);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Tile tile)) return false;
+        return rank == tile.rank && suit == tile.suit;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(suit, rank);
+    }
+
+    @Override
+    public String toString() {
+        return "[" + name + "]";
+    }
+}
+
+// File: TileSet.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class TileSet {
+    public static List<Tile> createStandardTileSet() {
+        List<Tile> tiles = new ArrayList<>(136);
+        // Suited tiles: 4 sets of 1-9 for Bamboo, Characters, Dots
+        for (int i = 0; i < 4; i++) {
+            for (int rank = 1; rank <= 9; rank++) {
+                tiles.add(new Tile(Suit.BAMBOO, rank));
+                tiles.add(new Tile(Suit.CHARACTERS, rank));
+                tiles.add(new Tile(Suit.DOTS, rank));
+            }
+            // Honor tiles: 4 copies of 4 Winds
+            for (int w = 1; w <= 4; w++) {
+                tiles.add(new Tile(Suit.WINDS, w));
+            }
+            // Honor tiles: 4 copies of 3 Dragons
+            for (int d = 1; d <= 3; d++) {
+                tiles.add(new Tile(Suit.DRAGONS, d));
+            }
+        }
+        return tiles;
+    }
+}
+
+// File: MeldType.java
+public enum MeldType {
+    CHOW,
+    PUNG,
+    KONG
+}
+
+// File: Meld.java
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Meld implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final MeldType type;
+    private final List<Tile> tiles;
+    private final boolean concealed;
+
+    public Meld(MeldType type, List<Tile> tiles, boolean concealed) {
+        this.type = type;
+        this.tiles = new ArrayList<>(tiles);
+        Collections.sort(this.tiles);
+        this.concealed = concealed;
+    }
+
+    public MeldType getType() {
+        return type;
+    }
+
+    public List<Tile> getTiles() {
+        return Collections.unmodifiableList(tiles);
+    }
+
+    public boolean isConcealed() {
+        return concealed;
+    }
+
+    @Override
+    public String toString() {
+        return type + " " + tiles + (concealed ? " (Concealed)" : " (Exposed)");
+    }
+}
+
+// File: RuleVariation.java
+public enum RuleVariation {
+    CLASSICAL_CHINESE,
+    CLEARED_HAND,
+    JAPANESE_RIICHI
+}
+
+// File: COLevel.java
+public enum COLevel {
+    BEGINNER,
+    INTERMEDIATE,
+    ADVANCED
+}
+
+// File: COStyle.java
+public enum COStyle {
+    DEFENSIVE,
+    BALANCED,
+    AGGRESSIVE
+}
+
+// File: HighScoreEntry.java
+import java.io.Serializable;
+
+public class HighScoreEntry implements Serializable, Comparable<HighScoreEntry> {
+    private static final long serialVersionUID = 1L;
+
+    private final String playerName;
+    private final int score;
+
+    public HighScoreEntry(String playerName, int score) {
+        this.playerName = playerName;
+        this.score = score;
+    }
+
+    public String getPlayerName() {
+        return playerName;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    @Override
+    public int compareTo(HighScoreEntry o) {
+        return Integer.compare(o.score, this.score); // Descending order
+    }
+
+    @Override
+    public String toString() {
+        return playerName + ": " + score + " pts";
+    }
+}
+
+// File: GameSnapshot.java
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+public class GameSnapshot implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final int gameId;
+    private final int currentTurn;
+    private final Wind roundWind;
+    private final List<Tile> wall;
+    private final List<Tile> userHand;
+    private final List<Tile> discards;
+    private final int scoreLimit;
+
+    public GameSnapshot(int gameId, int currentTurn, Wind roundWind, List<Tile> wall, List<Tile> userHand, List<Tile> discards, int scoreLimit) {
+        this.gameId = gameId;
+        this.currentTurn = currentTurn;
+        this.roundWind = roundWind;
+        this.wall = new ArrayList<>(wall);
+        this.userHand = new ArrayList<>(userHand);
+        this.discards = new ArrayList<>(discards);
+        this.scoreLimit = scoreLimit;
+    }
+
+    public int getGameId() {
+        return gameId;
+    }
+
+    public int getCurrentTurn() {
+        return currentTurn;
+    }
+
+    public Wind getRoundWind() {
+        return roundWind;
+    }
+
+    public List<Tile> getWall() {
+        return wall;
+    }
+
+    public List<Tile> getUserHand() {
+        return userHand;
+    }
+
+    public List<Tile> getDiscards() {
+        return discards;
+    }
+
+    public int getScoreLimit() {
+        return scoreLimit;
+    }
+}
+
+// File: Preferences.java
+import java.io.Serializable;
+
+public class Preferences implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private String playerName;
+    private String icon;
+    private boolean soundEnabled;
+    private COLevel defaultCOLevel;
+    private RuleVariation defaultVariation;
+
+    public Preferences() {
+        this.playerName = "Player";
+        this.icon = "Icon_Default.png";
+        this.soundEnabled = true;
+        this.defaultCOLevel = COLevel.BEGINNER;
+        this.defaultVariation = RuleVariation.CLASSICAL_CHINESE;
+    }
+
+    public Preferences(String playerName, String icon, boolean soundEnabled, COLevel defaultCOLevel, RuleVariation defaultVariation) {
+        this.playerName = playerName;
+        this.icon = icon;
+        this.soundEnabled = soundEnabled;
+        this.defaultCOLevel = defaultCOLevel;
+        this.defaultVariation = defaultVariation;
+    }
+
+    public String getPlayerName() {
+        return playerName;
+    }
+
+    public void setPlayerName(String playerName) {
+        this.playerName = playerName;
+    }
+
+    public String getIcon() {
+        return icon;
+    }
+
+    public void setIcon(String icon) {
+        this.icon = icon;
+    }
+
+    public boolean isSoundEnabled() {
+        return soundEnabled;
+    }
+
+    public void setSoundEnabled(boolean soundEnabled) {
+        this.soundEnabled = soundEnabled;
+    }
+
+    public COLevel getDefaultCOLevel() {
+        return defaultCOLevel;
+    }
+
+    public void setDefaultCOLevel(COLevel defaultCOLevel) {
+        this.defaultCOLevel = defaultCOLevel;
+    }
+
+    public RuleVariation getDefaultVariation() {
+        return defaultVariation;
+    }
+
+    public void setDefaultVariation(RuleVariation defaultVariation) {
+        this.defaultVariation = defaultVariation;
+    }
+}
+
+// File: PreferenceManager.java
+import java.io.*;
+
+public class PreferenceManager {
+    public static void savePreferences(Preferences prefs, String filePath) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath))) {
+            oos.writeObject(prefs);
+        } catch (IOException e) {
+            System.err.println("Failed to save preferences: " + e.getMessage());
+        }
+    }
+
+    public static Preferences loadPreferences(String filePath) {
+        File file = new File(filePath);
+        if (!file.exists()) {
+            return new Preferences();
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
+            return (Preferences) ois.readObject();
+        } catch (Exception e) {
+            System.err.println("Failed to load preferences, using defaults: " + e.getMessage());
+            return new Preferences();
+        }
+    }
+}
+
+// File: MahjongRuleValidator.java
+import java.util.*;
+
+public class MahjongRuleValidator {
+
+    public static boolean canPung(List<Tile> hand, Tile discard) {
+        long count = hand.stream().filter(t -> t.equals(discard)).count();
+        return count >= 2;
+    }
+
+    public static boolean canKong(List<Tile> hand, Tile discard) {
+        long count = hand.stream().filter(t -> t.equals(discard)).count();
+        return count >= 3;
+    }
+
+    public static boolean canChow(List<Tile> hand, Tile discard) {
+        if (discard.isHonor()) {
+            return false;
+        }
+        Suit s = discard.getSuit();
+        int r = discard.getRank();
+
+        boolean hasMinus2 = containsSuitRank(hand, s, r - 2);
+        boolean hasMinus1 = containsSuitRank(hand, s, r - 1);
+        boolean hasPlus1 = containsSuitRank(hand, s, r + 1);
+        boolean hasPlus2 = containsSuitRank(hand, s, r + 2);
+
+        // Pattern 1: [r-2, r-1, r]
+        if (hasMinus2 && hasMinus1) return true;
+        // Pattern 2: [r-1, r, r+1]
+        if (hasMinus1 && hasPlus1) return true;
+        // Pattern 3: [r, r+1, r+2]
+        if (hasPlus1 && hasPlus2) return true;
+
+        return false;
+    }
+
+    public static List<List<Tile>> getChowCombinations(List<Tile> hand, Tile discard) {
+        List<List<Tile>> combos = new ArrayList<>();
+        if (discard.isHonor()) return combos;
+
+        Suit s = discard.getSuit();
+        int r = discard.getRank();
+
+        if (containsSuitRank(hand, s, r - 2) && containsSuitRank(hand, s, r - 1)) {
+            combos.add(List.of(findTile(hand, s, r - 2), findTile(hand, s, r - 1), discard));
+        }
+        if (containsSuitRank(hand, s, r - 1) && containsSuitRank(hand, s, r + 1)) {
+            combos.add(List.of(findTile(hand, s, r - 1), discard, findTile(hand, s, r + 1)));
+        }
+        if (containsSuitRank(hand, s, r + 1) && containsSuitRank(hand, s, r + 2)) {
+            combos.add(List.of(discard, findTile(hand, s, r + 1), findTile(hand, s, r + 2)));
+        }
+        return combos;
+    }
+
+    private static boolean containsSuitRank(List<Tile> hand, Suit suit, int rank) {
+        return hand.stream().anyMatch(t -> t.getSuit() == suit && t.getRank() == rank);
+    }
+
+    private static Tile findTile(List<Tile> hand, Suit suit, int rank) {
+        return hand.stream().filter(t -> t.getSuit() == suit && t.getRank() == rank).findFirst().orElse(null);
+    }
+
+    public static boolean checkMahjong(List<Tile> handTiles, List<Meld> melds, Tile winningTile, RuleVariation variation) {
+        List<Tile> fullHand = new ArrayList<>(handTiles);
+        if (winningTile != null) {
+            fullHand.add(winningTile);
+        }
+        Collections.sort(fullHand);
+
+        // Mahjong requires 14 tiles equivalent: 4 melds + 1 pair
+        // (melds count towards the 4 melds)
+        int neededMelds = 4 - melds.size();
+        if (fullHand.size() != neededMelds * 3 + 2) {
+            return false;
+        }
+
+        if (variation == RuleVariation.CLEARED_HAND) {
+            if (!isClearedHand(fullHand, melds)) {
+                return false;
+            }
+        }
+
+        return canFormMeldsAndPair(fullHand, neededMelds);
+    }
+
+    private static boolean isClearedHand(List<Tile> hand, List<Meld> melds) {
+        // Cleared Hand (Flush/Half-flush or no honors): only 1 suit (+ optional honors)
+        Suit primarySuit = null;
+        for (Tile t : hand) {
+            if (!t.isHonor()) {
+                if (primarySuit == null) {
+                    primarySuit = t.getSuit();
+                } else if (primarySuit != t.getSuit()) {
+                    return false;
+                }
+            }
+        }
+        for (Meld m : melds) {
+            for (Tile t : m.getTiles()) {
+                if (!t.isHonor()) {
+                    if (primarySuit == null) {
+                        primarySuit = t.getSuit();
+                    } else if (primarySuit != t.getSuit()) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean canFormMeldsAndPair(List<Tile> tiles, int neededMelds) {
+        if (tiles.size() == 2) {
+            return tiles.get(0).equals(tiles.get(1));
+        }
+
+        // Try every possible pair
+        Set<Tile> checkedPairs = new HashSet<>();
+        for (int i = 0; i < tiles.size() - 1; i++) {
+            Tile t1 = tiles.get(i);
+            Tile t2 = tiles.get(i + 1);
+            if (t1.equals(t2) && !checkedPairs.contains(t1)) {
+                checkedPairs.add(t1);
+                List<Tile> remainder = new ArrayList<>(tiles);
+                remainder.remove(t1);
+                remainder.remove(t2);
+                if (canFormMelds(remainder, neededMelds)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean canFormMelds(List<Tile> tiles, int meldsRemaining) {
+        if (meldsRemaining == 0 && tiles.isEmpty()) {
+            return true;
+        }
+        if (tiles.size() < 3) return false;
+
+        Tile first = tiles.get(0);
+
+        // Try Pung: 3 identical tiles
+        long identicalCount = tiles.stream().filter(t -> t.equals(first)).count();
+        if (identicalCount >= 3) {
+            List<Tile> remainder = new ArrayList<>(tiles);
+            remainder.remove(first);
+            remainder.remove(first);
+            remainder.remove(first);
+            if (canFormMelds(remainder, meldsRemaining - 1)) {
+                return true;
+            }
+        }
+
+        // Try Chow: only for suited tiles
+        if (!first.isHonor()) {
+            Suit s = first.getSuit();
+            int r = first.getRank();
+            Tile second = findTile(tiles, s, r + 1);
+            Tile third = findTile(tiles, s, r + 2);
+            if (second != null && third != null) {
+                List<Tile> remainder = new ArrayList<>(tiles);
+                remainder.remove(first);
+                remainder.remove(second);
+                remainder.remove(third);
+                if (canFormMelds(remainder, meldsRemaining - 1)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public static boolean isFishing(List<Tile> hand, List<Meld> melds, RuleVariation variation) {
+        // Fishing (Ready hand / Tenpai): hand needs 1 tile to form Mahjong
+        List<Tile> sampleTiles = TileSet.createStandardTileSet();
+        Set<Tile> tested = new HashSet<>();
+        for (Tile t : sampleTiles) {
+            if (tested.add(t)) {
+                if (checkMahjong(hand, melds, t, variation)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static int calculateScore(List<Tile> hand, List<Meld> melds, Wind roundWind, Wind seatWind) {
+        // Base Chinese score calculation
+        int score = 20; // Base points for winning hand
+        for (Meld m : melds) {
+            if (m.getType() == MeldType.PUNG) {
+                score += m.isConcealed() ? 8 : 4;
+            } else if (m.getType() == MeldType.KONG) {
+                score += m.isConcealed() ? 32 : 16;
+            }
+        }
+        return Math.max(score, 20);
+    }
+}
+
+// File: Player.java
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Player implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final String id;
+    private String name;
+    private String icon;
+    private Wind seatWind;
+    private final boolean isComputer;
+    private COLevel coLevel;
+    private COStyle coStyle;
+
+    private final List<Tile> hand = new ArrayList<>();
+    private final List<Meld> melds = new ArrayList<>();
+    private int score;
+    private boolean fishing;
+
+    public Player(String id, String name, String icon, boolean isComputer) {
+        this.id = id;
+        this.name = name;
+        this.icon = icon;
+        this.isComputer = isComputer;
+        this.score = 0;
+        this.fishing = false;
+        this.coLevel = COLevel.BEGINNER;
+        this.coStyle = COStyle.BALANCED;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getIcon() {
+        return icon;
+    }
+
+    public void setIcon(String icon) {
+        this.icon = icon;
+    }
+
+    public Wind getSeatWind() {
+        return seatWind;
+    }
+
+    public void setSeatWind(Wind seatWind) {
+        this.seatWind = seatWind;
+    }
+
+    public boolean isComputer() {
+        return isComputer;
+    }
+
+    public COLevel getCoLevel() {
+        return coLevel;
+    }
+
+    public void setCoLevel(COLevel coLevel) {
+        this.coLevel = coLevel;
+    }
+
+    public COStyle getCoStyle() {
+        return coStyle;
+    }
+
+    public void setCoStyle(COStyle coStyle) {
+        this.coStyle = coStyle;
+    }
+
+    public List<Tile> getHand() {
+        return hand;
+    }
+
+    public List<Meld> getMelds() {
+        return melds;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public void addScore(int delta) {
+        this.score += delta;
+    }
+
+    public boolean isFishing() {
+        return fishing;
+    }
+
+    public void setFishing(boolean fishing) {
+        this.fishing = fishing;
+    }
+
+    public void addTile(Tile tile) {
+        hand.add(tile);
+        Collections.sort(hand);
+    }
+
+    public boolean removeTile(Tile tile) {
+        return hand.remove(tile);
+    }
+
+    public void addMeld(Meld meld) {
+        melds.add(meld);
+    }
+
+    public void sortHand() {
+        Collections.sort(hand);
+    }
+
+    @Override
+    public String toString() {
+        return name + " (" + seatWind + ")" + (isComputer ? " [CO:" + coLevel + "]" : " [Human]");
+    }
+}
+
+// File: ComputerOpponentAI.java
+import java.util.*;
+
+public class ComputerOpponentAI {
+
+    public static Tile chooseDiscard(Player co, List<Tile> discardedTiles, RuleVariation variation) {
+        List<Tile> hand = co.getHand();
+        if (hand.isEmpty()) return null;
+
+        COLevel level = co.getCoLevel();
+        COStyle style = co.getCoStyle();
+
+        // Level 1: Beginner
+        if (level == COLevel.BEGINNER) {
+            // Discard isolated honor tiles first, then random
+            for (Tile t : hand) {
+                if (t.isHonor() && Collections.frequency(hand, t) == 1) {
+                    return t;
+                }
+            }
+            return hand.get(0);
+        }
+
+        // Level 2 & 3: Intermediate & Advanced with Look-ahead / Strategy
+        // Rate tiles by utility to preserve pairs, partial sequences (Chows), etc.
+        Map<Tile, Double> tileScores = new HashMap<>();
+
+        for (Tile t : hand) {
+            double score = 0.0;
+            int count = Collections.frequency(hand, t);
+
+            // Pair or triplet protection
+            if (count >= 2) {
+                score += count * 30.0;
+            }
+
+            // Chow potential
+            if (!t.isHonor()) {
+                Suit s = t.getSuit();
+                int r = t.getRank();
+                boolean neighbor1 = hand.stream().anyMatch(h -> h.getSuit() == s && Math.abs(h.getRank() - r) == 1);
+                boolean neighbor2 = hand.stream().anyMatch(h -> h.getSuit() == s && Math.abs(h.getRank() - r) == 2);
+                if (neighbor1) score += 20.0;
+                if (neighbor2) score += 10.0;
+            }
+
+            // Advanced look-ahead: consider discarded tiles visibility
+            if (level == COLevel.ADVANCED) {
+                long seenInDiscards = discardedTiles.stream().filter(d -> d.equals(t)).count();
+                // Fewer unseen tiles remaining makes forming sets harder
+                score -= seenInDiscards * 5.0;
+
+                // Adjust based on style
+                if (style == COStyle.DEFENSIVE) {
+                    // Favor keeping safe honor tiles if already discarded by others
+                    if (seenInDiscards > 0) score += 15.0;
+                } else if (style == COStyle.AGGRESSIVE) {
+                    // Aggressive pushes for high suited sequences
+                    if (!t.isHonor() && (t.getRank() >= 3 && t.getRank() <= 7)) {
+                        score += 8.0;
+                    }
+                }
+            }
+
+            tileScores.put(t, score);
+        }
+
+        // Discard tile with lowest score
+        Tile bestDiscard = hand.get(0);
+        double minScore = Double.MAX_VALUE;
+        for (Tile t : hand) {
+            double s = tileScores.getOrDefault(t, 0.0);
+            if (s < minScore) {
+                minScore = s;
+                bestDiscard = t;
+            }
+        }
+        return bestDiscard;
+    }
+
+    public static boolean shouldClaimDiscard(Player co, Tile discard, MeldType claimType) {
+        if (co.getCoLevel() == COLevel.BEGINNER) {
+            return claimType == MeldType.PUNG || claimType == MeldType.KONG;
+        }
+        // Intermediate & Advanced prefer Pung/Kong or Chows if aggressive/balanced
+        if (co.getCoStyle() == COStyle.DEFENSIVE && claimType == MeldType.CHOW) {
+            return false; // Defensive prefers closed hand
+        }
+        return true;
+    }
+}
+
+// File: SoundManager.java
+public class SoundManager {
+    private boolean enabled;
+
+    public SoundManager(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        System.out.println("[Audio System] Sound effects " + (enabled ? "ENABLED" : "DISABLED"));
+    }
+
+    public void playSound(String soundEffect) {
+        if (!enabled) return;
+        System.out.println("[Sound Effect] *Playing sound: " + soundEffect + "*");
+    }
+}
+
+// File: GameSession.java
+import java.io.Serializable;
+import java.util.*;
+
+public class GameSession implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final int gameId;
+    private final String creatorName;
+    private final String creatorIcon;
+    private final int scoreLimit;
+    private final int totalHumanCapacity;
+    private final RuleVariation ruleVariation;
+    private COLevel defaultCOLevel;
+
+    private final List<Player> players = new ArrayList<>();
+    private final List<Tile> wall = new ArrayList<>();
+    private final List<Tile> discards = new ArrayList<>();
+    private int currentTurnIndex = 0;
+    private Wind currentRoundWind = Wind.EAST;
+    private int roundCount = 1;
+    private boolean active = false;
+    private boolean finished = false;
+    private Tile lastDiscardedTile = null;
+    private int lastDiscarderIndex = -1;
+
+    public GameSession(int gameId, String creatorName, String creatorIcon, int scoreLimit, int totalHumans, RuleVariation variation, COLevel coLevel) {
+        this.gameId = gameId;
+        this.creatorName = creatorName;
+        this.creatorIcon = creatorIcon;
+        this.scoreLimit = scoreLimit;
+        this.totalHumanCapacity = totalHumans;
+        this.ruleVariation = variation;
+        this.defaultCOLevel = coLevel;
+    }
+
+    public int getGameId() {
+        return gameId;
+    }
+
+    public String getCreatorName() {
+        return creatorName;
+    }
+
+    public String getCreatorIcon() {
+        return creatorIcon;
+    }
+
+    public int getScoreLimit() {
+        return scoreLimit;
+    }
+
+    public int getTotalHumanCapacity() {
+        return totalHumanCapacity;
+    }
+
+    public RuleVariation getRuleVariation() {
+        return ruleVariation;
+    }
+
+    public COLevel getDefaultCOLevel() {
+        return defaultCOLevel;
+    }
+
+    public void setDefaultCOLevel(COLevel defaultCOLevel) {
+        this.defaultCOLevel = defaultCOLevel;
+    }
+
+    public List<Player> getPlayers() {
+        return players;
+    }
+
+    public List<Tile> getWall() {
+        return wall;
+    }
+
+    public List<Tile> getDiscards() {
+        return discards;
+    }
+
+    public int getCurrentTurnIndex() {
+        return currentTurnIndex;
+    }
+
+    public Wind getCurrentRoundWind() {
+        return currentRoundWind;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public boolean isFinished() {
+        return finished;
+    }
+
+    public Tile getLastDiscardedTile() {
+        return lastDiscardedTile;
+    }
+
+    public int getLastDiscarderIndex() {
+        return lastDiscarderIndex;
+    }
+
+    public int getRemainingPlayerSlots() {
+        long humanCount = players.stream().filter(p -> !p.isComputer()).count();
+        return (int) Math.max(0, totalHumanCapacity - humanCount);
+    }
+
+    public synchronized boolean addPlayer(Player player) {
+        if (players.size() >= 4) return false;
+        players.add(player);
+        return true;
+    }
+
+    public synchronized void startGame() {
+        // Complete remaining spots with COs up to 4 players
+        int coIndex = 1;
+        while (players.size() < 4) {
+            Player co = new Player("CO_" + coIndex, "Computer " + coIndex, "Icon_CO.png", true);
+            co.setCoLevel(defaultCOLevel);
+            players.add(co);
+            coIndex++;
+        }
+
+        // Randomise seating position
+        Collections.shuffle(players);
+        Wind[] winds = Wind.values();
+        for (int i = 0; i < 4; i++) {
+            players.get(i).setSeatWind(winds[i]);
+        }
+
+        // Randomise tile order
+        wall.clear();
+        wall.addAll(TileSet.createStandardTileSet());
+        Collections.shuffle(wall);
+
+        // Deal tiles: 13 each, East (dealer) starts with 14
+        for (Player p : players) {
+            p.getHand().clear();
+            p.getMelds().clear();
+            for (int i = 0; i < 13; i++) {
+                p.addTile(wall.remove(0));
+            }
+        }
+        // East player picks up 1st tile (turn 0)
+        currentTurnIndex = 0;
+        players.get(0).addTile(wall.remove(0));
+
+        active = true;
+        finished = false;
+    }
+
+    public synchronized Tile drawTile(Player player) {
+        if (wall.isEmpty()) {
+            return null; // Wall depleted -> Draw
+        }
+        Tile drawn = wall.remove(0);
+        player.addTile(drawn);
+        return drawn;
+    }
+
+    public synchronized void discardTile(Player player, Tile tile) {
+        player.removeTile(tile);
+        discards.add(tile);
+        lastDiscardedTile = tile;
+        lastDiscarderIndex = players.indexOf(player);
+
+        // Check if player is fishing
+        boolean fishing = MahjongRuleValidator.isFishing(player.getHand(), player.getMelds(), ruleVariation);
+        player.setFishing(fishing);
+
+        // Advance turn clockwise
+        currentTurnIndex = (currentTurnIndex + 1) % 4;
+    }
+
+    public synchronized void performMeld(Player claimant, Meld meld) {
+        claimant.addMeld(meld);
+        for (Tile t : meld.getTiles()) {
+            claimant.removeTile(t);
+        }
+        currentTurnIndex = players.indexOf(claimant);
+    }
+
+    public synchronized void replacePlayerWithCO(Player humanPlayer, COLevel level) {
+        int index = players.indexOf(humanPlayer);
+        if (index >= 0) {
+            Player co = new Player("CO_sub_" + System.currentTimeMillis(), "CO (sub for " + humanPlayer.getName() + ")", "Icon_CO.png", true);
+            co.setSeatWind(humanPlayer.getSeatWind());
+            co.setCoLevel(level);
+            co.getHand().addAll(humanPlayer.getHand());
+            co.getMelds().addAll(humanPlayer.getMelds());
+            co.addScore(humanPlayer.getScore());
+            co.setFishing(humanPlayer.isFishing());
+            players.set(index, co);
+        }
+    }
+
+    public synchronized void endRound(Player winner) {
+        if (winner != null) {
+            int score = MahjongRuleValidator.calculateScore(winner.getHand(), winner.getMelds(), currentRoundWind, winner.getSeatWind());
+            winner.addScore(score);
+        }
+        roundCount++;
+        if (roundCount > 4) {
+            finished = true;
+            active = false;
+        } else {
+            // Next round wind
+            currentRoundWind = Wind.values()[(currentRoundWind.ordinal() + 1) % 4];
+        }
+    }
+
+    public synchronized void terminateGame() {
+        active = false;
+        finished = true;
+    }
+
+    public GameSnapshot createSnapshot(Player userPlayer) {
+        return new GameSnapshot(gameId, currentTurnIndex, currentRoundWind, wall, userPlayer.getHand(), discards, scoreLimit);
+    }
+
+    public void restoreSnapshot(Player userPlayer, GameSnapshot snapshot) {
+        this.currentTurnIndex = snapshot.getCurrentTurnIndex();
+        this.currentRoundWind = snapshot.getRoundWind();
+        this.wall.clear();
+        this.wall.addAll(snapshot.getWall());
+        this.discards.clear();
+        this.discards.addAll(snapshot.getDiscards());
+        userPlayer.getHand().clear();
+        userPlayer.getHand().addAll(snapshot.getUserHand());
+        userPlayer.sortHand();
+    }
+}
+
+// File: ChatMessage.java
+import java.io.Serializable;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+
+public class ChatMessage implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final String sender;
+    private final String message;
+    private final String timestamp;
+
+    public ChatMessage(String sender, String message) {
+        this.sender = sender;
+        this.message = message;
+        this.timestamp = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+    }
+
+    public String getSender() {
+        return sender;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public String getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + timestamp + "] " + sender + ": " + message;
+    }
+}
+
+// File: MultiMahjongServer.java
+import java.io.*;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class MultiMahjongServer {
+    private final String ipAddress;
+    private final List<HighScoreEntry> highScores = new CopyOnWriteArrayList<>();
+    private final Map<Integer, GameSession> activeGames = new ConcurrentHashMap<>();
+    private final List<ChatMessage> chatLog = new CopyOnWriteArrayList<>();
+    private final List<String> serverLogs = new CopyOnWriteArrayList<>();
+    private final AtomicInteger gameIdSequence = new AtomicInteger(100);
+
+    private String serverName = "MultiMahjong Master Server";
+    private int maxConcurrentGames = 50;
+
+    public MultiMahjongServer(String ipAddress) {
+        this.ipAddress = ipAddress;
+        loadServerPreferences("server_prefs.dat");
+        initialiseDefaultHighScores();
+        log("MultiMahjongServer initialised on IP: " + ipAddress);
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public synchronized void log(String message) {
+        String logEntry = "[SERVER " + System.currentTimeMillis() + "] " + message;
+        serverLogs.add(logEntry);
+        System.out.println(logEntry);
+    }
+
+    public List<String> getServerLogs() {
+        return Collections.unmodifiableList(serverLogs);
+    }
+
+    private void initialiseDefaultHighScores() {
+        highScores.add(new HighScoreEntry("DragonMaster", 1200));
+        highScores.add(new HighScoreEntry("WindWalker", 950));
+        highScores.add(new HighScoreEntry("TileWizard", 800));
+        highScores.add(new HighScoreEntry("JadePhoenix", 650));
+        Collections.sort(highScores);
+    }
+
+    public List<HighScoreEntry> getHighScores() {
+        return Collections.unmodifiableList(highScores);
+    }
+
+    public synchronized void submitHighScore(String playerName, int score) {
+        highScores.add(new HighScoreEntry(playerName, score));
+        Collections.sort(highScores);
+        log("New high score recorded: " + playerName + " -> " + score);
+    }
+
+    public synchronized GameSession createGame(String creatorName, String creatorIcon, int scoreLimit, int totalHumans, RuleVariation variation, COLevel coLevel) {
+        int id = gameIdSequence.incrementAndGet();
+        GameSession session = new GameSession(id, creatorName, creatorIcon, scoreLimit, totalHumans, variation, coLevel);
+        Player creator = new Player(UUID.randomUUID().toString(), creatorName, creatorIcon, false);
+        session.addPlayer(creator);
+        activeGames.put(id, session);
+        log("Game created [ID: " + id + "] by " + creatorName + ", RuleVariation: " + variation);
+        return session;
+    }
+
+    public List<GameSession> getAvailableGames() {
+        List<GameSession> available = new ArrayList<>();
+        for (GameSession g : activeGames.values()) {
+            if (!g.isActive() && !g.isFinished() && g.getRemainingPlayerSlots() > 0) {
+                available.add(g);
+            }
+        }
+        return available;
+    }
+
+    public synchronized boolean joinGame(int gameId, Player player) {
+        GameSession game = activeGames.get(gameId);
+        if (game != null && !game.isActive() && game.getRemainingPlayerSlots() > 0) {
+            game.addPlayer(player);
+            log("Player " + player.getName() + " joined game ID " + gameId);
+            return true;
+        }
+        return false;
+    }
+
+    public synchronized void broadcastChat(ChatMessage msg) {
+        chatLog.add(msg);
+        log("Chat Relay: " + msg);
+    }
+
+    public List<ChatMessage> getChatHistory() {
+        return Collections.unmodifiableList(chatLog);
+    }
+
+    public void updatePlayerProfile(int gameId, String playerId, String newName, String newIcon) {
+        GameSession game = activeGames.get(gameId);
+        if (game != null) {
+            for (Player p : game.getPlayers()) {
+                if (p.getId().equals(playerId)) {
+                    p.setName(newName);
+                    p.setIcon(newIcon);
+                    log("Player " + playerId + " updated profile: Name=" + newName + ", Icon=" + newIcon);
+                    break;
+                }
+            }
+        }
+    }
+
+    public void saveServerPreferences(String filepath) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filepath))) {
+            writer.println("ServerName=" + serverName);
+            writer.println("MaxConcurrentGames=" + maxConcurrentGames);
+            log("Server preferences saved to " + filepath);
+        } catch (IOException e) {
+            log("Error saving server preferences: " + e.getMessage());
+        }
+    }
+
+    public void loadServerPreferences(String filepath) {
+        File file = new File(filepath);
+        if (!file.exists()) return;
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("=");
+                if (parts.length == 2) {
+                    if (parts[0].equals("ServerName")) serverName = parts[1];
+                    if (parts[0].equals("MaxConcurrentGames")) maxConcurrentGames = Integer.parseInt(parts[1]);
+                }
+            }
+            log("Server preferences loaded from " + filepath);
+        } catch (Exception e) {
+            log("Error reading preferences: " + e.getMessage());
+        }
+    }
+
+    // Graphical Administrator Console interface
+    public void openAdminConsole() {
+        System.out.println("==================================================");
+        System.out.println("  [SERVER ADMIN GUI CONSOLE] - " + serverName);
+        System.out.println("  IP: " + ipAddress + " | Max Games: " + maxConcurrentGames);
+        System.out.println("  Active Games: " + activeGames.size());
+        System.out.println("  Recent Logs Count: " + serverLogs.size());
+        System.out.println("==================================================");
+    }
+}
+
+// File: MultiMahjongClient.java
+import java.io.*;
+import java.util.*;
+
+public class MultiMahjongClient {
+    private final String clientId;
+    private final MultiMahjongServer server; // In single-player, server call intercepted internally
+    private final boolean isSinglePlayerMode;
+
+    private Preferences preferences;
+    private Player localPlayer;
+    private GameSession currentGame;
+    private final SoundManager soundManager;
+    private final List<GameSnapshot> undoHistory = new ArrayList<>();
+
+    public MultiMahjongClient(String clientId, MultiMahjongServer server, boolean singlePlayerMode) {
+        this.clientId = clientId;
+        this.server = server;
+        this.isSinglePlayerMode = singlePlayerMode;
+        this.preferences = PreferenceManager.loadPreferences("client_prefs_" + clientId + ".dat");
+        this.soundManager = new SoundManager(preferences.isSoundEnabled());
+        this.localPlayer = new Player(clientId, preferences.getPlayerName(), preferences.getIcon(), false);
+    }
+
+    public Player getLocalPlayer() {
+        return localPlayer;
+    }
+
+    public GameSession getCurrentGame() {
+        return currentGame;
+    }
+
+    public SoundManager getSoundManager() {
+        return soundManager;
+    }
+
+    // Preference management
+    public void updatePreferences(String name, String icon, boolean sound, COLevel level, RuleVariation variation) {
+        preferences.setPlayerName(name);
+        preferences.setIcon(icon);
+        preferences.setSoundEnabled(sound);
+        preferences.setDefaultCOLevel(level);
+        preferences.setDefaultVariation(variation);
+        soundManager.setEnabled(sound);
+        localPlayer.setName(name);
+        localPlayer.setIcon(icon);
+        PreferenceManager.savePreferences(preferences, "client_prefs_" + clientId + ".dat");
+        System.out.println("[Client " + clientId + "] Preferences updated and saved.");
+    }
+
+    // Custom Icon / Avatar upload
+    public void uploadCustomImage(String imageFilePath) {
+        if (imageFilePath.endsWith(".jpg") || imageFilePath.endsWith(".jpeg") || imageFilePath.endsWith(".gif")) {
+            localPlayer.setIcon(imageFilePath);
+            preferences.setIcon(imageFilePath);
+            PreferenceManager.savePreferences(preferences, "client_prefs_" + clientId + ".dat");
+            System.out.println("[Client " + clientId + "] Custom image uploaded successfully: " + imageFilePath);
+            if (!isSinglePlayerMode && currentGame != null) {
+                server.updatePlayerProfile(currentGame.getGameId(), clientId, localPlayer.getName(), imageFilePath);
+            }
+        } else {
+            System.out.println("[Client " + clientId + "] Error: Only JPEG and GIF formats are allowed!");
+        }
+    }
+
+    // Profile modification during gameplay
+    public void modifyProfileDuringGame(String newName, String newIcon) {
+        localPlayer.setName(newName);
+        localPlayer.setIcon(newIcon);
+        System.out.println("[Client " + clientId + "] Profile changed mid-game to: " + newName + " (" + newIcon + ")");
+        if (!isSinglePlayerMode && currentGame != null) {
+            server.updatePlayerProfile(currentGame.getGameId(), clientId, newName, newIcon);
+        }
+    }
+
+    // Game creation: Multi-player
+    public GameSession createMultiPlayerGame(int totalHumans, int scoreLimit, RuleVariation variation, COLevel coLevel) {
+        if (totalHumans < 1 || totalHumans > 4) {
+            throw new IllegalArgumentException("Total human players must be between 1 and 4.");
+        }
+        GameSession game = server.createGame(localPlayer.getName(), localPlayer.getIcon(), scoreLimit, totalHumans, variation, coLevel);
+        this.currentGame = game;
+        return game;
+    }
+
+    // Game creation: Single-player (server intercepted internally)
+    public GameSession createSinglePlayerGame(int scoreLimit, RuleVariation variation, COLevel coLevel) {
+        GameSession spGame = new GameSession(1, localPlayer.getName(), localPlayer.getIcon(), scoreLimit, 1, variation, coLevel);
+        spGame.addPlayer(localPlayer);
+        // Setup 3 COs directly
+        for (int i = 1; i <= 3; i++) {
+            Player co = new Player("CO_SP_" + i, "Bot_" + i, "Icon_CO.png", true);
+            co.setCoLevel(coLevel);
+            spGame.addPlayer(co);
+        }
+        this.currentGame = spGame;
+        return spGame;
+    }
+
+    // Join Game
+    public List<GameSession> fetchAvailableGames() {
+        if (isSinglePlayerMode) {
+            return Collections.emptyList();
+        }
+        return server.getAvailableGames();
+    }
+
+    public boolean joinMultiPlayerGame(int gameId) {
+        boolean success = server.joinGame(gameId, localPlayer);
+        if (success) {
+            for (GameSession g : server.getAvailableGames()) {
+                if (g.getGameId() == gameId) {
+                    this.currentGame = g;
+                    break;
+                }
+            }
+        }
+        return success;
+    }
+
+    // Start game
+    public void startMahjongGame() {
+        if (currentGame == null) return;
+        currentGame.startGame();
+        soundManager.playSound("game_start.wav");
+        displayGameStatus();
+    }
+
+    // Display user interface screen status
+    public void displayGameStatus() {
+        System.out.println("\n----------------- GAME SCREEN [" + localPlayer.getName() + "] -----------------");
+        System.out.println("Round Wind: " + currentGame.getCurrentRoundWind() + " | Wall Tiles Left: " + currentGame.getWall().size());
+        System.out.println("Players:");
+        for (Player p : currentGame.getPlayers()) {
+            System.out.println("  " + p + " | Exposed Melds: " + p.getMelds() + (p.isFishing() ? " [FISHING!]" : ""));
+        }
+        System.out.println("Your Concealed Hand: " + localPlayer.getHand());
+        System.out.println("Discard Pool: " + currentGame.getDiscards());
+        Player turnPlayer = currentGame.getPlayers().get(currentGame.getCurrentTurnIndex());
+        System.out.println(">> CURRENT TURN: " + turnPlayer.getName() + " (" + turnPlayer.getSeatWind() + ") <<");
+        System.out.println("-----------------------------------------------------------------");
+    }
+
+    // Automated or manual tile pickup
+    public Tile pickUpTileFromWall() {
+        if (currentGame == null) return null;
+        Player current = currentGame.getPlayers().get(currentGame.getCurrentTurnIndex());
+        if (!current.getId().equals(localPlayer.getId())) {
+            System.out.println("It is not your turn to pick up a tile!");
+            return null;
+        }
+
+        // Save state for undo if in single player
+        if (isSinglePlayerMode) {
+            undoHistory.add(currentGame.createSnapshot(localPlayer));
+        }
+
+        Tile drawn = currentGame.drawTile(localPlayer);
+        if (drawn != null) {
+            soundManager.playSound("tile_draw.wav");
+            System.out.println("[Action] You drew tile: " + drawn);
+            localPlayer.sortHand();
+        } else {
+            System.out.println("[Notice] Wall is empty! Hand ended in a DRAW.");
+            soundManager.playSound("draw_game.wav");
+            currentGame.endRound(null);
+        }
+        return drawn;
+    }
+
+    // Discard tile
+    public void discardTile(Tile tile) {
+        if (currentGame == null) return;
+        if (!localPlayer.getHand().contains(tile)) {
+            System.out.println("Cannot discard a tile not present in your hand.");
+            return;
+        }
+
+        // Save undo point in SP
+        if (isSinglePlayerMode) {
+            undoHistory.add(currentGame.createSnapshot(localPlayer));
+        }
+
+        currentGame.discardTile(localPlayer, tile);
+        soundManager.playSound("tile_discard.wav");
+        System.out.println("[Action] You discarded: " + tile);
+
+        // Check if other players can claim
+        evaluateOtherPlayersOnDiscard(tile);
+    }
+
+    // Respond to claims: Chow, Pung, Kong, Mahjong
+    public void evaluatePlayerActionOptions(Tile lastDiscard) {
+        if (lastDiscard == null) return;
+        System.out.println("\nChecking claim options for " + localPlayer.getName() + " on " + lastDiscard + ":");
+
+        boolean canChow = MahjongRuleValidator.canChow(localPlayer.getHand(), lastDiscard);
+        boolean canPung = MahjongRuleValidator.canPung(localPlayer.getHand(), lastDiscard);
+        boolean canKong = MahjongRuleValidator.canKong(localPlayer.getHand(), lastDiscard);
+        boolean canMahjong = MahjongRuleValidator.checkMahjong(localPlayer.getHand(), localPlayer.getMelds(), lastDiscard, currentGame.getRuleVariation());
+
+        if (canChow) System.out.println(" -> Option available: CHOW");
+        if (canPung) System.out.println(" -> Option available: PUNG");
+        if (canKong) System.out.println(" -> Option available: KONG");
+        if (canMahjong) System.out.println(" -> Option available: MAHJONG (HU)!");
+
+        if (!canChow && !canPung && !canKong && !canMahjong) {
+            System.out.println(" -> No valid claims on this discard.");
+        }
+    }
+
+    public void claimPung(Tile discard) {
+        if (!MahjongRuleValidator.canPung(localPlayer.getHand(), discard)) {
+            System.out.println("Invalid Pung claim.");
+            return;
+        }
+        Meld meld = new Meld(MeldType.PUNG, List.of(discard, discard, discard), false);
+        currentGame.performMeld(localPlayer, meld);
+        soundManager.playSound("pung.wav");
+        System.out.println("[Claim] You announced PUNG on " + discard + "!");
+    }
+
+    public void claimChow(Tile discard, Tile t1, Tile t2) {
+        List<Tile> chowList = List.of(discard, t1, t2);
+        Meld meld = new Meld(MeldType.CHOW, chowList, false);
+        currentGame.performMeld(localPlayer, meld);
+        soundManager.playSound("chow.wav");
+        System.out.println("[Claim] You announced CHOW: " + meld);
+    }
+
+    public void claimKong(Tile discard) {
+        if (!MahjongRuleValidator.canKong(localPlayer.getHand(), discard)) {
+            System.out.println("Invalid Kong claim.");
+            return;
+        }
+        Meld meld = new Meld(MeldType.KONG, List.of(discard, discard, discard, discard), false);
+        currentGame.performMeld(localPlayer, meld);
+        soundManager.playSound("kong.wav");
+        System.out.println("[Claim] You announced KONG on " + discard + "!");
+        // Pick extra tile from wall
+        currentGame.drawTile(localPlayer);
+    }
+
+    public void declareMahjong(Tile winningTile) {
+        if (MahjongRuleValidator.checkMahjong(localPlayer.getHand(), localPlayer.getMelds(), winningTile, currentGame.getRuleVariation())) {
+            soundManager.playSound("mahjong_win.wav");
+            System.out.println("\n************************************************");
+            System.out.println("MAHJONG! " + localPlayer.getName() + " WINS THE HAND!");
+            System.out.println("************************************************\n");
+            currentGame.endRound(localPlayer);
+            if (!isSinglePlayerMode) {
+                server.submitHighScore(localPlayer.getName(), localPlayer.getScore());
+            }
+        } else {
+            System.out.println("False Mahjong declaration!");
+        }
+    }
+
+    private void evaluateOtherPlayersOnDiscard(Tile discard) {
+        // Evaluate for AI players
+        for (Player p : currentGame.getPlayers()) {
+            if (p.isComputer() && !p.equals(localPlayer)) {
+                if (MahjongRuleValidator.checkMahjong(p.getHand(), p.getMelds(), discard, currentGame.getRuleVariation())) {
+                    System.out.println("[Notification] " + p.getName() + " went MAHJONG on " + discard + "!");
+                    currentGame.endRound(p);
+                    return;
+                }
+                if (MahjongRuleValidator.canPung(p.getHand(), discard) && ComputerOpponentAI.shouldClaimDiscard(p, discard, MeldType.PUNG)) {
+                    Meld meld = new Meld(MeldType.PUNG, List.of(discard, discard, discard), false);
+                    currentGame.performMeld(p, meld);
+                    System.out.println("[CO Action] " + p.getName() + " claimed PUNG on " + discard);
+                    // CO then discards
+                    Tile coDiscard = ComputerOpponentAI.chooseDiscard(p, currentGame.getDiscards(), currentGame.getRuleVariation());
+                    currentGame.discardTile(p, coDiscard);
+                    System.out.println("[CO Action] " + p.getName() + " discarded " + coDiscard);
+                    return;
+                }
+            }
+        }
+    }
+
+    // Process turn for CO if current turn belongs to a Computer Opponent
+    public void processNextCOTurn() {
+        Player current = currentGame.getPlayers().get(currentGame.getCurrentTurnIndex());
+        if (current.isComputer()) {
+            Tile drawn = currentGame.drawTile(current);
+            System.out.println("[CO Action] " + current.getName() + " picked up a tile from the wall.");
+            // Check self-drawn win
+            if (drawn != null && MahjongRuleValidator.checkMahjong(current.getHand(), current.getMelds(), null, currentGame.getRuleVariation())) {
+                System.out.println("[CO Action] " + current.getName() + " goes MAHJONG with self-drawn tile!");
+                currentGame.endRound(current);
+                return;
+            }
+            Tile discard = ComputerOpponentAI.chooseDiscard(current, currentGame.getDiscards(), currentGame.getRuleVariation());
+            currentGame.discardTile(current, discard);
+            System.out.println("[CO Action] " + current.getName() + " discards " + discard);
+            evaluatePlayerActionOptions(discard);
+        }
+    }
+
+    // Single Player Undo & Save
+    public void undoLastMove() {
+        if (!isSinglePlayerMode) {
+            System.out.println("Undo is only allowed in single player games!");
+            return;
+        }
+        if (undoHistory.isEmpty()) {
+            System.out.println("No move history to undo.");
+            return;
+        }
+        GameSnapshot lastState = undoHistory.remove(undoHistory.size() - 1);
+        currentGame.restoreSnapshot(localPlayer, lastState);
+        System.out.println("[Undo] Reverted to previous move state successfully.");
+    }
+
+    public void saveSinglePlayerGame(String filename) {
+        if (!isSinglePlayerMode) {
+            System.out.println("Save is only allowed in single player games!");
+            return;
+        }
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filename))) {
+            oos.writeObject(currentGame);
+            System.out.println("[Save Game] Game successfully saved to " + filename);
+        } catch (IOException e) {
+            System.err.println("Failed to save game: " + e.getMessage());
+        }
+    }
+
+    public void loadSinglePlayerGame(String filename) {
+        if (!isSinglePlayerMode) return;
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filename))) {
+            this.currentGame = (GameSession) ois.readObject();
+            System.out.println("[Load Game] Game restored from " + filename);
+        } catch (Exception e) {
+            System.err.println("Failed to load game: " + e.getMessage());
+        }
+    }
+
+    // In-game Real-time Chat
+    public void sendChatMessage(String text) {
+        ChatMessage msg = new ChatMessage(localPlayer.getName(), text);
+        if (!isSinglePlayerMode) {
+            server.broadcastChat(msg);
+        } else {
+            System.out.println("[SP Chat] " + msg);
+        }
+    }
+
+    public void printChatHistory() {
+        if (!isSinglePlayerMode) {
+            System.out.println("----- CHAT HISTORY -----");
+            for (ChatMessage m : server.getChatHistory()) {
+                System.out.println(m);
+            }
+            System.out.println("------------------------");
+        }
+    }
+
+    // High Scores Viewer
+    public void viewHighScores() {
+        System.out.println("========== HIGH SCORES LIST ==========");
+        List<HighScoreEntry> list = server.getHighScores();
+        for (int i = 0; i < list.size(); i++) {
+            System.out.println((i + 1) + ". " + list.get(i));
+        }
+        System.out.println("======================================");
+    }
+
+    // User Documentation
+    public void openOnlineDocumentation() {
+        System.out.println("\n[Online User Documentation]");
+        System.out.println("Rulebook: 'How to Play Mah Jong' (Classical Chinese rules)");
+        System.out.println("Objective: Complete 4 melds (Chow/Pung/Kong) and 1 pair (Eye) to achieve Mahjong (14 tiles).");
+        System.out.println("Variations supported: Classical Chinese, Cleared Hand, Japanese Riichi.");
+        System.out.println("CO Levels: Beginner (random discards), Intermediate (protects pairs/sequences), Advanced (look-ahead).");
+        System.out.println("End Game: 4 winds rounds completed or player voluntary quit.\n");
+    }
+
+    // User premature leave replacement with CO
+    public void leaveGamePrematurely() {
+        if (currentGame != null && !isSinglePlayerMode) {
+            System.out.println("[Client " + clientId + "] Player left game prematurely. Creating substitute CO...");
+            currentGame.replacePlayerWithCO(localPlayer, preferences.getDefaultCOLevel());
+            this.currentGame = null;
+        }
+    }
+
+    // End current game
+    public void endGame() {
+        if (currentGame != null) {
+            currentGame.terminateGame();
+            System.out.println("[Client " + clientId + "] Game terminated. You can now quit or start/join a new game.");
+        }
+    }
+}
+
+// File: Main.java
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("================================================================");
+        System.out.println("          MultiMahjong System Specification Demo                ");
+        System.out.println("================================================================\n");
+
+        // 1. Initialise MultiMahjongServer on central IP node
+        MultiMahjongServer server = new MultiMahjongServer("192.168.1.100");
+        server.openAdminConsole();
+
+        // 2. Initialise Clients
+        MultiMahjongClient clientAlice = new MultiMahjongClient("client_01", server, false);
+        clientAlice.updatePreferences("Alice", "Icon_Flower.png", true, COLevel.INTERMEDIATE, RuleVariation.CLASSICAL_CHINESE);
+        clientAlice.uploadCustomImage("alice_avatar.jpg");
+
+        MultiMahjongClient clientBob = new MultiMahjongClient("client_02", server, false);
+        clientBob.updatePreferences("Bob", "Icon_Dragon.png", true, COLevel.ADVANCED, RuleVariation.CLASSICAL_CHINESE);
+
+        // 3. Alice creates a 2-human multiplayer game (will support 2 COs)
+        System.out.println("\n--- Step 1: Alice creates a multiplayer game ---");
+        GameSession game = clientAlice.createMultiPlayerGame(2, 500, RuleVariation.CLASSICAL_CHINESE, COLevel.INTERMEDIATE);
+
+        // Bob queries available games and joins
+        System.out.println("\n--- Step 2: Bob lists available unstarted games & joins ---");
+        List<GameSession> availableGames = clientBob.fetchAvailableGames();
+        for (GameSession g : availableGames) {
+            System.out.println("Found Game ID: " + g.getGameId() + " | Creator: " + g.getCreatorName() + " (" + g.getCreatorIcon() + ")"
+                    + " | Needed Players: " + g.getRemainingPlayerSlots() + " | Score Limit: " + g.getScoreLimit());
+        }
+        clientBob.joinMultiPlayerGame(game.getGameId());
+
+        // 4. In-Game Chat & Profile Change
+        System.out.println("\n--- Step 3: Real-Time Chat & Profile Modification ---");
+        clientAlice.sendChatMessage("Hello Bob, good luck in our Mahjong match!");
+        clientBob.sendChatMessage("Thanks Alice! May the winds favor us.");
+        clientAlice.printChatHistory();
+        clientAlice.modifyProfileDuringGame("Alice_TheChampion", "Icon_MasterPhoenix.png");
+
+        // 5. Start Game: Initialise Wall, Seatings, Tiles Deal
+        System.out.println("\n--- Step 4: Game Initialisation & Starting Game ---");
+        clientAlice.startMahjongGame();
+
+        // 6. Demonstrate Turn Actions (Pick, Discard, Rule Checking)
+        System.out.println("\n--- Step 5: Player Turns and Discard Action ---");
+        Player currentTurnPlayer = game.getPlayers().get(game.getCurrentTurnIndex());
+        System.out.println("Current turn belongs to: " + currentTurnPlayer.getName());
+
+        if (currentTurnPlayer.getId().equals(clientAlice.getLocalPlayer().getId())) {
+            Tile discardCandidate = clientAlice.getLocalPlayer().getHand().get(0);
+            clientAlice.discardTile(discardCandidate);
+        } else if (currentTurnPlayer.isComputer()) {
+            clientAlice.processNextCOTurn();
+        }
+
+        // 7. Check Claim Evaluation (Chow, Pung, Kong, Mahjong)
+        Tile sampleDiscard = new Tile(Suit.BAMBOO, 5);
+        clientAlice.evaluatePlayerActionOptions(sampleDiscard);
+
+        // 8. View High Scores & Online Documentation
+        System.out.println("\n--- Step 6: Documentation and High Scores ---");
+        clientAlice.openOnlineDocumentation();
+        clientAlice.viewHighScores();
+
+        // 9. Demonstrate Single Player Mode with Save & Undo
+        System.out.println("\n--- Step 7: Single Player Mode (Save & Undo Capability) ---");
+        MultiMahjongClient singlePlayerClient = new MultiMahjongClient("client_sp", server, true);
+        singlePlayerClient.createSinglePlayerGame(300, RuleVariation.CLEARED_HAND, COLevel.BEGINNER);
+        singlePlayerClient.startMahjongGame();
+
+        System.out.println("Single player taking tile from wall...");
+        Tile drawn = singlePlayerClient.pickUpTileFromWall();
+        System.out.println("Performing single player Undo...");
+        singlePlayerClient.undoLastMove();
+        singlePlayerClient.saveSinglePlayerGame("sp_saved_game.dat");
+
+        // 10. Demonstrate Premature Player Disconnect & CO Replacement
+        System.out.println("\n--- Step 8: Bob leaves prematurely -> Replaced by Computer Opponent ---");
+        clientBob.leaveGamePrematurely();
+        System.out.println("Current players in Alice's game after Bob left:");
+        for (Player p : game.getPlayers()) {
+            System.out.println("  -> " + p);
+        }
+
+        // 11. End Game
+        System.out.println("\n--- Step 9: Ending Game ---");
+        clientAlice.endGame();
+
+        System.out.println("\n================================================================");
+        System.out.println("      MultiMahjong Specification Demo Executed Successfully     ");
+        System.out.println("================================================================");
+    }
+}

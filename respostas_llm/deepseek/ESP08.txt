@@ -1,0 +1,1738 @@
+// File: Main.java
+import java.time.LocalDate;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Repository repo = new Repository();
+
+        User curator = new User("u1", "Curator", "curator@example.edu",
+                Role.COLLECTION_CURATOR, Role.REPOSITORY_ADMIN, Role.SUPERUSER);
+        User faculty = new User("u2", "Faculty", "faculty@example.edu", Role.FACULTY);
+        User depositor = new User("u3", "Depositor", "dep@example.edu", Role.DEPOSITOR);
+        repo.addUser(curator);
+        repo.addUser(faculty);
+        repo.addUser(depositor);
+        curator.enterSuperuserScope();
+
+        Collection coll = new Collection("c1", "Open Data", curator);
+        coll.addLicense(new License("l1", "CC0", "CC0 text", true));
+        coll.addDepositForm(new DepositForm("f1", "Data deposit form", coll, "title", "date", "embargoRelease"));
+        coll.setAllowEmbargoAtDeposit(true);
+
+        DepositGroup group = new DepositGroup("ETD Depositors");
+        group.addMember(depositor);
+        group.addNetId("duke123");
+        group.setWindow(LocalDate.now().minusDays(1), LocalDate.now().plusDays(30));
+        coll.addDepositGroup(group);
+
+        coll.setReplicationPolicy(new ReplicationPolicy(true, true, true, true,
+                "remote-primary", "remote-secondary"));
+        repo.addCollection(coll);
+
+        Collection other = new Collection("c2", "Teaching Collection", curator);
+        repo.addCollection(other);
+
+        FinancialContact contact = new FinancialContact(
+                "fc1", "Alice PI", "555-1234", "alice@example.edu", "Professor", "1 Campus Dr");
+
+        Item item = new Item("i1", "Sample ETD Dataset", LocalDate.now().minusDays(2), coll, contact, 2048);
+        item.updateMetadata("subject", "demo");
+        item.setDoi("doi:10.1234/demo");
+        item.addAuthor(new AuthorIdentifier("orcid:0000", "ORCID", "Alice Smith"));
+        item.addComponent(new Component("cmp1", "data.csv", 4096));
+        item.setEmbargo(new Embargo(LocalDate.now().plusDays(10), true, new AccessControl()));
+        repo.addItem(item);
+
+        repo.scheduleExpiration("i1", LocalDate.now().plusDays(1));
+        repo.acceptLicense("i1", coll.getLicenses().get(0), true);
+        repo.mapItemToCollection("i1", "c2");
+        repo.publishItem("i1", "u1", "Published");
+        repo.queueCollectionReplication("c1");
+
+        System.out.println("Replication: " + repo.replicateCollection("c1"));
+        SearchQuery query = new SearchQuery("Sample", DateDelimiter.after(LocalDate.now().minusDays(5)));
+        System.out.println("Search results: " + repo.search(query).size());
+        System.out.println(item.getPageDescription());
+        System.out.println(item.getComponents().get(0).getPageDescription(LocalDate.now()));
+        System.out.println("Storage report: " + repo.reportStorageByFinancialContact());
+
+        repo.updateMetadata("i1", "subject", "updated", "u1");
+        System.out.println("DOI propagation: " + repo.getDoiPropagationStatus("doi:10.1234/demo"));
+
+        repo.scheduleMessage("Maintenance window", LocalDate.now(), LocalDate.now().plusDays(3));
+        System.out.println("Messages: " + repo.activeMessages(LocalDate.now()).size());
+
+        repo.recordError("Disk latency");
+        repo.recordError("Disk latency");
+        repo.recordError("Index lag");
+        System.out.println("Deduplicated errors: " + repo.recentErrors(5));
+
+        System.out.println(repo.dashboardStats());
+        System.out.println("Collection replication summary: " + repo.collectionReplicationSummary("c1"));
+
+        BatchIngestTool batch = new BatchIngestTool();
+        Map<String, String> etd = new HashMap<>();
+        etd.put("title", "Batch ETD");
+        etd.put("date", LocalDate.now().toString());
+        etd.put("embargoRelease", LocalDate.now().plusYears(1).toString());
+        etd.put("contact", "Batch Contact");
+        etd.put("email", "batch@example.edu");
+        System.out.println(batch.ingestEtds(repo, coll, List.of(etd)));
+        System.out.println("ETD embargo summary:\n" + repo.exportEtdEmbargoSummary());
+
+        System.out.println(repo.oaiPmh(coll, LocalDate.now().minusDays(30), LocalDate.now()));
+        System.out.println(repo.linkedData("i1"));
+        System.out.println(repo.syncSymplectic("i1"));
+
+        repo.setDepositWindow("c1", "ETD Depositors", LocalDate.now(), LocalDate.now().plusDays(60));
+        repo.markDepositSubmitted("c1", "ETD Depositors", depositor);
+        System.out.println("Non-submitters: " + group.getNonSubmitters());
+    }
+}
+
+// File: Role.java
+public enum Role {
+    COLLECTION_CURATOR,
+    REPOSITORY_MANAGER,
+    REPOSITORY_ADMIN,
+    DIGITAL_RECORDS_ARCHIVIST,
+    FACULTY,
+    DEPOSITOR,
+    VISITOR,
+    SUPERUSER,
+    BATCH_SUBMITTER
+}
+
+// File: DateDelimiterMode.java
+public enum DateDelimiterMode {
+    NONE,
+    BEFORE,
+    AFTER,
+    BETWEEN
+}
+
+// File: ReplicationStatus.java
+public enum ReplicationStatus {
+    NOT_QUEUED,
+    QUEUED,
+    IN_PROGRESS,
+    REPLICATED,
+    FAILED
+}
+
+// File: AuditEventType.java
+public enum AuditEventType {
+    PUBLISHED,
+    UNPUBLISHED,
+    METADATA_UPDATED,
+    EMBARGO_LIFTED,
+    EXPIRED,
+    PERMISSION_CHANGED,
+    REPLICATED,
+    BATCH_INGESTED,
+    LICENSE_ACCEPTED,
+    MESSAGE
+}
+
+// File: User.java
+import java.util.*;
+
+public class User {
+    private final String id;
+    private String name;
+    private String email;
+    private final Set<Role> roles = EnumSet.noneOf(Role.class);
+    private boolean active = true;
+    private boolean superuserScope = false;
+
+    public User(String id, String name, String email, Role... roles) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.roles.addAll(Arrays.asList(roles));
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+    public Set<Role> getRoles() { return Collections.unmodifiableSet(roles); }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
+
+    public boolean hasRole(Role role) {
+        return roles.contains(role);
+    }
+
+    public void addRole(Role role) {
+        roles.add(role);
+    }
+
+    public boolean enterSuperuserScope() {
+        if (hasRole(Role.SUPERUSER) || hasRole(Role.REPOSITORY_ADMIN)) {
+            superuserScope = true;
+            return true;
+        }
+        return false;
+    }
+
+    public void exitSuperuserScope() {
+        superuserScope = false;
+    }
+
+    public boolean isInSuperuserScope() {
+        return superuserScope;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User)) return false;
+        User user = (User) o;
+        return id.equals(user.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+}
+
+// File: FinancialContact.java
+import java.util.Objects;
+
+public class FinancialContact {
+    private final String id;
+    private final String name;
+    private final String phone;
+    private final String email;
+    private final String title;
+    private final String address;
+
+    public FinancialContact(String id, String name, String phone, String email, String title, String address) {
+        this.id = id;
+        this.name = name;
+        this.phone = phone;
+        this.email = email;
+        this.title = title;
+        this.address = address;
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getPhone() { return phone; }
+    public String getEmail() { return email; }
+    public String getTitle() { return title; }
+    public String getAddress() { return address; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof FinancialContact)) return false;
+        FinancialContact that = (FinancialContact) o;
+        return id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return name + " <" + email + ">";
+    }
+}
+
+// File: License.java
+public class License {
+    private final String id;
+    private final String name;
+    private final String text;
+    private final boolean required;
+
+    public License(String id, String name, String text, boolean required) {
+        this.id = id;
+        this.name = name;
+        this.text = text;
+        this.required = required;
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public String getText() { return text; }
+    public boolean isRequired() { return required; }
+}
+
+// File: DepositForm.java
+import java.util.*;
+
+public class DepositForm {
+    private final String id;
+    private final String name;
+    private final Collection collection;
+    private final List<String> fields = new ArrayList<>();
+
+    public DepositForm(String id, String name, Collection collection, String... fields) {
+        this.id = id;
+        this.name = name;
+        this.collection = collection;
+        this.fields.addAll(Arrays.asList(fields));
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public Collection getCollection() { return collection; }
+    public List<String> getFields() { return Collections.unmodifiableList(fields); }
+}
+
+// File: DepositGroup.java
+import java.time.LocalDate;
+import java.util.*;
+
+public class DepositGroup {
+    private final String name;
+    private final Set<User> members = new LinkedHashSet<>();
+    private final Set<String> netIds = new LinkedHashSet<>();
+    private final Set<String> submittedUserIds = new LinkedHashSet<>();
+    private LocalDate windowStart;
+    private LocalDate windowEnd;
+    private AccessControl permissions = new AccessControl();
+
+    public DepositGroup(String name) {
+        this.name = name;
+    }
+
+    public String getName() { return name; }
+    public Set<User> getMembers() { return Collections.unmodifiableSet(members); }
+    public Set<String> getNetIds() { return Collections.unmodifiableSet(netIds); }
+    public Set<String> getSubmittedUserIds() { return Collections.unmodifiableSet(submittedUserIds); }
+
+    public void addMember(User user) { members.add(user); }
+    public void removeMember(User user) { members.remove(user); }
+    public void addNetId(String netId) { netIds.add(netId); }
+    public void removeNetId(String netId) { netIds.remove(netId); }
+
+    public void setWindow(LocalDate start, LocalDate end) {
+        this.windowStart = start;
+        this.windowEnd = end;
+    }
+
+    public boolean isOpen(LocalDate now) {
+        boolean startOk = windowStart == null || !now.isBefore(windowStart);
+        boolean endOk = windowEnd == null || !now.isAfter(windowEnd);
+        return startOk && endOk;
+    }
+
+    public AccessControl getPermissions() { return permissions; }
+    public void setPermissions(AccessControl permissions) { this.permissions = permissions; }
+
+    public void markSubmitted(User user) {
+        submittedUserIds.add(user.getId());
+    }
+
+    public Set<String> getNonSubmitters() {
+        Set<String> nonSubmitters = new LinkedHashSet<>();
+        for (User user : members) {
+            if (!submittedUserIds.contains(user.getId())) {
+                nonSubmitters.add(user.getName());
+            }
+        }
+        for (String netId : netIds) {
+            if (!submittedUserIds.contains(netId)) {
+                nonSubmitters.add(netId);
+            }
+        }
+        return nonSubmitters;
+    }
+}
+
+// File: AccessControl.java
+import java.util.*;
+
+public class AccessControl {
+    private final Set<String> allowedUserIds = new HashSet<>();
+    private final Set<String> allowedRoles = new HashSet<>();
+    private final Set<String> whitelistedIps = new HashSet<>();
+    private boolean restricted = false;
+    private boolean authenticatedOnly = false;
+    private boolean dukeIpOnly = false;
+
+    public void allowUser(User user) {
+        allowedUserIds.add(user.getId());
+        restricted = true;
+    }
+
+    public void allowRole(Role role) {
+        allowedRoles.add(role.name());
+        restricted = true;
+    }
+
+    public void addWhitelistIp(String ip) {
+        whitelistedIps.add(ip);
+    }
+
+    public void setAuthenticatedOnly(boolean authenticatedOnly) {
+        this.authenticatedOnly = authenticatedOnly;
+        if (authenticatedOnly) restricted = true;
+    }
+
+    public void setDukeIpOnly(boolean dukeIpOnly) {
+        this.dukeIpOnly = dukeIpOnly;
+        if (dukeIpOnly) restricted = true;
+    }
+
+    public boolean isRestricted() { return restricted; }
+
+    public boolean canAccess(User user, String ip) {
+        if (ip != null) {
+            if (whitelistedIps.contains(ip)) return true;
+            if (dukeIpOnly && ip.startsWith("10.")) return true;
+        }
+        if (!restricted) return true;
+        if (authenticatedOnly && user == null) return false;
+        if (user != null) {
+            if (allowedUserIds.contains(user.getId())) return true;
+            for (Role role : user.getRoles()) {
+                if (allowedRoles.contains(role.name())) return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean canDownloadEmbargoed(User user) {
+        if (user == null) return false;
+        return user.hasRole(Role.COLLECTION_CURATOR)
+                || user.hasRole(Role.REPOSITORY_ADMIN)
+                || user.hasRole(Role.DIGITAL_RECORDS_ARCHIVIST);
+    }
+
+    public String describe() {
+        return "restricted=" + restricted
+                + ", users=" + allowedUserIds
+                + ", roles=" + allowedRoles
+                + ", whitelistedIps=" + whitelistedIps
+                + ", authenticatedOnly=" + authenticatedOnly
+                + ", dukeIpOnly=" + dukeIpOnly;
+    }
+}
+
+// File: Embargo.java
+import java.time.LocalDate;
+
+public class Embargo {
+    private LocalDate releaseDate;
+    private final boolean metadataDiscoverable;
+    private final AccessControl accessAfterRelease;
+    private boolean lifted;
+
+    public Embargo(LocalDate releaseDate, boolean metadataDiscoverable, AccessControl accessAfterRelease) {
+        this.releaseDate = releaseDate;
+        this.metadataDiscoverable = metadataDiscoverable;
+        this.accessAfterRelease = accessAfterRelease;
+    }
+
+    public LocalDate getReleaseDate() { return releaseDate; }
+    public boolean isMetadataDiscoverable() { return metadataDiscoverable; }
+    public AccessControl getAccessAfterRelease() { return accessAfterRelease; }
+    public boolean isLifted() { return lifted; }
+
+    public void setReleaseDate(LocalDate releaseDate) {
+        this.releaseDate = releaseDate;
+        this.lifted = false;
+    }
+
+    public boolean isActive(LocalDate now) {
+        return !lifted && releaseDate != null && now.isBefore(releaseDate);
+    }
+
+    public void lift() {
+        this.lifted = true;
+        this.releaseDate = LocalDate.now();
+    }
+}
+
+// File: ReplicationPolicy.java
+import java.util.*;
+
+public class ReplicationPolicy {
+    private final boolean enabled;
+    private final boolean replicateBeyondPrimary;
+    private final boolean encrypt;
+    private final boolean checksum;
+    private final List<String> remoteSites = new ArrayList<>();
+
+    public ReplicationPolicy() {
+        this(false, false, false, false);
+    }
+
+    public ReplicationPolicy(boolean enabled, boolean replicateBeyondPrimary, boolean encrypt, boolean checksum,
+                             String... remoteSites) {
+        this.enabled = enabled;
+        this.replicateBeyondPrimary = replicateBeyondPrimary;
+        this.encrypt = encrypt;
+        this.checksum = checksum;
+        this.remoteSites.addAll(Arrays.asList(remoteSites));
+    }
+
+    public boolean isEnabled() { return enabled; }
+    public boolean isReplicateBeyondPrimary() { return replicateBeyondPrimary; }
+    public boolean isEncrypt() { return encrypt; }
+    public boolean isChecksum() { return checksum; }
+    public List<String> getRemoteSites() { return Collections.unmodifiableList(remoteSites); }
+}
+
+// File: Collection.java
+import java.util.*;
+
+public class Collection {
+    private final String id;
+    private final String name;
+    private final User curator;
+    private ReplicationPolicy replicationPolicy = new ReplicationPolicy();
+    private AccessControl defaultAccess = new AccessControl();
+    private final List<DepositForm> depositForms = new ArrayList<>();
+    private final List<License> licenses = new ArrayList<>();
+    private final List<DepositGroup> depositGroups = new ArrayList<>();
+    private boolean restrictToDukeIp = false;
+    private boolean allowEmbargoAtDeposit = false;
+    private String oaiSetSpec;
+
+    public Collection(String id, String name, User curator) {
+        this.id = id;
+        this.name = name;
+        this.curator = curator;
+        this.oaiSetSpec = id;
+    }
+
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public User getCurator() { return curator; }
+    public ReplicationPolicy getReplicationPolicy() { return replicationPolicy; }
+    public void setReplicationPolicy(ReplicationPolicy replicationPolicy) { this.replicationPolicy = replicationPolicy; }
+    public AccessControl getDefaultAccess() { return defaultAccess; }
+    public void setDefaultAccess(AccessControl defaultAccess) { this.defaultAccess = defaultAccess; }
+    public List<DepositForm> getDepositForms() { return Collections.unmodifiableList(depositForms); }
+    public List<License> getLicenses() { return Collections.unmodifiableList(licenses); }
+    public List<DepositGroup> getDepositGroups() { return Collections.unmodifiableList(depositGroups); }
+    public boolean isRestrictToDukeIp() { return restrictToDukeIp; }
+    public void setRestrictToDukeIp(boolean restrictToDukeIp) { this.restrictToDukeIp = restrictToDukeIp; }
+    public boolean isAllowEmbargoAtDeposit() { return allowEmbargoAtDeposit; }
+    public void setAllowEmbargoAtDeposit(boolean allowEmbargoAtDeposit) { this.allowEmbargoAtDeposit = allowEmbargoAtDeposit; }
+    public String getOaiSetSpec() { return oaiSetSpec; }
+    public void setOaiSetSpec(String oaiSetSpec) { this.oaiSetSpec = oaiSetSpec; }
+
+    public void addDepositForm(DepositForm form) { depositForms.add(form); }
+    public void addLicense(License license) { licenses.add(license); }
+    public void addDepositGroup(DepositGroup group) { depositGroups.add(group); }
+
+    public DepositGroup getDepositGroup(String name) {
+        for (DepositGroup group : depositGroups) {
+            if (group.getName().equals(name)) return group;
+        }
+        return null;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Collection)) return false;
+        Collection that = (Collection) o;
+        return id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+}
+
+// File: Item.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+
+public class Item {
+    private final String id;
+    private String title;
+    private final LocalDate date;
+    private Collection collection;
+    private final Set<Collection> mappedCollections = new LinkedHashSet<>();
+    private final Map<String, String> metadata = new LinkedHashMap<>();
+    private final List<Component> components = new ArrayList<>();
+    private FinancialContact financialContact;
+    private LocalDate scheduledDeletionDate;
+    private Embargo embargo;
+    private License license;
+    private boolean licenseAccepted;
+    private AccessControl accessControl = new AccessControl();
+    private ReplicationStatus replicationStatus = ReplicationStatus.NOT_QUEUED;
+    private long storageBytes;
+    private String doi;
+    private final List<AuthorIdentifier> authors = new ArrayList<>();
+    private final List<Version> versions = new ArrayList<>();
+    private boolean hidden;
+    private boolean deleted;
+    private boolean published;
+
+    public Item(String id, String title, LocalDate date, Collection collection,
+                FinancialContact financialContact, long storageBytes) {
+        this.id = id;
+        this.title = title;
+        this.date = date;
+        this.collection = collection;
+        this.financialContact = financialContact;
+        this.storageBytes = storageBytes;
+        updateMetadata("title", title);
+        updateMetadata("date", date.toString());
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public LocalDate getDate() { return date; }
+    public Collection getCollection() { return collection; }
+    public void setCollection(Collection collection) { this.collection = collection; }
+    public Set<Collection> getMappedCollections() { return Collections.unmodifiableSet(mappedCollections); }
+    public Map<String, String> getMetadataCopy() { return new LinkedHashMap<>(metadata); }
+    public List<Component> getComponents() { return Collections.unmodifiableList(components); }
+    public FinancialContact getFinancialContact() { return financialContact; }
+    public void setFinancialContact(FinancialContact financialContact) { this.financialContact = financialContact; }
+    public LocalDate getScheduledDeletionDate() { return scheduledDeletionDate; }
+    public void setScheduledDeletionDate(LocalDate scheduledDeletionDate) { this.scheduledDeletionDate = scheduledDeletionDate; }
+    public Embargo getEmbargo() { return embargo; }
+    public License getLicense() { return license; }
+    public boolean isLicenseAccepted() { return licenseAccepted; }
+    public AccessControl getAccessControl() { return accessControl; }
+    public void setAccessControl(AccessControl accessControl) { this.accessControl = accessControl; }
+    public ReplicationStatus getReplicationStatus() { return replicationStatus; }
+    public void setReplicationStatus(ReplicationStatus replicationStatus) { this.replicationStatus = replicationStatus; }
+    public String getDoi() { return doi; }
+    public List<AuthorIdentifier> getAuthors() { return Collections.unmodifiableList(authors); }
+    public List<Version> getVersions() { return Collections.unmodifiableList(versions); }
+    public boolean isHidden() { return hidden; }
+    public void setHidden(boolean hidden) { this.hidden = hidden; }
+    public boolean isDeleted() { return deleted; }
+    public void setDeleted(boolean deleted) { this.deleted = deleted; }
+    public boolean isPublished() { return published; }
+    public void setPublished(boolean published) { this.published = published; }
+
+    public void updateMetadata(String key, String value) {
+        metadata.put(key, value);
+        if (key.equalsIgnoreCase("title")) {
+            this.title = value;
+        }
+    }
+
+    public void setLicense(License license) {
+        this.license = license;
+        if (license != null) updateMetadata("license", license.getName());
+    }
+
+    public void setLicenseAccepted(boolean accepted) {
+        this.licenseAccepted = accepted;
+        updateMetadata("licenseAccepted", String.valueOf(accepted));
+    }
+
+    public void setDoi(String doi) {
+        this.doi = doi;
+        if (doi != null) updateMetadata("doi", doi);
+    }
+
+    public void setEmbargo(Embargo embargo) {
+        this.embargo = embargo;
+        if (embargo != null && embargo.getReleaseDate() != null) {
+            updateMetadata("embargoRelease", embargo.getReleaseDate().toString());
+        }
+    }
+
+    public void liftEmbargo() {
+        if (embargo != null) {
+            embargo.lift();
+            updateMetadata("embargoRelease", "lifted");
+        }
+    }
+
+    public boolean isEmbargoActive() {
+        return embargo != null && embargo.isActive(LocalDate.now());
+    }
+
+    public void addComponent(Component component) {
+        component.setItem(this);
+        components.add(component);
+    }
+
+    public void addAuthor(AuthorIdentifier author) {
+        authors.add(author);
+    }
+
+    public void mapTo(Collection otherCollection) {
+        if (otherCollection != null && !otherCollection.equals(collection)) {
+            mappedCollections.add(otherCollection);
+        }
+    }
+
+    public void removeMapping(Collection otherCollection) {
+        mappedCollections.remove(otherCollection);
+    }
+
+    public Set<Collection> getAllCollections() {
+        Set<Collection> all = new LinkedHashSet<>();
+        all.add(collection);
+        all.addAll(mappedCollections);
+        return all;
+    }
+
+    public long getTotalStorageBytes() {
+        long total = storageBytes;
+        for (Component component : components) {
+            total += component.getStorageBytes();
+        }
+        return total;
+    }
+
+    public String getScheduledDeletionDisplay() {
+        return scheduledDeletionDate == null ? "None" : scheduledDeletionDate.toString();
+    }
+
+    public String getEmbargoDisplay() {
+        if (embargo == null) return "No embargo";
+        return (embargo.isActive(LocalDate.now()) ? "EMBARGO ACTIVE" : "Embargo released")
+                + " release=" + embargo.getReleaseDate();
+    }
+
+    public String getPageDescription() {
+        return "Item " + id + " [" + title + "]"
+                + " | scheduledDeletion=" + getScheduledDeletionDisplay()
+                + " | replication=" + replicationStatus
+                + " | " + getEmbargoDisplay()
+                + " | published=" + published;
+    }
+
+    public boolean canViewMetadata(User user, String ip) {
+        if (embargo == null || !embargo.isActive(LocalDate.now()) || embargo.isMetadataDiscoverable()) {
+            return true;
+        }
+        return accessControl.canAccess(user, ip);
+    }
+
+    public boolean canDownloadFiles(User user, String ip) {
+        if (embargo == null || !embargo.isActive(LocalDate.now())) {
+            return accessControl.canAccess(user, ip);
+        }
+        return embargo.getAccessAfterRelease().canAccess(user, ip)
+                || embargo.getAccessAfterRelease().canDownloadEmbargoed(user);
+    }
+
+    public Version createVersion() {
+        Version version = new Version("v-" + (versions.size() + 1), id, LocalDateTime.now(),
+                title, getMetadataCopy());
+        versions.add(version);
+        return version;
+    }
+
+    public boolean restoreVersion(String versionId) {
+        for (Version version : versions) {
+            if (version.getId().equals(versionId)) {
+                this.title = version.getTitle();
+                metadata.clear();
+                metadata.putAll(version.getMetadata());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void setAllReplicationStatus(ReplicationStatus status) {
+        this.replicationStatus = status;
+        for (Component component : components) {
+            component.setReplicationStatus(status);
+        }
+    }
+}
+
+// File: Component.java
+import java.time.LocalDate;
+
+public class Component {
+    private final String id;
+    private final String label;
+    private Item item;
+    private final long storageBytes;
+    private ReplicationStatus replicationStatus = ReplicationStatus.NOT_QUEUED;
+    private LocalDate scheduledDeletionDate;
+
+    public Component(String id, String label, long storageBytes) {
+        this.id = id;
+        this.label = label;
+        this.storageBytes = storageBytes;
+    }
+
+    public Component(String id, String label, Item item, long storageBytes) {
+        this(id, label, storageBytes);
+        this.item = item;
+    }
+
+    public String getId() { return id; }
+    public String getLabel() { return label; }
+    public Item getItem() { return item; }
+    public void setItem(Item item) { this.item = item; }
+    public long getStorageBytes() { return storageBytes; }
+    public ReplicationStatus getReplicationStatus() { return replicationStatus; }
+    public void setReplicationStatus(ReplicationStatus replicationStatus) { this.replicationStatus = replicationStatus; }
+    public LocalDate getScheduledDeletionDate() { return scheduledDeletionDate; }
+    public void setScheduledDeletionDate(LocalDate scheduledDeletionDate) { this.scheduledDeletionDate = scheduledDeletionDate; }
+
+    public String getPageDescription(LocalDate now) {
+        LocalDate deletionDate = scheduledDeletionDate != null ? scheduledDeletionDate
+                : (item != null ? item.getScheduledDeletionDate() : null);
+        String embargo = item == null ? "No embargo" : item.getEmbargoDisplay();
+        return "Component " + id + " [" + label + "]"
+                + " | scheduledDeletion=" + (deletionDate == null ? "None" : deletionDate)
+                + " | replication=" + replicationStatus
+                + " | " + embargo;
+    }
+}
+
+// File: ExpirationService.java
+import java.time.LocalDate;
+import java.util.*;
+
+public class ExpirationService {
+    public List<String> processExpired(java.util.Collection<Item> items, LocalDate now) {
+        List<String> changes = new ArrayList<>();
+        for (Item item : items) {
+            if (item.isDeleted() || item.getScheduledDeletionDate() == null) continue;
+            if (!now.isBefore(item.getScheduledDeletionDate())) {
+                if (!item.isHidden()) {
+                    item.setHidden(true);
+                    changes.add(item.getId() + " hidden");
+                } else {
+                    item.setDeleted(true);
+                    changes.add(item.getId() + " deleted");
+                }
+            }
+        }
+        return changes;
+    }
+}
+
+// File: EncryptionService.java
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
+public class EncryptionService {
+    public String encrypt(String plainText, String key) {
+        byte[] plain = plainText.getBytes(StandardCharsets.UTF_8);
+        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+        byte[] encrypted = new byte[plain.length];
+        for (int i = 0; i < plain.length; i++) {
+            encrypted[i] = (byte) (plain[i] ^ keyBytes[i % keyBytes.length]);
+        }
+        return Base64.getEncoder().encodeToString(encrypted);
+    }
+}
+
+// File: ChecksumService.java
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+public class ChecksumService {
+    public String sha256(byte[] data) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data);
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            return "unavailable";
+        }
+    }
+
+    public String sha256(String text) {
+        return sha256(text.getBytes(StandardCharsets.UTF_8));
+    }
+}
+
+// File: ReplicationService.java
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+public class ReplicationService {
+    private final EncryptionService encryptionService = new EncryptionService();
+    private final ChecksumService checksumService = new ChecksumService();
+
+    public void queueCollection(Collection collection, List<Item> items) {
+        if (!collection.getReplicationPolicy().isEnabled()) return;
+        for (Item item : items) {
+            item.setAllReplicationStatus(ReplicationStatus.QUEUED);
+        }
+    }
+
+    public String replicateItem(Item item) {
+        Collection collection = item.getCollection();
+        ReplicationPolicy policy = collection.getReplicationPolicy();
+        if (!policy.isEnabled()) {
+            item.setAllReplicationStatus(ReplicationStatus.NOT_QUEUED);
+            return "not-enabled";
+        }
+        String data = item.getTitle() + "|" + item.getMetadataCopy();
+        if (policy.isEncrypt()) {
+            data = encryptionService.encrypt(data, "server-key");
+        }
+        String checksum = policy.isChecksum()
+                ? checksumService.sha256(data.getBytes(StandardCharsets.UTF_8))
+                : "none";
+        item.setAllReplicationStatus(ReplicationStatus.REPLICATED);
+        return checksum;
+    }
+}
+
+// File: DateDelimiter.java
+import java.time.LocalDate;
+
+public class DateDelimiter {
+    private final DateDelimiterMode mode;
+    private final LocalDate start;
+    private final LocalDate end;
+
+    private DateDelimiter(DateDelimiterMode mode, LocalDate start, LocalDate end) {
+        this.mode = mode;
+        this.start = start;
+        this.end = end;
+    }
+
+    public static DateDelimiter none() {
+        return new DateDelimiter(DateDelimiterMode.NONE, null, null);
+    }
+
+    public static DateDelimiter before(LocalDate date) {
+        return new DateDelimiter(DateDelimiterMode.BEFORE, date, null);
+    }
+
+    public static DateDelimiter after(LocalDate date) {
+        return new DateDelimiter(DateDelimiterMode.AFTER, date, null);
+    }
+
+    public static DateDelimiter between(LocalDate start, LocalDate end) {
+        return new DateDelimiter(DateDelimiterMode.BETWEEN, start, end);
+    }
+
+    public boolean matches(LocalDate date) {
+        if (mode == DateDelimiterMode.NONE) return true;
+        if (date == null) return false;
+        switch (mode) {
+            case BEFORE:
+                return date.isBefore(start);
+            case AFTER:
+                return date.isAfter(start);
+            case BETWEEN:
+                return !date.isBefore(start) && !date.isAfter(end);
+            default:
+                return true;
+        }
+    }
+
+    public DateDelimiterMode getMode() { return mode; }
+    public LocalDate getStart() { return start; }
+    public LocalDate getEnd() { return end; }
+}
+
+// File: SearchQuery.java
+public class SearchQuery {
+    private final String text;
+    private final DateDelimiter dateDelimiter;
+
+    public SearchQuery(String text, DateDelimiter dateDelimiter) {
+        this.text = text == null ? "" : text.toLowerCase();
+        this.dateDelimiter = dateDelimiter == null ? DateDelimiter.none() : dateDelimiter;
+    }
+
+    public boolean matches(Item item) {
+        boolean textMatch = text.isEmpty()
+                || item.getTitle().toLowerCase().contains(text)
+                || item.getMetadataCopy().values().stream().anyMatch(v -> v.toLowerCase().contains(text));
+        return textMatch && dateDelimiter.matches(item.getDate());
+    }
+
+    public String getText() { return text; }
+    public DateDelimiter getDateDelimiter() { return dateDelimiter; }
+}
+
+// File: AuditEvent.java
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+public class AuditEvent {
+    private final String id;
+    private final AuditEventType type;
+    private final String itemId;
+    private final String actorId;
+    private final String comment;
+    private final LocalDateTime timestamp;
+
+    public AuditEvent(AuditEventType type, String itemId, String actorId, String comment) {
+        this.id = UUID.randomUUID().toString();
+        this.type = type;
+        this.itemId = itemId;
+        this.actorId = actorId;
+        this.comment = comment;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    public String getId() { return id; }
+    public AuditEventType getType() { return type; }
+    public String getItemId() { return itemId; }
+    public String getActorId() { return actorId; }
+    public String getComment() { return comment; }
+    public LocalDateTime getTimestamp() { return timestamp; }
+
+    @Override
+    public String toString() {
+        return timestamp + " " + type + " item=" + itemId + " actor=" + actorId + " comment=" + comment;
+    }
+}
+
+// File: DashboardStats.java
+import java.util.*;
+
+public class DashboardStats {
+    private final int collectionCount;
+    private final int itemCount;
+    private final int componentCount;
+    private final long totalStorageBytes;
+    private final Map<String, Long> storageByCollection;
+    private final Map<String, Integer> itemCountByCollection;
+    private final Map<String, Integer> depositActivityByDay;
+
+    public DashboardStats(int collectionCount, int itemCount, int componentCount, long totalStorageBytes,
+                          Map<String, Long> storageByCollection,
+                          Map<String, Integer> itemCountByCollection,
+                          Map<String, Integer> depositActivityByDay) {
+        this.collectionCount = collectionCount;
+        this.itemCount = itemCount;
+        this.componentCount = componentCount;
+        this.totalStorageBytes = totalStorageBytes;
+        this.storageByCollection = new LinkedHashMap<>(storageByCollection);
+        this.itemCountByCollection = new LinkedHashMap<>(itemCountByCollection);
+        this.depositActivityByDay = new LinkedHashMap<>(depositActivityByDay);
+    }
+
+    public int getCollectionCount() { return collectionCount; }
+    public int getItemCount() { return itemCount; }
+    public int getComponentCount() { return componentCount; }
+    public long getTotalStorageBytes() { return totalStorageBytes; }
+    public Map<String, Long> getStorageByCollection() { return Collections.unmodifiableMap(storageByCollection); }
+    public Map<String, Integer> getItemCountByCollection() { return Collections.unmodifiableMap(itemCountByCollection); }
+    public Map<String, Integer> getDepositActivityByDay() { return Collections.unmodifiableMap(depositActivityByDay); }
+
+    @Override
+    public String toString() {
+        return "DashboardStats{collections=" + collectionCount
+                + ", items=" + itemCount
+                + ", components=" + componentCount
+                + ", totalStorageBytes=" + totalStorageBytes
+                + ", storageByCollection=" + storageByCollection
+                + ", itemCountByCollection=" + itemCountByCollection
+                + ", depositActivityByDay=" + depositActivityByDay + "}";
+    }
+}
+
+// File: BroadcastMessage.java
+import java.time.LocalDate;
+import java.util.UUID;
+
+public class BroadcastMessage {
+    private final String id;
+    private final String text;
+    private final LocalDate start;
+    private final LocalDate end;
+
+    public BroadcastMessage(String text, LocalDate start, LocalDate end) {
+        this.id = UUID.randomUUID().toString();
+        this.text = text;
+        this.start = start;
+        this.end = end;
+    }
+
+    public String getId() { return id; }
+    public String getText() { return text; }
+    public LocalDate getStart() { return start; }
+    public LocalDate getEnd() { return end; }
+
+    public boolean isActive(LocalDate now) {
+        return !now.isBefore(start) && !now.isAfter(end);
+    }
+}
+
+// File: ErrorSummary.java
+import java.time.LocalDateTime;
+
+public class ErrorSummary {
+    private final String message;
+    private int count;
+    private LocalDateTime lastSeen;
+
+    public ErrorSummary(String message) {
+        this.message = message;
+    }
+
+    public void record(LocalDateTime at) {
+        count++;
+        lastSeen = at;
+    }
+
+    public String getMessage() { return message; }
+    public int getCount() { return count; }
+    public LocalDateTime getLastSeen() { return lastSeen; }
+
+    @Override
+    public String toString() {
+        return message + " x" + count + " lastSeen=" + lastSeen;
+    }
+}
+
+// File: ErrorLog.java
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class ErrorLog {
+    private final Map<String, ErrorSummary> summaries = new LinkedHashMap<>();
+
+    public void record(String message, LocalDateTime at) {
+        summaries.computeIfAbsent(message, ErrorSummary::new).record(at);
+    }
+
+    public Map<String, ErrorSummary> recentDeduplicated(int limit) {
+        return summaries.entrySet().stream()
+                .sorted((a, b) -> b.getValue().getLastSeen().compareTo(a.getValue().getLastSeen()))
+                .limit(limit)
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (x, y) -> x,
+                        LinkedHashMap::new));
+    }
+}
+
+// File: Version.java
+import java.time.LocalDateTime;
+import java.util.*;
+
+public class Version {
+    private final String id;
+    private final String itemId;
+    private final LocalDateTime createdAt;
+    private final String title;
+    private final Map<String, String> metadata;
+
+    public Version(String id, String itemId, LocalDateTime createdAt, String title, Map<String, String> metadata) {
+        this.id = id;
+        this.itemId = itemId;
+        this.createdAt = createdAt;
+        this.title = title;
+        this.metadata = new LinkedHashMap<>(metadata);
+    }
+
+    public String getId() { return id; }
+    public String getItemId() { return itemId; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public String getTitle() { return title; }
+    public Map<String, String> getMetadata() { return new LinkedHashMap<>(metadata); }
+}
+
+// File: AuthorIdentifier.java
+import java.util.Objects;
+
+public class AuthorIdentifier {
+    private final String identifier;
+    private final String scheme;
+    private String name;
+
+    public AuthorIdentifier(String identifier, String scheme, String name) {
+        this.identifier = identifier;
+        this.scheme = scheme;
+        this.name = name;
+    }
+
+    public String getIdentifier() { return identifier; }
+    public String getScheme() { return scheme; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof AuthorIdentifier)) return false;
+        AuthorIdentifier that = (AuthorIdentifier) o;
+        return identifier.equals(that.identifier) && scheme.equals(that.scheme);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(identifier, scheme);
+    }
+}
+
+// File: DoiService.java
+import java.util.*;
+
+public class DoiService {
+    private final Map<String, String> propagated = new LinkedHashMap<>();
+
+    public void propagate(Item item) {
+        if (item.getDoi() != null) {
+            propagated.put(item.getDoi(), item.getMetadataCopy().toString());
+        }
+    }
+
+    public String getLastPropagated(String doi) {
+        return propagated.getOrDefault(doi, "not propagated");
+    }
+}
+
+// File: FileValidationResult.java
+public class FileValidationResult {
+    private final boolean valid;
+    private final boolean wellFormed;
+    private final String message;
+
+    public FileValidationResult(boolean valid, boolean wellFormed, String message) {
+        this.valid = valid;
+        this.wellFormed = wellFormed;
+        this.message = message;
+    }
+
+    public static FileValidationResult ok(String message) {
+        return new FileValidationResult(true, true, message);
+    }
+
+    public static FileValidationResult fail(String message) {
+        return new FileValidationResult(false, false, message);
+    }
+
+    public boolean isValid() { return valid; }
+    public boolean isWellFormed() { return wellFormed; }
+    public String getMessage() { return message; }
+}
+
+// File: FormatValidator.java
+import java.nio.charset.StandardCharsets;
+
+public class FormatValidator {
+    public FileValidationResult validate(String format, byte[] data) {
+        if (format == null || data == null) {
+            return FileValidationResult.fail("Missing format or data");
+        }
+        String lower = format.toLowerCase();
+        if (lower.contains("pdf")) {
+            String header = new String(data, StandardCharsets.ISO_8859_1);
+            return header.startsWith("%PDF")
+                    ? FileValidationResult.ok("Valid PDF header")
+                    : FileValidationResult.fail("Invalid PDF header");
+        }
+        if (lower.contains("xml")) {
+            String text = new String(data, StandardCharsets.UTF_8).trim();
+            return text.startsWith("<")
+                    ? FileValidationResult.ok("Well-formed XML prefix")
+                    : FileValidationResult.fail("Invalid XML prefix");
+        }
+        return FileValidationResult.ok("No specific validator; accepted");
+    }
+}
+
+// File: OaiPmhService.java
+import java.time.LocalDate;
+import java.util.*;
+
+public class OaiPmhService {
+    public String listRecords(Collection collection, List<Item> items, LocalDate from, LocalDate until) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<OAI-PMH><ListRecords set=\"").append(collection.getOaiSetSpec()).append("\">");
+        for (Item item : items) {
+            if (item.isDeleted()) continue;
+            if (!item.getAllCollections().contains(collection)) continue;
+            if (from != null && item.getDate().isBefore(from)) continue;
+            if (until != null && item.getDate().isAfter(until)) continue;
+            sb.append("<record><header><identifier>")
+                    .append(item.getId())
+                    .append("</identifier></header><metadata><title>")
+                    .append(item.getTitle())
+                    .append("</title></metadata></record>");
+        }
+        sb.append("</ListRecords></OAI-PMH>");
+        return sb.toString();
+    }
+}
+
+// File: LinkedDataService.java
+public class LinkedDataService {
+    public String toJsonLd(Item item) {
+        return "{\"@id\":\"" + item.getId() + "\",\"title\":\"" + item.getTitle() + "\"}";
+    }
+}
+
+// File: SymplecticElementsConnector.java
+import java.util.*;
+
+public class SymplecticElementsConnector {
+    private final Map<String, String> remoteRecords = new LinkedHashMap<>();
+
+    public void push(Item item) {
+        remoteRecords.put(item.getId(), item.getTitle());
+    }
+
+    public String pull(String itemId) {
+        return remoteRecords.get(itemId);
+    }
+
+    public String sync(Item item) {
+        push(item);
+        return "Synced bidirectionally for " + item.getId() + " with title " + item.getTitle();
+    }
+}
+
+// File: BatchIngestTool.java
+import java.time.LocalDate;
+import java.util.*;
+
+public class BatchIngestTool {
+    public List<String> ingestEtds(Repository repository, Collection collection, List<Map<String, String>> records) {
+        List<String> feedback = new ArrayList<>();
+        for (Map<String, String> record : records) {
+            String id = "etd-" + UUID.randomUUID();
+            LocalDate date = LocalDate.parse(record.getOrDefault("date", LocalDate.now().toString()));
+            FinancialContact contact = new FinancialContact(
+                    "fc-" + id,
+                    record.getOrDefault("contact", "Unknown"),
+                    record.getOrDefault("phone", ""),
+                    record.getOrDefault("email", ""),
+                    record.getOrDefault("title", ""),
+                    record.getOrDefault("address", ""));
+            Item item = new Item(id, record.getOrDefault("title", "Untitled ETD"), date, collection, contact, 1024);
+            for (Map.Entry<String, String> entry : record.entrySet()) {
+                item.updateMetadata(entry.getKey(), entry.getValue());
+            }
+            if (record.containsKey("embargoRelease")) {
+                AccessControl embargoAccess = new AccessControl();
+                embargoAccess.allowRole(Role.COLLECTION_CURATOR);
+                embargoAccess.allowRole(Role.REPOSITORY_ADMIN);
+                item.setEmbargo(new Embargo(LocalDate.parse(record.get("embargoRelease")), true, embargoAccess));
+            }
+            repository.addItem(item);
+            feedback.add("Ingested " + id + " title=" + item.getTitle());
+        }
+        return feedback;
+    }
+}
+
+// File: ReportService.java
+import java.util.*;
+
+public class ReportService {
+    public Map<FinancialContact, Long> financialContactStorage(Repository repository) {
+        return repository.reportStorageByFinancialContact();
+    }
+
+    public String embargoSummary(List<Item> items) {
+        StringBuilder sb = new StringBuilder("Embargo summary:\n");
+        for (Item item : items) {
+            if (item.getEmbargo() != null) {
+                sb.append(item.getId())
+                        .append(" | ")
+                        .append(item.getTitle())
+                        .append(" | release=")
+                        .append(item.getEmbargo().getReleaseDate())
+                        .append(" | active=")
+                        .append(item.isEmbargoActive())
+                        .append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
+    public String collectionDashboard(Repository repository) {
+        return repository.dashboardStats().toString();
+    }
+}
+
+// File: Repository.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class Repository {
+    private final Map<String, Collection> collections = new LinkedHashMap<>();
+    private final Map<String, Item> items = new LinkedHashMap<>();
+    private final Map<String, User> users = new LinkedHashMap<>();
+    private final List<AuditEvent> auditEvents = new ArrayList<>();
+    private final List<BroadcastMessage> messages = new ArrayList<>();
+    private final ErrorLog errorLog = new ErrorLog();
+    private final ExpirationService expirationService = new ExpirationService();
+    private final ReplicationService replicationService = new ReplicationService();
+    private final DoiService doiService = new DoiService();
+    private final FormatValidator formatValidator = new FormatValidator();
+
+    public void addUser(User user) { users.put(user.getId(), user); }
+    public User getUser(String id) { return users.get(id); }
+    public void addCollection(Collection collection) { collections.put(collection.getId(), collection); }
+    public Collection getCollection(String id) { return collections.get(id); }
+    public void addItem(Item item) { items.put(item.getId(), item); }
+    public Item getItem(String id) { return items.get(id); }
+    public List<Item> getItems() { return new ArrayList<>(items.values()); }
+    public List<User> getUsers() { return new ArrayList<>(users.values()); }
+    public Collection<Collection> getCollections() { return Collections.unmodifiableCollection(collections.values()); }
+    public List<AuditEvent> getAuditEvents() { return Collections.unmodifiableList(auditEvents); }
+
+    public void scheduleExpiration(String itemId, LocalDate date) {
+        Item item = getItem(itemId);
+        if (item != null) item.setScheduledDeletionDate(date);
+    }
+
+    public List<String> processExpirations(LocalDate now) {
+        List<String> changes = expirationService.processExpired(items.values(), now);
+        for (String change : changes) {
+            String itemId = change.split(" ")[0];
+            recordAudit(AuditEventType.EXPIRED, itemId, "system", change);
+        }
+        return changes;
+    }
+
+    public Map<FinancialContact, Long> reportStorageByFinancialContact() {
+        Map<FinancialContact, Long> result = new LinkedHashMap<>();
+        for (Item item : items.values()) {
+            FinancialContact contact = item.getFinancialContact();
+            if (contact == null) {
+                contact = new FinancialContact("unknown", "Unknown", "", "", "", "");
+            }
+            result.merge(contact, item.getTotalStorageBytes(), Long::sum);
+        }
+        return result;
+    }
+
+    public void mapItemToCollection(String itemId, String collectionId) {
+        Item item = getItem(itemId);
+        Collection collection = getCollection(collectionId);
+        if (item != null && collection != null) item.mapTo(collection);
+    }
+
+    public void moveItemToCollection(String itemId, String collectionId) {
+        Item item = getItem(itemId);
+        Collection collection = getCollection(collectionId);
+        if (item != null && collection != null) item.setCollection(collection);
+    }
+
+    public List<Item> search(SearchQuery query) {
+        return items.values().stream()
+                .filter(item -> !item.isDeleted() && !item.isHidden())
+                .filter(query::matches)
+                .collect(Collectors.toList());
+    }
+
+    public void setReplicationPolicy(String collectionId, ReplicationPolicy policy) {
+        Collection collection = getCollection(collectionId);
+        if (collection != null) collection.setReplicationPolicy(policy);
+    }
+
+    public void queueCollectionReplication(String collectionId) {
+        Collection collection = getCollection(collectionId);
+        if (collection == null) return;
+        replicationService.queueCollection(collection, itemsForCollection(collection));
+    }
+
+    public List<String> replicateCollection(String collectionId) {
+        Collection collection = getCollection(collectionId);
+        List<String> checksums = new ArrayList<>();
+        if (collection == null) return checksums;
+        for (Item item : itemsForCollection(collection)) {
+            String checksum = replicationService.replicateItem(item);
+            checksums.add(item.getId() + ":" + checksum);
+            recordAudit(AuditEventType.REPLICATED, item.getId(), "system", "checksum=" + checksum);
+        }
+        return checksums;
+    }
+
+    public List<Item> itemsForCollection(Collection collection) {
+        List<Item> result = new ArrayList<>();
+        for (Item item : items.values()) {
+            if (item.getAllCollections().contains(collection)) {
+                result.add(item);
+            }
+        }
+        return result;
+    }
+
+    public void publishItem(String itemId, String actorId, String comment) {
+        Item item = getItem(itemId);
+        if (item != null) {
+            item.setPublished(true);
+            recordAudit(AuditEventType.PUBLISHED, itemId, actorId, comment);
+        }
+    }
+
+    public void unpublishItem(String itemId, String actorId, String comment) {
+        Item item = getItem(itemId);
+        if (item != null) {
+            item.setPublished(false);
+            recordAudit(AuditEventType.UNPUBLISHED, itemId, actorId, comment);
+        }
+    }
+
+    public void liftEmbargo(String itemId, String actorId) {
+        Item item = getItem(itemId);
+        if (item != null) {
+            item.liftEmbargo();
+            recordAudit(AuditEventType.EMBARGO_LIFTED, itemId, actorId, "Embargo lifted");
+        }
+    }
+
+    public void editEmbargoReleaseDate(String itemId, LocalDate newDate, String actorId) {
+        Item item = getItem(itemId);
+        if (item != null && item.getEmbargo() != null) {
+            item.getEmbargo().setReleaseDate(newDate);
+            item.updateMetadata("embargoRelease", newDate.toString());
+            recordAudit(AuditEventType.METADATA_UPDATED, itemId, actorId, "Embargo length edited");
+        }
+    }
+
+    public void acceptLicense(String itemId, License license, boolean accepted) {
+        Item item = getItem(itemId);
+        if (item == null) return;
+        if (!accepted && license.isRequired()) {
+            throw new IllegalArgumentException("License must be accepted");
+        }
+        item.setLicense(license);
+        item.setLicenseAccepted(accepted);
+        recordAudit(AuditEventType.LICENSE_ACCEPTED, itemId, "submitter",
+                "accepted=" + accepted + " license=" + license.getName());
+    }
+
+    public void addDepositGroupMember(String collectionId, String groupName, User user) {
+        Collection collection = getCollection(collectionId);
+        if (collection != null) {
+            DepositGroup group = collection.getDepositGroup(groupName);
+            if (group != null) group.addMember(user);
+        }
+    }
+
+    public void removeDepositGroupMember(String collectionId, String groupName, User user) {
+        Collection collection = getCollection(collectionId);
+        if (collection != null) {
+            DepositGroup group = collection.getDepositGroup(groupName);
+            if (group != null) group.removeMember(user);
+        }
+    }
+
+    public void addDepositGroupNetId(String collectionId, String groupName, String netId) {
+        Collection collection = getCollection(collectionId);
+        if (collection != null) {
+            DepositGroup group = collection.getDepositGroup(groupName);
+            if (group != null) group.addNetId(netId);
+        }
+    }
+
+    public void setDepositWindow(String collectionId, String groupName, LocalDate start, LocalDate end) {
+        Collection collection = getCollection(collectionId);
+        if (collection != null) {
+            DepositGroup group = collection.getDepositGroup(groupName);
+            if (group != null) group.setWindow(start, end);
+        }
+    }
+
+    public void markDepositSubmitted(String collectionId, String groupName, User user) {
+        Collection collection = getCollection(collectionId);
+        if (collection != null) {
+            DepositGroup group = collection.getDepositGroup(groupName);
+            if (group != null) group.markSubmitted(user);
+        }
+    }
+
+    public String exportEtdEmbargoSummary() {
+        StringBuilder sb = new StringBuilder();
+        for (Item item : items.values()) {
+            if (item.getEmbargo() != null) {
+                sb.append(item.getId())
+                        .append(",")
+                        .append(item.getTitle())
+                        .append(",")
+                        .append(item.getEmbargo().getReleaseDate())
+                        .append(",")
+                        .append(item.isEmbargoActive())
+                        .append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
+    public void updateMetadata(String itemId, String key, String value, String actorId) {
+        Item item = getItem(itemId);
+        if (item != null) {
+            item.updateMetadata(key, value);
+            doiService.propagate(item);
+            recordAudit(AuditEventType.METADATA_UPDATED, itemId, actorId, key + "=" + value);
+        }
+    }
+
+    public String getDoiPropagationStatus(String doi) {
+        return doiService.getLastPropagated(doi);
+    }
+
+    public Version createVersion(String itemId) {
+        Item item = getItem(itemId);
+        return item == null ? null : item.createVersion();
+    }
+
+    public boolean restoreVersion(String itemId, String versionId, String actorId) {
+        Item item = getItem(itemId);
+        if (item != null && item.restoreVersion(versionId)) {
+            recordAudit(AuditEventType.METADATA_UPDATED, itemId, actorId, "Restored version " + versionId);
+            return true;
+        }
+        return false;
+    }
+
+    public void changePermissions(List<String> itemIds, AccessControl accessControl, String actorId) {
+        for (String itemId : itemIds) {
+            Item item = getItem(itemId);
+            if (item != null) {
+                item.setAccessControl(accessControl);
+                recordAudit(AuditEventType.PERMISSION_CHANGED, itemId, actorId,
+                        accessControl.describe());
+            }
+        }
+    }
+
+    public String permissionsReport() {
+        StringBuilder sb = new StringBuilder();
+        for (Item item : items.values()) {
+            sb.append(item.getId()).append(": ").append(item.getAccessControl().describe()).append("\n");
+        }
+        return sb.toString();
+    }
+
+    public DashboardStats dashboardStats() {
+        int componentCount = 0;
+        long totalStorage = 0;
+        Map<String, Long> storageByCollection = new LinkedHashMap<>();
+        Map<String, Integer> itemCountByCollection = new LinkedHashMap<>();
+        Map<String, Integer> depositActivityByDay = new LinkedHashMap<>();
+
+        for (Item item : items.values()) {
+            componentCount += item.getComponents().size();
+            long bytes = item.getTotalStorageBytes();
+            totalStorage += bytes;
+            String collectionName = item.getCollection().getName();
+            storageByCollection.merge(collectionName, bytes, Long::sum);
+            itemCountByCollection.merge(collectionName, 1, Integer::sum);
+            depositActivityByDay.merge(item.getDate().toString(), 1, Integer::sum);
+        }
+
+        return new DashboardStats(collections.size(), items.size(), componentCount,
+                totalStorage, storageByCollection, itemCountByCollection, depositActivityByDay);
+    }
+
+    public Map<ReplicationStatus, Integer> collectionReplicationSummary(String collectionId) {
+        Collection collection = getCollection(collectionId);
+        Map<ReplicationStatus, Integer> summary = new EnumMap<>(ReplicationStatus.class);
+        if (collection == null) return summary;
+        for (Item item : itemsForCollection(collection)) {
+            summary.merge(item.getReplicationStatus(), 1, Integer::sum);
+        }
+        return summary;
+    }
+
+    public void scheduleMessage(String text, LocalDate start, LocalDate end) {
+        messages.add(new BroadcastMessage(text, start, end));
+        recordAudit(AuditEventType.MESSAGE, null, "system", text);
+    }
+
+    public List<BroadcastMessage> activeMessages(LocalDate now) {
+        return messages.stream().filter(message -> message.isActive(now)).collect(Collectors.toList());
+    }
+
+    public void recordError(String message) {
+        errorLog.record(message, LocalDateTime.now());
+    }
+
+    public Map<String, ErrorSummary> recentErrors(int limit) {
+        return errorLog.recentDeduplicated(limit);
+    }
+
+    public List<User> authenticatedActiveUsers() {
+        return users.values().stream().filter(User::isActive).collect(Collectors.toList());
+    }
+
+    public int anonymousUserCount() {
+        return 0;
+    }
+
+    public String oaiPmh(Collection collection, LocalDate from, LocalDate until) {
+        return new OaiPmhService().listRecords(collection, new ArrayList<>(items.values()), from, until);
+    }
+
+    public String linkedData(String itemId) {
+        Item item = getItem(itemId);
+        return item == null ? "{}" : new LinkedDataService().toJsonLd(item);
+    }
+
+    public String syncSymplectic(String itemId) {
+        Item item = getItem(itemId);
+        return item == null ? "not found" : new SymplecticElementsConnector().sync(item);
+    }
+
+    public List<Item> findByAuthorIdentifier(String identifier) {
+        List<Item> result = new ArrayList<>();
+        for (Item item : items.values()) {
+            for (AuthorIdentifier author : item.getAuthors()) {
+                if (author.getIdentifier().equals(identifier)) {
+                    result.add(item);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public void applyAuthorAuthority(String scheme, String identifier, String canonicalName) {
+        for (Item item : items.values()) {
+            for (AuthorIdentifier author : item.getAuthors()) {
+                if (author.getScheme().equals(scheme) && author.getIdentifier().equals(identifier)) {
+                    author.setName(canonicalName);
+                }
+            }
+        }
+    }
+
+    public String requestAccess(String collectionId, User user, String requestMessage) {
+        Collection collection = getCollection(collectionId);
+        if (collection == null || collection.getCurator() == null) return "No curator available";
+        String curatorEmail = collection.getCurator().getEmail();
+        return "Access request from " + user.getName() + " sent to " + curatorEmail + ": " + requestMessage;
+    }
+
+    public String validateFile(Component component, String format, byte[] data) {
+        FileValidationResult result = formatValidator.validate(format, data);
+        return "Component " + component.getId() + ": " + result.getMessage();
+    }
+
+    public void grantEmbargoPrivileges(User user) {
+        user.addRole(Role.DIGITAL_RECORDS_ARCHIVIST);
+    }
+
+    public void restrictCollectionToDukeIp(String collectionId, boolean restrict) {
+        Collection collection = getCollection(collectionId);
+        if (collection != null) {
+            collection.setRestrictToDukeIp(restrict);
+            collection.getDefaultAccess().setDukeIpOnly(restrict);
+        }
+    }
+
+    public void recordAudit(AuditEventType type, String itemId, String actorId, String comment) {
+        auditEvents.add(new AuditEvent(type, itemId, actorId, comment));
+    }
+}

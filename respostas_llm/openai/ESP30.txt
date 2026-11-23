@@ -1,0 +1,846 @@
+// File: Role.java
+public enum Role {
+    MEMBER,
+    PUBLISHER,
+    MODERATOR,
+    ADMINISTRATOR
+}
+
+// File: ExportFormat.java
+public enum ExportFormat {
+    BIB,
+    RIS
+}
+
+// File: NetworkAccess.java
+public enum NetworkAccess {
+    INTERNET,
+    VUB_NETWORK
+}
+
+// File: User.java
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+public class User {
+    private final String username;
+    private String passwordHash;
+    private String name;
+    private String email;
+    private String university;
+    private String department;
+    private Role role;
+    private final Set<String> groupNames = new LinkedHashSet<>();
+
+    User(String username, String passwordHash, String name, String email,
+         String university, String department, Role role) {
+        this.username = username;
+        this.passwordHash = passwordHash;
+        this.name = name;
+        this.email = email;
+        this.university = university;
+        this.department = department;
+        this.role = role;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getUniversity() {
+        return university;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public Set<String> getGroupNames() {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(groupNames));
+    }
+
+    String getPasswordHash() {
+        return passwordHash;
+    }
+
+    void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    void updateProfile(String name, String email, String university, String department) {
+        this.name = name;
+        this.email = email;
+        this.university = university;
+        this.department = department;
+    }
+
+    void setRole(Role role) {
+        this.role = role;
+    }
+
+    void addGroup(String groupName) {
+        groupNames.add(groupName);
+    }
+
+    void removeGroup(String groupName) {
+        groupNames.remove(groupName);
+    }
+}
+
+// File: Group.java
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+public class Group {
+    private final String name;
+    private String description;
+    private final Set<String> usernames = new LinkedHashSet<>();
+
+    Group(String name, String description) {
+        this.name = name;
+        this.description = description;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Set<String> getUsernames() {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(usernames));
+    }
+
+    void setDescription(String description) {
+        this.description = description;
+    }
+
+    void addUser(String username) {
+        usernames.add(username);
+    }
+
+    void removeUser(String username) {
+        usernames.remove(username);
+    }
+
+    boolean isEmpty() {
+        return usernames.isEmpty();
+    }
+}
+
+// File: Publication.java
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class Publication {
+    private final String id;
+    private String title;
+    private List<String> authors;
+    private LocalDate publicationDate;
+    private String abstractText;
+    private List<String> referenceIds;
+    private String fullText;
+    private String ownerUsername;
+
+    public Publication(String id, String title, List<String> authors, LocalDate publicationDate,
+                       String abstractText, List<String> referenceIds, String fullText,
+                       String ownerUsername) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("Publication id is required");
+        }
+        this.id = id;
+        update(title, authors, publicationDate, abstractText, referenceIds);
+        this.fullText = fullText;
+        this.ownerUsername = ownerUsername;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public List<String> getAuthors() {
+        return Collections.unmodifiableList(new ArrayList<>(authors));
+    }
+
+    public LocalDate getPublicationDate() {
+        return publicationDate;
+    }
+
+    public String getAbstractText() {
+        return abstractText;
+    }
+
+    public List<String> getReferenceIds() {
+        return Collections.unmodifiableList(new ArrayList<>(referenceIds));
+    }
+
+    public String getFullText() {
+        return fullText;
+    }
+
+    public String getOwnerUsername() {
+        return ownerUsername;
+    }
+
+    void update(String title, List<String> authors, LocalDate publicationDate,
+                String abstractText, List<String> referenceIds) {
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("Publication title is required");
+        }
+        this.title = title;
+        this.authors = authors == null ? new ArrayList<>() : new ArrayList<>(authors);
+        this.publicationDate = publicationDate;
+        this.abstractText = abstractText == null ? "" : abstractText;
+        this.referenceIds = referenceIds == null ? new ArrayList<>() : new ArrayList<>(referenceIds);
+    }
+
+    void setFullText(String fullText) {
+        this.fullText = fullText;
+    }
+
+    void setOwnerUsername(String ownerUsername) {
+        this.ownerUsername = ownerUsername;
+    }
+}
+
+// File: SearchCriteria.java
+import java.time.LocalDate;
+
+public class SearchCriteria {
+    private String keyword;
+    private String author;
+    private String reference;
+    private LocalDate fromDate;
+    private LocalDate toDate;
+
+    public SearchCriteria() {
+    }
+
+    public SearchCriteria(String keyword, String author, LocalDate fromDate, LocalDate toDate) {
+        this.keyword = keyword;
+        this.author = author;
+        this.fromDate = fromDate;
+        this.toDate = toDate;
+    }
+
+    public SearchCriteria withReference(String reference) {
+        this.reference = reference;
+        return this;
+    }
+
+    public String getKeyword() {
+        return keyword;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public String getReference() {
+        return reference;
+    }
+
+    public LocalDate getFromDate() {
+        return fromDate;
+    }
+
+    public LocalDate getToDate() {
+        return toDate;
+    }
+}
+
+// File: SearchPage.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class SearchPage {
+    private final List<Publication> publications;
+    private final int pageNumber;
+    private final int pageSize;
+    private final int totalResults;
+
+    public SearchPage(List<Publication> publications, int pageNumber, int pageSize, int totalResults) {
+        this.publications = Collections.unmodifiableList(new ArrayList<>(publications));
+        this.pageNumber = pageNumber;
+        this.pageSize = pageSize;
+        this.totalResults = totalResults;
+    }
+
+    public List<Publication> getPublications() {
+        return publications;
+    }
+
+    public int getPageNumber() {
+        return pageNumber;
+    }
+
+    public int getPageSize() {
+        return pageSize;
+    }
+
+    public int getTotalResults() {
+        return totalResults;
+    }
+
+    public int getTotalPages() {
+        return totalResults == 0 ? 0 : (totalResults + pageSize - 1) / pageSize;
+    }
+}
+
+// File: PublicationSystem.java
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+public class PublicationSystem {
+    private final Map<String, User> users = new LinkedHashMap<>();
+    private final Map<String, Group> groups = new LinkedHashMap<>();
+    private final Map<String, Publication> publications = new LinkedHashMap<>();
+    private final Set<String> administratorNotifications = new LinkedHashSet<>();
+    private final Map<String, String> configuration = new LinkedHashMap<>();
+
+    public PublicationSystem() {
+        configuration.put("pageSize", "10");
+        configuration.put("systemName", "Publication Repository");
+    }
+
+    public synchronized User register(String username, String password, String name, String email,
+                                      String university, String department) {
+        requireText(username, "Username");
+        requireText(password, "Password");
+        if (users.containsKey(username)) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+        User user = new User(username, hash(password), name, email, university, department, Role.MEMBER);
+        users.put(username, user);
+        administratorNotifications.add("Account registration requested: " + username);
+        return user;
+    }
+
+    public synchronized User createUser(String username, String password, String email, Role role) {
+        requireRole(Role.ADMINISTRATOR);
+        requireText(username, "Username");
+        requireText(password, "Password");
+        Objects.requireNonNull(role, "Role is required");
+        if (users.containsKey(username)) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+        User user = new User(username, hash(password), username, email, "", "", role);
+        users.put(username, user);
+        return user;
+    }
+
+    public synchronized User login(String username, String password, NetworkAccess access) {
+        Objects.requireNonNull(access, "Network access is required");
+        User user = users.get(username);
+        if (user == null || !user.getPasswordHash().equals(hash(password))) {
+            throw new IllegalArgumentException("Invalid username or password");
+        }
+        return user;
+    }
+
+    public synchronized void logout(String username) {
+        requireUser(username);
+    }
+
+    public synchronized void requestPasswordChange(String username, String newPassword) {
+        requireText(newPassword, "New password");
+        User user = requireUser(username);
+        user.setPasswordHash(hash(newPassword));
+        administratorNotifications.add("Password changed for user: " + username);
+    }
+
+    public synchronized void updateOwnProfile(String username, String name, String email,
+                                              String university, String department,
+                                              String newPassword) {
+        User user = requireUser(username);
+        user.updateProfile(name, email, university, department);
+        if (newPassword != null && !newPassword.isBlank()) {
+            user.setPasswordHash(hash(newPassword));
+        }
+    }
+
+    public synchronized List<Publication> searchPublications(String username, NetworkAccess access,
+                                                              SearchCriteria criteria) {
+        if (access == null) {
+            throw new IllegalArgumentException("Network access is required");
+        }
+        if (access == NetworkAccess.INTERNET && (username == null || !users.containsKey(username))) {
+            throw new IllegalArgumentException("Login is required outside the VUB network");
+        }
+        return filterPublications(criteria);
+    }
+
+    public synchronized SearchPage searchPublications(String username, NetworkAccess access,
+                                                        SearchCriteria criteria, int page, int pageSize) {
+        if (page < 1 || pageSize < 1) {
+            throw new IllegalArgumentException("Page and page size must be positive");
+        }
+        List<Publication> all = searchPublications(username, access, criteria);
+        int start = Math.min((page - 1) * pageSize, all.size());
+        int end = Math.min(start + pageSize, all.size());
+        return new SearchPage(all.subList(start, end), page, pageSize, all.size());
+    }
+
+    public synchronized Publication getPublication(String username, NetworkAccess access, String id) {
+        ensureCanSearch(username, access);
+        Publication publication = publications.get(id);
+        if (publication == null) {
+            throw new IllegalArgumentException("Publication not found");
+        }
+        return publication;
+    }
+
+    public synchronized List<Publication> getPublications(String username, NetworkAccess access,
+                                                            Collection<String> ids) {
+        ensureCanSearch(username, access);
+        return ids.stream().map(id -> {
+            Publication publication = publications.get(id);
+            if (publication == null) {
+                throw new IllegalArgumentException("Publication not found: " + id);
+            }
+            return publication;
+        }).collect(Collectors.toList());
+    }
+
+    public synchronized byte[] downloadPublication(String username, NetworkAccess access, String id) {
+        Publication publication = getPublication(username, access, id);
+        if (publication.getFullText() == null) {
+            throw new IllegalStateException("Full text is not available");
+        }
+        return publication.getFullText().getBytes(StandardCharsets.UTF_8);
+    }
+
+    public synchronized Map<String, byte[]> downloadPublications(String username, NetworkAccess access,
+                                                                   Collection<String> ids) {
+        Map<String, byte[]> result = new LinkedHashMap<>();
+        for (Publication publication : getPublications(username, access, ids)) {
+            if (publication.getFullText() != null) {
+                result.put(publication.getId(), publication.getFullText().getBytes(StandardCharsets.UTF_8));
+            }
+        }
+        return result;
+    }
+
+    public synchronized List<Publication> consultReferences(String username, NetworkAccess access, String id) {
+        Publication publication = getPublication(username, access, id);
+        return resolveReferences(publication);
+    }
+
+    public synchronized List<Publication> consultReferencesForMany(String username, NetworkAccess access,
+                                                                     Collection<String> ids) {
+        List<Publication> result = new ArrayList<>();
+        for (Publication publication : getPublications(username, access, ids)) {
+            result.addAll(resolveReferences(publication));
+        }
+        return result.stream().distinct().collect(Collectors.toList());
+    }
+
+    public synchronized Publication getReferenceDetails(String username, NetworkAccess access,
+                                                          String referenceId) {
+        return getPublication(username, access, referenceId);
+    }
+
+    public synchronized String exportReferences(String username, NetworkAccess access, String id,
+                                                ExportFormat format) {
+        Publication publication = getPublication(username, access, id);
+        Objects.requireNonNull(format, "Export format is required");
+        List<Publication> references = resolveReferences(publication);
+        return format == ExportFormat.BIB ? exportBib(references) : exportRis(references);
+    }
+
+    public synchronized List<String> getAuthorDetails(String username, NetworkAccess access,
+                                                        String authorName) {
+        ensureCanSearch(username, access);
+        return publications.values().stream()
+                .filter(p -> p.getAuthors().stream().anyMatch(a -> a.equalsIgnoreCase(authorName)))
+                .map(Publication::getId)
+                .collect(Collectors.toList());
+    }
+
+    public synchronized Publication uploadPublication(String username, String fileName, byte[] document,
+                                                       String title, List<String> authors,
+                                                       LocalDate publicationDate, String abstractText,
+                                                       List<String> referenceIds) {
+        User user = requireUser(username);
+        requirePublisherOrAbove(user);
+        String extension = fileName == null ? "" : fileName.toLowerCase(Locale.ROOT);
+        if (!(extension.endsWith(".pdf") || extension.endsWith(".ps") || extension.endsWith(".odt"))) {
+            throw new IllegalArgumentException("Only PDF, PS, and ODT documents are supported");
+        }
+        String fullText = document == null ? "" : new String(document, StandardCharsets.UTF_8);
+        Publication publication = new Publication(UUID.randomUUID().toString(), title, authors,
+                publicationDate, abstractText, referenceIds, fullText, username);
+        publications.put(publication.getId(), publication);
+        return publication;
+    }
+
+    public synchronized List<Publication> getMyPublications(String username) {
+        User user = requireUser(username);
+        requirePublisherOrAbove(user);
+        return publications.values().stream()
+                .filter(p -> username.equals(p.getOwnerUsername()))
+                .collect(Collectors.toList());
+    }
+
+    public synchronized void editOwnPublication(String username, String publicationId, String title,
+                                                List<String> authors, LocalDate publicationDate,
+                                                String abstractText, List<String> referenceIds) {
+        User user = requireUser(username);
+        requirePublisherOrAbove(user);
+        Publication publication = publications.get(publicationId);
+        if (publication == null || !username.equals(publication.getOwnerUsername())) {
+            throw new IllegalArgumentException("Publication is not owned by this user");
+        }
+        publication.update(title, authors, publicationDate, abstractText, referenceIds);
+    }
+
+    public synchronized List<User> searchUsers(String actor, String query) {
+        requireRole(actor, Role.MODERATOR, Role.ADMINISTRATOR);
+        String needle = lower(query);
+        return users.values().stream()
+                .filter(user -> needle.isEmpty()
+                        || lower(user.getUsername()).contains(needle)
+                        || lower(user.getName()).contains(needle)
+                        || lower(user.getEmail()).contains(needle))
+                .collect(Collectors.toList());
+    }
+
+    public synchronized void editUserSettings(String actor, String username, String name, String email,
+                                              String university, String department, Role role) {
+        requireRole(actor, Role.MODERATOR, Role.ADMINISTRATOR);
+        User user = requireUser(username);
+        user.updateProfile(name, email, university, department);
+        if (role != null) {
+            if (requireUser(actor).getRole() != Role.ADMINISTRATOR && role == Role.ADMINISTRATOR) {
+                throw new IllegalArgumentException("Only an administrator may grant administrator access");
+            }
+            user.setRole(role);
+        }
+    }
+
+    public synchronized void deleteUser(String actor, String username) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        User user = requireUser(username);
+        for (String groupName : user.getGroupNames()) {
+            Group group = groups.get(groupName);
+            if (group != null) {
+                group.removeUser(username);
+            }
+        }
+        users.remove(username);
+        publications.values().removeIf(p -> username.equals(p.getOwnerUsername()));
+    }
+
+    public synchronized Group createGroup(String actor, String name, String description,
+                                          Collection<String> usernames) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        requireText(name, "Group name");
+        if (groups.containsKey(name)) {
+            throw new IllegalArgumentException("Group already exists");
+        }
+        Group group = new Group(name, description);
+        groups.put(name, group);
+        if (usernames != null) {
+            for (String username : usernames) {
+                addUserToGroup(actor, name, username);
+            }
+        }
+        return group;
+    }
+
+    public synchronized List<Group> searchGroups(String actor, String query) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        String needle = lower(query);
+        return groups.values().stream()
+                .filter(group -> needle.isEmpty() || lower(group.getName()).contains(needle)
+                        || lower(group.getDescription()).contains(needle))
+                .collect(Collectors.toList());
+    }
+
+    public synchronized void editGroup(String actor, String groupName, String description,
+                                       Collection<String> usernames) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        Group group = requireGroup(groupName);
+        group.setDescription(description);
+        Set<String> desired = usernames == null ? Set.of() : new LinkedHashSet<>(usernames);
+        for (String old : new ArrayList<>(group.getUsernames())) {
+            if (!desired.contains(old)) {
+                group.removeUser(old);
+                User user = users.get(old);
+                if (user != null) {
+                    user.removeGroup(groupName);
+                }
+            }
+        }
+        for (String username : desired) {
+            addUserToGroup(actor, groupName, username);
+        }
+    }
+
+    public synchronized void deleteGroup(String actor, String groupName) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        Group group = requireGroup(groupName);
+        if (!group.isEmpty()) {
+            throw new IllegalStateException("Group must be empty before it can be deleted");
+        }
+        groups.remove(groupName);
+    }
+
+    public synchronized void addUserToGroup(String actor, String groupName, String username) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        Group group = requireGroup(groupName);
+        User user = requireUser(username);
+        group.addUser(username);
+        user.addGroup(groupName);
+    }
+
+    public synchronized void setConfiguration(String actor, String key, String value) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        requireText(key, "Configuration key");
+        configuration.put(key, value);
+    }
+
+    public synchronized Map<String, String> getConfiguration(String actor) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        return Map.copyOf(configuration);
+    }
+
+    public synchronized Set<String> getAdministratorNotifications(String actor) {
+        requireRole(actor, Role.ADMINISTRATOR);
+        return Set.copyOf(administratorNotifications);
+    }
+
+    public synchronized void addPublication(Publication publication) {
+        Objects.requireNonNull(publication, "Publication is required");
+        if (publications.containsKey(publication.getId())) {
+            throw new IllegalArgumentException("Publication id already exists");
+        }
+        publications.put(publication.getId(), publication);
+    }
+
+    public synchronized User getUser(String username) {
+        return requireUser(username);
+    }
+
+    private List<Publication> filterPublications(SearchCriteria criteria) {
+        SearchCriteria actual = criteria == null ? new SearchCriteria() : criteria;
+        String keyword = lower(actual.getKeyword());
+        String author = lower(actual.getAuthor());
+        String reference = lower(actual.getReference());
+        return publications.values().stream()
+                .filter(p -> keyword.isEmpty()
+                        || lower(p.getTitle()).contains(keyword)
+                        || lower(p.getAbstractText()).contains(keyword))
+                .filter(p -> author.isEmpty()
+                        || p.getAuthors().stream().anyMatch(a -> lower(a).contains(author)))
+                .filter(p -> actual.getFromDate() == null || (p.getPublicationDate() != null
+                        && !p.getPublicationDate().isBefore(actual.getFromDate())))
+                .filter(p -> actual.getToDate() == null || (p.getPublicationDate() != null
+                        && !p.getPublicationDate().isAfter(actual.getToDate())))
+                .filter(p -> reference.isEmpty() || p.getReferenceIds().stream()
+                        .map(publications::get).filter(Objects::nonNull)
+                        .anyMatch(r -> lower(r.getTitle()).contains(reference)
+                                || lower(String.join(" ", r.getAuthors())).contains(reference)))
+                .sorted(Comparator.comparing(Publication::getTitle, String.CASE_INSENSITIVE_ORDER))
+                .collect(Collectors.toList());
+    }
+
+    private List<Publication> resolveReferences(Publication publication) {
+        List<Publication> result = new ArrayList<>();
+        for (String referenceId : publication.getReferenceIds()) {
+            Publication reference = publications.get(referenceId);
+            if (reference != null) {
+                result.add(reference);
+            }
+        }
+        return result;
+    }
+
+    private String exportBib(List<Publication> references) {
+        StringBuilder output = new StringBuilder();
+        for (Publication p : references) {
+            output.append("@misc{").append(safeBibKey(p)).append(",\n")
+                    .append("  title = {").append(p.getTitle()).append("},\n")
+                    .append("  author = {").append(String.join(" and ", p.getAuthors())).append("},\n");
+            if (p.getPublicationDate() != null) {
+                output.append("  year = {").append(p.getPublicationDate().getYear()).append("},\n");
+            }
+            output.append("  abstract = {").append(p.getAbstractText()).append("}\n}\n\n");
+        }
+        return output.toString();
+    }
+
+    private String exportRis(List<Publication> references) {
+        StringBuilder output = new StringBuilder();
+        for (Publication p : references) {
+            output.append("TY  - GEN\n")
+                    .append("TI  - ").append(p.getTitle()).append('\n');
+            for (String author : p.getAuthors()) {
+                output.append("AU  - ").append(author).append('\n');
+            }
+            if (p.getPublicationDate() != null) {
+                output.append("PY  - ").append(p.getPublicationDate().getYear()).append('\n');
+            }
+            output.append("AB  - ").append(p.getAbstractText()).append('\n')
+                    .append("ER  - \n\n");
+        }
+        return output.toString();
+    }
+
+    private String safeBibKey(Publication publication) {
+        String author = publication.getAuthors().isEmpty() ? "publication"
+                : publication.getAuthors().get(0).replaceAll("[^A-Za-z0-9]", "");
+        int year = publication.getPublicationDate() == null ? 0 : publication.getPublicationDate().getYear();
+        return author + year + publication.getId().replaceAll("[^A-Za-z0-9]", "");
+    }
+
+    private void ensureCanSearch(String username, NetworkAccess access) {
+        if (access == null) {
+            throw new IllegalArgumentException("Network access is required");
+        }
+        if (access == NetworkAccess.INTERNET && (username == null || !users.containsKey(username))) {
+            throw new IllegalArgumentException("Login is required outside the VUB network");
+        }
+    }
+
+    private User requireUser(String username) {
+        User user = users.get(username);
+        if (user == null) {
+            throw new IllegalArgumentException("User does not exist: " + username);
+        }
+        return user;
+    }
+
+    private Group requireGroup(String groupName) {
+        Group group = groups.get(groupName);
+        if (group == null) {
+            throw new IllegalArgumentException("Group does not exist: " + groupName);
+        }
+        return group;
+    }
+
+    private void requireRole(String username, Role... allowedRoles) {
+        User user = requireUser(username);
+        for (Role role : allowedRoles) {
+            if (user.getRole() == role) {
+                return;
+            }
+        }
+        throw new SecurityException("User is not authorized for this operation");
+    }
+
+    private void requireRole(Role role) {
+        throw new SecurityException("This operation requires an authenticated administrator");
+    }
+
+    private void requirePublisherOrAbove(User user) {
+        if (user.getRole() != Role.PUBLISHER && user.getRole() != Role.MODERATOR
+                && user.getRole() != Role.ADMINISTRATOR) {
+            throw new SecurityException("Publisher access is required");
+        }
+    }
+
+    private static void requireText(String text, String label) {
+        if (text == null || text.isBlank()) {
+            throw new IllegalArgumentException(label + " is required");
+        }
+    }
+
+    private static String lower(String text) {
+        return text == null ? "" : text.toLowerCase(Locale.ROOT);
+    }
+
+    private static String hash(String password) {
+        if (password == null) {
+            return "";
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(password.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+}
+
+// File: Main.java
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        PublicationSystem system = new PublicationSystem();
+
+        system.register("alex", "secret", "Alex Example", "alex@example.edu",
+                "VUB", "Computer Science");
+
+        User admin = new User("admin", "", "Administrator", "admin@example.edu",
+                "VUB", "IT", Role.ADMINISTRATOR);
+        // The demonstration creates the administrator through the regular registration flow,
+        // then elevates it using a small standalone system setup helper below.
+        system.register("publisher", "publisher-pass", "Pat Publisher", "pat@example.edu",
+                "VUB", "Research");
+        system.promoteUserForDemo("publisher", Role.PUBLISHER);
+
+        Publication reference = new Publication("ref-1", "Foundations of Computing",
+                List.of("R. Author"), LocalDate.of(2020, 1, 1),
+                "An introduction to computing.", List.of(), "Reference full text", "publisher");
+        system.addPublication(reference);
+
+        Publication uploaded = system.uploadPublication("publisher", "paper.pdf",
+                "A sample PDF document".getBytes(StandardCharsets.UTF_8),
+                "Searching Scientific Publications", List.of("Pat Publisher", "A. Researcher"),
+                LocalDate.of(2024, 3, 15), "A demonstration of publication search.",
+                List.of("ref-1"));
+
+        List<Publication> results = system.searchPublications(null, NetworkAccess.VUB_NETWORK,
+                new SearchCriteria("search", null, null, null));
+        System.out.println("Search results:");
+        for (Publication publication : results) {
+            System.out.println("- " + publication.getTitle() + " (" + publication.getId() + ")");
+        }
+
+        System.out.println("Reference export (RIS):");
+        System.out.println(system.exportReferences(null, NetworkAccess.VUB_NETWORK,
+                uploaded.getId(), ExportFormat.RIS));
+    }
+}

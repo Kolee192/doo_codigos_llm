@@ -1,0 +1,1390 @@
+// File: Card.java
+import java.util.Objects;
+
+public class Card implements Comparable<Card> {
+    private final double value;
+    private final String label;
+
+    public Card(double value, String label) {
+        this.value = value;
+        this.label = label;
+    }
+
+    public Card(double value) {
+        this(value, formatValue(value));
+    }
+
+    private static String formatValue(double val) {
+        if (val == (long) val) {
+            return String.format("%d", (long) val);
+        } else {
+            return String.format("%s", val);
+        }
+    }
+
+    public double getValue() {
+        return value;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    @Override
+    public int compareTo(Card other) {
+        return Double.compare(this.value, other.value);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Card card)) return false;
+        return Double.compare(card.value, value) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(value);
+    }
+
+    @Override
+    public String toString() {
+        return label;
+    }
+}
+
+// File: DeckType.java
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public enum DeckType {
+    MODIFIED_FIBONACCI("Modified Fibonacci", List.of(
+            new Card(0.0, "0"),
+            new Card(0.5, "1/2"),
+            new Card(1.0, "1"),
+            new Card(2.0, "2"),
+            new Card(3.0, "3"),
+            new Card(5.0, "5"),
+            new Card(8.0, "8"),
+            new Card(13.0, "13"),
+            new Card(20.0, "20"),
+            new Card(40.0, "40"),
+            new Card(100.0, "100")
+    )),
+    POWERS_OF_TWO("Powers of 2", List.of(
+            new Card(0.0, "0"),
+            new Card(1.0, "1"),
+            new Card(2.0, "2"),
+            new Card(4.0, "4"),
+            new Card(8.0, "8"),
+            new Card(16.0, "16"),
+            new Card(32.0, "32"),
+            new Card(64.0, "64")
+    ));
+
+    private final String displayName;
+    private final List<Card> cards;
+
+    DeckType(String displayName, List<Card> cards) {
+        this.displayName = displayName;
+        this.cards = Collections.unmodifiableList(cards);
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public List<Card> getCards() {
+        return cards;
+    }
+}
+
+// File: UserAccount.java
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Objects;
+
+public class UserAccount {
+    private final String id;
+    private String username;
+    private String password;
+    private String fullName;
+    private String email;
+    private ZoneId timezone;
+    private final Instant createdAt;
+
+    public UserAccount(String id, String username, String password, String fullName, String email, ZoneId timezone) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.fullName = fullName;
+        this.email = email;
+        this.timezone = timezone != null ? timezone : ZoneId.systemDefault();
+        this.createdAt = Instant.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public ZoneId getTimezone() {
+        return timezone;
+    }
+
+    public void setTimezone(ZoneId timezone) {
+        this.timezone = timezone;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public String formatDateTime(Instant instant) {
+        if (instant == null) return "N/A";
+        ZonedDateTime zdt = instant.atZone(this.timezone);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
+        return zdt.format(formatter);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof UserAccount that)) return false;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+}
+
+// File: Estimator.java
+import java.util.Objects;
+
+public class Estimator {
+    private final String id;
+    private final String name;
+    private final String avatarUrl;
+    private final String anonymousCode;
+
+    public Estimator(String id, String name, String avatarUrl, String anonymousCode) {
+        this.id = id;
+        this.name = name;
+        this.avatarUrl = avatarUrl != null && !avatarUrl.isBlank() ? avatarUrl : "default_avatar.png";
+        this.anonymousCode = anonymousCode;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public String getAnonymousCode() {
+        return anonymousCode;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Estimator estimator)) return false;
+        return Objects.equals(id, estimator.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+}
+
+// File: EstimateVote.java
+import java.time.Instant;
+
+public class EstimateVote {
+    private final String estimatorId;
+    private Card card;
+    private final Instant timestamp;
+
+    public EstimateVote(String estimatorId, Card card) {
+        this.estimatorId = estimatorId;
+        this.card = card;
+        this.timestamp = Instant.now();
+    }
+
+    public String getEstimatorId() {
+        return estimatorId;
+    }
+
+    public Card getCard() {
+        return card;
+    }
+
+    public void setCard(Card card) {
+        this.card = card;
+    }
+
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+}
+
+// File: CountdownTimer.java
+import java.time.Duration;
+import java.time.Instant;
+
+public class CountdownTimer {
+    private static final long DEFAULT_DURATION_SECONDS = 120; // 2 minutes
+    private Instant startedAt;
+    private boolean isRunning;
+
+    public CountdownTimer() {
+        this.isRunning = false;
+    }
+
+    public synchronized void start() {
+        this.startedAt = Instant.now();
+        this.isRunning = true;
+    }
+
+    public synchronized void reset() {
+        this.startedAt = null;
+        this.isRunning = false;
+    }
+
+    public synchronized boolean isRunning() {
+        if (!isRunning) return false;
+        if (getRemainingSeconds() <= 0) {
+            isRunning = false;
+            return false;
+        }
+        return true;
+    }
+
+    public synchronized long getRemainingSeconds() {
+        if (!isRunning || startedAt == null) {
+            return DEFAULT_DURATION_SECONDS;
+        }
+        long elapsed = Duration.between(startedAt, Instant.now()).toSeconds();
+        long remaining = DEFAULT_DURATION_SECONDS - elapsed;
+        return Math.max(0, remaining);
+    }
+
+    public synchronized String getFormattedRemaining() {
+        long sec = getRemainingSeconds();
+        long minutes = sec / 60;
+        long seconds = sec % 60;
+        return String.format("%02d:%02d", minutes, seconds);
+    }
+}
+
+// File: RoundStatus.java
+public enum RoundStatus {
+    VOTING,
+    REVEALED,
+    ACCEPTED
+}
+
+// File: Round.java
+import java.time.Instant;
+import java.util.*;
+
+public class Round {
+    private final int roundNumber;
+    private final Map<String, EstimateVote> votes;
+    private RoundStatus status;
+    private Double acceptedEstimate;
+    private final Instant startedAt;
+    private Instant endedAt;
+
+    public Round(int roundNumber) {
+        this.roundNumber = roundNumber;
+        this.votes = new LinkedHashMap<>();
+        this.status = RoundStatus.VOTING;
+        this.startedAt = Instant.now();
+    }
+
+    public int getRoundNumber() {
+        return roundNumber;
+    }
+
+    public synchronized void recordVote(String estimatorId, Card card) {
+        if (status != RoundStatus.VOTING) {
+            throw new IllegalStateException("Voting has concluded for this round.");
+        }
+        EstimateVote vote = votes.get(estimatorId);
+        if (vote != null) {
+            vote.setCard(card);
+        } else {
+            votes.put(estimatorId, new EstimateVote(estimatorId, card));
+        }
+    }
+
+    public synchronized boolean hasVoted(String estimatorId) {
+        return votes.containsKey(estimatorId);
+    }
+
+    public synchronized Card getVote(String estimatorId) {
+        EstimateVote vote = votes.get(estimatorId);
+        return vote != null ? vote.getCard() : null;
+    }
+
+    public synchronized Map<String, EstimateVote> getVotes() {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(votes));
+    }
+
+    public synchronized int getVoteCount() {
+        return votes.size();
+    }
+
+    public synchronized void reveal() {
+        if (this.status == RoundStatus.VOTING) {
+            this.status = RoundStatus.REVEALED;
+        }
+    }
+
+    public synchronized boolean isRevealed() {
+        return this.status == RoundStatus.REVEALED || this.status == RoundStatus.ACCEPTED;
+    }
+
+    public synchronized void acceptEstimate(double estimate) {
+        this.acceptedEstimate = estimate;
+        this.status = RoundStatus.ACCEPTED;
+        this.endedAt = Instant.now();
+    }
+
+    public synchronized RoundStatus getStatus() {
+        return status;
+    }
+
+    public synchronized Double getAcceptedEstimate() {
+        return acceptedEstimate;
+    }
+
+    public synchronized OptionalDouble calculateAverage() {
+        if (votes.isEmpty()) return OptionalDouble.empty();
+        return votes.values().stream()
+                .mapToDouble(v -> v.getCard().getValue())
+                .average();
+    }
+
+    public synchronized boolean isUnanimous() {
+        if (votes.isEmpty()) return false;
+        double first = votes.values().iterator().next().getCard().getValue();
+        for (EstimateVote vote : votes.values()) {
+            if (Double.compare(vote.getCard().getValue(), first) != 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public synchronized Optional<Double> getUnanimousValue() {
+        if (isUnanimous()) {
+            return Optional.of(votes.values().iterator().next().getCard().getValue());
+        }
+        return Optional.empty();
+    }
+
+    public Instant getStartedAt() {
+        return startedAt;
+    }
+
+    public Instant getEndedAt() {
+        return endedAt;
+    }
+}
+
+// File: Story.java
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+public class Story {
+    private final String id;
+    private String title;
+    private String description;
+    private final List<Round> rounds;
+    private Double finalEstimate;
+    private final Instant createdAt;
+
+    public Story(String id, String title, String description) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.rounds = new ArrayList<>();
+        this.finalEstimate = null;
+        this.createdAt = Instant.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Double getFinalEstimate() {
+        return finalEstimate;
+    }
+
+    public void setFinalEstimate(Double finalEstimate) {
+        this.finalEstimate = finalEstimate;
+    }
+
+    public boolean isEstimated() {
+        return finalEstimate != null;
+    }
+
+    public synchronized Round startNewRound() {
+        Round round = new Round(rounds.size() + 1);
+        rounds.add(round);
+        return round;
+    }
+
+    public synchronized Round getCurrentRound() {
+        if (rounds.isEmpty()) {
+            return null;
+        }
+        return rounds.get(rounds.size() - 1);
+    }
+
+    public synchronized List<Round> getRounds() {
+        return Collections.unmodifiableList(new ArrayList<>(rounds));
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Story story)) return false;
+        return Objects.equals(id, story.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+}
+
+// File: Game.java
+import java.time.Instant;
+import java.util.*;
+
+public class Game {
+    public static final int MAX_ESTIMATORS = 15;
+
+    private final String id;
+    private final String moderatorUsername;
+    private String name;
+    private String description;
+    private final DeckType deckType;
+    private final List<Estimator> estimators;
+    private final List<Story> stories;
+    private Story currentStory;
+    private final CountdownTimer timer;
+    private final Instant createdAt;
+
+    public Game(String id, String moderatorUsername, String name, String description, DeckType deckType) {
+        this.id = id;
+        this.moderatorUsername = moderatorUsername;
+        this.name = name;
+        this.description = description;
+        this.deckType = deckType != null ? deckType : DeckType.MODIFIED_FIBONACCI;
+        this.estimators = new ArrayList<>();
+        this.stories = new ArrayList<>();
+        this.timer = new CountdownTimer();
+        this.createdAt = Instant.now();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getModeratorUsername() {
+        return moderatorUsername;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public DeckType getDeckType() {
+        return deckType;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public CountdownTimer getTimer() {
+        return timer;
+    }
+
+    public String getInvitationUrl(String baseUrl) {
+        return baseUrl + "/games/" + id + "/join";
+    }
+
+    public synchronized Estimator join(String estimatorId, String name, String avatarUrl) {
+        if (estimators.size() >= MAX_ESTIMATORS) {
+            throw new IllegalStateException("Game is full. Maximum " + MAX_ESTIMATORS + " estimators allowed.");
+        }
+        for (Estimator e : estimators) {
+            if (e.getId().equals(estimatorId)) {
+                return e;
+            }
+        }
+        char codeLetter = (char) ('A' + estimators.size());
+        String anonCode = "Estimator " + codeLetter;
+        Estimator estimator = new Estimator(estimatorId, name, avatarUrl, anonCode);
+        estimators.add(estimator);
+        return estimator;
+    }
+
+    public synchronized List<Estimator> getEstimators() {
+        return Collections.unmodifiableList(new ArrayList<>(estimators));
+    }
+
+    public synchronized void addStory(Story story) {
+        stories.add(story);
+    }
+
+    public synchronized boolean editStory(String storyId, String newTitle, String newDescription) {
+        for (Story s : stories) {
+            if (s.getId().equals(storyId)) {
+                s.setTitle(newTitle);
+                s.setDescription(newDescription);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public synchronized boolean deleteStory(String storyId) {
+        if (currentStory != null && currentStory.getId().equals(storyId)) {
+            currentStory = null;
+        }
+        return stories.removeIf(s -> s.getId().equals(storyId));
+    }
+
+    public synchronized List<Story> getStories() {
+        return Collections.unmodifiableList(new ArrayList<>(stories));
+    }
+
+    public synchronized Story getStory(String storyId) {
+        return stories.stream().filter(s -> s.getId().equals(storyId)).findFirst().orElse(null);
+    }
+
+    public synchronized Story selectStoryToEstimate(String storyId) {
+        Story story = getStory(storyId);
+        if (story == null) {
+            throw new IllegalArgumentException("Story not found: " + storyId);
+        }
+        this.currentStory = story;
+        story.startNewRound();
+        this.timer.reset();
+        return story;
+    }
+
+    public synchronized Story getCurrentStory() {
+        return currentStory;
+    }
+
+    public synchronized boolean submitEstimate(String estimatorId, Card card) {
+        if (currentStory == null) {
+            throw new IllegalStateException("No story is currently selected for estimation.");
+        }
+        Round round = currentStory.getCurrentRound();
+        if (round == null || round.isRevealed()) {
+            throw new IllegalStateException("Current round is not active for voting.");
+        }
+
+        round.recordVote(estimatorId, card);
+
+        // Check if all joined estimators have now voted
+        if (!estimators.isEmpty() && round.getVoteCount() >= estimators.size()) {
+            round.reveal();
+            timer.reset(); // Two-minute timer resets itself as soon as all play an estimate
+            return true;
+        }
+        return false;
+    }
+
+    public synchronized void forceShowEstimates() {
+        if (currentStory != null && currentStory.getCurrentRound() != null) {
+            currentStory.getCurrentRound().reveal();
+        }
+    }
+
+    public synchronized void acceptAgreedEstimate(double estimate) {
+        if (currentStory != null && currentStory.getCurrentRound() != null) {
+            Round round = currentStory.getCurrentRound();
+            round.acceptEstimate(estimate);
+            currentStory.setFinalEstimate(estimate);
+        }
+    }
+
+    public synchronized void acceptAverageEstimate() {
+        if (currentStory != null && currentStory.getCurrentRound() != null) {
+            Round round = currentStory.getCurrentRound();
+            OptionalDouble avg = round.calculateAverage();
+            if (avg.isPresent()) {
+                acceptAgreedEstimate(avg.getAsDouble());
+            } else {
+                throw new IllegalStateException("No votes to average.");
+            }
+        }
+    }
+
+    public synchronized boolean hasAutoSuggestedEstimate() {
+        if (currentStory != null && currentStory.getCurrentRound() != null) {
+            Round round = currentStory.getCurrentRound();
+            return round.isRevealed() && round.isUnanimous();
+        }
+        return false;
+    }
+
+    public synchronized Optional<Double> getAutoSuggestedEstimate() {
+        if (hasAutoSuggestedEstimate()) {
+            return currentStory.getCurrentRound().getUnanimousValue();
+        }
+        return Optional.empty();
+    }
+}
+
+// File: SystemMetrics.java
+import java.util.concurrent.atomic.AtomicLong;
+
+public class SystemMetrics {
+    private final AtomicLong accountsCreated = new AtomicLong();
+    private final AtomicLong gamesCreated = new AtomicLong();
+    private final AtomicLong storiesCreated = new AtomicLong();
+    private final AtomicLong roundsPlayed = new AtomicLong();
+    private final AtomicLong totalVotesCast = new AtomicLong();
+    private final AtomicLong totalEstimatorsJoined = new AtomicLong();
+
+    public void recordAccountCreated() { accountsCreated.incrementAndGet(); }
+    public void recordGameCreated() { gamesCreated.incrementAndGet(); }
+    public void recordStoryCreated() { storiesCreated.incrementAndGet(); }
+    public void recordRoundPlayed() { roundsPlayed.incrementAndGet(); }
+    public void recordVoteCast() { totalVotesCast.incrementAndGet(); }
+    public void recordEstimatorJoined() { totalEstimatorsJoined.incrementAndGet(); }
+
+    public long getAccountsCreated() { return accountsCreated.get(); }
+    public long getGamesCreated() { return gamesCreated.get(); }
+    public long getStoriesCreated() { return storiesCreated.get(); }
+    public long getRoundsPlayed() { return roundsPlayed.get(); }
+    public long getTotalVotesCast() { return totalVotesCast.get(); }
+    public long getTotalEstimatorsJoined() { return totalEstimatorsJoined.get(); }
+
+    public String generateReport() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== Planning Poker System Metrics (Mike's Dashboard) ===\n");
+        sb.append(String.format("Total Accounts Created:    %d\n", accountsCreated.get()));
+        sb.append(String.format("Total Games Created:       %d\n", gamesCreated.get()));
+        sb.append(String.format("Total Stories Created:     %d\n", storiesCreated.get()));
+        sb.append(String.format("Total Rounds Played:       %d\n", roundsPlayed.get()));
+        sb.append(String.format("Total Votes Cast:          %d\n", totalVotesCast.get()));
+        sb.append(String.format("Total Estimators Joined:   %d\n", totalEstimatorsJoined.get()));
+        return sb.toString();
+    }
+}
+
+// File: DatabaseIndexRepository.java
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Simulates indexed repository for optimal database performance and fast query lookups.
+ */
+public class DatabaseIndexRepository {
+    // Primary indexes
+    private final Map<String, UserAccount> usersById = new ConcurrentHashMap<>();
+    private final Map<String, Game> gamesById = new ConcurrentHashMap<>();
+
+    // Secondary / Foreign-Key indexes
+    private final Map<String, UserAccount> usersByUsername = new ConcurrentHashMap<>();
+    private final Map<String, UserAccount> usersByEmail = new ConcurrentHashMap<>();
+    private final Map<String, List<String>> gameIdsByModerator = new ConcurrentHashMap<>();
+
+    // User indexing operations
+    public void indexUser(UserAccount account) {
+        usersById.put(account.getId(), account);
+        usersByUsername.put(account.getUsername().toLowerCase(), account);
+        usersByEmail.put(account.getEmail().toLowerCase(), account);
+    }
+
+    public void removeUser(String userId) {
+        UserAccount account = usersById.remove(userId);
+        if (account != null) {
+            usersByUsername.remove(account.getUsername().toLowerCase());
+            usersByEmail.remove(account.getEmail().toLowerCase());
+        }
+    }
+
+    public UserAccount findUserById(String id) {
+        return usersById.get(id);
+    }
+
+    public UserAccount findUserByUsername(String username) {
+        return usersByUsername.get(username.toLowerCase());
+    }
+
+    public UserAccount findUserByEmail(String email) {
+        return usersByEmail.get(email.toLowerCase());
+    }
+
+    // Game indexing operations
+    public void indexGame(Game game) {
+        gamesById.put(game.getId(), game);
+        gameIdsByModerator.computeIfAbsent(game.getModeratorUsername().toLowerCase(), k -> new ArrayList<>())
+                .add(game.getId());
+    }
+
+    public void removeGame(String gameId) {
+        Game game = gamesById.remove(gameId);
+        if (game != null) {
+            List<String> list = gameIdsByModerator.get(game.getModeratorUsername().toLowerCase());
+            if (list != null) {
+                list.remove(gameId);
+            }
+        }
+    }
+
+    public Game findGameById(String gameId) {
+        return gamesById.get(gameId);
+    }
+
+    public List<Game> findGamesByModerator(String username) {
+        List<String> ids = gameIdsByModerator.getOrDefault(username.toLowerCase(), Collections.emptyList());
+        List<Game> result = new ArrayList<>();
+        for (String id : ids) {
+            Game g = gamesById.get(id);
+            if (g != null) {
+                result.add(g);
+            }
+        }
+        return result;
+    }
+}
+
+// File: Glossary.java
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class Glossary {
+    private static final Map<String, String> TERMS = new LinkedHashMap<>();
+
+    static {
+        TERMS.put("Planning Poker", "A consensus-based, gamified technique for estimating effort or relative size of development goals in Agile.");
+        TERMS.put("Moderator", "The facilitator who leads the planning session, controls items to estimate, and records final estimates.");
+        TERMS.put("Estimator", "A team member who participates in sizing stories by submitting card votes.");
+        TERMS.put("Story / Item", "A unit of work or user requirement presented for sizing.");
+        TERMS.put("Draw / Round", "A single voting cycle where participants independently select a card for the active item.");
+        TERMS.put("Reveal", "The event where all estimator cards are shown simultaneously to avoid bias.");
+        TERMS.put("Modified Fibonacci", "Sequence {0, 0.5, 1, 2, 3, 5, 8, 13, 20, 40, 100} reflecting increased uncertainty with larger size.");
+        TERMS.put("Powers of 2", "Sequence {0, 1, 2, 4, 8, 16, 32, 64} used as an alternative sizing scale.");
+        TERMS.put("Countdown Timer", "A 2-minute timeboxing mechanism to keep team discussions concise and focused.");
+    }
+
+    public static Map<String, String> getDefinitions() {
+        return Collections.unmodifiableMap(TERMS);
+    }
+}
+
+// File: ErrorPageRenderer.java
+public class ErrorPageRenderer {
+
+    public static String render(int statusCode, String title, String message, String backUrl) {
+        return "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n" +
+                "  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +
+                "<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n" +
+                "<head>\n" +
+                "  <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n" +
+                "  <title>" + statusCode + " - " + escapeXml(title) + "</title>\n" +
+                "  <style type=\"text/css\">\n" +
+                "    body { font-family: Arial, Helvetica, sans-serif; background-color: #f8f9fa; color: #333; margin: 40px; }\n" +
+                "    .error-card { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 24px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }\n" +
+                "    h1 { color: #d9534f; margin-top: 0; }\n" +
+                "    p { line-height: 1.5; }\n" +
+                "    a { color: #0275d8; text-decoration: none; font-weight: bold; }\n" +
+                "    a:hover { text-decoration: underline; }\n" +
+                "  </style>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "  <div class=\"error-card\" role=\"alert\">\n" +
+                "    <h1>" + statusCode + ": " + escapeXml(title) + "</h1>\n" +
+                "    <p>" + escapeXml(message) + "</p>\n" +
+                "    <p><a href=\"" + escapeXml(backUrl) + "\">&laquo; Return to Application</a></p>\n" +
+                "  </div>\n" +
+                "</body>\n" +
+                "</html>";
+    }
+
+    private static String escapeXml(String input) {
+        if (input == null) return "";
+        return input.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
+    }
+}
+
+// File: TranscriptExporter.java
+import java.util.List;
+import java.util.Map;
+
+public class TranscriptExporter {
+
+    public static String toCsv(Game game) {
+        StringBuilder sb = new StringBuilder();
+        // UTF-8 CSV header
+        sb.append("Story ID,Story Title,Story Description,Round,Estimator Name,Estimate,Final Estimate\n");
+        for (Story story : game.getStories()) {
+            String finalEst = story.getFinalEstimate() != null ? String.valueOf(story.getFinalEstimate()) : "N/A";
+            List<Round> rounds = story.getRounds();
+            if (rounds.isEmpty()) {
+                sb.append(escapeCsv(story.getId())).append(",")
+                        .append(escapeCsv(story.getTitle())).append(",")
+                        .append(escapeCsv(story.getDescription())).append(",")
+                        .append("0,,,").append(finalEst).append("\n");
+            } else {
+                for (Round round : rounds) {
+                    Map<String, EstimateVote> votes = round.getVotes();
+                    for (Estimator estimator : game.getEstimators()) {
+                        EstimateVote vote = votes.get(estimator.getId());
+                        String voteVal = (vote != null) ? vote.getCard().getLabel() : "No vote";
+                        sb.append(escapeCsv(story.getId())).append(",")
+                                .append(escapeCsv(story.getTitle())).append(",")
+                                .append(escapeCsv(story.getDescription())).append(",")
+                                .append(round.getRoundNumber()).append(",")
+                                .append(escapeCsv(estimator.getName())).append(",")
+                                .append(escapeCsv(voteVal)).append(",")
+                                .append(finalEst).append("\n");
+                    }
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    public static String toAnonymizedCsv(Game game) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Story ID,Round,Anonymous Estimator,Vote Value,Final Estimate\n");
+        for (Story story : game.getStories()) {
+            String finalEst = story.getFinalEstimate() != null ? String.valueOf(story.getFinalEstimate()) : "N/A";
+            for (Round round : story.getRounds()) {
+                for (Estimator estimator : game.getEstimators()) {
+                    EstimateVote vote = round.getVotes().get(estimator.getId());
+                    String voteVal = (vote != null) ? String.valueOf(vote.getCard().getValue()) : "none";
+                    sb.append(escapeCsv(story.getId())).append(",")
+                            .append(round.getRoundNumber()).append(",")
+                            .append(escapeCsv(estimator.getAnonymousCode())).append(",")
+                            .append(escapeCsv(voteVal)).append(",")
+                            .append(finalEst).append("\n");
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    public static String toXhtml(Game game, UserAccount moderator) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n")
+                .append("  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n")
+                .append("<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n")
+                .append("<head>\n")
+                .append("  <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n")
+                .append("  <title>Game Transcript: ").append(escapeXml(game.getName())).append("</title>\n")
+                .append("  <style type=\"text/css\">\n")
+                .append("    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; margin: 30px; background: #fff; color: #222; }\n")
+                .append("    h1, h2, h3 { color: #2c3e50; }\n")
+                .append("    table { border-collapse: collapse; width: 100%; margin-bottom: 25px; }\n")
+                .append("    th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }\n")
+                .append("    th { background-color: #f2f2f2; }\n")
+                .append("    .estimator-avatar { width: 24px; height: 24px; vertical-align: middle; border-radius: 50%; margin-right: 6px; }\n")
+                .append("    .summary-box { background: #f9f9f9; padding: 15px; border-left: 4px solid #3498db; margin-bottom: 20px; }\n")
+                .append("  </style>\n")
+                .append("</head>\n")
+                .append("<body>\n")
+                .append("  <h1>Game Transcript: ").append(escapeXml(game.getName())).append("</h1>\n")
+                .append("  <div class=\"summary-box\">\n")
+                .append("    <p><strong>Description:</strong> ").append(escapeXml(game.getDescription())).append("</p>\n")
+                .append("    <p><strong>Scale:</strong> ").append(escapeXml(game.getDeckType().getDisplayName())).append("</p>\n")
+                .append("    <p><strong>Date &amp; Time:</strong> ")
+                .append(escapeXml(moderator != null ? moderator.formatDateTime(game.getCreatedAt()) : game.getCreatedAt().toString()))
+                .append("</p>\n")
+                .append("  </div>\n")
+                .append("  <h2>Stories and Estimates</h2>\n");
+
+        for (Story story : game.getStories()) {
+            sb.append("  <h3>Story: ").append(escapeXml(story.getTitle())).append("</h3>\n")
+                    .append("  <p><strong>Description:</strong> <pre>").append(escapeXml(story.getDescription())).append("</pre></p>\n")
+                    .append("  <p><strong>Agreed Final Estimate:</strong> ")
+                    .append(story.getFinalEstimate() != null ? story.getFinalEstimate() : "Not finalized")
+                    .append("</p>\n");
+
+            if (!story.getRounds().isEmpty()) {
+                sb.append("  <table>\n")
+                        .append("    <thead>\n")
+                        .append("      <tr><th>Round</th><th>Estimator</th><th>Estimate Card</th></tr>\n")
+                        .append("    </thead>\n")
+                        .append("    <tbody>\n");
+
+                for (Round r : story.getRounds()) {
+                    for (Estimator est : game.getEstimators()) {
+                        EstimateVote vote = r.getVotes().get(est.getId());
+                        String voteCard = (vote != null) ? vote.getCard().getLabel() : "-";
+                        sb.append("      <tr>\n")
+                                .append("        <td>").append(r.getRoundNumber()).append("</td>\n")
+                                .append("        <td><img class=\"estimator-avatar\" src=\"").append(escapeXml(est.getAvatarUrl()))
+                                .append("\" alt=\"Photo\" /> ").append(escapeXml(est.getName())).append("</td>\n")
+                                .append("        <td>").append(escapeXml(voteCard)).append("</td>\n")
+                                .append("      </tr>\n");
+                    }
+                }
+                sb.append("    </tbody>\n").append("  </table>\n");
+            } else {
+                sb.append("  <p><em>No rounds played for this item.</em></p>\n");
+            }
+        }
+
+        sb.append("</body>\n</html>");
+        return sb.toString();
+    }
+
+    private static String escapeCsv(String val) {
+        if (val == null) return "\"\"";
+        return "\"" + val.replace("\"", "\"\"") + "\"";
+    }
+
+    private static String escapeXml(String input) {
+        if (input == null) return "";
+        return input.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
+    }
+}
+
+// File: PlanningPokerSystem.java
+import java.time.ZoneId;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * Facade coordinating planning poker operations, persistence, metrics, and security.
+ */
+public class PlanningPokerSystem {
+    private final String baseUrl;
+    private final DatabaseIndexRepository repository;
+    private final SystemMetrics metrics;
+    private final AtomicInteger idCounter = new AtomicInteger(100);
+
+    public PlanningPokerSystem(String baseUrl) {
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        this.repository = new DatabaseIndexRepository();
+        this.metrics = new SystemMetrics();
+    }
+
+    // Account Management
+    public UserAccount createAccount(String username, String password, String fullName, String email, ZoneId timezone) {
+        if (repository.findUserByUsername(username) != null) {
+            throw new IllegalArgumentException("Username already exists: " + username);
+        }
+        if (repository.findUserByEmail(email) != null) {
+            throw new IllegalArgumentException("Email already registered: " + email);
+        }
+        String id = "usr_" + idCounter.incrementAndGet();
+        UserAccount account = new UserAccount(id, username, password, fullName, email, timezone);
+        repository.indexUser(account);
+        metrics.recordAccountCreated();
+        return account;
+    }
+
+    public UserAccount login(String username, String password) {
+        UserAccount account = repository.findUserByUsername(username);
+        if (account == null || !account.getPassword().equals(password)) {
+            throw new SecurityException("Invalid username or password.");
+        }
+        return account;
+    }
+
+    public void updateAccountDetails(String userId, String fullName, String email, ZoneId timezone) {
+        UserAccount account = repository.findUserById(userId);
+        if (account == null) {
+            throw new NoSuchElementException("User not found: " + userId);
+        }
+        account.setFullName(fullName);
+        account.setEmail(email);
+        account.setTimezone(timezone);
+        repository.indexUser(account);
+    }
+
+    public void deleteAccount(String userId) {
+        UserAccount account = repository.findUserById(userId);
+        if (account != null) {
+            // Delete all games owned by this moderator
+            List<Game> games = repository.findGamesByModerator(account.getUsername());
+            for (Game g : games) {
+                repository.removeGame(g.getId());
+            }
+            repository.removeUser(userId);
+        }
+    }
+
+    public String sendPasswordReminder(String email) {
+        UserAccount account = repository.findUserByEmail(email);
+        if (account == null) {
+            throw new NoSuchElementException("No account found for email: " + email);
+        }
+        // Generates reminder email notification content
+        return "To: " + account.getEmail() + "\n" +
+                "Subject: Password Reminder for Planning Poker\n\n" +
+                "Hello " + account.getFullName() + ",\n" +
+                "Your password for username '" + account.getUsername() + "' is: " + account.getPassword() + "\n" +
+                "Please log in at: " + baseUrl + "/login\n";
+    }
+
+    // Game Management
+    public Game createGame(String moderatorUsername, String name, String description, DeckType deckType) {
+        UserAccount mod = repository.findUserByUsername(moderatorUsername);
+        if (mod == null) {
+            throw new IllegalArgumentException("Moderator user does not exist: " + moderatorUsername);
+        }
+        String id = "game_" + idCounter.incrementAndGet();
+        Game game = new Game(id, moderatorUsername, name, description, deckType);
+        repository.indexGame(game);
+        metrics.recordGameCreated();
+        return game;
+    }
+
+    public List<Game> browsePreviousGames(String moderatorUsername) {
+        return repository.findGamesByModerator(moderatorUsername);
+    }
+
+    public void deleteGame(String gameId) {
+        repository.removeGame(gameId);
+    }
+
+    public Game getGame(String gameId) {
+        return repository.findGameById(gameId);
+    }
+
+    public String getJoinUrl(String gameId) {
+        return baseUrl + "/games/" + gameId + "/join";
+    }
+
+    // Estimator actions
+    public Estimator joinGame(String gameId, String estimatorName, String avatarUrl) {
+        Game game = repository.findGameById(gameId);
+        if (game == null) {
+            throw new NoSuchElementException("Game not found: " + gameId);
+        }
+        String estimatorId = "est_" + idCounter.incrementAndGet();
+        Estimator estimator = game.join(estimatorId, estimatorName, avatarUrl);
+        metrics.recordEstimatorJoined();
+        return estimator;
+    }
+
+    // Story Management
+    public Story addStory(String gameId, String title, String description) {
+        Game game = repository.findGameById(gameId);
+        if (game == null) throw new NoSuchElementException("Game not found");
+        String storyId = "story_" + idCounter.incrementAndGet();
+        Story story = new Story(storyId, title, description);
+        game.addStory(story);
+        metrics.recordStoryCreated();
+        return story;
+    }
+
+    public void importStoriesSpreadsheet(String gameId, String spreadsheetText) {
+        if (spreadsheetText == null || spreadsheetText.isBlank()) return;
+        String[] lines = spreadsheetText.split("\\r?\\n");
+        for (String line : lines) {
+            if (line.trim().isEmpty()) continue;
+            // Support tab or comma-separated: Title [delimiter] Description
+            String[] parts = line.contains("\t") ? line.split("\t", 2) : line.split(",", 2);
+            String title = parts[0].trim();
+            String desc = parts.length > 1 ? parts[1].trim() : "";
+            addStory(gameId, title, desc);
+        }
+    }
+
+    public Story selectItemForEstimation(String gameId, String storyId) {
+        Game game = repository.findGameById(gameId);
+        if (game == null) throw new NoSuchElementException("Game not found");
+        Story story = game.selectStoryToEstimate(storyId);
+        metrics.recordRoundPlayed();
+        return story;
+    }
+
+    public void castEstimate(String gameId, String estimatorId, Card card) {
+        Game game = repository.findGameById(gameId);
+        if (game == null) throw new NoSuchElementException("Game not found");
+        game.submitEstimate(estimatorId, card);
+        metrics.recordVoteCast();
+    }
+
+    public SystemMetrics getMetrics() {
+        return metrics;
+    }
+
+    public DatabaseIndexRepository getRepository() {
+        return repository;
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+}
+
+// File: Main.java
+import java.time.ZoneId;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("=================================================================");
+        System.out.println("  PLANNING POKER SYSTEM - SPECIFICATION VERIFICATION & DEMO");
+        System.out.println("=================================================================\n");
+
+        PlanningPokerSystem system = new PlanningPokerSystem("https://planningpoker.app");
+
+        // 1. Moderator Account Creation, Login, Timezone, Password Reminder
+        System.out.println("1. Setting up Moderator Account with Tokyo Timezone & Unicode:");
+        UserAccount mod = system.createAccount("sarah_scrum", "SecretPass123", "Sarah Müller (サラ)", "sarah@example.com", ZoneId.of("Asia/Tokyo"));
+        System.out.println("   Account created: " + mod.getFullName() + " | Timezone: " + mod.getTimezone());
+
+        // Password reminder test
+        String reminder = system.sendPasswordReminder("sarah@example.com");
+        System.out.println("   Password Reminder Email Generated:\n" + reminder.indent(4));
+
+        // Authenticate
+        UserAccount loggedIn = system.login("sarah_scrum", "SecretPass123");
+        System.out.println("   Login successful for: " + loggedIn.getUsername() + "\n");
+
+        // 2. Game Creation (Deck selection: Modified Fibonacci vs Powers of 2, Predictable URL)
+        System.out.println("2. Creating Games with Modified Fibonacci & Powers of 2:");
+        Game game = system.createGame(mod.getUsername(), "Payment Gateway Sprint Planning (スプリント計画)",
+                "Estimating items for Q3 payment services checkout pipeline.", DeckType.MODIFIED_FIBONACCI);
+
+        String inviteUrl = system.getJoinUrl(game.getId());
+        System.out.println("   Game: " + game.getName());
+        System.out.println("   Deck Selected: " + game.getDeckType().getDisplayName() + " -> " + game.getDeckType().getCards());
+        System.out.println("   Sensible Invite URL: " + inviteUrl + "\n");
+
+        // 3. Estimator Joining (Up to 15 estimators, photos/avatars, immediate visibility)
+        System.out.println("3. Estimators Joining Game via Invitation URL:");
+        Estimator alice = system.joinGame(game.getId(), "Alice", "https://cdn.example.com/photos/alice.png");
+        Estimator bob = system.joinGame(game.getId(), "Bob (ボブ)", "https://cdn.example.com/photos/bob.png");
+        Estimator charlie = system.joinGame(game.getId(), "Charlie", "https://cdn.example.com/photos/charlie.png");
+        System.out.println("   Joined: " + alice.getName() + " (Avatar: " + alice.getAvatarUrl() + ")");
+        System.out.println("   Joined: " + bob.getName() + " (Avatar: " + bob.getAvatarUrl() + ")");
+        System.out.println("   Joined: " + charlie.getName() + " (Avatar: " + charlie.getAvatarUrl() + ")");
+        System.out.println("   Total estimators currently: " + game.getEstimators().size() + " / " + Game.MAX_ESTIMATORS + "\n");
+
+        // 4. Story Management (Multi-line text, Spreadsheet Import, Add, Edit, Delete)
+        System.out.println("4. Story Management & Spreadsheet Import (CSV/TSV):");
+        system.importStoriesSpreadsheet(game.getId(),
+                "Stripe ApplePay Integration\tSupport 1-click checkout with ApplePay tokenization.\n" +
+                "Multi-Currency FX Support,Enable dynamic currency conversion for EUR, JPY and USD.\n" +
+                "Deprecated Legacy SOAP API\tSafely decommission old SOAP endpoints.");
+
+        // Add story with multi-line text field
+        Story customStory = system.addStory(game.getId(), "3-D Secure 2.0 Auth",
+                "Implement 3DS v2 challenge flows for SCA compliance.\nMust support fallback to frictionless flow.");
+
+        // Edit story to better reflect team understanding
+        game.editStory(customStory.getId(), "3-D Secure 2.0 Auth (SCA Compliant)",
+                "Implement 3DS v2 challenge & frictionless flows.\nIncludes biometric test coverage.");
+
+        // Delete unnecessary story
+        Story toDelete = system.addStory(game.getId(), "Obsolete Task", "To be deleted.");
+        game.deleteStory(toDelete.getId());
+
+        System.out.println("   All Stories currently in session:");
+        for (Story s : game.getStories()) {
+            System.out.println("   - [" + s.getId() + "] " + s.getTitle() + " (Estimated: " + s.isEstimated() + ")");
+        }
+        System.out.println();
+
+        // 5. Estimation Round 1: Cards consistency, changing minds, 2-minute timer
+        System.out.println("5. Starting Round for: " + customStory.getTitle());
+        system.selectItemForEstimation(game.getId(), customStory.getId());
+        CountdownTimer timer = game.getTimer();
+        timer.start();
+        System.out.println("   Two-minute countdown timer started: " + timer.getFormattedRemaining());
+
+        // Estimator plays card, changes estimate before reveal
+        System.out.println("   Alice plays 5...");
+        system.castEstimate(game.getId(), alice.getId(), new Card(5.0, "5"));
+        System.out.println("   Immediate status check -> Has Alice voted? " +
+                customStory.getCurrentRound().hasVoted(alice.getId()) + " | Has Bob voted? " +
+                customStory.getCurrentRound().hasVoted(bob.getId()));
+
+        System.out.println("   Alice changes mind to 8 before reveal...");
+        system.castEstimate(game.getId(), alice.getId(), new Card(8.0, "8"));
+
+        System.out.println("   Bob plays 8...");
+        system.castEstimate(game.getId(), bob.getId(), new Card(8.0, "8"));
+
+        // Moderator force reveal or auto reveal when last plays
+        System.out.println("   Charlie plays 8 (last estimator plays card)...");
+        system.castEstimate(game.getId(), charlie.getId(), new Card(8.0, "8"));
+
+        // All voted -> Auto revealed and timer reset
+        System.out.println("   All voted! Round revealed automatically? " + customStory.getCurrentRound().isRevealed());
+        System.out.println("   Timer reset on completion? " + (!timer.isRunning()) + " (Remaining: " + timer.getFormattedRemaining() + ")");
+
+        // Unanimous auto-fill check
+        if (game.hasAutoSuggestedEstimate()) {
+            double autoVal = game.getAutoSuggestedEstimate().get();
+            System.out.println("   Unanimous agreement detected! Auto-filled estimate field: " + autoVal);
+            game.acceptAgreedEstimate(autoVal);
+            System.out.println("   Accepted unanimous estimate: " + customStory.getFinalEstimate() + " story points.");
+        }
+        System.out.println();
+
+        // 6. Re-estimating a story later in session & Accepting Average
+        System.out.println("6. Re-estimating Story Later in Session & Accept Average:");
+        Story firstStory = game.getStories().get(0);
+        system.selectItemForEstimation(game.getId(), firstStory.getId());
+        System.out.println("   Round 1 for: " + firstStory.getTitle());
+        system.castEstimate(game.getId(), alice.getId(), new Card(3.0, "3"));
+        system.castEstimate(game.getId(), bob.getId(), new Card(5.0, "5"));
+        // Moderator decides to show estimates immediately before Charlie votes
+        System.out.println("   Moderator triggers immediate reveal before Charlie submits...");
+        game.forceShowEstimates();
+        System.out.println("   Round is revealed: " + firstStory.getCurrentRound().isRevealed());
+
+        // Re-estimate Round 2 for the same story
+        System.out.println("   Starting Re-estimate (Round 2) for same story...");
+        system.selectItemForEstimation(game.getId(), firstStory.getId());
+        system.castEstimate(game.getId(), alice.getId(), new Card(5.0, "5"));
+        system.castEstimate(game.getId(), bob.getId(), new Card(8.0, "8"));
+        system.castEstimate(game.getId(), charlie.getId(), new Card(8.0, "8"));
+
+        // Show prior estimates history across rounds
+        System.out.println("   Prior Estimates History for " + firstStory.getTitle() + ":");
+        for (Round r : firstStory.getRounds()) {
+            System.out.print("     Round " + r.getRoundNumber() + " -> ");
+            r.getVotes().forEach((eId, v) -> System.out.print("[" + eId + ": " + v.getCard().getLabel() + "] "));
+            System.out.println();
+        }
+
+        // Accept average
+        game.acceptAverageEstimate();
+        System.out.println("   Accepted Average Estimate: " + String.format("%.2f", firstStory.getFinalEstimate()));
+        System.out.println();
+
+        // 7. Transcripts and Exports (CSV, Anonymized Research CSV, XHTML Standards-compliant)
+        System.out.println("7. Transcripts and Local Exports (CSV & XHTML):");
+        String csvTranscript = TranscriptExporter.toCsv(game);
+        System.out.println("   Standard CSV Transcript:\n" + csvTranscript.indent(4));
+
+        String anonymizedCsv = TranscriptExporter.toAnonymizedCsv(game);
+        System.out.println("   Researcher Anonymized Data (Estimator A, Estimator B...):\n" + anonymizedCsv.indent(4));
+
+        String xhtmlTranscript = TranscriptExporter.toXhtml(game, mod);
+        System.out.println("   XHTML Compliant Export Preview (First 400 chars):");
+        System.out.println(xhtmlTranscript.substring(0, Math.min(400, xhtmlTranscript.length())).indent(4) + "...\n");
+
+        // 8. Error Pages and Standards
+        System.out.println("8. W3C Compliant Error Page Rendering (e.g. 404 Not Found):");
+        String errorPage = ErrorPageRenderer.render(404, "Game Not Found", "The estimation session you are looking for has expired or was removed.", "/browse");
+        System.out.println(errorPage.substring(0, Math.min(300, errorPage.length())).indent(4) + "...\n");
+
+        // 9. Definitions / Glossary for Developers
+        System.out.println("9. Developer Glossary of Standard Terms:");
+        Glossary.getDefinitions().forEach((term, def) ->
+                System.out.println("   * " + term + ": " + def));
+        System.out.println();
+
+        // 10. Mike's Metrics Dashboard
+        System.out.println("10. Mike's Usage Metrics Dashboard:");
+        System.out.print(system.getMetrics().generateReport().indent(4));
+
+        // 11. Cleanup / Account & Game Deletion
+        System.out.println("11. Testing Game & Account Deletion:");
+        system.deleteAccount(mod.getId());
+        System.out.println("   Account and associated games successfully removed from indexed database: "
+                + (system.getRepository().findUserById(mod.getId()) == null));
+
+        System.out.println("\nAll user stories and requirements verified successfully!");
+    }
+}

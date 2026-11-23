@@ -1,0 +1,1174 @@
+// File: Device.java
+public interface Device {
+    String getId();
+
+    String getName();
+}
+
+// File: TemperatureUnit.java
+public enum TemperatureUnit {
+    FAHRENHEIT,
+    CELSIUS
+}
+
+// File: ContactState.java
+public enum ContactState {
+    OPEN,
+    CLOSED
+}
+
+// File: ReadingType.java
+public enum ReadingType {
+    TEMPERATURE,
+    HUMIDITY
+}
+
+// File: SensorReading.java
+import java.time.LocalDateTime;
+
+public final class SensorReading {
+    private final String deviceId;
+    private final ReadingType type;
+    private final double value;
+    private final LocalDateTime timestamp;
+
+    public SensorReading(String deviceId, ReadingType type, double value, LocalDateTime timestamp) {
+        this.deviceId = deviceId;
+        this.type = type;
+        this.value = value;
+        this.timestamp = timestamp;
+    }
+
+    public String getDeviceId() {
+        return deviceId;
+    }
+
+    public ReadingType getType() {
+        return type;
+    }
+
+    public double getValue() {
+        return value;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+}
+
+// File: GatewayDevice.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+public class GatewayDevice implements Device {
+    private final String id;
+    private final String name;
+    private final Set<String> connectedDeviceIds = new LinkedHashSet<>();
+    private final List<String> communicationLog = new ArrayList<>();
+
+    public GatewayDevice(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    @Override
+    public String getId() {
+        return id;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    public void register(Device device) {
+        connectedDeviceIds.add(device.getId());
+    }
+
+    public boolean isConnected(String deviceId) {
+        return connectedDeviceIds.contains(deviceId);
+    }
+
+    public void transmit(String deviceId, String command) {
+        if (!isConnected(deviceId)) {
+            throw new IllegalArgumentException("Device is not registered with the gateway: " + deviceId);
+        }
+        communicationLog.add(LocalDateTime.now() + " -> " + deviceId + ": " + command);
+    }
+
+    public List<String> getCommunicationLog() {
+        return Collections.unmodifiableList(communicationLog);
+    }
+}
+
+// File: Thermostat.java
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Thermostat implements Device {
+    private final String id;
+    private final String name;
+    private final String room;
+    private final Map<DayOfWeek, Map<Integer, Integer>> hourlyTargets = new EnumMap<>(DayOfWeek.class);
+    private double currentTemperatureFahrenheit;
+    private int targetTemperatureFahrenheit;
+    private int defaultTemperatureFahrenheit = 70;
+    private LocalDateTime manualOverrideUntil;
+
+    public Thermostat(String id, String name, String room, double currentTemperatureFahrenheit) {
+        this.id = id;
+        this.name = name;
+        this.room = room;
+        this.currentTemperatureFahrenheit = currentTemperatureFahrenheit;
+        this.targetTemperatureFahrenheit = defaultTemperatureFahrenheit;
+    }
+
+    @Override
+    public String getId() {
+        return id;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    public String getRoom() {
+        return room;
+    }
+
+    public double readTemperature(TemperatureUnit unit) {
+        if (unit == TemperatureUnit.CELSIUS) {
+            return (currentTemperatureFahrenheit - 32.0) * 5.0 / 9.0;
+        }
+        return currentTemperatureFahrenheit;
+    }
+
+    public double getCurrentTemperatureFahrenheit() {
+        return currentTemperatureFahrenheit;
+    }
+
+    public void setCurrentTemperatureFahrenheit(double temperature) {
+        if (!Double.isFinite(temperature)) {
+            throw new IllegalArgumentException("Temperature must be finite");
+        }
+        currentTemperatureFahrenheit = temperature;
+    }
+
+    public int getTargetTemperatureFahrenheit() {
+        return targetTemperatureFahrenheit;
+    }
+
+    public void setTargetTemperature(double value, TemperatureUnit unit) {
+        setTargetTemperature(value, unit, LocalDateTime.now());
+    }
+
+    public void setTargetTemperature(double value, TemperatureUnit unit, LocalDateTime now) {
+        int fahrenheit = toFahrenheit(value, unit);
+        validateTarget(fahrenheit);
+        targetTemperatureFahrenheit = fahrenheit;
+        manualOverrideUntil = nextHour(now);
+    }
+
+    public void setPlannedTarget(int fahrenheit) {
+        validateTarget(fahrenheit);
+        defaultTemperatureFahrenheit = fahrenheit;
+        targetTemperatureFahrenheit = fahrenheit;
+        manualOverrideUntil = null;
+    }
+
+    public void setDefaultTarget(int fahrenheit) {
+        validateTarget(fahrenheit);
+        defaultTemperatureFahrenheit = fahrenheit;
+    }
+
+    public void scheduleTarget(DayOfWeek day, int hour, int fahrenheit) {
+        validateHour(hour);
+        validateTarget(fahrenheit);
+        hourlyTargets.computeIfAbsent(day, ignored -> new HashMap<>()).put(hour, fahrenheit);
+    }
+
+    public void applySchedule(LocalDateTime time) {
+        if (manualOverrideUntil != null && time.isBefore(manualOverrideUntil)) {
+            return;
+        }
+        manualOverrideUntil = null;
+        targetTemperatureFahrenheit = hourlyTargets
+                .getOrDefault(time.getDayOfWeek(), Map.of())
+                .getOrDefault(time.getHour(), defaultTemperatureFahrenheit);
+    }
+
+    private static int toFahrenheit(double value, TemperatureUnit unit) {
+        if (!Double.isFinite(value)) {
+            throw new IllegalArgumentException("Temperature must be finite");
+        }
+        double fahrenheit = unit == TemperatureUnit.CELSIUS ? value * 9.0 / 5.0 + 32.0 : value;
+        return (int) Math.round(fahrenheit);
+    }
+
+    private static void validateTarget(int fahrenheit) {
+        if (fahrenheit < 60 || fahrenheit > 80) {
+            throw new IllegalArgumentException("Thermostat target must be between 60 and 80 F");
+        }
+    }
+
+    private static void validateHour(int hour) {
+        if (hour < 0 || hour > 23) {
+            throw new IllegalArgumentException("Hour must be between 0 and 23");
+        }
+    }
+
+    private static LocalDateTime nextHour(LocalDateTime now) {
+        return now.withMinute(0).withSecond(0).withNano(0).plusHours(1);
+    }
+}
+
+// File: Humidistat.java
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Humidistat implements Device {
+    private final String id;
+    private final String name;
+    private final String room;
+    private final Map<DayOfWeek, Map<Integer, Integer>> hourlyTargets = new EnumMap<>(DayOfWeek.class);
+    private int currentHumidity;
+    private int targetHumidity = 45;
+    private int defaultHumidity = 45;
+    private LocalDateTime manualOverrideUntil;
+
+    public Humidistat(String id, String name, String room, int currentHumidity) {
+        this.id = id;
+        this.name = name;
+        this.room = room;
+        setCurrentHumidity(currentHumidity);
+    }
+
+    @Override
+    public String getId() {
+        return id;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    public String getRoom() {
+        return room;
+    }
+
+    public int readHumidity() {
+        return currentHumidity;
+    }
+
+    public void setCurrentHumidity(int humidity) {
+        if (humidity < 0 || humidity > 100) {
+            throw new IllegalArgumentException("Measured humidity must be between 0 and 100");
+        }
+        currentHumidity = humidity;
+    }
+
+    public int getTargetHumidity() {
+        return targetHumidity;
+    }
+
+    public void setTargetHumidity(int humidity) {
+        setTargetHumidity(humidity, LocalDateTime.now());
+    }
+
+    public void setTargetHumidity(int humidity, LocalDateTime now) {
+        validateTarget(humidity);
+        targetHumidity = humidity;
+        manualOverrideUntil = nextHour(now);
+    }
+
+    public void setPlannedTarget(int humidity) {
+        validateTarget(humidity);
+        targetHumidity = humidity;
+        defaultHumidity = humidity;
+        manualOverrideUntil = null;
+    }
+
+    public void setDefaultTarget(int humidity) {
+        validateTarget(humidity);
+        defaultHumidity = humidity;
+    }
+
+    public void scheduleTarget(DayOfWeek day, int hour, int humidity) {
+        validateHour(hour);
+        validateTarget(humidity);
+        hourlyTargets.computeIfAbsent(day, ignored -> new HashMap<>()).put(hour, humidity);
+    }
+
+    public void applySchedule(LocalDateTime time) {
+        if (manualOverrideUntil != null && time.isBefore(manualOverrideUntil)) {
+            return;
+        }
+        manualOverrideUntil = null;
+        targetHumidity = hourlyTargets
+                .getOrDefault(time.getDayOfWeek(), Map.of())
+                .getOrDefault(time.getHour(), defaultHumidity);
+    }
+
+    private static void validateTarget(int humidity) {
+        if (humidity < 30 || humidity > 60) {
+            throw new IllegalArgumentException("Humidity target must be between 30 and 60 percent");
+        }
+    }
+
+    private static void validateHour(int hour) {
+        if (hour < 0 || hour > 23) {
+            throw new IllegalArgumentException("Hour must be between 0 and 23");
+        }
+    }
+
+    private static LocalDateTime nextHour(LocalDateTime now) {
+        return now.withMinute(0).withSecond(0).withNano(0).plusHours(1);
+    }
+}
+
+// File: ContactSensor.java
+public class ContactSensor implements Device {
+    private final String id;
+    private final String name;
+    private final String location;
+    private ContactState state = ContactState.CLOSED;
+
+    public ContactSensor(String id, String name, String location) {
+        this.id = id;
+        this.name = name;
+        this.location = location;
+    }
+
+    @Override
+    public String getId() {
+        return id;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public ContactState getState() {
+        return state;
+    }
+
+    public void setState(ContactState state) {
+        this.state = state;
+    }
+
+    public boolean isOpen() {
+        return state == ContactState.OPEN;
+    }
+}
+
+// File: PowerSwitch.java
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Map;
+
+public class PowerSwitch implements Device {
+    private final String id;
+    private final String name;
+    private final String appliance;
+    private final Map<DayOfWeek, Map<Integer, Boolean>> hourlyTargets = new EnumMap<>(DayOfWeek.class);
+    private boolean on;
+    private boolean defaultOn;
+    private LocalDateTime manualOverrideUntil;
+
+    public PowerSwitch(String id, String name, String appliance) {
+        this.id = id;
+        this.name = name;
+        this.appliance = appliance;
+    }
+
+    @Override
+    public String getId() {
+        return id;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    public String getAppliance() {
+        return appliance;
+    }
+
+    public boolean isOn() {
+        return on;
+    }
+
+    public void setOnManually(boolean on) {
+        setOnManually(on, LocalDateTime.now());
+    }
+
+    public void setOnManually(boolean on, LocalDateTime now) {
+        this.on = on;
+        manualOverrideUntil = nextHour(now);
+    }
+
+    public void setPlannedState(boolean on) {
+        this.on = on;
+        this.defaultOn = on;
+        this.manualOverrideUntil = null;
+    }
+
+    public void setDefaultState(boolean on) {
+        defaultOn = on;
+    }
+
+    public void scheduleState(DayOfWeek day, int hour, boolean on) {
+        if (hour < 0 || hour > 23) {
+            throw new IllegalArgumentException("Hour must be between 0 and 23");
+        }
+        hourlyTargets.computeIfAbsent(day, ignored -> new HashMap<>()).put(hour, on);
+    }
+
+    public void applySchedule(LocalDateTime time) {
+        if (manualOverrideUntil != null && time.isBefore(manualOverrideUntil)) {
+            return;
+        }
+        manualOverrideUntil = null;
+        on = hourlyTargets.getOrDefault(time.getDayOfWeek(), Map.of()).getOrDefault(time.getHour(), defaultOn);
+    }
+
+    private static LocalDateTime nextHour(LocalDateTime now) {
+        return now.withMinute(0).withSecond(0).withNano(0).plusHours(1);
+    }
+}
+
+// File: SecurityAlarmSystem.java
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class SecurityAlarmSystem {
+    public static final class BreachEvent {
+        private final String sensorId;
+        private final String location;
+        private final LocalDateTime timestamp;
+
+        public BreachEvent(String sensorId, String location, LocalDateTime timestamp) {
+            this.sensorId = sensorId;
+            this.location = location;
+            this.timestamp = timestamp;
+        }
+
+        public String getSensorId() {
+            return sensorId;
+        }
+
+        public String getLocation() {
+            return location;
+        }
+
+        public LocalDateTime getTimestamp() {
+            return timestamp;
+        }
+
+        @Override
+        public String toString() {
+            return timestamp + " breach at " + location + " (" + sensorId + ")";
+        }
+    }
+
+    private boolean armed = true;
+    private boolean soundAlarmActive;
+    private boolean lightAlarmActive;
+    private final List<BreachEvent> events = new ArrayList<>();
+
+    public boolean isArmed() {
+        return armed;
+    }
+
+    public void setArmed(boolean armed) {
+        this.armed = armed;
+    }
+
+    public boolean isSoundAlarmActive() {
+        return soundAlarmActive;
+    }
+
+    public boolean isLightAlarmActive() {
+        return lightAlarmActive;
+    }
+
+    public void activateFor(ContactSensor sensor, LocalDateTime timestamp) {
+        if (armed && sensor.isOpen()) {
+            soundAlarmActive = true;
+            lightAlarmActive = true;
+            events.add(new BreachEvent(sensor.getId(), sensor.getLocation(), timestamp));
+        }
+    }
+
+    public void silence() {
+        soundAlarmActive = false;
+        lightAlarmActive = false;
+    }
+
+    public List<BreachEvent> getEvents() {
+        return Collections.unmodifiableList(events);
+    }
+}
+
+// File: PlannedPeriod.java
+import java.time.LocalTime;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class PlannedPeriod {
+    private final LocalTime startTime;
+    private final Map<String, Integer> temperaturesFahrenheit = new LinkedHashMap<>();
+    private final Map<String, Integer> humidities = new LinkedHashMap<>();
+    private final Map<String, Boolean> switchStates = new LinkedHashMap<>();
+    private final Map<String, ContactState> contactStates = new LinkedHashMap<>();
+    private Boolean securityArmed;
+
+    public PlannedPeriod(LocalTime startTime) {
+        if (startTime == null) {
+            throw new IllegalArgumentException("Start time is required");
+        }
+        this.startTime = startTime;
+    }
+
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public PlannedPeriod setTemperature(String thermostatId, int fahrenheit) {
+        if (fahrenheit < 60 || fahrenheit > 80) {
+            throw new IllegalArgumentException("Temperature must be between 60 and 80 F");
+        }
+        temperaturesFahrenheit.put(thermostatId, fahrenheit);
+        return this;
+    }
+
+    public PlannedPeriod setHumidity(String humidistatId, int humidity) {
+        if (humidity < 30 || humidity > 60) {
+            throw new IllegalArgumentException("Humidity must be between 30 and 60 percent");
+        }
+        humidities.put(humidistatId, humidity);
+        return this;
+    }
+
+    public PlannedPeriod setSwitch(String switchId, boolean on) {
+        switchStates.put(switchId, on);
+        return this;
+    }
+
+    public PlannedPeriod setContact(String sensorId, ContactState state) {
+        contactStates.put(sensorId, state);
+        return this;
+    }
+
+    public PlannedPeriod setSecurityArmed(boolean armed) {
+        securityArmed = armed;
+        return this;
+    }
+
+    public Map<String, Integer> getTemperaturesFahrenheit() {
+        return Collections.unmodifiableMap(temperaturesFahrenheit);
+    }
+
+    public Map<String, Integer> getHumidities() {
+        return Collections.unmodifiableMap(humidities);
+    }
+
+    public Map<String, Boolean> getSwitchStates() {
+        return Collections.unmodifiableMap(switchStates);
+    }
+
+    public Map<String, ContactState> getContactStates() {
+        return Collections.unmodifiableMap(contactStates);
+    }
+
+    public Boolean getSecurityArmed() {
+        return securityArmed;
+    }
+}
+
+// File: MonthlyPlan.java
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class MonthlyPlan {
+    private final YearMonth month;
+    private final Map<Integer, List<PlannedPeriod>> dailyPeriods = new HashMap<>();
+
+    public MonthlyPlan(YearMonth month) {
+        this.month = month;
+    }
+
+    public YearMonth getMonth() {
+        return month;
+    }
+
+    public void addOrReplacePeriod(int dayOfMonth, PlannedPeriod period) {
+        if (dayOfMonth < 1 || dayOfMonth > month.lengthOfMonth()) {
+            throw new IllegalArgumentException("Day is not in the plan month");
+        }
+        List<PlannedPeriod> periods = dailyPeriods.computeIfAbsent(dayOfMonth, ignored -> new ArrayList<>());
+        periods.removeIf(existing -> existing.getStartTime().equals(period.getStartTime()));
+        if (periods.size() >= 4) {
+            throw new IllegalStateException("A day can contain at most four planned periods");
+        }
+        periods.add(period);
+        periods.sort(Comparator.comparing(PlannedPeriod::getStartTime));
+    }
+
+    public List<PlannedPeriod> getPeriods(LocalDate date) {
+        if (!YearMonth.from(date).equals(month)) {
+            return List.of();
+        }
+        return Collections.unmodifiableList(dailyPeriods.getOrDefault(date.getDayOfMonth(), List.of()));
+    }
+}
+
+// File: DigitalHomePlanner.java
+import java.time.YearMonth;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class DigitalHomePlanner {
+    private final Map<YearMonth, MonthlyPlan> plans = new LinkedHashMap<>();
+
+    public MonthlyPlan createOrGetPlan(YearMonth month) {
+        return plans.computeIfAbsent(month, MonthlyPlan::new);
+    }
+
+    public MonthlyPlan getPlan(YearMonth month) {
+        return plans.get(month);
+    }
+
+    public Map<YearMonth, MonthlyPlan> getPlans() {
+        return Collections.unmodifiableMap(plans);
+    }
+}
+
+// File: MonthlyReport.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class MonthlyReport {
+    public static final class DailyStats {
+        private final LocalDate date;
+        private final double average;
+        private final double minimum;
+        private final LocalDateTime minimumTime;
+        private final double maximum;
+        private final LocalDateTime maximumTime;
+        private final int sampleCount;
+
+        public DailyStats(LocalDate date, double average, double minimum, LocalDateTime minimumTime,
+                          double maximum, LocalDateTime maximumTime, int sampleCount) {
+            this.date = date;
+            this.average = average;
+            this.minimum = minimum;
+            this.minimumTime = minimumTime;
+            this.maximum = maximum;
+            this.maximumTime = maximumTime;
+            this.sampleCount = sampleCount;
+        }
+
+        public LocalDate getDate() {
+            return date;
+        }
+
+        public double getAverage() {
+            return average;
+        }
+
+        public double getMinimum() {
+            return minimum;
+        }
+
+        public LocalDateTime getMinimumTime() {
+            return minimumTime;
+        }
+
+        public double getMaximum() {
+            return maximum;
+        }
+
+        public LocalDateTime getMaximumTime() {
+            return maximumTime;
+        }
+
+        public int getSampleCount() {
+            return sampleCount;
+        }
+    }
+
+    public static final class DowntimePeriod {
+        private final LocalDateTime startedAt;
+        private final LocalDateTime endedAt;
+
+        public DowntimePeriod(LocalDateTime startedAt, LocalDateTime endedAt) {
+            this.startedAt = startedAt;
+            this.endedAt = endedAt;
+        }
+
+        public LocalDateTime getStartedAt() {
+            return startedAt;
+        }
+
+        public LocalDateTime getEndedAt() {
+            return endedAt;
+        }
+    }
+
+    private final YearMonth month;
+    private final Map<String, List<DailyStats>> temperatureStatistics = new LinkedHashMap<>();
+    private final Map<String, List<DailyStats>> humidityStatistics = new LinkedHashMap<>();
+    private final List<SecurityAlarmSystem.BreachEvent> securityBreaches = new ArrayList<>();
+    private final List<DowntimePeriod> downtimePeriods = new ArrayList<>();
+
+    public MonthlyReport(YearMonth month) {
+        this.month = month;
+    }
+
+    public YearMonth getMonth() {
+        return month;
+    }
+
+    public void addTemperatureStatistics(String deviceId, List<DailyStats> statistics) {
+        temperatureStatistics.put(deviceId, new ArrayList<>(statistics));
+    }
+
+    public void addHumidityStatistics(String deviceId, List<DailyStats> statistics) {
+        humidityStatistics.put(deviceId, new ArrayList<>(statistics));
+    }
+
+    public void addSecurityBreach(SecurityAlarmSystem.BreachEvent event) {
+        securityBreaches.add(event);
+    }
+
+    public void addDowntime(DowntimePeriod period) {
+        downtimePeriods.add(period);
+    }
+
+    public Map<String, List<DailyStats>> getTemperatureStatistics() {
+        return immutableMapOfLists(temperatureStatistics);
+    }
+
+    public Map<String, List<DailyStats>> getHumidityStatistics() {
+        return immutableMapOfLists(humidityStatistics);
+    }
+
+    public List<SecurityAlarmSystem.BreachEvent> getSecurityBreaches() {
+        return Collections.unmodifiableList(securityBreaches);
+    }
+
+    public List<DowntimePeriod> getDowntimePeriods() {
+        return Collections.unmodifiableList(downtimePeriods);
+    }
+
+    private static <K, V> Map<K, List<V>> immutableMapOfLists(Map<K, List<V>> source) {
+        Map<K, List<V>> result = new LinkedHashMap<>();
+        source.forEach((key, value) -> result.put(key, Collections.unmodifiableList(value)));
+        return Collections.unmodifiableMap(result);
+    }
+
+    @Override
+    public String toString() {
+        return "Monthly report for " + month + ": " + temperatureStatistics.size() + " thermostat(s), "
+                + humidityStatistics.size() + " humidistat(s), " + securityBreaches.size()
+                + " security breach(es), " + downtimePeriods.size() + " downtime period(s)";
+    }
+}
+
+// File: DigitalHome.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class DigitalHome {
+    private static final int MAX_THERMOSTATS = 8;
+    private static final int MAX_HUMIDISTATS = 8;
+    private static final int MAX_CONTACT_SENSORS = 50;
+    private static final int MAX_POWER_SWITCHES = 100;
+
+    private final GatewayDevice gateway;
+    private final Map<String, Thermostat> thermostats = new LinkedHashMap<>();
+    private final Map<String, Humidistat> humidistats = new LinkedHashMap<>();
+    private final Map<String, ContactSensor> contactSensors = new LinkedHashMap<>();
+    private final Map<String, PowerSwitch> powerSwitches = new LinkedHashMap<>();
+    private final List<SensorReading> readings = new ArrayList<>();
+    private final SecurityAlarmSystem securitySystem = new SecurityAlarmSystem();
+    private final DigitalHomePlanner planner = new DigitalHomePlanner();
+    private final List<MonthlyReport.DowntimePeriod> downtimePeriods = new ArrayList<>();
+    private LocalDateTime outageStartedAt;
+
+    public DigitalHome(String homeName) {
+        gateway = new GatewayDevice("gateway", homeName + " Gateway");
+    }
+
+    public GatewayDevice getGateway() {
+        return gateway;
+    }
+
+    public SecurityAlarmSystem getSecuritySystem() {
+        return securitySystem;
+    }
+
+    public DigitalHomePlanner getPlanner() {
+        return planner;
+    }
+
+    public Map<String, Thermostat> getThermostats() {
+        return Map.copyOf(thermostats);
+    }
+
+    public Map<String, Humidistat> getHumidistats() {
+        return Map.copyOf(humidistats);
+    }
+
+    public Map<String, ContactSensor> getContactSensors() {
+        return Map.copyOf(contactSensors);
+    }
+
+    public Map<String, PowerSwitch> getPowerSwitches() {
+        return Map.copyOf(powerSwitches);
+    }
+
+    public void addThermostat(Thermostat thermostat) {
+        requireCapacity(thermostats, MAX_THERMOSTATS, "thermostats");
+        ensureUniqueId(thermostat.getId());
+        thermostats.put(thermostat.getId(), thermostat);
+        gateway.register(thermostat);
+    }
+
+    public void addHumidistat(Humidistat humidistat) {
+        requireCapacity(humidistats, MAX_HUMIDISTATS, "humidistats");
+        ensureUniqueId(humidistat.getId());
+        humidistats.put(humidistat.getId(), humidistat);
+        gateway.register(humidistat);
+    }
+
+    public void addContactSensor(ContactSensor sensor) {
+        requireCapacity(contactSensors, MAX_CONTACT_SENSORS, "contact sensors");
+        ensureUniqueId(sensor.getId());
+        contactSensors.put(sensor.getId(), sensor);
+        gateway.register(sensor);
+    }
+
+    public void addPowerSwitch(PowerSwitch powerSwitch) {
+        requireCapacity(powerSwitches, MAX_POWER_SWITCHES, "power switches");
+        ensureUniqueId(powerSwitch.getId());
+        powerSwitches.put(powerSwitch.getId(), powerSwitch);
+        gateway.register(powerSwitch);
+    }
+
+    public double readTemperature(String thermostatId, TemperatureUnit unit, LocalDateTime time) {
+        Thermostat thermostat = requireDevice(thermostats, thermostatId, "thermostat");
+        gateway.transmit(thermostatId, "read temperature");
+        double value = thermostat.readTemperature(unit);
+        readings.add(new SensorReading(thermostatId, ReadingType.TEMPERATURE,
+                thermostat.getCurrentTemperatureFahrenheit(), time));
+        return value;
+    }
+
+    public int readHumidity(String humidistatId, LocalDateTime time) {
+        Humidistat humidistat = requireDevice(humidistats, humidistatId, "humidistat");
+        gateway.transmit(humidistatId, "read humidity");
+        int value = humidistat.readHumidity();
+        readings.add(new SensorReading(humidistatId, ReadingType.HUMIDITY, value, time));
+        return value;
+    }
+
+    public void setThermostatTarget(String thermostatId, double value, TemperatureUnit unit, LocalDateTime time) {
+        Thermostat thermostat = requireDevice(thermostats, thermostatId, "thermostat");
+        gateway.transmit(thermostatId, "set temperature target");
+        thermostat.setTargetTemperature(value, unit, time);
+    }
+
+    public void setHumidityTarget(String humidistatId, int value, LocalDateTime time) {
+        Humidistat humidistat = requireDevice(humidistats, humidistatId, "humidistat");
+        gateway.transmit(humidistatId, "set humidity target");
+        humidistat.setTargetHumidity(value, time);
+    }
+
+    public void setPowerSwitch(String switchId, boolean on, LocalDateTime time) {
+        PowerSwitch powerSwitch = requireDevice(powerSwitches, switchId, "power switch");
+        gateway.transmit(switchId, on ? "turn on" : "turn off");
+        powerSwitch.setOnManually(on, time);
+    }
+
+    public void updateContactSensor(String sensorId, ContactState state, LocalDateTime time) {
+        ContactSensor sensor = requireDevice(contactSensors, sensorId, "contact sensor");
+        gateway.transmit(sensorId, "contact state " + state);
+        sensor.setState(state);
+        if (state == ContactState.OPEN) {
+            securitySystem.activateFor(sensor, time);
+        }
+    }
+
+    public void applySchedules(LocalDateTime time) {
+        thermostats.values().forEach(device -> device.applySchedule(time));
+        humidistats.values().forEach(device -> device.applySchedule(time));
+        powerSwitches.values().forEach(device -> device.applySchedule(time));
+        applyMonthlyPlan(time);
+    }
+
+    public void applyMonthlyPlan(LocalDateTime time) {
+        MonthlyPlan plan = planner.getPlan(YearMonth.from(time));
+        if (plan == null) {
+            return;
+        }
+        List<PlannedPeriod> periods = new ArrayList<>(plan.getPeriods(time.toLocalDate()));
+        periods.sort(Comparator.comparing(PlannedPeriod::getStartTime));
+        PlannedPeriod selected = null;
+        for (PlannedPeriod period : periods) {
+            if (!period.getStartTime().isAfter(time.toLocalTime())) {
+                selected = period;
+            }
+        }
+        if (selected == null) {
+            return;
+        }
+        selected.getTemperaturesFahrenheit().forEach((id, value) -> {
+            Thermostat device = thermostats.get(id);
+            if (device != null) {
+                gateway.transmit(id, "apply planned temperature");
+                device.setPlannedTarget(value);
+            }
+        });
+        selected.getHumidities().forEach((id, value) -> {
+            Humidistat device = humidistats.get(id);
+            if (device != null) {
+                gateway.transmit(id, "apply planned humidity");
+                device.setPlannedTarget(value);
+            }
+        });
+        selected.getSwitchStates().forEach((id, value) -> {
+            PowerSwitch device = powerSwitches.get(id);
+            if (device != null) {
+                gateway.transmit(id, "apply planned switch state");
+                device.setPlannedState(value);
+            }
+        });
+        selected.getContactStates().forEach((id, value) -> {
+            ContactSensor device = contactSensors.get(id);
+            if (device != null) {
+                gateway.transmit(id, "apply planned contact state");
+                device.setState(value);
+                if (value == ContactState.OPEN) {
+                    securitySystem.activateFor(device, time);
+                }
+            }
+        });
+        if (selected.getSecurityArmed() != null) {
+            securitySystem.setArmed(selected.getSecurityArmed());
+        }
+    }
+
+    public void recordSystemOutage(LocalDateTime startedAt) {
+        if (outageStartedAt != null) {
+            throw new IllegalStateException("An outage is already in progress");
+        }
+        outageStartedAt = startedAt;
+    }
+
+    public void recordSystemRestored(LocalDateTime restoredAt) {
+        if (outageStartedAt == null) {
+            throw new IllegalStateException("No outage is in progress");
+        }
+        downtimePeriods.add(new MonthlyReport.DowntimePeriod(outageStartedAt, restoredAt));
+        outageStartedAt = null;
+    }
+
+    public MonthlyReport generateMonthlyReport(YearMonth month, LocalDate today) {
+        if (month.isAfter(YearMonth.from(today)) || month.isBefore(YearMonth.from(today).minusYears(2))) {
+            throw new IllegalArgumentException("Reports are available only for the current and previous two years");
+        }
+        MonthlyReport report = new MonthlyReport(month);
+        for (String id : thermostats.keySet()) {
+            report.addTemperatureStatistics(id, calculateDailyStats(id, ReadingType.TEMPERATURE, month));
+        }
+        for (String id : humidistats.keySet()) {
+            report.addHumidityStatistics(id, calculateDailyStats(id, ReadingType.HUMIDITY, month));
+        }
+        securitySystem.getEvents().stream()
+                .filter(event -> YearMonth.from(event.getTimestamp()).equals(month))
+                .forEach(report::addSecurityBreach);
+        for (MonthlyReport.DowntimePeriod period : downtimePeriods) {
+            if (YearMonth.from(period.getStartedAt()).equals(month)
+                    || YearMonth.from(period.getEndedAt()).equals(month)) {
+                report.addDowntime(period);
+            }
+        }
+        if (outageStartedAt != null && YearMonth.from(outageStartedAt).equals(month)) {
+            report.addDowntime(new MonthlyReport.DowntimePeriod(outageStartedAt, null));
+        }
+        return report;
+    }
+
+    private List<MonthlyReport.DailyStats> calculateDailyStats(String deviceId, ReadingType type, YearMonth month) {
+        Map<LocalDate, List<SensorReading>> byDay = new LinkedHashMap<>();
+        for (SensorReading reading : readings) {
+            if (reading.getDeviceId().equals(deviceId)
+                    && reading.getType() == type
+                    && YearMonth.from(reading.getTimestamp()).equals(month)) {
+                byDay.computeIfAbsent(reading.getTimestamp().toLocalDate(), ignored -> new ArrayList<>()).add(reading);
+            }
+        }
+        List<MonthlyReport.DailyStats> result = new ArrayList<>();
+        byDay.forEach((date, samples) -> {
+            double sum = 0;
+            SensorReading minimum = samples.get(0);
+            SensorReading maximum = samples.get(0);
+            for (SensorReading sample : samples) {
+                sum += sample.getValue();
+                if (sample.getValue() < minimum.getValue()) {
+                    minimum = sample;
+                }
+                if (sample.getValue() > maximum.getValue()) {
+                    maximum = sample;
+                }
+            }
+            result.add(new MonthlyReport.DailyStats(date, sum / samples.size(),
+                    minimum.getValue(), minimum.getTimestamp(),
+                    maximum.getValue(), maximum.getTimestamp(), samples.size()));
+        });
+        result.sort(Comparator.comparing(MonthlyReport.DailyStats::getDate));
+        return result;
+    }
+
+    private void ensureUniqueId(String id) {
+        if (thermostats.containsKey(id) || humidistats.containsKey(id)
+                || contactSensors.containsKey(id) || powerSwitches.containsKey(id)
+                || gateway.getId().equals(id)) {
+            throw new IllegalArgumentException("Device ID already exists: " + id);
+        }
+    }
+
+    private static void requireCapacity(Map<?, ?> devices, int maximum, String type) {
+        if (devices.size() >= maximum) {
+            throw new IllegalStateException("Maximum number of " + type + " reached");
+        }
+    }
+
+    private static <T> T requireDevice(Map<String, T> devices, String id, String type) {
+        T device = devices.get(id);
+        if (device == null) {
+            throw new IllegalArgumentException("Unknown " + type + ": " + id);
+        }
+        return device;
+    }
+}
+
+// File: DHWebServer.java
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+
+public class DHWebServer {
+    private final DigitalHome home;
+
+    public DHWebServer(DigitalHome home) {
+        this.home = home;
+    }
+
+    public double readTemperature(String thermostatId, TemperatureUnit unit) {
+        return home.readTemperature(thermostatId, unit, LocalDateTime.now());
+    }
+
+    public int readHumidity(String humidistatId) {
+        return home.readHumidity(humidistatId, LocalDateTime.now());
+    }
+
+    public void setTemperature(String thermostatId, double value, TemperatureUnit unit) {
+        home.setThermostatTarget(thermostatId, value, unit, LocalDateTime.now());
+    }
+
+    public void setHumidity(String humidistatId, int humidity) {
+        home.setHumidityTarget(humidistatId, humidity, LocalDateTime.now());
+    }
+
+    public void setPowerSwitch(String switchId, boolean on) {
+        home.setPowerSwitch(switchId, on, LocalDateTime.now());
+    }
+
+    public void setSecurityArmed(boolean armed) {
+        home.getSecuritySystem().setArmed(armed);
+    }
+
+    public MonthlyPlan createOrGetMonthlyPlan(YearMonth month) {
+        return home.getPlanner().createOrGetPlan(month);
+    }
+
+    public MonthlyReport getMonthlyReport(YearMonth month) {
+        return home.generateMonthlyReport(month, LocalDate.now());
+    }
+}
+
+// File: Main.java
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+
+public class Main {
+    public static void main(String[] args) {
+        DigitalHome home = new DigitalHome("Sample Home");
+        home.addThermostat(new Thermostat("thermo-living", "Living Room Thermostat", "Living Room", 68.5));
+        home.addHumidistat(new Humidistat("humid-main", "Main Humidistat", "Hallway", 42));
+        home.addContactSensor(new ContactSensor("contact-front", "Front Door", "Front Door"));
+        home.addPowerSwitch(new PowerSwitch("switch-lamp", "Living Room Lamp Switch", "Living Room Lamp"));
+
+        DHWebServer web = new DHWebServer(home);
+        System.out.println("Temperature: " + web.readTemperature("thermo-living", TemperatureUnit.FAHRENHEIT) + " F");
+        web.setTemperature("thermo-living", 72, TemperatureUnit.FAHRENHEIT);
+        web.setPowerSwitch("switch-lamp", true);
+
+        home.updateContactSensor("contact-front", ContactState.OPEN, LocalDateTime.now());
+        System.out.println("Sound alarm active: " + home.getSecuritySystem().isSoundAlarmActive());
+
+        MonthlyPlan plan = web.createOrGetMonthlyPlan(YearMonth.now());
+        plan.addOrReplacePeriod(LocalDateTime.now().getDayOfMonth(),
+                new PlannedPeriod(java.time.LocalTime.of(18, 0))
+                        .setTemperature("thermo-living", 70)
+                        .setHumidity("humid-main", 45)
+                        .setSwitch("switch-lamp", false));
+
+        System.out.println(web.getMonthlyReport(YearMonth.now()));
+    }
+}
